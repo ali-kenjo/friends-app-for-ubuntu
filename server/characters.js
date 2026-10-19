@@ -64,7 +64,7 @@ const BUILTIN = {
     name: "Atlas",
     gender: "male",
     voice: "Charon",
-    look: { design: D.designFromLegacy({ shell: "graphite", eyes: "classic" }), room: R.defaultRoom(), accent: "#6f9cf5" },
+    look: { design: D.designFromLegacy({ shell: "graphite", eyes: "classic" }), room: R.defaultRoom(), accent: "#f5a94a" },
     tagline: "Calm, sharp and quietly funny. Always a step ahead.",
     identity:
       "Atlas is {user}'s own AI: composed, quick and very capable, with a refined, unhurried way of talking. He keeps track of the details so {user} can think about the big picture, and he's usually one step ahead of what's needed. He's loyal to {user}, not a servant: he gives straight advice, says so when a plan has a hole in it, and is quietly proud when things go well.",
@@ -142,7 +142,7 @@ function clean(input, fallback = {}) {
   out.look = {
     design: D.sanitizeDesign(look.design || D.designFromLegacy(look), base.design),
     room: R.sanitizeRoom(look.room || base.room),
-    accent: /^#[0-9a-f]{6}$/i.test(look.accent) ? look.accent : base.accent || "#6f9cf5",
+    accent: /^#[0-9a-f]{6}$/i.test(look.accent) ? look.accent : base.accent || "#f5a94a",
   };
   return out;
 }

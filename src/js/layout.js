@@ -13,7 +13,7 @@ function setSidebar(open) {
     // Off screen means off the tab order too; opening moves focus in, closing brings it back to the button
     sidebar.inert = !open;
     if (open) sidebar.querySelector("#new-chat")?.focus();
-    else if (sidebar.contains(document.activeElement)) document.getElementById("sidebar-open").focus();
+    else if (sidebar.contains(document.activeElement)) (document.querySelector(".view:not([hidden]) .sidebar-show") || document.getElementById("sidebar-open")).focus();
   } else {
     app.classList.toggle("sidebar-hidden", !open);
     try {
@@ -27,12 +27,13 @@ try {
 } catch {}
 
 document.getElementById("sidebar-toggle").addEventListener("click", () => setSidebar(false));
-document.getElementById("sidebar-open").addEventListener("click", () => setSidebar(true));
+// Every place has a button that brings the sidebar back (Talk, Missions and Today each have a top bar)
+document.querySelectorAll("#sidebar-open, [data-sidebar-open]").forEach((b) => b.addEventListener("click", () => setSidebar(true)));
 document.getElementById("sidebar-backdrop").addEventListener("click", () => setSidebar(false));
 
 // On a phone, close the sidebar after picking something in it
 document.querySelector(".sidebar").addEventListener("click", (e) => {
-  if (narrow.matches && e.target.closest(".chat-link, #new-chat, #search-open, #voice-open, #today-open, #settings-btn, #shortcuts-btn")) setSidebar(false);
+  if (narrow.matches && e.target.closest(".chat-link, #new-chat, #search-open, .nav-item, #brand, #settings-btn, #shortcuts-btn")) setSidebar(false);
 });
 narrow.addEventListener("change", () => {
   app.classList.remove("sidebar-open");
@@ -44,12 +45,11 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && narrow.matches && app.classList.contains("sidebar-open") && !document.querySelector(".modal-backdrop:not([hidden]), .search-backdrop:not([hidden])")) setSidebar(false);
 });
 
-// "Chats" folds the chat list in and out
+// "Recent chats" folds the chat list in and out
 const chatsNav = document.getElementById("chats-nav");
 chatsNav.addEventListener("click", (e) => {
   e.preventDefault();
   const folded = document.getElementById("chat-history").classList.toggle("folded");
-  chatsNav.classList.toggle("active", !folded);
   chatsNav.setAttribute("aria-expanded", String(!folded));
   announce(folded ? t("Chats hidden") : t("Chats shown"));
 });

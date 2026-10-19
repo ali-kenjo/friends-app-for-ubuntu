@@ -17,6 +17,12 @@ const FONTS = {
 
 let current = "dark";
 
+// Text on the accent: dark ink on a light accent, white on a dark one (whatever accent is chosen)
+function onAccent(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3 ? "#2a1a05" : "#ffffff";
+}
+
 function applyTheme() {
   const light = current === "light" || (current === "system" && !systemDark.matches);
   root.dataset.theme = light ? "light" : "dark";
@@ -28,6 +34,7 @@ onSettings((s) => {
   current = s.theme.appearance;
   applyTheme();
   root.style.setProperty("--accent", s.theme.accent);
+  root.style.setProperty("--on-accent", onAccent(s.theme.accent));
   root.style.setProperty("--chat-font", FONTS[s.font.family] || FONTS.default);
   root.style.setProperty("--chat-size", `${s.font.size}px`);
   root.dataset.chatStyle = s.chat.style;

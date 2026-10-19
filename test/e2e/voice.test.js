@@ -85,7 +85,7 @@ describe("Voice conversation", { skip: !CHROME && "no Chrome found" }, () => {
 
   const captionText = () => page.$eval("#voice-caption", (el) => el.innerText.replace(/\s+/g, " ").trim());
   const open = async () => {
-    await click("#hero-voice-btn");
+    await click("#voice-open");
     await page.waitForFunction(() => !document.getElementById("voice-mode").hidden);
   };
 

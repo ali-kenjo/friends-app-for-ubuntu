@@ -11,14 +11,17 @@ const LANGUAGES = ["auto", "en", "de", "ar"];
 
 const DEFAULTS = {
   // The interface language: "auto" follows the browser (see src/js/i18n.js)
-  ui: { language: "auto" },
-  // The first-run guide (src/js/onboarding.js): set once the person has finished or skipped it
-  onboarding: { done: false },
+  ui: { language: "auto", design: 2 }, // design: 1 before the redesign (only used to carry the old default accent over)
+  // The first-run guide (src/js/onboarding.js): done once the person has finished or skipped it;
+  // missions once they have seen the card that says Missions exist
+  onboarding: { done: false, missions: false },
   font: { family: "default", size: 16 },
   // How conversations look: "minimal" (only your messages in bubbles) or "bubbles",
   // "comfortable" or "compact" spacing, and follow-up chips under the last reply
   chat: { style: "minimal", density: "comfortable", suggestions: true },
-  theme: { appearance: "dark", accent: "#6f9cf5" },
+  // The accent is the one colour of the interface (the lamp: a warm amber, see src/css/tokens.css); the
+  // robot's light and the glow behind it follow it. THEME_ACCENTS are the swatches in Settings → Appearance.
+  theme: { appearance: "dark", accent: "#f5a94a" },
   // What the AI may do with files on this computer (see files.js)
   permissions: {
     folders: [],
@@ -147,6 +150,10 @@ const DEFAULTS = {
   },
 };
 
+const THEME_ACCENTS = ["#f5a94a", "#f472b6", "#a78bfa", "#6fb4f5", "#4fd1a5"];
+// The interface was blue before the redesign (0.6.0): those who never changed the accent get the new one
+const OLD_ACCENT = "#6f9cf5";
+
 const VOICE = {
   styles: ["listener", "balanced", "chatty"],
   sensitivities: ["easy", "normal", "hard"],
@@ -264,6 +271,12 @@ function get() {
   // Settings from before there were characters: a name you'd given the AI becomes your own character
   const upgraded = stored && characters.migrate(stored, stored.personality);
   cache = sanitize(upgraded ? { ...stored, characters: upgraded } : stored || {});
+  // Before the redesign the accent was blue: someone who never changed it (and their built-in Atlas) gets the new one
+  if (stored && (stored.ui?.design ?? 1) < 2) {
+    if (cache.theme.accent === OLD_ACCENT) cache.theme.accent = DEFAULTS.theme.accent;
+    for (const c of cache.characters.list) if (c.look?.accent === OLD_ACCENT) c.look.accent = DEFAULTS.theme.accent;
+  }
+  cache.ui.design = 2;
   return cache;
 }
 
@@ -288,4 +301,4 @@ function reload() {
   return get();
 }
 
-module.exports = { get, set, reload, onChange, sanitize, DEFAULTS, ROBOT, ROUTING, ON_AIR, VOICE };
+module.exports = { get, set, reload, onChange, sanitize, DEFAULTS, ROBOT, ROUTING, ON_AIR, VOICE, THEME_ACCENTS };

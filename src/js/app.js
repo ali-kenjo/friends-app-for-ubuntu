@@ -1,5 +1,6 @@
 import "./i18n.js";
 import "./a11y.js";
+import { startViews } from "./views.js";
 import { closeSettings } from "./settings.js";
 import { openVoice, closeVoice, isVoiceOpen } from "./voice/index.js";
 import { closeSearch } from "./chats.js";
@@ -15,6 +16,7 @@ import "./activities.js";
 import "./episodes.js";
 import "./life.js";
 import "./apps.js";
+import "./missions/index.js";
 import "./composer.js";
 import "./onboarding.js";
 import "./chat.js";
@@ -24,6 +26,9 @@ import "./workspace.js";
 import "./data.js";
 import "./robot/settings-pane.js";
 import "./voice-settings.js";
+
+// The address (#today, #missions, #voice, #chat/<id>) says where to start
+startViews();
 
 // Check if launched with ?voice=true or ?voice=1
 try {

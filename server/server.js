@@ -45,6 +45,9 @@ const STATIC = {
   "/vendor/highlight/": path.join(ROOT, "node_modules/@highlightjs/cdn-assets/es"),
   "/vendor/katex/": path.join(ROOT, "node_modules/katex/dist"),
   "/vendor/mermaid/": path.join(ROOT, "node_modules/mermaid/dist"),
+  // The two typefaces (src/css/fonts.css)
+  "/vendor/fonts/bricolage/": path.join(ROOT, "node_modules/@fontsource-variable/bricolage-grotesque/files"),
+  "/vendor/fonts/figtree/": path.join(ROOT, "node_modules/@fontsource-variable/figtree/files"),
   // The 3D robot (see src/js/robot/); the page's import map names these
   "/vendor/three/build/": path.join(ROOT, "node_modules/three/build"),
   "/vendor/three/addons/": path.join(ROOT, "node_modules/three/examples/jsm"),

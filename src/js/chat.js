@@ -17,6 +17,7 @@ import { t, tp, formatDate, formatTime, formatDateTime } from "./i18n.js";
 import { announce, trapModal } from "./a11y.js";
 import { characterName } from "./characters.js";
 import { openOnboarding, onboardingShowing } from "./onboarding.js";
+import { showView } from "./views.js";
 
 const main = document.getElementById("main");
 const messagesEl = document.getElementById("messages");
@@ -923,6 +924,7 @@ function clearMessages() {
 }
 
 export function newChat() {
+  showView("home", { focus: false });
   stopActive();
   session = {};
   clearMessages();
@@ -939,6 +941,7 @@ export async function openChat(id, { force = false, find = "" } = {}) {
     if (find) openFind(find);
     return;
   }
+  showView("home", { focus: false });
   stopActive();
   const mine = (session = {});
 
@@ -1002,6 +1005,5 @@ document.getElementById("new-chat").addEventListener("click", (e) => {
   newChat();
 });
 
-// Reopen the chat from the address after a reload
-const fromAddress = location.hash.match(/^#chat\/([\w-]+)$/);
-if (fromAddress) openChat(fromAddress[1]);
+// The address #chat/<id> (a notification, or a reload) reopens a chat (views.js)
+document.addEventListener("friends:open-chat", (e) => openChat(e.detail.id));

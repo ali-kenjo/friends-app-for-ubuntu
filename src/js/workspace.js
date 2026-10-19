@@ -310,8 +310,8 @@ document.getElementById("test-news-btn")?.addEventListener("click", () => {
   quickSearchNews();
 });
 
-// Workspace quick pill bar
-document.getElementById("workspace-bar")?.addEventListener("click", (e) => {
+// The "+" menu's lookups (Calendar, Gmail, Drive, News, GitHub)
+document.getElementById("plus-menu")?.addEventListener("click", (e) => {
   const pill = e.target.closest(".ws-pill");
   if (!pill) return;
   const app = pill.dataset.app;

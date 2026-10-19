@@ -1,4 +1,6 @@
-// ---------- The robot next to your text chats ----------
+// ---------- The robot on Home, and next to your text chats ----------
+// Before you've said anything, Home shows the robot big under the top bar, with a greeting (the
+// "home" host). Once a conversation is open it moves to a small corner of its own (the "dock"):
 // A small live robot in the bottom right corner. It only uses the empty space
 // beside the centered chat column, so it never covers messages or the
 // composer: it gets smaller as that space shrinks and hides when there's
@@ -14,6 +16,8 @@ const foldButton = document.getElementById("robot-dock-toggle");
 const openButton = document.getElementById("robot-dock-open");
 const voiceMode = document.getElementById("voice-mode");
 const narrow = window.matchMedia("(max-width: 760px)");
+const homeRobot = document.getElementById("home-robot");
+const homeStage = document.getElementById("home-robot-stage");
 
 // Sizes, biggest first: [name, width, height]; each needs its width + 32 px of space
 const SIZES = [
@@ -29,19 +33,26 @@ try {
 } catch {}
 
 robot.host("dock", stage, { priority: 1, shot: "dock", background: "dock", position: "center", cinematic: false });
+// Home's big robot paints the page's own colors with a stronger glow behind it
+robot.host("home", homeStage, { priority: 2, shot: "dock", background: "dock", position: "center", cinematic: false, glowBoost: 2.4 });
 
 // How much room is free beside the centered column
 function freeSpace() {
-  const column = main.classList.contains("has-chat") ? COLUMN.chat : COLUMN.welcome;
+  const column = COLUMN.chat;
   return (main.clientWidth - column) / 2;
 }
 
 let size = null;
 function update() {
   const on = Boolean(getSettings()?.robot?.chatDock) && !robot.unavailable;
+  // Home (nothing said yet): the big robot, or its face as a picture when the 3D one is off or can't start
+  const onHome = !main.hidden && !main.classList.contains("has-chat");
+  const homeLive = on && onHome && voiceMode.hidden;
+  robot.show("home", homeLive);
+  homeRobot.dataset.live = String(homeLive && Boolean(robot.engine));
   const room = freeSpace();
   size = narrow.matches ? null : SIZES.find(([, w]) => room >= w + 32) || null;
-  const fits = on && Boolean(size);
+  const fits = on && Boolean(size) && !main.hidden && main.classList.contains("has-chat");
   dock.hidden = !fits || folded;
   openButton.hidden = !fits || !folded;
   if (size) {
@@ -65,16 +76,19 @@ foldButton.addEventListener("click", () => setFolded(true));
 openButton.addEventListener("click", () => setFolded(false));
 
 // Say hi: a click (or Enter) on the robot makes it wave
-stage.addEventListener("click", () => robot.director.toolEvent({ gesture: "wave" }));
-stage.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    robot.director.toolEvent({ gesture: "wave" });
-  }
-});
+for (const el of [stage, homeRobot]) {
+  el.addEventListener("click", () => robot.director.toolEvent({ gesture: "wave" }));
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      robot.director.toolEvent({ gesture: "wave" });
+    }
+  });
+}
 
 new ResizeObserver(update).observe(main);
-new MutationObserver(update).observe(main, { attributes: true, attributeFilter: ["class"] });
+new MutationObserver(update).observe(main, { attributes: true, attributeFilter: ["class", "hidden"] });
+document.addEventListener("friends:robot-ready", update);
 new MutationObserver(update).observe(voiceMode, { attributes: true, attributeFilter: ["hidden"] });
 narrow.addEventListener("change", update);
 onSettings(update);
@@ -86,4 +100,11 @@ document.addEventListener("friends:robot-face", (e) => {
 });
 
 // The robot is on screen next to the chat (so the AI may be offered its tools)
-export const dockShowing = () => !dock.hidden && robot.engine?.active?.name === "dock";
+export const dockShowing = () => (!dock.hidden && robot.engine?.active?.name === "dock") || (homeRobot.dataset.live === "true" && robot.engine?.active?.name === "home");
+
+// A mission is running or waiting (src/js/missions/): the robot looks busy, and the face picture says so
+document.addEventListener("friends:missions-active", (e) => {
+  const working = e.detail?.running > 0;
+  robot.director.working(working);
+  homeRobot.classList.toggle("working", working);
+});

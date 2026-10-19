@@ -1,14 +1,17 @@
 // ---------- First run ----------
-// Until an AI is set up, the start screen shows a short guide instead of the voice card: it looks for
-// an AI on this computer (and offers it with one click), or takes a free Gemini key. "Not now" hides
-// it; the status line under the start screen brings it back.
+// A new person meets the companion first: the robot and a greeting. Until an AI is set up, a short
+// guide under them looks for an AI on this computer (and offers it with one click), or takes a free
+// Gemini key. "Not now" hides it; the status line under the message box brings it back. Once an AI
+// answers, a card says that Missions exist (once).
 import { api } from "./api.js";
 import { getSettings, onSettings, updateSettings, flushSettings } from "./store.js";
 import { announce } from "./a11y.js";
 import { t, tp } from "./i18n.js";
+import { showView } from "./views.js";
 
+const main = document.getElementById("main");
 const card = document.getElementById("onboarding");
-const hero = document.getElementById("voice-hero-card");
+const intro = document.getElementById("missions-intro");
 const status = document.getElementById("onb-local-status");
 const actions = document.getElementById("onb-local-actions");
 const help = document.getElementById("onb-local-help");
@@ -36,10 +39,31 @@ function sync() {
   const show = shouldShow();
   const was = !card.hidden;
   card.hidden = !show;
-  hero.hidden = show;
+  main.classList.toggle("onboarding-open", show); // the robot and the greeting stay; the ideas make room
   if (show && !was) detect();
   if (!show) clearTimeout(timer);
+  syncIntro();
 }
+
+// The card about Missions: once, after an AI is set up, on an empty Home
+function syncIntro() {
+  const s = getSettings();
+  const show = Boolean(s) && brains !== null && hasAI() && card.hidden && s.onboarding?.done === true && s.onboarding?.missions !== true && !main.classList.contains("has-chat");
+  intro.hidden = !show;
+}
+function seenIntro() {
+  updateSettings((s) => ((s.onboarding ||= {}).missions = true));
+  syncIntro();
+}
+document.getElementById("missions-intro-go").addEventListener("click", () => {
+  seenIntro();
+  showView("missions");
+});
+document.getElementById("missions-intro-dismiss").addEventListener("click", () => {
+  seenIntro();
+  document.getElementById("composer-input").focus();
+});
+new MutationObserver(syncIntro).observe(main, { attributes: true, attributeFilter: ["class"] });
 
 // ----- An AI on this computer -----
 async function detect() {

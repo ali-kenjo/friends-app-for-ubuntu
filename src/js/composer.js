@@ -4,6 +4,7 @@ import { openSettings } from "./settings.js";
 import { getSettings, onSettings, updateSettings } from "./store.js";
 import { t, nf } from "./i18n.js";
 import { announce } from "./a11y.js";
+import { icon } from "./icons.js";
 
 // ----- Model picker -----
 // Besides one brain of your choice, a mode can pick the AI per message (see server/router.js)
@@ -12,12 +13,25 @@ const menu = document.getElementById("model-menu");
 const CHECK = '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>';
 
 const MODES = [
-  { id: "auto", icon: "✨", label: t("Auto"), desc: t("Local by default; the cloud for what a message needs") },
-  { id: "dynamic", icon: "🔄", label: t("Dynamic"), desc: t("Auto, and it reacts to how the AIs are doing") },
-  { id: "fastest", icon: "⚡", label: t("Fastest"), desc: t("Asks both; the first answer wins") },
-  { id: "local", icon: "🔒", label: t("Local only"), desc: t("Only an AI on this computer"), needs: "local" },
-  { id: "cloud", icon: "☁️", label: t("Cloud only"), desc: t("Only Gemini"), needs: "cloud" },
+  { id: "auto", icon: "sparkles", label: t("Auto"), desc: t("Local by default; the cloud for what a message needs") },
+  { id: "dynamic", icon: "refresh", label: t("Dynamic"), desc: t("Auto, and it reacts to how the AIs are doing") },
+  { id: "fastest", icon: "bolt", label: t("Fastest"), desc: t("Asks both; the first answer wins") },
+  { id: "local", icon: "lock", label: t("Local only"), desc: t("Only an AI on this computer"), needs: "local" },
+  { id: "cloud", icon: "cloud", label: t("Cloud only"), desc: t("Only Gemini"), needs: "cloud" },
 ];
+
+// "llama3.2:latest" is the same model as "llama3.2": one clean name
+export const cleanModel = (model) => String(model || "").replace(/:latest$/, "");
+// What to show for a brain: its name, and its model only when that says something more
+export function brainLabel(b) {
+  const model = cleanModel(b.model);
+  const name = cleanModel(b.name);
+  return { name, model: model && model.toLowerCase() !== name.toLowerCase() ? model : "" };
+}
+const withIcon = (el, name, text) => {
+  el.innerHTML = icon(name, { size: 16 });
+  el.append(document.createTextNode(` ${text}`));
+};
 
 let brains = [];
 let defaultBrainId = null;
@@ -99,12 +113,13 @@ function renderPicker() {
   const mode = getMode();
   const info = MODES.find((m) => m.id === mode);
   if (info) {
-    picker.querySelector("strong").textContent = `${info.icon} ${info.label}`;
+    withIcon(picker.querySelector("strong"), info.icon, info.label);
     picker.querySelector("span").textContent = isPrivate() ? t("Private mode") : "";
   } else {
     const brain = brains.find((b) => b.id === getSelectedBrainId());
-    picker.querySelector("strong").textContent = brain ? brain.name : t("Choose an AI");
-    picker.querySelector("span").textContent = brain ? brain.model : "";
+    const label = brain ? brainLabel(brain) : null;
+    picker.querySelector("strong").textContent = label ? label.name : t("Choose an AI");
+    picker.querySelector("span").textContent = label ? label.model : "";
   }
   picker.setAttribute("aria-label", `${t("Which AI answers")}: ${picker.textContent.replace(/\s+/g, " ").trim()}`);
   // "Answer again with the other AI" only makes sense with both kinds, outside Private mode
@@ -145,7 +160,7 @@ function renderMenu() {
       item.dataset.mode = m.id;
       item.disabled = missing || blocked;
       item.innerHTML = `<span class="model-item-text"><strong></strong><span></span></span>${m.id === mode ? CHECK : ""}`;
-      item.querySelector("strong").textContent = `${m.icon} ${m.label}`;
+      withIcon(item.querySelector("strong"), m.icon, m.label);
       item.querySelector(".model-item-text span").textContent = blocked ? t("Off in Private mode") : missing ? (m.needs === "cloud" ? t("Add a Gemini AI first") : m.needs === "local" ? t("Add a local AI first") : t("Add an AI first")) : m.desc;
       group.append(item);
     }
@@ -166,8 +181,9 @@ function renderMenu() {
     item.setAttribute("aria-checked", on);
     item.dataset.id = b.id;
     item.innerHTML = `<span class="model-item-text"><strong></strong><span></span></span>${on ? CHECK : ""}`;
-    item.querySelector("strong").textContent = `${isLocal(b) ? "🔒" : "☁️"} ${b.name}`;
-    item.querySelector(".model-item-text span").textContent = b.model;
+    const label = brainLabel(b);
+    withIcon(item.querySelector("strong"), isLocal(b) ? "lock" : "cloud", label.name);
+    item.querySelector(".model-item-text span").textContent = label.model || (isLocal(b) ? t("On this computer") : t("Cloud"));
     item.disabled = isPrivate() && !isLocal(b);
     group.append(item);
   }
@@ -333,6 +349,44 @@ export function takeAttachments() {
   changed();
   return ready;
 }
+
+// ----- The "+" menu: attach a file, or have it look something up -----
+const plusBtn = document.getElementById("plus-btn");
+const plusMenu = document.getElementById("plus-menu");
+const plusItems = () => [...plusMenu.querySelectorAll(".plus-item")];
+
+function setPlus(open, { focusButton = false } = {}) {
+  plusMenu.hidden = !open;
+  plusBtn.setAttribute("aria-expanded", String(open));
+  if (open) plusItems()[0]?.focus();
+  else if (focusButton) plusBtn.focus();
+}
+plusBtn.addEventListener("click", () => setPlus(plusMenu.hidden));
+plusBtn.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" && plusMenu.hidden) {
+    e.preventDefault();
+    setPlus(true);
+  }
+});
+plusMenu.addEventListener("keydown", (e) => {
+  const list = plusItems();
+  const at = list.indexOf(document.activeElement);
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    list[(at + (e.key === "ArrowDown" ? 1 : -1) + list.length) % list.length]?.focus();
+  } else if (e.key === "Home" || e.key === "End") {
+    e.preventDefault();
+    list[e.key === "Home" ? 0 : list.length - 1]?.focus();
+  } else if (e.key === "Escape") {
+    e.stopPropagation();
+    setPlus(false, { focusButton: true });
+  } else if (e.key === "Tab") setPlus(false);
+});
+// Picking something closes the menu (workspace.js does what a lookup asks)
+plusMenu.addEventListener("click", () => setPlus(false));
+document.addEventListener("click", (e) => {
+  if (!plusMenu.hidden && !e.target.closest(".plus-wrap")) setPlus(false);
+});
 
 document.getElementById("attach-btn").addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", () => {

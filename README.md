@@ -226,27 +226,37 @@ Switch with the names at the top of the chat or in voice mode's top bar; in voic
 
 - **They remember your conversations.** When a chat or voice conversation has been quiet for 15 minutes, a short memory of it is written (what you talked about, how you seemed, what's still open). New conversations start with the latest few; `recall_conversations` looks further back. See and delete them in Settings → Memory.
 - **They follow up**: things worth asking about later ("how did the interview go?") are kept for two weeks and brought up when it fits.
-- **Never boring**: 17 things to do together (debate, would you rather, build a story, quiz, hot takes, two truths and a lie, 20 questions, deep questions, role-play, German or English practice, content ideas, riddles, recommendation duel, plan my day, talk about my day, surprise me) on the start screen and in voice mode's 🎲 menu. They bring their own opinions and stories, vary how they talk, and pick up topics from "What you love talking about".
+- **Never boring**: 17 things to do together (debate, would you rather, build a story, quiz, hot takes, two truths and a lie, 20 questions, deep questions, role-play, German or English practice, content ideas, riddles, recommendation duel, plan my day, talk about my day, surprise me) on the start screen (three at a time) and in voice mode's activities menu. They bring their own opinions and stories, vary how they talk, and pick up topics from "What you love talking about".
 - **They speak first** when voice mode opens, picking up from last time.
 - **They take turns like a person.** The *Conversation style* (Settings → Characters → Voice conversation, or the pill at the top of voice mode) sets how much they talk: **Listener** only answers when you speak to it directly and waits a long time (for talking on camera), **Balanced** listens while you explain and answers when it makes sense, **Chatty** answers fast and joins in. Cut them off with the **Space bar** (or any key you set) or by talking over them (*Interrupting by voice*: Easy, Normal, Hard; choose Hard on speakers). Muting (**M**) also stops what they're saying.
 
 **ON AIR — co-host mode.** Press **ON AIR** in voice mode (it also turns on by itself in filming mode and while recording). The character knows it's on camera and co-hosts in the format you pick (podcast, reaction, Q&A, debate, explainer, storytime): it talks to the audience too, keeps turns tight, sets you up, and helps with the hook and the sign-off. With "Nothing private on camera" (the default), your memories, notes, earlier conversations, tasks, journal, emails, calendar, files and connected accounts are left out of what it knows and can use. Gemini Live switches in place, without dropping the conversation.
 
+## Home, Missions and Today
+
+The sidebar has three places, and nothing else competes with them:
+
+- **Talk** (Home): the companion. The robot greets you, and below it are one message box and a mic button for voice. **+** in the message box attaches a file or looks something up (Calendar, Gmail, Drive, News, GitHub). Atlas and Mira switch at the top. Once you talk, the robot sits in a corner of the chat.
+- **Missions**: goals the assistant carries out in the background (see [Missions](#missions)).
+- **Today**: your day in one calm place (below).
+
+Everything else lives in **Settings** (a full view): *You and your companion* (Appearance, Characters, Memory, Robot), *AI* (AI & privacy), *Extras* (Connected apps, Telegram, Notes vault, Daily life) and *Your data* (Data & backups). The addresses `#today`, `#missions`, `#missions/<id>`, `#voice`, `#chat/<id>` and `#settings` still open what they say (the tray and notifications use them), and **Alt+1**, **Alt+2** and **Alt+3** switch places.
+
 ## Daily life
 
-**Today** in the sidebar (and Settings → Daily life). Just talk to it ("remind me in 20 minutes to stretch", "add call the bank to my list for Friday", "I went to the gym", "what's on today?") or use the panel:
+**Today** in the sidebar. Just talk to it ("remind me in 20 minutes to stretch", "add call the bank to my list for Friday", "I went to the gym", "what's on today?") or use the page: one box adds a task, a reminder or an event, and under it are what's coming up, your tasks, habits, a focus timer, and a line about how you are. "All tasks, reminders, calendar, habits and journal" opens the rest.
 
 - **Tasks** with lists, due dates and times, priorities. Overdue and today's tasks show as a badge.
 - **Reminders**, once or repeating (daily, weekdays, weekly, monthly, yearly), with snooze. They pop up in the page, as desktop notifications (also with the window closed, from the tray), and in voice mode your character says them.
 - **Habits** with streaks and the last 7 days, checked off in one tap.
 - **Journal** entries with a mood, and a quick "How are you today?" line.
-- **Daily briefing**: your character writes your day in one message (calendar, reminders, tasks, habits, weather, headlines, follow-ups). Press ☀️ in Today, ask for it, or have it waiting as a new chat every morning.
+- **Daily briefing**: your character writes your day in one message (calendar, reminders, tasks, habits, weather, headlines, follow-ups). Press **Daily briefing** in Today, ask for it, or have it waiting as a new chat every morning.
 
 Everything stays in `~/.config/friends/life/`.
 
 ## Connected apps
 
-Settings → **Connected Apps**. Each app has its own card: switch it on, set it up, test it.
+Settings → Extras → **Connected apps**. Each app has its own card: switch it on, set it up, test it.
 
 | App | Needs | What the AI can do |
 |---|---|---|
@@ -268,15 +278,6 @@ Tokens are kept in your system keyring (never in backups or sent to the page). G
 **MCP** (Model Context Protocol) connects thousands of apps: add a server that runs on this computer (a command such as `npx -y @playwright/mcp@latest`) or at an address (Streamable HTTP, with an optional token). There are ready-made starts for a browser (Playwright), code docs (Context7), Git, files, a knowledge graph, fetch, and GitHub's own MCP server. Choose per app: always ask, ask except for what only reads, or never ask. In Private mode only apps you mark as working on this computer are used.
 
 A local AI gets the essential tools (Settings → AI & privacy → Tools for a local AI), so small models stay focused; Gemini gets all of them.
-
-## Builder mode
-
-Settings → **Builder**. Build websites, apps and SaaS products with your character as a senior developer, inside the folders you allow in AI & privacy → Permissions and file access.
-
-- **Starters**: a website, a SaaS landing page, a Node.js API with tests, a React app (Vite), and Next.js (through `create-next-app`).
-- **Code tools**: change part of a file, search code, read lines, see the project tree; plus the file tools (create, read, edit, move, delete).
-- **Running commands** in five modes: **Off**, **Suggest only** (it gives you the command), **Ask every time**, **Smart** (safe everyday commands such as tests, builds and `git status` run by themselves when they only touch the allowed folders; everything else asks), and **Auto** (everything runs except risky commands, which always ask: `sudo`, deleting outside the project, `git push`, `ssh`, piping a download into a shell, reading key files, and more). Add your own "may also run" and "never without asking" lists and a time limit. API keys are never passed to commands, and in Private mode every command asks.
-- **Background processes and live preview**: dev servers keep running and their address comes back as a link; `preview_site` serves a website folder on this computer. Settings → Builder lists what's running, with Stop.
 
 ## Features & Capabilities
 

@@ -30,7 +30,7 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
       await h.removeBrains();
       await h.setLook({ onboarding: false });
       await page.waitForFunction(() => !document.getElementById("onboarding").hidden);
-      assert.strictEqual(await page.$eval("#voice-hero-card", (el) => el.hidden), true, "the voice card waits");
+      assert.strictEqual(await page.$eval("#home-hero", (el) => el.hidden), false, "the companion is there before anything is set up");
       await page.waitForFunction(() => /Found Fake Ollama/.test(document.getElementById("onb-local-status").textContent));
       assert.match(await text("#onb-local-actions"), /Use llama3\.2/);
       assert.match(await text("#status-text"), /No AI set up yet/);
@@ -164,8 +164,8 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
 
   describe("languages", () => {
     const CASES = [
-      { lang: "de", dir: "ltr", sidebar: /Neuer Chat/, composer: /Frag mich/ },
-      { lang: "ar", dir: "rtl", sidebar: /محادثة جديدة/, composer: /اسأل/ },
+      { lang: "de", dir: "ltr", sidebar: /Letzte Chats/, composer: /Frag mich/ },
+      { lang: "ar", dir: "rtl", sidebar: /المحادثات الأخيرة/, composer: /اسأل/ },
     ];
     for (const { lang, dir, sidebar, composer } of CASES) {
       test(`${lang}: the page starts in it, ${dir === "rtl" ? "mirrored" : "left to right"}, and nothing static is left in English`, async () => {
@@ -238,7 +238,7 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
       await page.evaluate(() => document.getElementById("settings-btn").click());
       await page.select("#language-select", "de");
       await page.waitForFunction(() => document.documentElement.lang === "de", { timeout: 15000 });
-      assert.match(await text(".sidebar"), /Neuer Chat/);
+      assert.match(await text(".sidebar"), /Letzte Chats/);
       assert.strictEqual((await h.api("GET", "/api/settings")).ui.language, "de");
       await h.setLook({ lang: "en", width: 1280 });
     });

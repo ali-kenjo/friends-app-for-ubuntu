@@ -68,14 +68,25 @@ async function main() {
       await scan("search", lang, theme);
       await page.keyboard.press("Escape");
 
+      // The "+" menu, Today (and everything else under it), Missions
+      await click("#plus-btn");
+      await sleep(200);
+      await scan("plus-menu", lang, theme);
+      await click("#plus-btn");
       await click("#today-open");
-      await sleep(400);
-      for (const tab of ["today", "tasks", "reminders", "habits", "journal"]) {
+      await sleep(500);
+      await scan("today", lang, theme);
+      await page.evaluate(() => (document.getElementById("today-more").open = true));
+      for (const tab of ["tasks", "reminders", "calendar", "habits", "journal"]) {
         await click(`[data-life-tab="${tab}"]`);
         await sleep(250);
         await scan(`today-${tab}`, lang, theme);
       }
-      await click("#life-close");
+      await click("#nav-missions");
+      await sleep(500);
+      await scan("missions", lang, theme);
+      await click("#nav-home");
+      await sleep(300);
 
       await click("#settings-btn");
       await sleep(300);

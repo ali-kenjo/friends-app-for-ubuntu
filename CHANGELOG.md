@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased (0.6.0): a companion with an assistant behind it
+
+### Phase 1: three places, not a dozen
+- The sidebar has **Talk**, **Missions** and **Today** (Alt+1, Alt+2, Alt+3). Talk is Home: the robot greets you (big, before you've said anything; a corner of the chat afterwards), with one message box and a mic button. The voice card, the five connector pills and the six activity chips are gone from the start screen: three ideas, and **+** in the message box (attach a file, or look something up in Calendar, Gmail, Drive, News or GitHub).
+- **Today** is a page, not a window: one box adds a task, a reminder or an event, with what's coming up, your tasks (including ones without a date), habits, focus and a quick journal line under it; the old tabs are folded under "All tasks, reminders, calendar, habits and journal". (The calendar events of the day now show; the page asked the helper for a field it didn't send.)
+- **Settings** is a full view with the groups *You and your companion*, *AI*, *Extras* and *Your data*. Telegram and the Notes vault have their own sections.
+- The addresses `#today`, `#voice`, `#chat/<id>` keep working (the tray and notifications), and `#missions`, `#missions/<id>` and `#settings` are new.
+- First run: you meet the robot and a greeting first; once an AI answers, one card says Missions exist.
+- The README no longer describes Builder mode (it was removed in 0.4.0; file tools remain and Missions can build software).
+
 ## 0.5.1: A conversation that takes turns like a person
 
 Voice mode no longer answers every pause, says hello twice, or ignores the mute button.

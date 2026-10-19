@@ -42,7 +42,7 @@ describe("Settings Management", () => {
     assert.strictEqual(updated.font.size, 22);
     assert.strictEqual(updated.personality.creativity, 0);
     assert.strictEqual(updated.personality.speed, 10);
-    assert.strictEqual(updated.theme.accent, "#6f9cf5"); // reset to default
+    assert.strictEqual(updated.theme.accent, "#f5a94a"); // reset to default
   });
 
   test("set persists changes to disk", () => {

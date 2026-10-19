@@ -147,86 +147,25 @@
    Voice Conversation Hero Experience & Audio Reactive Themes
    ========================================================================== */
 
-.nav-voice-hero {
-  position: relative;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent-text);
-}
 
-.nav-voice-hero svg {
-  color: var(--accent-text);
-}
 
-.voice-hero-card {
-  margin: var(--space-5) 0 var(--space-6);
-  padding: var(--space-6) 28px;
-  border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, rgba(255, 176, 116, 0.12) 0%, rgba(240, 124, 124, 0.08) 50%, rgba(111, 156, 245, 0.1) 100%);
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
-  box-shadow: var(--shadow-pop);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-3);
-  position: relative;
-  overflow: hidden;
-}
 
-.voice-hero-title {
-  font-size: var(--fs-3xl);
-  font-weight: 700;
-  margin: 0;
-  background: linear-gradient(135deg, #ffffff 40%, #ffd0a8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
 
-.voice-hero-sub {
-  font-size: var(--fs-base);
-  color: var(--text-muted);
-  max-width: 480px;
-  margin: 0;
-  line-height: 1.45;
-}
 
-.btn-hero-voice {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2h);
-  font-size: var(--fs-md);
-  font-weight: 600;
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-pill);
-  background: linear-gradient(135deg, #ff9e58 0%, #e85d5d 100%);
-  color: #fff;
-  border: none;
-  box-shadow: 0 4px 18px rgba(232, 93, 93, 0.4);
-  transition: transform var(--dur-base), box-shadow var(--dur-base);
-  cursor: pointer;
-}
 
-.btn-hero-voice:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(232, 93, 93, 0.6);
-}
 
-.btn-hero-voice:active {
-  transform: translateY(0);
-}
 
-.btn-hero-voice svg {
-  width: 20px;
-  height: 20px;
-}
 
-.voice-hero-prompts {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-2);
-  margin-top: var(--space-1h);
-}
+
+
+
+
+
+
+
+
+
+
 
 .prompt-chip {
   background: rgba(255, 255, 255, 0.08);
@@ -249,51 +188,15 @@
    Connected Apps Quick Bar
    ========================================================================== */
 
-.workspace-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-2h);
-  margin-bottom: var(--space-5);
-}
 
-.ws-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: var(--space-1h) var(--space-3h);
-  font-size: var(--fs-sm);
-  font-weight: 500;
-  color: var(--text);
-  cursor: pointer;
-  transition: background var(--dur-fast), border-color var(--dur-fast);
-}
 
-.ws-pill:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent-text);
-}
 
-.ws-pill svg {
-  width: 15px;
-  height: 15px;
-  color: var(--accent-text);
-}
 
-.ws-status-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1h);
-  padding: var(--space-1) var(--space-2h);
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  border-radius: var(--radius-pill);
-  background: var(--bg-hover);
-}
+
+
+
+
+
 
 .status-circle {
   width: 7px;

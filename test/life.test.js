@@ -251,6 +251,9 @@ describe("The desktop app outside its window", () => {
     assert.strictEqual(desktop.hashFor({ type: "open-chat", id: "x\"); alert(1)" }), "");
     assert.strictEqual(desktop.hashFor({ type: "reminder" }), "#today");
     assert.strictEqual(desktop.hashFor({ type: "voice" }), "#voice");
+    assert.strictEqual(desktop.hashFor({ type: "missions" }), "#missions");
+    assert.strictEqual(desktop.hashFor({ type: "mission", id: "m-1" }), "#missions/m-1");
+    assert.strictEqual(desktop.hashFor({ type: "mission", id: "x\"); alert(1)" }), "");
     assert.strictEqual(desktop.hashFor(null), "");
   });
 });

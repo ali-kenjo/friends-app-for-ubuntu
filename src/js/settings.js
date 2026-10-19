@@ -48,6 +48,8 @@ function switchTab(name, { focus = false } = {}) {
 }
 
 settingsBtn.addEventListener("click", () => openSettings());
+// The address #settings (views.js)
+document.addEventListener("friends:open-settings", (e) => openSettings(e.detail?.tab, e.detail || {}));
 settingsClose.addEventListener("click", closeSettings);
 
 // Close when clicking outside the panel
