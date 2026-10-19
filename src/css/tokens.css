@@ -133,7 +133,7 @@
   --hairline: rgba(35, 29, 42, 0.09);
   --link: #7a4300;
   --focus: #7a4300;
-  --accent-text: color-mix(in srgb, var(--accent) 58%, #1c1000);
+  --accent-text: color-mix(in srgb, var(--accent) 50%, #1c1000);
   --danger: #b3201f;
   --danger-border: #efb7b5;
   --danger-bg: #fdecea;

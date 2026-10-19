@@ -75,7 +75,7 @@ export const audio = {
             ok: false,
             standby: "Microphone permission needed · Click to allow",
             retry: true,
-            text: t("Microphone access is blocked by your browser. Click the site settings 🔒 icon in your browser address bar to allow."),
+            text: t("Microphone access is blocked by your browser. Click the site settings (lock) icon in your browser address bar to allow."),
           };
         }
         if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {

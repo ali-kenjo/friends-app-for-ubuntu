@@ -19,7 +19,7 @@ function toOllamaMessages(contents, system) {
 }
 
 // options: contextSize (tokens, 0 = Ollama's own default), keepAlive (minutes, 0 = Ollama's default)
-function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speechModel = "" } = {}) {
+function create({ baseUrl, contextSize = 0, keepAlive = 0, numGpu = undefined, speechUrl = "", speechModel = "" } = {}) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
   const where = base.replace(/^https?:\/\//, "");
   const noTools = new Set();
@@ -67,6 +67,8 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speec
     const options = {};
     if (temperature !== undefined) options.temperature = temperature;
     if (contextSize > 0) options.num_ctx = contextSize;
+    // The model manager runs a model on the processor only (0) when it doesn't fit in the graphics card's memory
+    if (Number.isFinite(numGpu)) options.num_gpu = numGpu;
     if (Object.keys(options).length) body.options = options;
     if (keepAlive > 0) body.keep_alive = `${keepAlive}m`;
     return body;
@@ -97,9 +99,9 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speec
     await postChat(settingsFor({ model, messages: [{ role: "user", content: "Hi" }], stream: false }), undefined);
   }
 
-  async function generateText({ model, system, prompt, temperature = 0.3, signal }) {
+  async function generateText({ model, system, prompt, temperature = 0.3, signal, json = false }) {
     const messages = toOllamaMessages([{ role: "user", parts: [{ text: prompt }] }], system);
-    const res = await postChat(settingsFor({ model, messages, stream: false }, temperature), signal);
+    const res = await postChat(settingsFor({ model, messages, stream: false, ...(json ? { format: "json" } : {}) }, temperature), signal);
     const data = await res.json();
     return stripThinking(String(data.message?.content || ""));
   }

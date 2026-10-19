@@ -623,14 +623,14 @@ function broadcast(type, data, { title, body, action } = {}) {
 }
 
 life.onReminder((r) => {
-  broadcast("reminder", r, { title: `⏰ ${r.text}`, body: "Friends reminder", action: { type: "reminder", id: r.id } });
+  broadcast("reminder", r, { title: r.text, body: "Friends reminder", action: { type: "reminder", id: r.id } });
   telegram.sendAlert(`⏰ *Reminder:* ${r.text}`, settings.get());
 });
 life.onFocusComplete((f) => {
-  broadcast("focus_complete", f, { title: "🎯 Focus Complete!", body: `Completed focus session on ${f.task}`, action: { type: "focus" } });
+  broadcast("focus_complete", f, { title: "Focus complete", body: `Completed focus session on ${f.task}`, action: { type: "focus" } });
   telegram.sendAlert(`🎯 *Focus Complete!* You finished your session on: ${f.task}`, settings.get());
 });
-const briefingReady = (made) => broadcast("briefing", made, { title: "☀️ Your briefing is ready", body: made.title, action: { type: "open-chat", id: made.chatId } });
+const briefingReady = (made) => broadcast("briefing", made, { title: "Your briefing is ready", body: made.title, action: { type: "open-chat", id: made.chatId } });
 
 // The desktop app (electron/main.js) shows notifications itself
 function setNativeNotify(fn) {

@@ -4,6 +4,7 @@ const path = require("path");
 const { dataDir, writeJson } = require("./config");
 const characters = require("./characters");
 const look = require("./robot-look");
+const specialistRoles = require("./specialist-roles");
 
 const file = path.join(dataDir, "settings.json");
 
@@ -85,6 +86,24 @@ const DEFAULTS = {
     allowedUserIds: [],
     notifyReminders: true,
     notifyFocus: true,
+  },
+  // Missions: goals carried out in the background (server/missions/)
+  missions: {
+    enabled: true,
+    workspace: "~/friends-workspace", // where each mission gets a folder of its own to work in
+    // The manager is Gemini: a stronger model plans and checks, a faster one does routine steps. "" = choose by itself.
+    manager: { planModel: "", fastModel: "" },
+    limits: { maxMinutes: 60, maxSteps: 25, maxCloudCalls: 60 }, // what a plan starts with; shown on the plan
+    caps: { maxMinutes: 480, maxSteps: 100, maxCloudCalls: 400 }, // what no plan may go beyond
+    notify: { desktop: true, telegram: true },
+    maxConcurrent: 2,
+    commandTimeoutSeconds: 120,
+  },
+  // The specialist models (server/specialists.js): what you changed from the built-in roles
+  specialists: {
+    baseUrl: "", // the Ollama server ("" = the one of your local AI)
+    roles: [],
+    suggestedSeen: false, // the "pick models for your graphics card" card was dealt with
   },
   // The desktop app (Electron)
   desktop: {
@@ -229,6 +248,20 @@ function sanitize(input) {
   s.telegram.notifyReminders = s.telegram.notifyReminders !== false;
   s.telegram.notifyFocus = s.telegram.notifyFocus !== false;
   s.companion.interests = s.companion.interests.trim().slice(0, 1000);
+  const m = s.missions;
+  m.workspace = m.workspace.trim().slice(0, 300) || DEFAULTS.missions.workspace;
+  m.manager.planModel = m.manager.planModel.trim().slice(0, 120);
+  m.manager.fastModel = m.manager.fastModel.trim().slice(0, 120);
+  m.caps.maxMinutes = clamp(m.caps.maxMinutes, 1, 24 * 60);
+  m.caps.maxSteps = clamp(m.caps.maxSteps, 1, 200);
+  m.caps.maxCloudCalls = clamp(m.caps.maxCloudCalls, 0, 2000);
+  m.limits.maxMinutes = Math.min(m.caps.maxMinutes, clamp(m.limits.maxMinutes, 1, 24 * 60));
+  m.limits.maxSteps = Math.min(m.caps.maxSteps, clamp(m.limits.maxSteps, 1, 200));
+  m.limits.maxCloudCalls = Math.min(m.caps.maxCloudCalls, clamp(m.limits.maxCloudCalls, 0, 2000));
+  m.maxConcurrent = clamp(m.maxConcurrent, 1, 4);
+  m.commandTimeoutSeconds = clamp(m.commandTimeoutSeconds, 5, 3600);
+  s.specialists.baseUrl = s.specialists.baseUrl.trim().replace(/\/+$/, "").slice(0, 200);
+  s.specialists.roles = specialistRoles.sanitize(s.specialists.roles);
   s.voice.style = VOICE.styles.includes(s.voice.style) ? s.voice.style : DEFAULTS.voice.style;
   s.voice.interruptSensitivity = VOICE.sensitivities.includes(s.voice.interruptSensitivity) ? s.voice.interruptSensitivity : DEFAULTS.voice.interruptSensitivity;
   // A key code like "Space" or "KeyX"; anything else (or a key voice mode uses already) is the default

@@ -2,6 +2,16 @@
 
 ## Unreleased (0.6.0): a companion with an assistant behind it
 
+### Phase 2: the night room (a new look)
+- **One accent** (a warm amber, "the lamp": the robot's light is the interface's light) on a violet-tinted ink, with a light theme designed on its own. The blue and orange of before are gone; the accent swatches in Settings → Appearance are amber, pink, violet, blue and green, and anyone who never changed the blue gets the amber. See `docs/design/identity.md`.
+- **Two typefaces that ship with the app**: Bricolage Grotesque for the greeting, titles and the wordmark, Figtree for everything else.
+- **One icon language**: outline icons everywhere (`src/js/icons.js`). No more emoji as icons: the start chips, the Robot Studio's tabs and buttons, the voice screen's themes and pills, connector cards, tool steps, "Daily briefing" and the rest. Emoji stay only inside what you write (the mood picker, your habits) and what the AI says.
+- **Header overlap fixed**: the top bar has its own background and a soft fade, so the conversation starts below the Atlas/Mira switch and never runs under it.
+- **Fewer pills**: one row of follow-ups under a reply, connector shortcuts behind the message box's **+**, and "answers come from…" is a small quiet line. The model picker shows one clean name ("llama3.2", not "llama3.2 llama3.2:latest").
+- **Settings and Today are full views**; sentence-case labels instead of mixed capitals; a bigger, softer shape scale; depth from layered shadows instead of borders.
+- A **logo**: the robot's face (sidebar, app icon, README).
+- Still true: right-to-left (Arabic), German, keyboard navigation, focus rings, screen-reader roles, 44 px touch targets; `npm run test:a11y` is clean (it now also scans Today, Missions, the **+** menu and Settings as full views).
+
 ### Phase 1: three places, not a dozen
 - The sidebar has **Talk**, **Missions** and **Today** (Alt+1, Alt+2, Alt+3). Talk is Home: the robot greets you (big, before you've said anything; a corner of the chat afterwards), with one message box and a mic button. The voice card, the five connector pills and the six activity chips are gone from the start screen: three ideas, and **+** in the message box (attach a file, or look something up in Calendar, Gmail, Drive, News or GitHub).
 - **Today** is a page, not a window: one box adds a task, a reminder or an event, with what's coming up, your tasks (including ones without a date), habits, focus and a quick journal line under it; the old tabs are folded under "All tasks, reminders, calendar, habits and journal". (The calendar events of the day now show; the page asked the helper for a field it didn't send.)

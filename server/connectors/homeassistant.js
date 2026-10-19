@@ -43,7 +43,7 @@ function serviceFor(entityId, action, args = {}) {
 module.exports = {
   id: "homeassistant",
   name: "Home Assistant",
-  icon: "🏠",
+  icon: "home",
   description: "Control your smart home by talking: lights, switches, heating, blinds, media and scenes, and read your sensors.",
   help: "In Home Assistant open your profile → Security → Long-lived access tokens → Create token. The address is the one you open Home Assistant with, like http://homeassistant.local:8123.",
   link: "https://www.home-assistant.io/docs/authentication/#your-account-profile",

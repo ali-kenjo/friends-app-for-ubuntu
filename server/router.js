@@ -147,6 +147,40 @@ function plan(input) {
   return { ...flags, steps: [localStep(why), cloudStep(dynamic ? "The local AI didn't manage" : "The local AI failed")] };
 }
 
+// ---------- A step of a mission ----------
+// Which AI runs a step: the specialist of its role (a local model), and the manager's fast model to take over
+// when the specialist fails, is too slow or its answer doesn't pass the check (escalation). A step whose role is
+// "manager" (hard reasoning, architecture) goes to the manager's strong model, with the general local model as
+// the way out. In Private mode there is no cloud: a step that can't be done locally is a RouteError, and the
+// mission pauses instead of using the cloud.
+//   deps: { local(role) → brain|null, cloud(tier: "plan" | "fast") → brain|null }
+// Returns the same shape as plan(), so execute() runs it (with { track: false }: a mission's trouble doesn't
+// count as the chat's).
+function planStep({ role = "general", privateMode = false, deps, label = role }) {
+  const base = { mode: "mission", race: false, escalate: false, askCloud: false };
+  const step = (kind, brain, reason) => ({ kind, brain, reason });
+  const steps = [];
+  if (role === "manager") {
+    const cloud = privateMode ? null : deps.cloud("plan");
+    const local = deps.local("general");
+    if (cloud) steps.push(step("cloud", cloud, "The manager takes the hard reasoning"));
+    if (local) steps.push(step("local", local, cloud ? "The manager wasn't available" : "Private mode: the general local model"));
+  } else {
+    const local = deps.local(role);
+    const cloud = privateMode ? null : deps.cloud("fast");
+    if (local) steps.push(step("local", local, `The ${label} specialist`));
+    if (cloud) steps.push(step("cloud", cloud, local ? "The specialist couldn't, so the manager took over" : "No local model for this role, so the manager does it"));
+  }
+  if (!steps.length) {
+    throw new RouteError(
+      privateMode
+        ? "Private mode is on, so this step can only use a model on this computer, and there isn't one set up for it. Add a local model in Settings → AI → Specialists, or turn Private mode off."
+        : "No AI is available for this step. Add Gemini or a local model in Settings → AI & privacy."
+    );
+  }
+  return { ...base, steps };
+}
+
 // ---------- Running a plan ----------
 // io: {
 //   run(step, { signal, started }) → Promise   the AI call. It must call started() before anything
@@ -213,11 +247,13 @@ async function execute(plan, io) {
 
   const note = (step, result) => {
     if (result.ok && result.visible) {
-      forgive(step.kind);
+      if (io.track !== false) forgive(step.kind);
       return;
     }
-    if (result.slow) penalize(step.kind, SLOW_COOLDOWN_MS);
-    else penalize(step.kind, FAILURE_COOLDOWN_MS);
+    if (io.track !== false) {
+      if (result.slow) penalize(step.kind, SLOW_COOLDOWN_MS);
+      else penalize(step.kind, FAILURE_COOLDOWN_MS);
+    }
     errors.push(
       result.slow
         ? `The ${KIND_NAME[step.kind]} didn't answer in time.`
@@ -275,7 +311,7 @@ async function execute(plan, io) {
     io.emit(describe(step));
     const r = await attempt(step, { hasNext: i < plan.steps.length - 1 });
     if (r.ok && r.visible) {
-      forgive(step.kind);
+      if (io.track !== false) forgive(step.kind);
       return { step, ttftMs: r.ttftMs };
     }
     if (io.signal?.aborted) throw r.err || new Error("Stopped.");
@@ -285,4 +321,4 @@ async function execute(plan, io) {
   fail();
 }
 
-module.exports = { plan, execute, cloudReason, RouteError, penalized, penalize, forgive, resetHealth, estimateTokens, VISION };
+module.exports = { plan, planStep, execute, cloudReason, RouteError, penalized, penalize, forgive, resetHealth, estimateTokens, VISION };

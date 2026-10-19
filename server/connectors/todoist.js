@@ -15,7 +15,7 @@ const results = (data) => (Array.isArray(data) ? data : data.results || []);
 module.exports = {
   id: "todoist",
   name: "Todoist",
-  icon: "✔️",
+  icon: "check",
   description: "Your Todoist tasks: see them, add new ones with natural dates (\"tomorrow at 5pm\"), and complete them.",
   help: "Find your API token in Todoist → Settings → Integrations → Developer.",
   link: "https://app.todoist.com/app/settings/integrations/developer",

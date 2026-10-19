@@ -22,7 +22,7 @@ const brief = (i) => ({ number: i.number, title: i.title, state: i.state, author
 module.exports = {
   id: "github",
   name: "GitHub",
-  icon: "🐙",
+  icon: "github",
   description: "Your repositories, issues, pull requests, notifications and files, for building apps and websites together.",
   help: "Create a fine-grained token at github.com → Settings → Developer settings → Personal access tokens, with read access to your repositories (and Issues: read and write, to create issues).",
   link: "https://github.com/settings/personal-access-tokens/new",

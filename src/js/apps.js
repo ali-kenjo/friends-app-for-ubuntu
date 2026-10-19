@@ -1,6 +1,7 @@
 // ---------- Settings → Connected Apps: apps and MCP servers ----------
 // The built-in apps (server/connectors/) as cards you switch on, set up and
 // test, and any other app through MCP (server/mcp.js).
+import { iconEl } from "./icons.js";
 import { api } from "./api.js";
 import { t, tp } from "./i18n.js";
 import { confirmDialog } from "./dialogs.js";
@@ -51,7 +52,9 @@ function card(app) {
   toggle.addEventListener("change", () => save(app.id, { enabled: toggle.checked }));
   const [label, kind] = statusOf(app);
   const title = el("div", "app-title");
-  title.append(el("strong", "", `${app.icon} ${t(app.name)}`), el("span", `app-status ${kind}`, label));
+  const name = el("strong", "");
+  name.append(iconEl(app.icon && app.icon.length < 20 ? app.icon : "puzzle", { size: 18 }), document.createTextNode(` ${t(app.name)}`));
+  title.append(name, el("span", `app-status ${kind}`, label));
   head.append(title, toggle);
   c.append(head, el("p", "row-desc", t(app.description)));
 
@@ -161,7 +164,9 @@ function mcpItem(s) {
   const head = el("div", "app-head");
   const [label, kind] = STATUS[s.status] || [s.status, "off"];
   const title = el("div", "app-title");
-  title.append(el("strong", "", `🧩 ${s.name}`), el("span", `app-status ${kind}`, label));
+  const name = el("strong", "");
+  name.append(iconEl("puzzle", { size: 18 }), document.createTextNode(` ${s.name}`));
+  title.append(name, el("span", `app-status ${kind}`, label));
   const toggle = Object.assign(document.createElement("input"), { type: "checkbox", className: "toggle", checked: s.enabled });
   toggle.setAttribute("aria-label", t("{name} on", { name: s.name }));
   toggle.addEventListener("change", async () => {

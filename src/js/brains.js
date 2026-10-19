@@ -212,20 +212,27 @@ async function testSingleBrain(id, triggerBtn) {
   const meta = brainLi?.querySelector(".brain-meta");
   const origText = meta ? meta.textContent : "";
   triggerBtn.disabled = true;
-  if (meta) meta.textContent = t("Testing connection…");
+  if (meta) {
+    meta.textContent = t("Testing connection…");
+    meta.classList.remove("error");
+  }
 
   try {
     const res = await api.test(id);
     if (meta) meta.textContent = `✓ ${t("{ms} ms latency", { ms: nf(res.latencyMs) })} · ${t("{model} verified", { model: res.model })}`;
     if (meta) announce(meta.textContent);
   } catch (err) {
-    if (meta) meta.textContent = `⚠️ ${t("Connection error: {message}", { message: err.message })}`;
-    if (meta) announce(meta.textContent, { urgent: true });
+    if (meta) {
+      meta.textContent = t("Connection error: {message}", { message: err.message });
+      meta.classList.add("error");
+      announce(meta.textContent, { urgent: true });
+    }
   } finally {
     triggerBtn.disabled = false;
     setTimeout(() => {
-      if (meta && (meta.textContent.includes("✓") || meta.textContent.includes("⚠️"))) {
+      if (meta && (meta.textContent.includes("✓") || meta.classList.contains("error"))) {
         const b = brains.find((x) => x.id === id);
+        meta.classList.remove("error");
         if (b) meta.textContent = `${PROVIDERS[b.provider]?.company || t("AI")} · ${b.model} · ${maskKey(b.keyHint, b)}`;
       }
     }, 4500);
@@ -282,7 +289,7 @@ if (pingBtn) {
       announce(pingStatus.textContent);
     } catch (err) {
       pingStatus.className = "ai-ping-status error";
-      pingStatus.textContent = `⚠️ ${t("Connection error: {message}", { message: err.message })}`;
+      pingStatus.textContent = t("Connection error: {message}", { message: err.message });
       announce(pingStatus.textContent, { urgent: true });
     } finally {
       pingBtn.disabled = false;
@@ -539,7 +546,7 @@ if (brainTestBtn) {
     } catch (err) {
       if (brainTestFeedback) {
         brainTestFeedback.className = "test-feedback error";
-        brainTestFeedback.textContent = `⚠️ ${err.message}`;
+        brainTestFeedback.textContent = err.message;
       }
     } finally {
       brainTestBtn.disabled = false;

@@ -53,7 +53,7 @@ async function forecast(place, { days = 3, units = "metric" } = {}) {
 module.exports = {
   id: "weather",
   name: "Weather",
-  icon: "⛅",
+  icon: "sun",
   description: "Current weather and the forecast for any place. Free, no account.",
   link: "https://open-meteo.com",
   online: true,

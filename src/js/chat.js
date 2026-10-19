@@ -18,6 +18,7 @@ import { announce, trapModal } from "./a11y.js";
 import { characterName } from "./characters.js";
 import { openOnboarding, onboardingShowing } from "./onboarding.js";
 import { showView } from "./views.js";
+import { icon as outline } from "./icons.js";
 
 const main = document.getElementById("main");
 const messagesEl = document.getElementById("messages");
@@ -48,17 +49,17 @@ const ICONS = {
 
 // What each kind of tool step looks like in the activity list
 const ACTIVITY_ICONS = [
-  [/declin/i, "✋"],
-  [/couldn't/i, "⚠️"],
-  [/gmail|email/i, "✉️"],
-  [/calendar|event/i, "📅"],
-  [/drive/i, "📂"],
-  [/github/i, "🐙"],
-  [/news/i, "📰"],
-  [/memory note/i, "🧠"],
-  [/file|folder|trash/i, "📁"],
+  [/declin/i, "hand"],
+  [/couldn't/i, "warning"],
+  [/gmail|email/i, "mail"],
+  [/calendar|event/i, "calendar"],
+  [/drive/i, "drive"],
+  [/github/i, "github"],
+  [/news/i, "news"],
+  [/memory note/i, "brain"],
+  [/file|folder|trash/i, "folder"],
 ];
-const activityIcon = (text) => ACTIVITY_ICONS.find(([re]) => re.test(text))?.[1] || "⚙️";
+const activityIcon = (text) => ACTIVITY_ICONS.find(([re]) => re.test(text))?.[1] || "bolt";
 
 export function getCurrentChatId() {
   return currentChatId;
@@ -181,7 +182,8 @@ function setVia(msg, via) {
     actions.prepend(badge);
   }
   badge.dataset.kind = via.kind;
-  badge.textContent = `${via.kind === "local" ? t("🔒 Local") : t("☁️ Cloud")} · ${via.name}`;
+  badge.innerHTML = outline(via.kind === "local" ? "lock" : "cloud", { size: 13 });
+  badge.append(document.createTextNode(` ${via.kind === "local" ? t("Local") : t("Cloud")} · ${via.name}`));
   badge.title = via.reason || "";
   badge.dataset.reason = via.reason || "";
   badge.tabIndex = 0; // keyboard users can reach the reason too
@@ -230,7 +232,7 @@ function addActivity(msg, text) {
   const line = document.createElement("div");
   line.className = "activity-item";
   line.innerHTML = '<span class="activity-icon" aria-hidden="true"></span><span></span>';
-  line.firstChild.textContent = activityIcon(text);
+  line.firstChild.innerHTML = outline(activityIcon(text), { size: 16 });
   line.lastChild.textContent = text;
   msg.querySelector(".activity").append(line);
 }

@@ -72,7 +72,9 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     assert.match(await page.$eval("#robot-look-summary", (el) => el.textContent), /Studio/);
     await click("#robot-studio-open");
     await page.waitForFunction(() => !document.getElementById("robot-studio").hidden);
-    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab]", (tabs) => tabs.map((t) => t.textContent.trim())), ["🎨Colors", "🧩Shape", "😊Face", "🎩Outfit", "🏠Room", "✨Looks"]);
+    // (outline icons, not emoji)
+    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab] svg", (icons) => icons.length), 6);
+    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab]", (tabs) => tabs.map((t) => t.textContent.trim())), ["Colors", "Shape", "Face", "Outfit", "Room", "Looks"]);
     assert.strictEqual(await page.evaluate(() => document.getElementById("robot-studio").contains(document.activeElement)), true);
     assert.strictEqual(await page.evaluate(() => document.getElementById("settings-modal").inert), true);
     // The robot is drawn in the Studio's stage

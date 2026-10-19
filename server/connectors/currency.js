@@ -18,7 +18,7 @@ async function convert(amount, from, to) {
 module.exports = {
   id: "currency",
   name: "Currency",
-  icon: "💱",
+  icon: "coin",
   description: "Convert money between currencies at today's exchange rate (European Central Bank). No account.",
   link: "https://frankfurter.dev",
   online: true,

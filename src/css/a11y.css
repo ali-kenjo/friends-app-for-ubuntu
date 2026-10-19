@@ -154,3 +154,9 @@
 .view-title:focus-visible {
   outline: none;
 }
+
+/* The message box shows the focus on its whole outline (accent border and glow), so its text field needs no second ring */
+.composer textarea:focus-visible,
+.quick-add .field:focus-visible {
+  outline: none;
+}

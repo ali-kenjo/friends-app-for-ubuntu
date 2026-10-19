@@ -201,9 +201,9 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
     await postChat(key, { model, messages: [{ role: "user", content: "Hi" }], max_tokens: 8, stream: false });
   }
 
-  async function generateText({ key, model, system, prompt, temperature = 0.3, signal }) {
+  async function generateText({ key, model, system, prompt, temperature = 0.3, signal, json = false }) {
     const messages = toMessages([{ role: "user", parts: [{ text: prompt }] }], system);
-    const res = await postChat(key, { model, messages, temperature, stream: false }, signal);
+    const res = await postChat(key, { model, messages, temperature, stream: false, ...(json ? { response_format: { type: "json_object" } } : {}) }, signal);
     const data = await res.json();
     return stripThinking(String(data.choices?.[0]?.message?.content || ""));
   }

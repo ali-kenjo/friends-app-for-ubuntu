@@ -369,7 +369,7 @@ document.getElementById("gsi-kept-save").addEventListener("click", async () => {
     renderKept(data);
     if (!data.connected) await signIn();
   } catch (err) {
-    keptStatus.textContent = `⚠️ ${err.message}`;
+    keptStatus.textContent = err.message;
     keptStatus.className = "test-feedback error";
   }
 });
@@ -414,7 +414,7 @@ setupSave?.addEventListener("click", async () => {
     setupStatus.classList.add("ok");
     document.getElementById("gsi-error").hidden = true;
   } catch (err) {
-    setupStatus.textContent = `⚠️ ${err.message}`;
+    setupStatus.textContent = err.message;
     setupStatus.classList.add("error");
   } finally {
     setupSave.disabled = false;

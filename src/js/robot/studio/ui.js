@@ -3,6 +3,16 @@
 // Each returns { el, set(value) } (set updates it from outside without firing onChange), so a panel
 // can be built once and kept in step with the settings while you drag.
 import { t } from "../../i18n.js";
+import { icon, iconNames } from "../../icons.js";
+
+// An outline icon when the name is one of ours, else the text it is (a glyph like ◌), else nothing
+export function glyph(value, size = 20) {
+  if (!value) return null;
+  if (!iconNames.includes(value)) return document.createTextNode(value);
+  const holder = document.createElement("span");
+  holder.innerHTML = icon(value, { size });
+  return holder.firstChild;
+}
 
 export function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);
@@ -87,7 +97,7 @@ export function tiles({ label, name = "", items, value, onChange, columns = 0, c
   const group = h("div", { class: `rs-tiles${compact ? " compact" : ""}`, role: "radiogroup", ...(label ? { "aria-labelledby": id } : { "aria-label": name }), style: columns ? `--cols:${columns}` : "" });
   const buttons = new Map();
   for (const item of items) {
-    const b = h("button", { type: "button", class: "rs-tile", role: "radio", "aria-checked": "false", "data-id": item.id, title: item.about ? `${t(item.label)}: ${t(item.about)}` : t(item.label) }, h("span", { class: "rs-tile-icon", "aria-hidden": "true", text: item.icon || "" }), h("span", { class: "rs-tile-label", text: t(item.label) }));
+    const b = h("button", { type: "button", class: "rs-tile", role: "radio", "aria-checked": "false", "data-id": item.id, title: item.about ? `${t(item.label)}: ${t(item.about)}` : t(item.label) }, h("span", { class: "rs-tile-icon", "aria-hidden": "true" }, glyph(item.icon)), h("span", { class: "rs-tile-label", text: t(item.label) }));
     b.addEventListener("click", () => onChange(item.id));
     buttons.set(item.id, b);
     group.append(b);
@@ -153,7 +163,7 @@ export function textField({ label, value = "", max = 16, onChange, placeholder =
 }
 
 export function button(text, onClick, { primary = false, small = true, icon = "", title = "" } = {}) {
-  const b = h("button", { type: "button", class: `btn${small ? " small" : ""}${primary ? " btn-primary" : ""}`, title: title || undefined }, icon ? h("span", { "aria-hidden": "true", text: icon }) : null, icon ? " " : null, text);
+  const b = h("button", { type: "button", class: `btn${small ? " small" : ""}${primary ? " btn-primary" : ""}`, title: title || undefined }, icon ? h("span", { class: "rs-btn-icon", "aria-hidden": "true" }, glyph(icon, 16)) : null, text);
   b.addEventListener("click", onClick);
   return b;
 }

@@ -670,11 +670,11 @@
 
             <div class="explain" id="local-vs-cloud">
               <div class="explain-item">
-                <span class="explain-icon" aria-hidden="true">🔒</span>
+                <span class="explain-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
                 <p data-i18n-html="explain.local"><strong>Local AI</strong> runs on this computer. Your messages never leave it, and it works offline. It can be slower on an older computer.</p>
               </div>
               <div class="explain-item">
-                <span class="explain-icon" aria-hidden="true">☁️</span>
+                <span class="explain-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 0 9.5z"/></svg></span>
                 <p data-i18n-html="explain.cloud"><strong>Cloud AI</strong> (Gemini) runs on Google's servers. It is faster and smarter, but your messages are sent to Google to be answered.</p>
               </div>
             </div>
@@ -731,11 +731,11 @@
               </div>
               <select class="field" data-setting="routing.mode" id="routing-mode">
                 <option value="fixed">One AI (the one you pick)</option>
-                <option value="auto">✨ Auto</option>
-                <option value="dynamic">🔄 Dynamic</option>
-                <option value="fastest">⚡ Fastest</option>
-                <option value="local">🔒 Local only</option>
-                <option value="cloud">☁️ Cloud only</option>
+                <option value="auto">Auto</option>
+                <option value="dynamic">Dynamic</option>
+                <option value="fastest">Fastest</option>
+                <option value="local">Local only</option>
+                <option value="cloud">Cloud only</option>
               </select>
             </label>
 
@@ -801,15 +801,15 @@
             <div class="row-label" id="effort-label">Thinking effort</div>
             <div class="choice-grid" id="reasoning-effort-grid" role="radiogroup" aria-labelledby="effort-label">
               <button type="button" class="choice" data-effort="fast" role="radio" aria-checked="false">
-                <span class="choice-title">⚡ Fast</span>
+                <span class="choice-title">Fast</span>
                 <span class="choice-desc">Concise, low-latency</span>
               </button>
               <button type="button" class="choice selected" data-effort="balanced" role="radio" aria-checked="true">
-                <span class="choice-title">⚖️ Balanced</span>
+                <span class="choice-title">Balanced</span>
                 <span class="choice-desc">Recommended</span>
               </button>
               <button type="button" class="choice" data-effort="deep" role="radio" aria-checked="false">
-                <span class="choice-title">🧠 Deep</span>
+                <span class="choice-title">Deep</span>
                 <span class="choice-desc">Step-by-step analysis</span>
               </button>
             </div>
@@ -862,10 +862,10 @@
 
             <div class="preset-chips">
               <span class="preset-label">Quick add:</span>
-              <button type="button" class="chip preset-btn" data-preset="flash">⚡ 2.5 Flash (fast)</button>
-              <button type="button" class="chip preset-btn" data-preset="pro">🧠 2.5 Pro (deep)</button>
-              <button type="button" class="chip preset-btn" data-preset="flash2">🎙️ 2.0 Flash (voice)</button>
-              <button type="button" class="chip preset-btn" data-preset="local">🔒 Local AI (private)</button>
+              <button type="button" class="chip preset-btn" data-preset="flash">2.5 Flash (fast)</button>
+              <button type="button" class="chip preset-btn" data-preset="pro">2.5 Pro (deep)</button>
+              <button type="button" class="chip preset-btn" data-preset="flash2">2.0 Flash (voice)</button>
+              <button type="button" class="chip preset-btn" data-preset="local">Local AI (private)</button>
             </div>
 
             <ul class="brain-list" id="brain-list"></ul>
@@ -1454,7 +1454,7 @@
 
           <div class="subhead"><div>
             <div class="subhead-title">Filming mode</div>
-            <p class="hint">For filming the screen with a camera or phone: in voice mode, press F or the 🎬 button.</p>
+            <p class="hint">For filming the screen with a camera or phone: in voice mode, press F or the camera button.</p>
           </div></div>
           <div class="row">
             <div><div class="row-label">Start delay</div><div class="row-desc">Time to get to your camera before the conversation starts</div></div>
@@ -1576,7 +1576,7 @@
 
           <div class="ws-features-list">
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">📅</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
               <div class="ws-feature-content">
                 <strong>Google Calendar</strong>
                 <span>See what's coming up, and add or change events (it asks first).</span>
@@ -1585,7 +1585,7 @@
             </div>
 
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">✉️</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
               <div class="ws-feature-content">
                 <strong>Gmail</strong>
                 <span>Search your inbox, read messages, and write drafts or replies (it asks before sending).</span>
@@ -1594,7 +1594,7 @@
             </div>
 
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">📁</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
               <div class="ws-feature-content">
                 <strong>Google Drive, Docs, Sheets & Slides</strong>
                 <span>Find and read your documents, spreadsheets and presentations.</span>
@@ -1610,14 +1610,14 @@
               </div>
             </div>
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">☑️</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg></div>
               <div class="ws-feature-content">
                 <strong>Google Tasks</strong>
                 <span>Your task lists that sync with your phone. (Turn on the Google Tasks API for your project.)</span>
               </div>
             </div>
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">🐙</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></div>
               <div class="ws-feature-content">
                 <strong>GitHub</strong>
                 <span>Search repositories and see what's trending.</span>
@@ -1626,7 +1626,7 @@
             </div>
 
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">📰</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"/><path d="M7 16h6M7 8h6m-6 4h6"/></svg></div>
               <div class="ws-feature-content">
                 <strong>News</strong>
                 <span>Search headlines and current events.</span>
@@ -1703,7 +1703,7 @@
           <div class="app-card" id="telegram-card">
             <div class="app-head">
               <div class="app-title">
-                <strong>✈️ Telegram Bot</strong>
+                <strong>Telegram bot</strong>
                 <span class="app-status off" id="telegram-status-pill">Off</span>
               </div>
               <input type="checkbox" class="toggle" id="telegram-enabled-toggle" data-setting="telegram.enabled" aria-label="Telegram Bot on">
@@ -1747,7 +1747,7 @@
           <div class="app-card" id="vault-card">
             <div class="app-head">
               <div class="app-title">
-                <strong>📝 Markdown Notes Vault</strong>
+                <strong>Markdown notes vault</strong>
               </div>
               <input type="checkbox" class="toggle" data-setting="localNotes.enabled" aria-label="Notes Vault on">
             </div>
@@ -1998,22 +1998,22 @@
     <div class="voice-top">
       <div class="voice-status" role="status" aria-live="polite"><span class="voice-dot" aria-hidden="true"></span><span id="voice-status">Listening</span></div>
       <div class="voice-theme-bar" id="voice-theme-bar" role="group" aria-label="Look of the voice screen">
-        <button type="button" class="voice-theme-btn active" data-theme="sunset" aria-pressed="true" title="Warm Sunset Waves">🌅 Sunset Waves</button>
-        <button type="button" class="voice-theme-btn" data-theme="aurora" aria-pressed="false" title="Warm Aurora">✨ Aurora</button>
-        <button type="button" class="voice-theme-btn" data-theme="cosmic" aria-pressed="false" title="Cosmic Pulse">🌌 Cosmic</button>
-        <button type="button" class="voice-theme-btn" data-theme="zen" aria-pressed="false" title="Zen Ripples">💧 Zen</button>
-        <button type="button" class="voice-theme-btn" data-theme="hearth" aria-pressed="false" title="Firefly Hearth">🔥 Hearth</button>
-        <button type="button" class="voice-theme-btn" data-theme="robot" aria-pressed="false" title="Robot: a 3D robot that is the AI's body">🤖 Robot</button>
+        <button type="button" class="voice-theme-btn active" data-theme="sunset" aria-pressed="true" title="Warm Sunset Waves"><svg viewBox="0 0 24 24"><path d="M3 18h18"/><path d="M7 18a5 5 0 0 1 10 0"/><line x1="12" y1="6" x2="12" y2="9"/><line x1="4.6" y1="11.6" x2="6.4" y2="13"/><line x1="19.4" y1="11.6" x2="17.6" y2="13"/></svg><span>Sunset Waves</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="aurora" aria-pressed="false" title="Warm Aurora"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg><span>Aurora</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="cosmic" aria-pressed="false" title="Cosmic Pulse"><svg viewBox="0 0 24 24"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/><path d="M5 16l.6 1.4L7 18l-1.4.6L5 20l-.6-1.4L3 18l1.4-.6z"/></svg><span>Cosmic</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="zen" aria-pressed="false" title="Zen Ripples"><svg viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg><span>Zen</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="hearth" aria-pressed="false" title="Firefly Hearth"><svg viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 2.5 1.5 2.5C10 9 11 6 12 3z"/></svg><span>Hearth</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="robot" aria-pressed="false" title="Robot: a 3D robot that is the AI's body"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg><span>Robot</span></button>
       </div>
       <div class="character-switch voice-character-switch" id="voice-character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
       <button type="button" class="voice-onair" id="voice-onair" aria-pressed="false" title="Co-host mode: it knows it's on camera and keeps private things out of it" aria-label="On air: co-host mode, private things stay out of it">ON AIR</button>
       <span class="voice-rec-badge" id="voice-rec-badge"><span class="voice-rec-dot"></span>REC <span id="voice-rec-time">0:00</span></span>
       <button type="button" class="voice-speed-pill" id="voice-engine" title="How the conversation runs: Live (Google), Studio or Instant">
-        <span class="speed-bolt" id="voice-engine-icon">⚡</span>
+        <span class="speed-bolt" id="voice-engine-icon"><svg viewBox="0 0 24 24"><polygon points="13 2 4 14 11 14 10 22 20 9 13 9 13 2"/></svg></span>
         <span id="voice-engine-label">Live</span>
       </button>
       <button type="button" class="voice-speed-pill" id="voice-style" title="How much it talks: Listener, Balanced or Chatty">
-        <span class="speed-bolt" id="voice-style-icon">🙂</span>
+        <span class="speed-bolt" id="voice-style-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14a4.5 4.5 0 0 0 8 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg></span>
         <span id="voice-style-label">Balanced</span>
       </button>
       <button type="button" class="voice-top-btn voice-robot-only" id="voice-scene" title="Robot scene: background and camera" aria-label="Robot scene: background and camera" aria-expanded="false" aria-controls="voice-scene-pop">

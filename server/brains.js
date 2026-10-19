@@ -5,21 +5,18 @@ const path = require("path");
 const { dataDir, writeJson } = require("./config");
 const gemini = require("./gemini");
 const openai = require("./openai");
-const ollama = require("./ollama");
+const providers = require("./providers");
 const keys = require("./keys");
 const settings = require("./settings");
 
-// "gemini" is Google's cloud API; "local" is any OpenAI-compatible server
-// (Ollama, LM Studio, llama.cpp, vLLM...), see openai.js
-const PROVIDERS = { gemini: true, local: true };
+// The providers are in providers.js ("gemini" is Google's cloud API; "local" is any OpenAI-compatible
+// server: Ollama, LM Studio, llama.cpp, vLLM…, see openai.js)
+const isLocalProvider = (provider) => providers.kindOf(provider) === "local";
+const PROVIDERS = new Proxy({}, { get: (_, name) => providers.has(name), has: (_, name) => providers.has(name) });
 
-// The functions that talk to a brain's provider (same for both, see openai.js)
-function apiFor({ provider, protocol, baseUrl, contextSize, keepAlive, speechUrl, speechModel }) {
-  if (provider === "local") {
-    if (protocol === "ollama") return ollama.create({ baseUrl, contextSize, keepAlive, speechUrl, speechModel });
-    return openai.create({ baseUrl, speechUrl, speechModel });
-  }
-  return gemini;
+// The functions that talk to a brain's provider (the same ones for every provider, see providers.js)
+function apiFor(brain) {
+  return providers.create(brain);
 }
 
 // Private mode (Settings → AI & privacy): only local AI, nothing goes to the internet
@@ -27,7 +24,7 @@ const privateMode = () => settings.get().privacy?.localOnly === true;
 const PRIVATE_MESSAGE = "Private mode is on, so only a local AI can answer. Add a local AI, or turn Private mode off in Settings → AI & privacy.";
 
 // Local servers rarely have a key; Gemini always does
-const keyFor = (brain) => (brain.provider === "local" ? keys.getOptionalKey(brain.id) : keys.getKey(brain.id));
+const keyFor = (brain) => (isLocalProvider(brain.provider) ? keys.getOptionalKey(brain.id) : keys.getKey(brain.id));
 const file = path.join(dataDir, "brains.json");
 
 let state = null;
@@ -81,12 +78,12 @@ function pickDefaultModel(models) {
 
 async function listModels({ id, key, provider = "gemini", protocol, baseUrl }) {
   key = typeof key === "string" ? key.trim() : "";
-  if (privateMode() && !(id ? find(Number(id)).provider === "local" : provider === "local")) throw new Error(PRIVATE_MESSAGE);
+  if (privateMode() && !(id ? isLocalProvider(find(Number(id)).provider) : isLocalProvider(provider))) throw new Error(PRIVATE_MESSAGE);
   if (id) {
     const brain = find(Number(id));
     return apiFor(brain).listModels(key || keyFor(brain));
   }
-  if (provider === "local") {
+  if (isLocalProvider(provider)) {
     const fields = localFields({ protocol, baseUrl });
     return apiFor({ provider, ...fields }).listModels(key);
   }
@@ -127,7 +124,7 @@ async function saveBrain({ id, provider, name, model, key, protocol, baseUrl, sp
   if (!PROVIDERS[provider]) throw new Error("That kind of AI isn't supported.");
   const existing = id ? find(id) : null;
   if (existing && existing.provider !== provider) throw new Error("A brain can't change its provider. Add a new one instead.");
-  const local = provider === "local";
+  const local = isLocalProvider(provider);
   if (privateMode() && !local) throw new Error(PRIVATE_MESSAGE);
   const extra = local
     ? localFields({
@@ -209,7 +206,7 @@ function setEnabled(id, enabled) {
 }
 
 // "local" runs on this computer, "cloud" is anything online (Gemini)
-const kindOf = (b) => (b.provider === "local" ? "local" : "cloud");
+const kindOf = (b) => providers.kindOf(b.provider);
 
 // A saved brain with its key and its functions (server only, never sent to the page)
 const materialize = (b) => ({ ...b, key: keyFor(b), api: apiFor(b), kind: kindOf(b) });
@@ -258,7 +255,7 @@ function forVoice() {
 // A brain that was deleted or switched off falls back to the default one.
 function getForChat(id) {
   const s = load();
-  const usable = (b) => !privateMode() || b.provider === "local";
+  const usable = (b) => !privateMode() || isLocalProvider(b.provider);
   const brain =
     s.brains.find((b) => b.id === id && b.enabled && usable(b)) ||
     s.brains.find((b) => b.id === s.defaultBrainId && usable(b)) ||
@@ -275,28 +272,28 @@ function getForChat(id) {
 async function warm({ brainId, voice } = {}) {
   const brain = getForChat(Number(brainId) || null);
   const out = { warm: false };
-  if (brain?.provider === "local" && brain.api.warm) Object.assign(out, await brain.api.warm({ model: brain.model }));
-  if (voice && brain?.provider === "local") out.voice = (await require("./voice").warm()).warm;
+  if (brain && isLocalProvider(brain.provider) && brain.api.warm) Object.assign(out, await brain.api.warm({ model: brain.model }));
+  if (voice && brain && isLocalProvider(brain.provider)) out.voice = (await require("./voice").warm()).warm;
   return out;
 }
 
 async function testBrain(id) {
   const brain = id ? find(id) : getForChat(null);
   if (!brain) throw new Error("No active AI brain configured.");
-  if (privateMode() && brain.provider !== "local") throw new Error(PRIVATE_MESSAGE);
+  if (privateMode() && !isLocalProvider(brain.provider)) throw new Error(PRIVATE_MESSAGE);
   const plainKey = keyFor(brain);
-  if (!plainKey && brain.provider !== "local") throw new Error("No API key found for this brain.");
+  if (!plainKey && !isLocalProvider(brain.provider)) throw new Error("No API key found for this brain.");
 
   const api = apiFor(brain);
   const start = Date.now();
   const models = await api.listModels(plainKey).catch((err) => {
-    if (brain.provider === "local") return []; // not every server lists its models
+    if (isLocalProvider(brain.provider)) return []; // not every server lists its models
     throw err;
   });
   // A real request to this model: the list still names models Google retired
   await api.checkModel({ key: plainKey, model: brain.model });
   const latencyMs = Date.now() - start;
-  const isAvailable = !models.length || (brain.provider === "local" ? hasModel(models, brain.model) : models.includes(brain.model));
+  const isAvailable = !models.length || (isLocalProvider(brain.provider) ? hasModel(models, brain.model) : models.includes(brain.model));
   return {
     ok: true,
     latencyMs,
@@ -311,7 +308,7 @@ async function testBrain(id) {
 async function testConfig({ key, provider = "gemini", model, protocol, baseUrl }) {
   key = typeof key === "string" ? key.trim() : key;
   if (!PROVIDERS[provider]) throw new Error("That kind of AI isn't supported.");
-  const local = provider === "local";
+  const local = isLocalProvider(provider);
   if (privateMode() && !local) throw new Error(PRIVATE_MESSAGE);
   if (!local && !key) throw new Error("Paste an API key first.");
   const api = apiFor({ provider, ...(local ? localFields({ protocol, baseUrl }) : {}) });
@@ -332,6 +329,7 @@ function reload() {
 }
 
 module.exports = {
+  apiFor,
   reload,
   publicState,
   listModels,

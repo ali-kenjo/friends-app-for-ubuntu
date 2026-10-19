@@ -37,7 +37,7 @@ function renderDocStatus() {
   if (!docStatus) return;
   const doc = getActiveDoc();
   if (doc && doc.name) {
-    docStatus.textContent = `📄 ${doc.name} (${doc.content.length} chars)`;
+    docStatus.textContent = `${doc.name} (${doc.content.length} chars)`;
     if (docClearBtn) docClearBtn.hidden = false;
   } else {
     docStatus.textContent = t("No document attached.");
