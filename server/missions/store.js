@@ -58,6 +58,7 @@ function create(fields) {
     report: null, // { title, note, summary, sources, files }
     workdir: "",
     automationId: fields.automationId || null,
+    automation: fields.automation || null, // what to repeat when the plan is approved: { name, schedule | trigger }
     character: fields.character || null,
     timeline: [], // short lines for the page: { at, type, text, step? }
     error: "",
@@ -153,9 +154,17 @@ function readAudit(missionId, { limit = 500 } = {}) {
   }
 }
 
+function readReport(missionId) {
+  try {
+    return fs.readFileSync(path.join(dirOf(missionId), "report.md"), "utf8");
+  } catch {
+    return "";
+  }
+}
+
 function writeReport(missionId, markdown) {
   fs.mkdirSync(dirOf(missionId), { recursive: true, mode: 0o700 });
   fs.writeFileSync(path.join(dirOf(missionId), "report.md"), markdown, { mode: 0o600 });
 }
 
-module.exports = { create, save, get, find, all, remove, reload, note, audit, readAudit, writeReport, short, dirOf, root, newId };
+module.exports = { create, save, get, find, all, remove, reload, note, audit, readAudit, readReport, writeReport, short, dirOf, root, newId };

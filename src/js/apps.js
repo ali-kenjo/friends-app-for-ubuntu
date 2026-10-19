@@ -284,10 +284,23 @@ document.getElementById("telegram-allowed-users")?.addEventListener("change", sy
 document.getElementById("telegram-save-btn")?.addEventListener("click", async () => {
   syncTelegramAllowedUsers();
   const feedback = document.getElementById("telegram-feedback");
-  if (feedback) {
-    feedback.textContent = t("Settings saved.");
-    feedback.className = "test-feedback ok";
-    setTimeout(() => { feedback.textContent = ""; }, 2500);
+  const tokenInput = document.getElementById("telegram-token-input");
+  try {
+    // The token goes to the system keyring, not into the settings
+    if (tokenInput?.value.trim()) {
+      await api.telegram.saveToken(tokenInput.value.trim());
+      tokenInput.value = "";
+    }
+    if (feedback) {
+      feedback.textContent = t("Saved.");
+      feedback.className = "test-feedback ok";
+      setTimeout(() => { feedback.textContent = ""; }, 2500);
+    }
+  } catch (err) {
+    if (feedback) {
+      feedback.textContent = err.message;
+      feedback.className = "test-feedback error";
+    }
   }
   await refreshTelegramStatus();
 });
@@ -350,6 +363,8 @@ onSettings((s) => {
   if (allowedInput && document.activeElement !== allowedInput) {
     allowedInput.value = (s?.telegram?.allowedUserIds || []).join(", ");
   }
+  const tokenInput = document.getElementById("telegram-token-input");
+  if (tokenInput) tokenInput.placeholder = s?.telegram?.hasToken ? t("Saved. Type a new token to replace it.") : "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ";
   refreshTelegramStatus();
 });
 

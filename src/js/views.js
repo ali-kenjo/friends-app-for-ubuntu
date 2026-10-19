@@ -17,6 +17,7 @@ const VIEWS = {
 };
 
 let current = "home";
+let currentDetail = ""; // e.g. the mission that's open
 let first = true;
 const coarse = matchMedia("(pointer: coarse)");
 
@@ -53,8 +54,10 @@ export function showView(name, { detail = "", focus = true, updateHash = true } 
   }
   document.body.dataset.view = name;
   if (updateHash) setHash(name, detail);
+  const detailChanged = detail !== currentDetail;
   current = name;
-  if (changed || detail) fire("view", { name, detail });
+  currentDetail = detail;
+  if (changed || detailChanged) fire("view", { name, detail });
   if (changed && !first) {
     announce(VIEWS[name].title());
     if (focus) {

@@ -17,6 +17,8 @@ import "./episodes.js";
 import "./life.js";
 import "./apps.js";
 import "./missions/index.js";
+import "./specialists.js";
+import "./updates.js";
 import "./composer.js";
 import "./onboarding.js";
 import "./chat.js";

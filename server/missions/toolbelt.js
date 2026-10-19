@@ -29,6 +29,7 @@ const OWN = {
   system_status: fn("system_status", "How this computer is doing: processor, memory, disks, the graphics card's temperature, failing services.", { parts: str("Optional, comma-separated: cpu, memory, disks, gpu, services (default: all)") }, []),
   notify_user: fn("notify_user", "Tell the user something now: a notification on this computer (and on Telegram when it's connected). For alerts and milestones; use it sparingly.", { message: str("What to say, one or two sentences"), title: str("Optional short title") }, ["message"]),
   send_telegram: fn("send_telegram", "Send the user a message on Telegram.", { text: str("The message") }, ["text"]),
+  semantic_search_notes: fn("semantic_search_notes", "Search the user's notes vault by meaning (not only by the words), with a local embeddings model. Gives the notes closest to the question.", { query: str("What to look for, in a sentence"), limit: num("How many notes (default 6)") }, ["query"]),
 };
 
 const cap = (text, head = 3000, tail = 18000) => {
@@ -47,10 +48,11 @@ function declarations(settings, { google = false, telegram = false, mission = nu
     aiNotes: { ...settings.aiNotes, enabled: true },
     companion: { ...settings.companion, recall: true, followUps: false },
   };
-  const list = tools.declarations(open, { voice: false, robot: false, workspace: google, onAir: false, live: false });
+  const list = tools.declarations(open, { voice: false, robot: false, workspace: google, onAir: false, live: false }).filter((d) => d.name !== "start_mission");
   const names = new Set(list.map((d) => d.name));
   const extra = [OWN.run_command, OWN.system_status, OWN.notify_user];
   if (telegram) extra.push(OWN.send_telegram);
+  if (require("../embeddings").ready(settings)) extra.push(OWN.semantic_search_notes);
   return [...list, ...extra.filter((d) => !names.has(d.name))];
 }
 
@@ -203,8 +205,9 @@ function create(opts) {
       const asking = opts.requestApproval({ action, why: verdict.why, step });
       // While you decide, other missions can use the model
       const allowed = await (step?.pause ? step.pause(asking) : asking);
-      log({ risk: action.risk, approval: allowed ? "allowed" : "declined", why: verdict.why });
-      if (!allowed) return { error: "The user declined this action. Carry on without it, or change the approach." };
+      const declined = "The user declined this action. Carry on without it, or change the approach.";
+      log({ risk: action.risk, approval: allowed ? "allowed" : "declined", why: verdict.why, ...(allowed ? {} : { ok: false, result: declined }) });
+      if (!allowed) return { error: declined };
       // What you allowed becomes part of what this mission may do
       mission.scope.push({ type: action.type, risk: action.risk, ...scopeFields(action), summary: action.summary, grantedAt: Date.now() });
       store.save(mission);
@@ -223,6 +226,7 @@ function create(opts) {
     try {
       if (name === "run_command") result = await runCommand(args);
       else if (name === "system_status") result = { ok: true, ...(await system.snapshot(args.parts ? String(args.parts).split(/[\s,]+/).filter(Boolean) : null)) };
+      else if (name === "semantic_search_notes") result = { ok: true, ...(await require("../embeddings").search(String(args.query || ""), { limit: Math.min(15, Number(args.limit) || 6), settings })) };
       else if (name === "notify_user") {
         if (Date.now() - lastNotify < 20000) result = { ok: true, note: "Skipped: it already notified a moment ago." };
         else {
@@ -247,7 +251,7 @@ function create(opts) {
       step.effects ||= [];
       step.effects.push({ tool: name, summary: action.summary, at: Date.now() });
     }
-    log({ ok, risk: action.risk, type: action.type, result: store.short(result, 600) });
+    log({ ok, risk: action.risk, action: action.type, result: store.short(result, 600) });
     return result;
   }
 

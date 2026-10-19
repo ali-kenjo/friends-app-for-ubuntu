@@ -522,6 +522,14 @@
             <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><polyline points="9 12 11 14 15 10"/></svg>
             <span>AI &amp; privacy</span>
           </button>
+          <button class="tab" data-tab="specialists" role="tab" id="tab-specialists" aria-controls="pane-specialists" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg>
+            <span>Specialists</span>
+          </button>
+          <button class="tab" data-tab="missions" role="tab" id="tab-missions" aria-controls="pane-missions" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 5h11l-2 3.5L16 12H5"/></svg>
+            <span>Missions</span>
+          </button>
           <div class="nav-group" role="presentation">Extras</div>
           <button class="tab" data-tab="integrations" role="tab" id="tab-integrations" aria-controls="pane-integrations" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -1493,6 +1501,93 @@
         </section>
 
         <!-- Connected Apps & Workspace -->
+        <!-- Specialists -->
+        <section class="pane" data-pane="specialists" id="pane-specialists" role="tabpanel" aria-labelledby="tab-specialists">
+          <h3>Specialists</h3>
+          <p class="hint">Small AI models on this computer, each with a job. The manager (Gemini) hands steps of a mission to the right one. On a graphics card with 6 GB only one big model fits at a time, so Friends loads and unloads them for you, and keeps steps that use the same model together.</p>
+          <div class="spec-status card" id="spec-status" role="status"></div>
+          <div class="spec-setup card" id="spec-setup" hidden>
+            <div>
+              <div class="row-label">Pick models for my graphics card</div>
+              <div class="row-desc" id="spec-setup-text"></div>
+            </div>
+            <div class="actions-row">
+              <button type="button" class="btn btn-primary" id="spec-use-suggestions">Use the suggestions</button>
+              <button type="button" class="link-btn" id="spec-dismiss-suggestions">Not now</button>
+            </div>
+          </div>
+          <ul class="spec-list" id="spec-roles" aria-label="The roles"></ul>
+          <div class="actions-row">
+            <button type="button" class="btn" id="spec-add">Add a role</button>
+            <button type="button" class="btn" id="spec-reset">Reset to the suggested defaults</button>
+            <span class="test-feedback" id="spec-feedback" role="status"></span>
+          </div>
+          <form class="card spec-new" id="spec-new" hidden>
+            <label class="form-field"><span class="row-label">Name</span><input class="field wide" name="label" maxlength="60" placeholder="Translator" autocomplete="off" required></label>
+            <label class="form-field"><span class="row-label">When should the manager choose it?</span><input class="field wide" name="when" maxlength="300" placeholder="Translating between English and German" autocomplete="off"></label>
+            <label class="form-field"><span class="row-label">Its instructions</span><textarea class="field textarea wide" name="system" rows="3" maxlength="4000" placeholder="You translate text exactly, keeping the tone."></textarea></label>
+            <div class="actions-row"><button type="submit" class="btn btn-primary">Add this role</button><button type="button" class="btn btn-ghost" id="spec-new-cancel">Cancel</button></div>
+          </form>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Models on this computer</div>
+            <p class="hint">What Ollama has. Pull a new one by name (for example one of the suggestions); it needs the internet once, and Private mode keeps it off.</p>
+          </div></div>
+          <form class="spec-pull" id="spec-pull">
+            <input class="field" id="spec-pull-name" list="spec-pull-list" placeholder="qwen3.5:4b" autocomplete="off" spellcheck="false" aria-label="Model to pull">
+            <datalist id="spec-pull-list"></datalist>
+            <button type="submit" class="btn btn-primary" id="spec-pull-go">Pull</button>
+          </form>
+          <div class="spec-progress" id="spec-progress" hidden>
+            <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Download progress"><i id="spec-progress-bar" style="width:0%"></i></div>
+            <p class="row-desc" id="spec-progress-text" role="status"></p>
+          </div>
+          <ul class="spec-models" id="spec-models" aria-label="Installed models"></ul>
+        </section>
+
+        <!-- Missions -->
+        <section class="pane" data-pane="missions" id="pane-missions" role="tabpanel" aria-labelledby="tab-missions">
+          <h3>Missions</h3>
+          <p class="hint">Goals that your companion carries out in the background: it makes a plan, you approve it once, and it gets done. Where they work, how long they may take, and who plans them.</p>
+          <label class="row">
+            <div><div class="row-label">Missions on</div><div class="row-desc">Switch off to hide Missions and stop the companion from starting them</div></div>
+            <input type="checkbox" class="toggle" data-setting="missions.enabled">
+          </label>
+          <label class="form-field">
+            <span class="row-label">Workspace folder</span>
+            <span class="row-desc">Every mission gets a folder of its own in here to work in (files it makes, projects it builds, commands it runs).</span>
+            <input class="field wide" type="text" data-setting="missions.workspace" placeholder="~/friends-workspace" autocomplete="off" spellcheck="false">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Limits</div>
+            <p class="hint">What each plan starts with, and what no plan may go beyond. The plan shows its limits before you approve it.</p>
+          </div></div>
+          <label class="row"><div><div class="row-label">Minutes at most</div><div class="row-desc">A mission pauses when it has been working this long</div></div><input class="field narrow" type="number" min="1" max="1440" data-type="number" data-setting="missions.limits.maxMinutes"></label>
+          <label class="row"><div><div class="row-label">Steps at most</div></div><input class="field narrow" type="number" min="1" max="200" data-type="number" data-setting="missions.limits.maxSteps"></label>
+          <label class="row"><div><div class="row-label">Cloud calls at most</div><div class="row-desc">How often it may ask Gemini (each call counts against your free limit)</div></div><input class="field narrow" type="number" min="0" max="2000" data-type="number" data-setting="missions.limits.maxCloudCalls"></label>
+          <label class="row"><div><div class="row-label">Command time limit (seconds)</div><div class="row-desc">One command is stopped after this long</div></div><input class="field narrow" type="number" min="5" max="3600" data-type="number" data-setting="missions.commandTimeoutSeconds"></label>
+          <label class="row"><div><div class="row-label">Missions at the same time</div></div><input class="field narrow" type="number" min="1" max="4" data-type="number" data-setting="missions.maxConcurrent"></label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">The manager</div>
+            <p class="hint">Gemini plans, delegates and checks. A stronger model plans and checks; a faster one does routine steps. Leave them empty to choose from what your key can use. In Private mode a model on this computer is the manager.</p>
+          </div></div>
+          <label class="form-field"><span class="row-label">Planning and checking model</span><input class="field wide" type="text" data-setting="missions.manager.planModel" placeholder="Automatic (the newest Pro)" autocomplete="off" spellcheck="false"></label>
+          <label class="form-field"><span class="row-label">Routine steps model</span><input class="field wide" type="text" data-setting="missions.manager.fastModel" placeholder="Automatic (your Gemini AI's model)" autocomplete="off" spellcheck="false"></label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Telling you</div>
+            <p class="hint">At the milestones: a plan to approve, a question, halfway, done, or trouble.</p>
+          </div></div>
+          <label class="row"><div><div class="row-label">On this computer</div><div class="row-desc">A notification, also with the window closed</div></div><input type="checkbox" class="toggle" data-setting="missions.notify.desktop"></label>
+          <label class="row"><div><div class="row-label">On Telegram</div><div class="row-desc">With buttons to approve a plan or answer a question (set up under Telegram)</div></div><input type="checkbox" class="toggle" data-setting="missions.notify.telegram"></label>
+          <div class="honesty-note">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Approving a plan covers exactly the actions it lists. Anything else that sends, deletes or runs a command pauses the mission and asks you. Files stay inside the folders you allow (AI &amp; privacy) and the mission's own folder, deleting goes to the trash, commands run in the mission's folder with a time limit and without your keys. Stop works at once.</span>
+          </div>
+        </section>
+
         <section class="pane" data-pane="integrations" id="pane-integrations" role="tabpanel" aria-labelledby="tab-integrations">
           <h3>Connected apps</h3>
 
@@ -1708,17 +1803,17 @@
               </div>
               <input type="checkbox" class="toggle" id="telegram-enabled-toggle" data-setting="telegram.enabled" aria-label="Telegram Bot on">
             </div>
-            <p class="row-desc">Run a private companion bot you can message on your phone. It runs tasks, takes notes, gives you your daily briefing, and pushes reminders.</p>
+            <p class="row-desc">A private bot you can message on your phone. Your companion answers, you can start missions with /mission, approve their plans with a button, and stop everything with /stop. Reminders and mission news come here too.</p>
             <details class="app-setup" id="telegram-setup" open>
               <summary>Bot setup</summary>
               <label class="form-field">
-                <span class="row-label">Bot Token</span>
-                <span class="row-desc">Create a bot with @BotFather on Telegram and paste the API token here.</span>
-                <input class="field" type="password" id="telegram-token-input" data-setting="telegram.botToken" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" autocomplete="off" spellcheck="false">
+                <span class="row-label">Bot token</span>
+                <span class="row-desc">Create a bot with @BotFather on Telegram and paste the token here. It is kept in your system keyring, never in a file.</span>
+                <input class="field" type="password" id="telegram-token-input" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" autocomplete="off" spellcheck="false">
               </label>
               <label class="form-field">
                 <span class="row-label">Allowed Telegram User IDs</span>
-                <span class="row-desc">Comma-separated user IDs allowed to interact with the bot. Send a message to @userinfobot to find your ID. If blank, the first user to message becomes the allowed owner.</span>
+                <span class="row-desc">Comma-separated user IDs allowed to talk to the bot. Send a message to @userinfobot to find your ID. If blank, the first person to write to the bot becomes the only allowed one.</span>
                 <input class="field" type="text" id="telegram-allowed-users" placeholder="e.g. 12345678, 87654321" autocomplete="off" spellcheck="false">
               </label>
               <label class="life-toggle">
@@ -1834,6 +1929,28 @@
             <span class="test-feedback" id="backup-status" role="status"></span>
           </div>
           <ul class="backup-list" id="backup-list"></ul>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Updates</div>
+            <p class="hint">Friends looks for a newer version on GitHub once a day and tells you. It never installs anything by itself.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Check for updates</div><div class="row-desc">Asks GitHub's public releases page. Nothing about you is sent. Not in Private mode.</div></div>
+            <input type="checkbox" class="toggle" data-setting="updates.check">
+          </label>
+          <div class="card update-card" id="update-card">
+            <p class="update-line" id="update-line" role="status"></p>
+            <p class="row-desc" id="update-how" hidden></p>
+            <details class="update-notes" id="update-notes" hidden>
+              <summary>What's new</summary>
+              <div class="update-notes-body" id="update-notes-body"></div>
+            </details>
+            <div class="actions-row">
+              <button type="button" class="btn small" id="update-check">Check now</button>
+              <a class="btn small btn-primary" id="update-download" target="_blank" rel="noopener noreferrer" hidden>Download</a>
+              <a class="link-btn" id="update-page" target="_blank" rel="noopener noreferrer" hidden>Open the release page</a>
+            </div>
+          </div>
 
           <div class="subhead"><div>
             <div class="subhead-title">Export and import</div>

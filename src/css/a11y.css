@@ -51,7 +51,7 @@
 /* ---------- Touch: 44 x 44 px to hit ---------- */
 /* min-width and min-height (not width and height): a component's own fixed size can't shrink it back */
 @media (pointer: coarse) {
-  :is(.icon-btn, .btn, .btn-sm, .chip, .prompt-chip, .ws-pill, .status-quiet, .plus-item, .segmented-btn, .chat-list-toggle, .home-mission-note, .brand, .tab, .nav-item, .chat-link, .life-tab, .model-item, .model-picker,
+  :is(.icon-btn, .btn, .btn-sm, .chip, .prompt-chip, .ws-pill, .status-quiet, .plus-item, .segmented-btn, .chat-list-toggle, .home-mission-note, .brand, .mission-link, .step-more > summary, .tab, .nav-item, .chat-link, .life-tab, .model-item, .model-picker,
     .send-btn, .code-copy, .voice-theme-btn, .voice-top-btn, .seg button, .voice-seg button, .msg-action, .choice, .color, .link-btn, .life-item button,
     .habit-check, .character-chip, .field, select, summary, .mood-pick button, .model-card, .provider, .search-result, .settings-result,
     .gsi-material-button, .app-link, .back-link) {
@@ -151,7 +151,8 @@
 }
 
 /* A heading that takes the keyboard when a place opens (so a screen reader says where you are) needs no ring: it isn't something to press */
-.view-title:focus-visible {
+.view-title:focus-visible,
+.mission-detail .mission-title:focus-visible {
   outline: none;
 }
 

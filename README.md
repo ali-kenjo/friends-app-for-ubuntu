@@ -1,7 +1,11 @@
+<p align="center"><img src="build/icon.svg" width="88" alt="Friends: the robot's face"></p>
+
 # Friends
 
-A personal AI companion for Linux, in its own window or your browser. The AI behind it can be Google Gemini (cloud) or any AI model running on your own computer, so chats can stay completely private.
+A personal AI companion for Linux that also gets things done. You talk to a robot with a face (**Atlas** or **Mira**), and behind it is an assistant: give it a goal, it makes a plan, you approve it once, and it works in the background (researching, writing, organising files, watching your laptop, building small programs) and puts a report in your notes. Gemini plans and checks; small AI models on your own graphics card do the routine work. Everything is local-first, and **Private mode** keeps it all on your computer.
 
+- **Missions**: goals carried out in the background with a plan you approve once, a list of exactly what it may do, a big Stop button, and a report in your notes. They can repeat (every morning, every Friday, when a file appears, when the disk fills up) and run while the window is closed. See [Missions](#missions).
+- **Specialists**: roles (everyday, coding, writing, research, vision, embeddings) each with its own model on your computer, loaded one at a time so a 6 GB graphics card is enough, with Gemini as the manager. See [Specialists](#specialists-small-models-on-a-small-graphics-card).
 - **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
 - **Flagship Voice Mode & On-Camera Co-Host**: Real-time voice conversations with a 3D robot body, filming mode, customizable **acting dynamics** (*Best Friends Banter*, *Podcast Co-Host*, *Comedy Partner*, *Sarcastic Critic*, *Curious Interviewer*, *Custom*), scene briefs, and **live document grounding** (talk through scripts, articles, or vault notes during conversations).
 - **Everyday Life & Offline Calendar**: Tasks, reminders (as desktop and Telegram notifications), habits, a journal, offline calendar (with `.ics` export/import), and focus/Pomodoro sessions.
@@ -134,10 +138,10 @@ The server also emits structured request logs with status codes and duration met
 Friends' tests use Node.js's built-in `node:test` and `node:assert`:
 
 ```bash
-npm test               # unit and HTTP integration tests (over 340, about 20 seconds, no network)
+npm test               # unit and HTTP integration tests (nearly 500, under a minute, no network; a fake Gemini and a fake Ollama play the models)
 npm run check          # every script parses, JSON is valid, the page needs no internet to start
 npm run test:e2e       # the real page in Chrome against the real helper and a fake Ollama: first run, the keyboard,
-                       #   languages and right-to-left, touch targets, zoom (needs Chrome; set CHROME_PATH if it isn't in the usual place)
+                       #   languages and right-to-left, touch targets, zoom, Missions and Specialists (needs Chrome; set CHROME_PATH if it isn't in the usual place)
 npm run test:a11y      # axe-core over the main surfaces, dark and light, English and Arabic
 npm run i18n           # how complete the German and Arabic translations are
 npm audit              # dependencies with known vulnerabilities
@@ -241,6 +245,39 @@ The sidebar has three places, and nothing else competes with them:
 - **Today**: your day in one calm place (below).
 
 Everything else lives in **Settings** (a full view): *You and your companion* (Appearance, Characters, Memory, Robot), *AI* (AI & privacy), *Extras* (Connected apps, Telegram, Notes vault, Daily life) and *Your data* (Data & backups). The addresses `#today`, `#missions`, `#missions/<id>`, `#voice`, `#chat/<id>` and `#settings` still open what they say (the tray and notifications use them), and **Alt+1**, **Alt+2** and **Alt+3** switch places.
+
+## Missions
+
+A mission is a goal the assistant carries out for you in the background, with your approval at the one place it matters: before it starts.
+
+**Try your first one.** Open **Missions** (Alt+2), press **New mission**, and write something like *Research the three best budget laptops for video editing and write me a short report*. Or just say it to your companion in the message box: a message that sounds like a goal gets a small **Make it a mission** offer. Then:
+
+1. **A few questions**, only what it can't decide itself (leave one empty to let it choose).
+2. **The plan**: steps, each with the specialist and tools it uses, what goes in and what comes out, and what it may do: **reads**, **changes**, **sends**, **deletes**, **runs commands**. Every side effect is spelled out (who gets the email and its subject, which files and folders, which commands, what gets installed). You can edit or remove steps. The limits (minutes, steps, cloud calls) are on the plan too.
+3. **Approve and run.** It works in the background: the robot shows *working*, Missions shows progress, and you get a notification (and a Telegram message) at the milestones: a plan to approve, a question, halfway, done, trouble.
+4. **The report**: a note in your notes vault (or the local notes folder) and on the mission's page, with what was done, what was found or made, and what didn't work.
+
+**Safety, in plain terms**
+
+- Approving covers exactly the actions the plan lists. Anything else that sends, deletes or runs a command **stops the mission and asks you** (in the app and on Telegram). Re-planning inside what you approved doesn't need a second approval.
+- Files only in the folders you allow (Settings → AI & privacy) and the mission's own folder (default `~/friends-workspace/<mission>`). Deleting goes to the trash. Commands run in the mission's folder with a time limit and without your keys; `sudo`, installs and system settings **always** ask.
+- **Stop** (the big button, or `/stop` on Telegram) works at once. Every tool call and every model used is in the mission's **audit log**.
+- **Private mode** keeps a mission local; a step that needs the cloud pauses instead of using it.
+- A mission is saved as it goes (`<data folder>/missions/<id>/`). If the computer restarts or the app crashes, it carries on; a step that had already sent or deleted something asks before it would do it again.
+
+**What it's good at:** research and reports; emails and messages (Gmail, Telegram, Calendar: each send is in the plan); laptop and file work (organise Downloads, batch rename, small scripts, watching the system with alerts); building software (a project folder with code, tests and a commit).
+
+**Repeating and triggered.** In the new-mission form choose *Repeat*: every morning, every Friday, every few hours, when a file appears in a folder, when the disk fills up. They run the plan you approved, also with the window closed (they live in the tray), and are managed under Missions → Repeating. **Watch my computer** alerts you when the processor, memory, a disk, the graphics card's temperature or a service goes over a limit you set (it uses no model).
+
+**Telegram.** Settings → Extras → Telegram: paste your bot's token (kept in the system keyring, never in a file) and the user ids that may talk to it. Then `/mission <goal>` starts one, the plan arrives with **Approve** and **Stop** buttons, `/missions` shows what's going on, and `/stop` stops everything.
+
+**Settings → AI → Missions** has the on/off switch, the workspace folder, the limits, and which Gemini models plan and do the routine steps. When Gemini's free limit is reached, a mission waits and carries on by itself (or you press *Try again now*) instead of failing.
+
+## Specialists: small models on a small graphics card
+
+Settings → AI → **Specialists**. A mission's steps go to the role that fits: *General*, *Coding*, *Writing and social media*, *Research summaries*, *Vision* and *Embeddings* (searching your notes by meaning), or roles you add. Each role has a model from the ones **Ollama** has installed (or one you **pull** there, with a progress bar), its own instructions, a context size, and a smaller fallback. There are no model names built in; **Use the suggestions** picks ones that fit your card (checked on ollama.com on 2026-10-19: a 4B everyday model, a 7B coder, a small embeddings model for 6 GB; `npm run doctor` says what's missing).
+
+Friends manages the card for you: only **one heavy model is loaded at a time**. Before a step the loaded model is unloaded and the next one is loaded in the best place: on the card if it fits (its weights plus the memory for its context plus a margin, against what's free), split with the processor if only part fits, on the processor alone if it doesn't, or on the role's smaller fallback. Steps for the same specialist run together, and the next one is preloaded while Gemini thinks. The page shows the card, what is loaded now and why, and a badge per role (*fits the card*, *part runs on the processor*, *too big*). A specialist step that fails, is too slow or doesn't pass the manager's check goes to **Gemini** (the manager), unless the mission is Private. **Test** loads a role's model and asks it for a sentence.
 
 ## Daily life
 
@@ -422,7 +459,10 @@ Root                  the whole robot, standing on the ground (optional)
   - `src/js/filming.js` — filming mode. `src/models/face/` — the face detector model for Follow my face.
   - three.js and MediaPipe are served from `node_modules` under `/vendor/`; an import map (allowed by its hash in the page's security policy) names `three` and `three/addons/`.
 - `server/` — Local Node.js service providing Gemini API integration (`gemini.js`) and local/OpenAI-compatible AI servers (`openai.js`), file sandboxing, and data persistence. `characters.js` (the characters), `episodes.js` (memory of conversations), `activities.js`, `life.js` and `briefing.js` (daily life), `local-notes.js` (Markdown notes vault engine), `telegram.js` (Telegram companion bot engine), `connectors/` (one module per app), `mcp.js` (the MCP client), `net.js` (safe web fetching), `files.js` (sandboxed file tools), `backup.js`. `live.js` bridges voice mode to Gemini Live over a WebSocket (`/api/live`), so the API key stays on your computer. `robot.js` checks and keeps your own robot model and asks Gemini for Smarter moods; the robot tools live in `tools.js`.
+  - `server/missions/` — the mission engine: `risk.js` (risk classes, what an approval covers), `plan.js` (turning the manager's plan into steps with explicit side effects), `manager.js` (the prompts: clarify, plan, check, report), `runner.js` (the state machine, recovery after a restart, approvals, limits, stop), `toolbelt.js` (the tools a step may use, behind the gate: audit, trash, working folder, scrubbed environment), `cloud.js` (the serial Gemini queue, backoff, the daily count), `automations.js` (repeating and triggered missions, system watches), `store.js` (missions on disk).
+  - `server/providers.js` is the one interface to an AI (Gemini, Ollama, OpenAI-compatible servers). `server/specialists.js`, `specialist-roles.js`, `specialist-suggestions.js` and `specialists-api.js` are the roles and what Settings shows; `server/models.js` is the queue that loads one model at a time and `server/vram.js` decides where it runs (`nvidia-smi`, Ollama's `/api/ps`); `server/embeddings.js` is the notes search by meaning; `server/router.js` picks the model for a step.
 - Data lives in `~/.config/friends/` (or `FRIENDS_DATA_DIR`):
+  - `missions/` — one folder per mission (`mission.json`, `audit.jsonl`, `report.md`) and `automations.json`; `embeddings/` — the notes' numbers for search by meaning.
   - `chats/` — JSON storage for conversations (including voice turns, drafts, and a summary of the older part of long chats).
   - `memory/` — AI long-term memory notes.
   - `episodes/` — what it remembers of each conversation, and the follow-ups.

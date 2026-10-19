@@ -29,6 +29,7 @@ const manager = require("./manager");
 const cloud = require("./cloud");
 const risk = require("./risk");
 const toolbelt = require("./toolbelt");
+const automations = require("./automations");
 
 const MAX_ATTEMPTS = 3;
 const MAX_CLARIFY_ROUNDS = 2;
@@ -122,8 +123,9 @@ function callContext(m, signal) {
 function preloadNext(m) {
   try {
     if (!m.plan || !models.preload) return;
-    const next = planner.ready(m.plan).find((s) => s.role !== "manager");
-    const brain = next && specialists.brainFor(next.role, settingsModule.get());
+    // The step that will run next (the same choice the loop makes: the loaded model's steps first)
+    const next = planner.pickNext(m.plan, models.status().loaded?.role || null);
+    const brain = next && next.role !== "manager" && specialists.brainFor(next.role, settingsModule.get());
     if (brain) models.preload(brain, { role: next.role, why: `Getting the ${next.role} specialist ready for “${next.title}”` });
   } catch {}
 }
@@ -265,10 +267,32 @@ function approve(id) {
   m.status = "running";
   line(m, "approved", `You approved the plan (${m.scope.length} listed action${m.scope.length === 1 ? "" : "s"})`);
   store.audit(m.id, { type: "approved", scope: m.scope.map((a) => a.summary), limits: m.limits });
+  // "Repeat this": approving the plan also sets up the schedule or trigger that runs exactly this plan again
+  if (m.automation && !m.automationId) {
+    try {
+      const made = automations.create({ name: m.automation.name || m.title, goal: m.goal, plan: m.plan, private: m.private, schedule: m.automation.schedule, trigger: m.automation.trigger });
+      m.automationId = made.id;
+      line(m, "automation", `It will run again: ${automations.describe(made)}`);
+    } catch (err) {
+      line(m, "automation", `Couldn't set up the repeat: ${err.message}`);
+    }
+  }
   save(m);
   emit(m, "approved");
   run(m);
   return view(m);
+}
+
+// "Repeat this" for a mission that has an approved plan already
+function automate(id, { schedule = null, trigger = null, name = "" } = {}) {
+  const m = store.get(id);
+  if (!m.plan || !m.approvedAt) throw new Error("Approve the plan first; the approval is what is repeated.");
+  const made = automations.create({ name: name || m.title, goal: m.goal, plan: m.plan, private: m.private, schedule, trigger });
+  m.automationId = made.id;
+  line(m, "automation", `It will run again: ${automations.describe(made)}`);
+  save(m);
+  emit(m, "automation");
+  return made;
 }
 
 // ---------- 3. Running ----------
@@ -280,10 +304,8 @@ function startLive(m) {
 
 function stopLive(m) {
   const entry = live.get(m.id);
-  if (entry && !entry.running) {
-    clearTimeout(entry.timer);
-    live.delete(m.id);
-  }
+  // (a pending resume, after a rate limit, keeps its entry)
+  if (entry && !entry.running && !entry.timer) live.delete(m.id);
 }
 
 const running = () => [...live.values()].filter((e) => e.running).length;
@@ -596,7 +618,7 @@ async function runStep(m, entry, s, belt, c, signal) {
               return await cloud.call(() => callModel(brain, null), { mission: m, signal: sig, model: brain.model, onWait: callContext(m, sig).onWait });
             }
             m.usage.localCalls++;
-            return await models.use(brain, { role: s.role, why: `${role.label} specialist loaded for step ${index}`, mission: m.id, step: s.id, signal: sig }, async (b, control) => {
+            return await models.use(brain, { role: s.role, why: `${role.label} specialist loaded for step ${index}`, mission: m.id, step: s.id, signal: sig, fallbackModel: brain.fallbackModel }, async (b, control) => {
               m.model = { ...m.model, ...(models.status().loaded ? { placement: models.status().loaded.placement } : {}) };
               emit(m, "model");
               return callModel(b, control);
@@ -742,6 +764,7 @@ function scheduleResume(m, until) {
   const entry = live.get(m.id) || startLive(m);
   clearTimeout(entry.timer);
   entry.timer = setTimeout(() => {
+    entry.timer = null;
     const mm = store.find(m.id);
     if (mm && mm.status === "paused" && mm.pause?.kind === "quota") resume(m.id);
   }, Math.max(1000, Math.min(until - now(), 2 ** 31 - 1)));
@@ -755,6 +778,7 @@ function resume(id, { extend = false } = {}) {
   if (m.status === "paused" && m.pause?.kind === "approval") throw new Error("It's waiting for your answer to its question.");
   if (!m.plan || !m.approvedAt) {
     // Never approved: planning starts again
+    clearTimeout(live.get(m.id)?.timer);
     live.delete(m.id);
     prepare(m);
     return view(m);
@@ -767,6 +791,7 @@ function resume(id, { extend = false } = {}) {
   const entry = live.get(m.id);
   if (entry) {
     clearTimeout(entry.timer);
+    entry.timer = null;
     if (!entry.running) live.delete(m.id);
   }
   m.plan.steps.forEach((s) => {
@@ -818,12 +843,12 @@ function recover() {
 }
 
 // ---------- Starting ----------
-function create(goal, { source = "app", private: isPrivate = false, character = null, automationId = null } = {}) {
+function create(goal, { source = "app", private: isPrivate = false, character = null, automationId = null, automation = null } = {}) {
   const text = String(goal || "").trim();
   if (text.length < 4) throw new Error("Say what the goal is, in a sentence or two.");
   const settings = settingsModule.get();
   if (settings.missions?.enabled === false) throw new Error("Missions are switched off in Settings → AI → Missions.");
-  const m = store.create({ goal: text, source, private: isPrivate === true || settings.privacy?.localOnly === true, character, automationId });
+  const m = store.create({ goal: text, source, private: isPrivate === true || settings.privacy?.localOnly === true, character, automationId, automation });
   m.title = clip(text, 80);
   line(m, "created", `Mission started from ${source}`);
   save(m);
@@ -860,6 +885,7 @@ function createFromPlan(goal, plan, { source = "schedule", private: isPrivate = 
 const list = () => store.all().map(summary);
 const get = (id) => view(store.get(id));
 const audit = (id) => (store.get(id), store.readAudit(id));
+const report = (id) => (store.get(id), store.readReport(id));
 const active = () => store.all().filter((m) => ["planning", "clarifying", "awaiting_approval", "running", "paused"].includes(m.status));
 
-module.exports = { create, createFromPlan, answer, editPlan, approve, decide, stop, resume, remove, recover, list, get, audit, active, onEvent, setHooks, summary, view, events, live, MAX_ATTEMPTS };
+module.exports = { report, create, createFromPlan, automate, answer, editPlan, approve, decide, stop, resume, remove, recover, list, get, audit, active, onEvent, setHooks, summary, view, events, live, MAX_ATTEMPTS };

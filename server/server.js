@@ -21,6 +21,7 @@ const router = require("./router");
 const voiceLocal = require("./voice");
 const firebase = require("./firebase");
 const backup = require("./backup");
+const updates = require("./updates");
 const characters = require("./characters");
 const episodes = require("./episodes");
 const { ACTIVITIES } = require("./activities");
@@ -30,6 +31,10 @@ const connectors = require("./connectors");
 const mcp = require("./mcp");
 const localNotes = require("./local-notes");
 const telegram = require("./telegram");
+const companion = require("./companion");
+const missions = require("./missions");
+const specialists = require("./specialists");
+const specialistsApi = require("./specialists-api");
 const google = require("./google");
 const { execFile } = require("child_process");
 
@@ -452,6 +457,22 @@ async function speak(req, res) {
   }
 }
 
+// ---------- Pulling a model (progress as it downloads) ----------
+async function pullModel(req, res) {
+  const { model } = await readJson(req);
+  res.writeHead(200, securityHeaders({ "Content-Type": "application/x-ndjson; charset=utf-8" }));
+  const controller = new AbortController();
+  res.on("close", () => controller.abort());
+  const write = (event) => !res.writableEnded && res.write(JSON.stringify(event) + "\n");
+  try {
+    await specialistsApi.pull(model, (p) => write({ type: "progress", ...p }), controller.signal);
+    write({ type: "done" });
+  } catch (err) {
+    if (err.name !== "AbortError") write({ type: "error", error: err.message });
+  }
+  res.end();
+}
+
 // ---------- Liked and pinned replies ----------
 // Pinning also keeps the reply in the AI's own notes, so it remembers it in
 // every chat; unpinning removes that note again.
@@ -613,8 +634,13 @@ function events(req, res) {
   });
 }
 
-function broadcast(type, data, { title, body, action } = {}) {
+// To the page only, with no notification (a mission's progress)
+function push(type, data) {
   for (const res of eventClients) res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+function broadcast(type, data, { title, body, action } = {}) {
+  push(type, data);
   if (!settings.get().life.notify) return;
   if (nativeNotify) return nativeNotify({ title, body, action });
   if (!eventClients.size && process.platform === "linux") {
@@ -624,11 +650,11 @@ function broadcast(type, data, { title, body, action } = {}) {
 
 life.onReminder((r) => {
   broadcast("reminder", r, { title: r.text, body: "Friends reminder", action: { type: "reminder", id: r.id } });
-  telegram.sendAlert(`⏰ *Reminder:* ${r.text}`, settings.get());
+  if (settings.get().telegram.notifyReminders) telegram.sendAlert(`Reminder: ${r.text}`);
 });
 life.onFocusComplete((f) => {
   broadcast("focus_complete", f, { title: "Focus complete", body: `Completed focus session on ${f.task}`, action: { type: "focus" } });
-  telegram.sendAlert(`🎯 *Focus Complete!* You finished your session on: ${f.task}`, settings.get());
+  if (settings.get().telegram.notifyFocus) telegram.sendAlert(`Focus complete! You finished your session on: ${f.task}`);
 });
 const briefingReady = (made) => broadcast("briefing", made, { title: "Your briefing is ready", body: made.title, action: { type: "open-chat", id: made.chatId } });
 
@@ -678,11 +704,7 @@ const routes = [
   ["POST", /^\/api\/chats\/([\w-]+)\/suggestions$/, (req, id) => suggestions(id)],
 
   ["GET", /^\/api\/settings$/, () => settings.get()],
-  ["PUT", /^\/api\/settings$/, async (req) => {
-    const res = settings.set(await readJson(req));
-    telegram.start(res);
-    return res;
-  }],
+  ["PUT", /^\/api\/settings$/, async (req) => settings.set(await readJson(req))],
 
   // Characters (Settings → Characters): the choices; the characters themselves are in the settings
   ["GET", /^\/api\/characters\/meta$/, () => ({ voices: characters.GEMINI_VOICES, fields: characters.FIELDS, builtin: characters.BUILTIN, templates: characters.TEMPLATES, formats: Object.keys(prompt.FORMATS), max: characters.MAX_CHARACTERS })],
@@ -768,8 +790,46 @@ const routes = [
   ["POST", /^\/api\/life\/focus\/stop$/, () => life.stopFocus()],
 
   // Telegram bot companion
-  ["GET", /^\/api\/telegram\/status$/, () => telegram.status(settings.get())],
-  ["POST", /^\/api\/telegram\/test$/, () => telegram.testConnection(settings.get())],
+  ["GET", /^\/api\/telegram\/status$/, () => telegram.status()],
+  ["POST", /^\/api\/telegram\/test$/, () => telegram.testConnection()],
+  ["PUT", /^\/api\/telegram\/token$/, async (req) => telegram.saveToken((await readJson(req)).token)],
+
+  // Missions: goals carried out in the background (server/missions/)
+  ["GET", /^\/api\/missions$/, () => missions.overview()],
+  ["POST", /^\/api\/missions$/, async (req) => {
+    const b = await readJson(req);
+    return missions.create(b.goal, { source: b.source === "chat" ? "chat" : "app", private: b.private === true, automation: b.automation || null });
+  }],
+  ["GET", /^\/api\/missions\/([\w-]+)$/, (req, id) => missions.get(id)],
+  ["DELETE", /^\/api\/missions\/([\w-]+)$/, (req, id) => missions.remove(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/answers$/, async (req, id) => missions.answer(id, (await readJson(req)).answers)],
+  ["PUT", /^\/api\/missions\/([\w-]+)\/plan$/, async (req, id) => missions.editPlan(id, await readJson(req))],
+  ["POST", /^\/api\/missions\/([\w-]+)\/approve$/, (req, id) => missions.approve(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/stop$/, (req, id) => missions.stop(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/resume$/, async (req, id) => missions.resume(id, { extend: (await readJson(req)).extend === true })],
+  ["POST", /^\/api\/missions\/([\w-]+)\/decision$/, async (req, id) => {
+    const b = await readJson(req);
+    return missions.decide(id, String(b.requestId || ""), b.allow === true);
+  }],
+  ["POST", /^\/api\/missions\/([\w-]+)\/automate$/, async (req, id) => missions.automate(id, await readJson(req))],
+  ["GET", /^\/api\/missions\/([\w-]+)\/audit$/, (req, id) => ({ entries: missions.audit(id) })],
+  ["GET", /^\/api\/missions\/([\w-]+)\/report$/, (req, id) => ({ markdown: missions.report(id) })],
+  // The specialists: local models with a job each, and how they fit the graphics card (Settings → AI → Specialists)
+  ["GET", /^\/api\/specialists$/, () => specialistsApi.overview()],
+  ["POST", /^\/api\/specialists$/, async (req) => specialistsApi.addRole(await readJson(req))],
+  ["POST", /^\/api\/specialists\/reset$/, () => specialistsApi.reset()],
+  ["PUT", /^\/api\/specialists\/([\w-]+)$/, async (req, id) => specialistsApi.saveRole(id, await readJson(req))],
+  ["DELETE", /^\/api\/specialists\/([\w-]+)$/, (req, id) => specialistsApi.removeRole(id)],
+  ["POST", /^\/api\/specialists\/([\w-]+)\/test$/, (req, id) => specialistsApi.test(id)],
+  ["DELETE", /^\/api\/specialist-models\/(.+)$/, (req, name) => specialistsApi.deleteModel(decodeURIComponent(name))],
+  ["GET", /^\/api\/automations$/, () => ({ automations: missions.overview().automations })],
+  ["POST", /^\/api\/automations$/, async (req) => {
+    const b = await readJson(req);
+    return missions.automations.create({ name: b.name, goal: b.goal || "", schedule: b.schedule, trigger: b.trigger, watch: b.watch });
+  }],
+  ["PATCH", /^\/api\/automations\/([\w-]+)$/, async (req, id) => missions.automations.update(id, await readJson(req))],
+  ["POST", /^\/api\/automations\/([\w-]+)\/run$/, async (req, id) => ({ started: Boolean(await missions.automations.runNow(id)) })],
+  ["DELETE", /^\/api\/automations\/([\w-]+)$/, (req, id) => missions.automations.remove(id)],
 
   // Local Markdown Notes Vault (Obsidian/Logseq compatible)
   ["GET", /^\/api\/notes-vault$/, (req, id, url) => localNotes.listNotes({ limit: Number(url.searchParams.get("limit")) || 50 })],
@@ -795,6 +855,9 @@ const routes = [
   ["DELETE", /^\/api\/mcp\/([\w-]+)$/, (req, id) => mcp.remove(id)],
   ["POST", /^\/api\/mcp\/([\w-]+)\/restart$/, async (req, id) => (await mcp.restart(id), mcp.list().find((s) => s.id === id))],
 
+  // Is there a newer Friends? (GitHub Releases; it only tells you, and never in Private mode)
+  ["GET", /^\/api\/updates$/, () => updates.state()],
+  ["POST", /^\/api\/updates\/check$/, () => updates.check({ force: true })],
   ["GET", /^\/api\/backups$/, () => ({ dir: backup.dir, backups: backup.list() })],
   ["POST", /^\/api\/backups$/, () => backup.create("manual", { keep: settings.get().backup.keep })],
   ["POST", /^\/api\/backups\/import$/, async (req, id, url) => backup.restore(await readBody(req, 1024 * 1024 * 1024), { mode: restoreMode(url) })],
@@ -858,6 +921,7 @@ async function handle(req, res) {
     return res.end(google.callbackPage(ok, message));
   }
   if (pathname === "/api/voice/speak" && req.method === "POST") return speak(req, res);
+  if (pathname === "/api/specialists/pull" && req.method === "POST") return pullModel(req, res);
   const file = pathname.match(/^\/api\/attachments\/([\w-]+)$/);
   if (file && req.method === "GET") return download(req, res, file[1]);
   if (pathname === "/api/robot/model" && (req.method === "GET" || req.method === "HEAD")) return sendModel(req, res);
@@ -896,6 +960,7 @@ async function handle(req, res) {
 function start(port = PORT, host = HOST) {
   allowedHosts = computeAllowedHosts(port, host);
   backup.schedule(settings.get);
+  updates.schedule(settings.get);
   // Quiet conversations become memories, in the background (a local AI does it when there is one)
   episodes.schedule({ getBrain: () => brains.forTask(), getSettings: settings.get });
   // Reminders go off, and the morning briefing is made
@@ -903,29 +968,19 @@ function start(port = PORT, host = HOST) {
   briefing.schedule(briefingReady);
   // Apps connected through MCP start in the background; they stop with Friends
   mcp.startAll();
-  telegram.setChatHandler(async (text) => {
-    const current = settings.get();
-    const brain = brains.forTask();
-    if (!brain) return "No AI model is configured or available right now.";
-    const activeChar = characters.active(current);
-    const system = prompt.build(current, { character: activeChar });
-    let reply = "";
-    try {
-      await gemini.streamChat({
-        brain,
-        systemInstruction: system,
-        temperature: prompt.temperature(current),
-        history: [],
-        message: text,
-        onChunk: (c) => { reply += c; },
-        tools: [],
-      });
-      return reply.trim() || "Received.";
-    } catch (err) {
-      return `Error generating response: ${err.message}`;
-    }
+  // Telegram: the companion answers, and missions talk to you there
+  telegram.setHandlers({ chat: (text) => companion.reply(text, { googleToken }) });
+  telegram.start();
+  // The mission engine: it carries on after a restart, and runs its schedules and watches
+  missions.init({
+    push,
+    notify: ({ title, body, action }) => {
+      if (nativeNotify) nativeNotify({ title, body, action });
+      else if (!eventClients.size && process.platform === "linux") execFile("notify-send", ["--app-name=Friends", "-i", "friends", title, body], () => {});
+    },
+    telegram: { send: (text) => telegram.sendAlert(text), ready: () => telegram.ready(), event: (e) => telegram.onMissionEvent(e), alert: (text) => telegram.sendAlert(text) },
+    googleToken,
   });
-  telegram.start(settings.get());
   process.once("exit", () => (mcp.stopAll(), telegram.stop()));
   const connections = new Set();
   let isShuttingDown = false;

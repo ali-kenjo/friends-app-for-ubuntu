@@ -76,7 +76,8 @@ const inside = (child, parent) => child === parent || child.startsWith(parent.en
 const ALWAYS_ASK = [
   [/(^|[\s;&|(])sudo\b|\bsu\s+-?\w*\s*($|;|&)|\bdoas\b|\bpkexec\b/, "it needs administrator rights (sudo)"],
   [/(^|[\s;&|(])(apt|apt-get|aptitude|dpkg|snap|flatpak|dnf|yum|pacman|zypper|brew)\s+/, "it installs or changes software on this computer"],
-  [/\b(pip3?|pipx)\s+(install|uninstall)\b(?!.*\bvenv\b)/, "it installs Python packages outside a project environment"],
+  // (pip run from a project's own environment, like .venv/bin/pip, is a project install: see INSTALLERS)
+  [/(^|[\s;&|(])(pip3?|pipx|python3?\s+-m\s+pip)\s+(install|uninstall)\b/, "it installs Python packages outside a project environment"],
   [/\bnpm\s+(i|install|add|uninstall)\b.*(\s-g\b|--global|--location[= ]global)|\b(yarn|pnpm)\s+(global|add\s+-g)\b/, "it installs a program for the whole computer"],
   [/\bcargo\s+install\b|\bgo\s+install\b|\bgem\s+install\b/, "it installs a program for the whole computer"],
   [/(^|[\s;&|(])(systemctl|service|journalctl\s+--vacuum|loginctl|timedatectl|hostnamectl|localectl)\b/, "it changes system services"],
@@ -122,7 +123,8 @@ function classifyCommand(command, { workdir, folders = [] } = {}) {
       if (!roots.some((r) => inside(resolved, r))) return { always: true, reason: "it reaches outside the project folder" };
       continue;
     }
-    const resolved = path.resolve(word.replace(/^\$HOME/, home).replace(/^~(?=\/|$)/, home));
+    // In a mission's command ~ and $HOME are the mission's own folder (the shell is started with HOME set to it)
+    const resolved = path.resolve(word.replace(/^\$\{?HOME\}?/, base || home).replace(/^~(?=\/|$)/, base || home));
     // Standard tools and temporary files are fine to name: /usr/bin/env, /dev/null, /tmp
     if (/^\/(usr\/(bin|local\/bin)|bin|dev\/null|dev\/stdout|dev\/stderr|tmp)(\/|$)/.test(resolved)) continue;
     if (!roots.some((r) => inside(resolved, r))) return { always: true, reason: `it touches ${word}, outside the project and your allowed folders` };

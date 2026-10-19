@@ -87,7 +87,7 @@ function sanitize(list) {
     if (!id || seen.has(id) || id === "manager") continue;
     if (!BUILTIN.has(id) && seen.size >= BUILTIN.size + MAX_CUSTOM) continue;
     seen.add(id);
-    const entry = { id, model: clip(r.model, 200), system: clip(r.system, 4000), enabled: r.enabled !== false };
+    const entry = { id, model: clip(r.model, 200), fallback: clip(r.fallback, 200), system: clip(r.system, 4000), enabled: r.enabled !== false };
     if (Array.isArray(r.tools)) entry.tools = r.tools.map((t) => clip(t, 60)).filter(Boolean).slice(0, 80);
     const ctx = Math.round(Number(r.contextSize));
     if (Number.isFinite(ctx) && ctx > 0) entry.contextSize = Math.min(131072, Math.max(1024, ctx));

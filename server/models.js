@@ -9,7 +9,8 @@ const logger = require("./logger");
 let tail = Promise.resolve(); // the queue: each use() waits for the one before it
 let waiting = 0;
 let current = null; // what is loaded now: { model, role, why, kind, placement, at, mission, step }
-let preparer = async () => ({}); // vram.js sets how a model is made ready
+let preparer = (...args) => require("./vram").prepare(...args); // how a model is made ready (vram.js); tests can replace it
+let busy = false; // someone holds the model right now
 const listeners = new Set();
 
 const onChange = (fn) => (listeners.add(fn), () => listeners.delete(fn));
@@ -19,7 +20,7 @@ function setPreparer(fn) {
   preparer = fn;
 }
 
-const status = () => ({ loaded: current ? { ...current } : null, waiting });
+const status = () => ({ loaded: current ? { ...current } : null, waiting, busy });
 
 // Where the next call of this model happens: the manager's own cloud brains don't queue
 // info: { role, why, mission, step, signal }
@@ -53,6 +54,7 @@ async function use(brain, info = {}, fn) {
   let prepared = {};
   const control = {
     async pause(promise) {
+      busy = false;
       release();
       try {
         return await promise;
@@ -60,6 +62,7 @@ async function use(brain, info = {}, fn) {
         waiting++;
         await queueUp();
         waiting--;
+        busy = true;
         prepared = await ready();
       }
     },
@@ -67,11 +70,25 @@ async function use(brain, info = {}, fn) {
   try {
     await queueUp();
     waiting--;
+    busy = true;
     if (info.signal?.aborted) throw Object.assign(new Error("Stopped."), { name: "AbortError" });
     prepared = await ready();
     return await fn(prepared.brain || brain, control);
   } finally {
+    busy = false;
     release();
+  }
+}
+
+// Gets the next specialist ready while nothing else is using the model (the cloud manager is thinking). Never waits
+// for anyone and never unloads a model that is in use.
+async function preload(brain, info = {}) {
+  if (!brain || brain.kind === "cloud" || busy || waiting > 0) return false;
+  try {
+    await use(brain, { ...info, preload: true }, async () => {});
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -81,4 +98,4 @@ function forget() {
   emit();
 }
 
-module.exports = { use, status, onChange, setPreparer, forget };
+module.exports = { use, preload, status, onChange, setPreparer, forget };

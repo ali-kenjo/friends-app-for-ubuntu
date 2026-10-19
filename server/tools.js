@@ -323,6 +323,14 @@ const ROBOT_TOOLS = {
   ),
 };
 
+// Goals that take many steps and time: handed to the mission engine (server/missions/)
+const MISSION_TOOL = fn(
+  "start_mission",
+  "Turn a goal or a plan the user gave you into a mission: you make a plan, they approve it once, and it is carried out in the background (research and reports, emails and messages, organising files and the computer, building software). Use it when the work needs many steps or a lot of time, instead of doing it in the chat. It may ask them a few questions first; the plan appears under Missions (and on Telegram) for them to approve.",
+  { goal: str("The goal in the user's own words, with every detail they gave (a pasted plan included)"), private: bool("true to use only models on this computer") },
+  ["goal"]
+);
+
 const ONLINE_TOOLS = new Set(Object.keys(WORKSPACE_TOOLS));
 const LIFE_NAMES = new Set(Object.keys(LIFE_TOOLS));
 const VAULT_NAMES = new Set(Object.keys(VAULT_TOOLS));
@@ -404,6 +412,7 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
     list.push(RECALL_TOOLS.recall_conversations);
     if (settings.companion?.followUps !== false) list.push(RECALL_TOOLS.resolve_follow_up);
   }
+  if (settings.missions?.enabled !== false && !hidden) list.push(MISSION_TOOL);
   if (voice) list.push(DRAFT_TOOL);
   if (robotToolsOn(settings, { voice, robot: onScreen })) {
     for (const tool of Object.values(ROBOT_TOOLS)) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
@@ -422,7 +431,7 @@ const ESSENTIAL = new Set([
   "add_calendar_event", "list_calendar_events", "start_focus", "check_focus",
   "get_weather", "web_search", "read_webpage",
   "search_gmail", "get_calendar_events",
-  "home_devices", "home_control",
+  "home_devices", "home_control", "start_mission",
 ]);
 
 function forLocal(list, settings) {
@@ -727,6 +736,14 @@ async function run(name, args, ctx) {
       const result = await mcp.run(name, args, ctx);
       if (result) return result;
       throw new Error("That app isn't connected anymore.");
+    }
+
+    // Missions
+    if (name === "start_mission") {
+      if (ctx.settings.missions?.enabled === false) throw new Error("Missions are switched off in Settings → AI → Missions.");
+      const made = require("./missions/runner").create(args.goal, { source: ctx.source || "chat", private: args.private === true });
+      ctx.onActivity?.(`Started a mission: ${made.title}`);
+      return { ok: true, id: made.id, note: "The mission is under Missions. It may ask a few questions first; then the plan is there to approve (also on Telegram, if connected). Tell the user that, in a sentence." };
     }
 
     // Earlier conversations

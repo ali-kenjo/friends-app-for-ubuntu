@@ -246,9 +246,10 @@ body {
   justify-self: end;
 }
 
+/* The title lines up with the page's own column */
 .view-bar {
   grid-template-columns: auto 1fr auto;
-  padding-inline: var(--space-5);
+  padding-inline: max(var(--space-5), calc((100% - 62rem) / 2 + var(--space-5)));
 }
 
 .view-bar > .sidebar-show {
@@ -671,6 +672,30 @@ body {
 
 .status-quiet[data-state="none"] .status-circle {
   background: var(--warning);
+}
+
+/* "Make it a mission?" under a message that sounds like a goal */
+.mission-offer {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  max-width: 80%;
+  margin-top: calc(-1 * var(--space-3));
+  padding: var(--space-2h) var(--space-3h);
+  background: var(--bg-input);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--hairline));
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-sm);
+}
+
+.mission-offer svg {
+  color: var(--accent-text);
+}
+
+.mission-offer-text {
+  flex: 1 1 14rem;
 }
 
 /* The composer is the focus ring: no second ring around the text inside it */
@@ -1132,6 +1157,12 @@ body {
   .home-mission-note .pulse {
     animation: none;
   }
+}
+
+/* A text field that takes the width of its row (a folder, a model name) */
+.field.wide {
+  width: 100%;
+  max-width: 30rem;
 }
 
 /* ---------- Labels in sentence case: no mixed ALL CAPS ---------- */

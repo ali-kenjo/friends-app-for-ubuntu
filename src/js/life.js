@@ -13,6 +13,7 @@ import { t, tp, nf, formatDate, formatTime } from "./i18n.js";
 import { announce } from "./a11y.js";
 import { showView, isView } from "./views.js";
 import { icon, iconEl } from "./icons.js";
+import { onServerEvent, onHello } from "./events.js";
 
 const view = document.getElementById("view-today");
 const more = document.getElementById("today-more");
@@ -558,7 +559,7 @@ function syncAllowButton() {
 }
 allowButton.addEventListener("click", askForNotifications);
 
-function toast({ icon: iconName, title, body, actions = [] }) {
+export function toast({ icon: iconName, title, body, actions = [] }) {
   const box = el("div", "life-toast");
   box.setAttribute("role", "alert");
   const badge = el("span", "life-toast-icon");
@@ -626,15 +627,13 @@ function onBriefing(made) {
 
 // The helper tells the page as things happen; the browser reconnects by itself
 function listen() {
-  const source = new EventSource("/api/events");
-  source.addEventListener("hello", (e) => {
-    nativeNotifications = JSON.parse(e.data).native === true;
+  onHello((hello) => {
+    nativeNotifications = hello.native === true;
     syncAllowButton();
   });
-  source.addEventListener("reminder", (e) => onReminder(JSON.parse(e.data)));
-  source.addEventListener("briefing", (e) => onBriefing(JSON.parse(e.data)));
-  source.addEventListener("focus_complete", (e) => {
-    const f = JSON.parse(e.data);
+  onServerEvent("reminder", (r) => onReminder(r));
+  onServerEvent("briefing", (made) => onBriefing(made));
+  onServerEvent("focus_complete", (f) => {
     updateFocusDisplay(null);
     toast({
       icon: "target",

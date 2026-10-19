@@ -22,6 +22,7 @@ function list(settings = settingsModule.get()) {
 function overrides(mine = {}) {
   const o = {};
   if (typeof mine.model === "string") o.model = mine.model;
+  if (mine.fallback) o.fallback = mine.fallback;
   if (mine.system) o.system = mine.system;
   if (Array.isArray(mine.tools)) o.tools = mine.tools;
   if (mine.contextSize) o.contextSize = mine.contextSize;
@@ -72,6 +73,7 @@ function brainFor(roleId, settings = settingsModule.get()) {
     kind: "local",
     key: "",
     role: role.id,
+    fallbackModel: role.fallback || "", // a smaller model for when this one doesn't fit the graphics card (vram.js)
   };
   brain.api = brains.apiFor(brain);
   return brain;

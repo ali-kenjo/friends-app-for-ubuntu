@@ -19,6 +19,7 @@ import { characterName } from "./characters.js";
 import { openOnboarding, onboardingShowing } from "./onboarding.js";
 import { showView } from "./views.js";
 import { icon as outline } from "./icons.js";
+import { looksLikeMission } from "./missions/detect.mjs";
 
 const main = document.getElementById("main");
 const messagesEl = document.getElementById("messages");
@@ -562,6 +563,36 @@ function send() {
   input.value = "";
   fitInput();
   sendText(text, files);
+  if (text && getSettings()?.missions?.enabled !== false && looksLikeMission(text)) offerMission(text);
+}
+
+// Under a message that sounds like a goal or a plan: it's offered as a mission (it never starts by itself)
+function offerMission(text) {
+  const msg = [...messagesEl.querySelectorAll(".msg.user")].at(-1);
+  if (!msg) return;
+  const offer = document.createElement("div");
+  offer.className = "mission-offer";
+  offer.innerHTML = `${outline("missions", { size: 17 })}<span class="mission-offer-text"></span><button type="button" class="btn small btn-primary" data-offer="go"></button><button type="button" class="btn small btn-ghost" data-offer="no"></button>`;
+  offer.querySelector(".mission-offer-text").textContent = t("This sounds like a mission: I make a plan, you approve it once, and I do it in the background.");
+  offer.querySelector('[data-offer="go"]').textContent = t("Make it a mission");
+  offer.querySelector('[data-offer="no"]').textContent = t("Just chat");
+  offer.addEventListener("click", async (e) => {
+    const choice = e.target.closest("[data-offer]")?.dataset.offer;
+    if (!choice) return;
+    if (choice === "no") return offer.remove();
+    const button = e.target.closest("button");
+    button.disabled = true;
+    try {
+      stopActive();
+      const { startFromChat } = await import("./missions/index.js");
+      await startFromChat(text);
+      offer.remove();
+    } catch (err) {
+      button.disabled = false;
+      offer.querySelector(".mission-offer-text").textContent = err.message;
+    }
+  });
+  msg.after(offer);
 }
 
 // Removes a message and everything shown after it

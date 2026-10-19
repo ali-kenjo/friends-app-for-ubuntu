@@ -5,6 +5,8 @@ const { dataDir, writeJson } = require("./config");
 const characters = require("./characters");
 const look = require("./robot-look");
 const specialistRoles = require("./specialist-roles");
+const keys = require("./keys");
+const TELEGRAM_TOKEN_KEY = "telegram-bot-token";
 
 const file = path.join(dataDir, "settings.json");
 
@@ -33,6 +35,8 @@ const DEFAULTS = {
   },
   // Copies of your data folder in <data folder>/backups (see backup.js)
   backup: { auto: true, keep: 10 },
+  // Asking GitHub Releases once a day whether a newer Friends exists (see updates.js); it never installs anything
+  updates: { check: true },
   // Private mode: only a local AI answers, and nothing is sent to Google, GitHub
   // or news sites (no Gemini, Live, Google sign-in, GitHub search or news)
   privacy: { localOnly: false },
@@ -82,7 +86,8 @@ const DEFAULTS = {
   // Telegram Bot companion (telegram.js)
   telegram: {
     enabled: false,
-    botToken: "",
+    botToken: "", // only ever typed in: it goes to the system keyring and is never kept here (see storeTelegramToken)
+    hasToken: false, // (made up when the settings are read: whether a token is in the keyring)
     allowedUserIds: [],
     notifyReminders: true,
     notifyFocus: true,
@@ -244,6 +249,7 @@ function sanitize(input) {
   s.localNotes.folder = typeof s.localNotes.folder === "string" ? s.localNotes.folder.trim().slice(0, 300) : "";
   s.telegram.enabled = Boolean(s.telegram.enabled);
   s.telegram.botToken = typeof s.telegram.botToken === "string" ? s.telegram.botToken.trim().slice(0, 200) : "";
+  s.telegram.hasToken = false;
   s.telegram.allowedUserIds = Array.isArray(s.telegram.allowedUserIds) ? s.telegram.allowedUserIds.map(String).filter(Boolean).slice(0, 100) : [];
   s.telegram.notifyReminders = s.telegram.notifyReminders !== false;
   s.telegram.notifyFocus = s.telegram.notifyFocus !== false;
@@ -295,6 +301,19 @@ function sanitize(input) {
 
 let cache = null;
 
+// A bot token that was typed into the settings goes to the system keyring, and out of the settings file
+function storeTelegramToken(s) {
+  const token = s.telegram.botToken;
+  if (token) {
+    try {
+      keys.setSecret(TELEGRAM_TOKEN_KEY, token);
+    } catch {}
+    s.telegram.botToken = "";
+  }
+  s.telegram.hasToken = Boolean(keys.getSecret(TELEGRAM_TOKEN_KEY)) || Boolean(process.env.FRIENDS_TELEGRAM_BOT_TOKEN);
+  return Boolean(token);
+}
+
 function get() {
   if (cache) return cache;
   let stored = null;
@@ -310,6 +329,8 @@ function get() {
     for (const c of cache.characters.list) if (c.look?.accent === OLD_ACCENT) c.look.accent = DEFAULTS.theme.accent;
   }
   cache.ui.design = 2;
+  // A token an older version kept in this file moves to the keyring
+  if (storeTelegramToken(cache)) writeJson(file, withoutDerived(cache));
   return cache;
 }
 
@@ -317,9 +338,18 @@ function get() {
 const listeners = new Set();
 const onChange = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 
+// What's written to settings.json: without the made-up parts
+function withoutDerived(s) {
+  const copy = clone(s);
+  delete copy.telegram.hasToken;
+  copy.telegram.botToken = "";
+  return copy;
+}
+
 function set(input) {
   cache = sanitize(input);
-  writeJson(file, cache);
+  storeTelegramToken(cache);
+  writeJson(file, withoutDerived(cache));
   for (const fn of listeners) {
     try {
       fn(cache);
