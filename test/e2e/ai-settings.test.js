@@ -55,7 +55,7 @@ describe("AI & privacy in the page", { skip: !CHROME && "no Chrome found" }, () 
     server = require("../../server/server").start(0, "127.0.0.1");
     await new Promise((r) => (server.listening ? r() : server.on("listening", r)));
     base = `http://127.0.0.1:${server.address().port}`;
-    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--lang=en-US"] });
+    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--accept-lang=en-US,en", "--disable-gpu", "--lang=en-US"] });
     page = await browser.newPage();
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });

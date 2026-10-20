@@ -36,6 +36,7 @@ const connectors = require("./connectors");
 const mcp = require("./mcp");
 const localNotes = require("./local-notes");
 const telegram = require("./telegram");
+const { say, noteBrowser } = require("./say");
 const companion = require("./companion");
 const missions = require("./missions");
 const specialists = require("./specialists");
@@ -656,14 +657,14 @@ function broadcast(type, data, { title, body, action } = {}) {
 }
 
 life.onReminder((r) => {
-  broadcast("reminder", r, { title: r.text, body: "Friends reminder", action: { type: "reminder", id: r.id } });
-  if (settings.get().telegram.notifyReminders) telegram.sendAlert(`Reminder: ${r.text}`);
+  broadcast("reminder", r, { title: r.text, body: say("Friends reminder"), action: { type: "reminder", id: r.id } });
+  if (settings.get().telegram.notifyReminders) telegram.sendAlert(say("Reminder: {text}", { text: r.text }));
 });
 life.onFocusComplete((f) => {
-  broadcast("focus_complete", f, { title: "Focus complete", body: `Completed focus session on ${f.task}`, action: { type: "focus" } });
-  if (settings.get().telegram.notifyFocus) telegram.sendAlert(`Focus complete! You finished your session on: ${f.task}`);
+  broadcast("focus_complete", f, { title: say("Focus complete"), body: say("Completed focus session on {task}", { task: f.task }), action: { type: "focus" } });
+  if (settings.get().telegram.notifyFocus) telegram.sendAlert(say("Focus complete! You finished your session on: {task}", { task: f.task }));
 });
-const briefingReady = (made) => broadcast("briefing", made, { title: "Your briefing is ready", body: made.title, action: { type: "open-chat", id: made.chatId } });
+const briefingReady = (made) => broadcast("briefing", made, { title: say("Your briefing is ready"), body: made.title, action: { type: "open-chat", id: made.chatId } });
 
 // The desktop app (electron/main.js) shows notifications itself
 function setNativeNotify(fn) {
@@ -1010,6 +1011,7 @@ function start(port = PORT, host = HOST) {
 
   const server = http.createServer((req, res) => {
     const startMs = performance.now();
+    if (req.url.startsWith("/api/")) noteBrowser(req.headers["accept-language"]); // what "auto" means for the texts made here (say.js)
     res.on("finish", () => {
       logger.request(req, res, performance.now() - startMs);
     });

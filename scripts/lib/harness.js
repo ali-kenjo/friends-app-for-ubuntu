@@ -92,7 +92,7 @@ async function launch({ pointer = "fine", webgl = false } = {}) {
   const api = (method, url, body) => fetch(base + url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined }).then((r) => r.json());
 
   const puppeteer = require("puppeteer-core");
-  const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ["--no-sandbox", "--disable-gpu", ...(webgl ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : ["--use-gl=swiftshader"]), "--lang=en-US", `--blink-settings=primaryPointerType=${pointer === "coarse" ? 2 : 4},availablePointerTypes=${pointer === "coarse" ? 2 : 4},primaryHoverType=${pointer === "coarse" ? 1 : 2},availableHoverTypes=${pointer === "coarse" ? 1 : 2}`] });
+  const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ["--no-sandbox", "--accept-lang=en-US,en", "--disable-gpu", ...(webgl ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : ["--use-gl=swiftshader"]), "--lang=en-US", `--blink-settings=primaryPointerType=${pointer === "coarse" ? 2 : 4},availablePointerTypes=${pointer === "coarse" ? 2 : 4},primaryHoverType=${pointer === "coarse" ? 1 : 2},availableHoverTypes=${pointer === "coarse" ? 1 : 2}`] });
   const page = await browser.newPage();
   await page.setRequestInterception(true);
   page.on("request", (req) => {

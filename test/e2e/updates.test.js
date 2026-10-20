@@ -32,7 +32,7 @@ describe("Updates in Settings", { skip: !CHROME && "no Chrome found" }, () => {
     settings.set({ ...s, onboarding: { done: true, missions: true }, robot: { ...s.robot, chatDock: false } });
     server = require("../../server/server").start(0, "127.0.0.1");
     await new Promise((r) => (server.listening ? r() : server.on("listening", r)));
-    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--lang=en-US"] });
+    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--accept-lang=en-US,en", "--disable-gpu", "--lang=en-US"] });
     page = await browser.newPage();
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });

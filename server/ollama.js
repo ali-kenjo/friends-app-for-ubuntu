@@ -4,6 +4,7 @@
 // which cuts long chats off.) Same functions as openai.js, so the rest of the
 // helper doesn't care which one answers.
 const logger = require("./logger");
+const { say } = require("./say");
 const { toMessages, toTools, ThinkFilter, stripThinking, LocalAiError, create: createOpenAi } = require("./openai");
 
 const NOT_CHAT = /embed|rerank|whisper|tts|bge-|nomic-bert/i;
@@ -38,9 +39,9 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, numGpu = undefined, s
     } catch {}
     logger.warn(`Ollama ${where} answered ${res.status}: ${detail || res.statusText}`);
     let err;
-    if (res.status === 404 || /not found/i.test(detail)) err = new LocalAiError(`The model "${model || ""}" isn't installed in Ollama. Get it with: ollama pull ${model || "<model>"}`);
-    else if (/out of memory|requires more (system )?memory|unable to allocate|cuda/i.test(detail)) err = new LocalAiError(`Ollama ran out of memory for this model${contextSize ? ` at a context of ${contextSize}` : ""}. Pick a smaller model or lower the context size in the brain's settings.`);
-    else err = new LocalAiError(detail || `Ollama returned an error (${res.status}).`);
+    if (res.status === 404 || /not found/i.test(detail)) err = new LocalAiError(say("The model \"{model}\" isn't installed in Ollama. Get it with: ollama pull {model}", { model: model || "<model>" }));
+    else if (/out of memory|requires more (system )?memory|unable to allocate|cuda/i.test(detail)) err = new LocalAiError(contextSize ? say("Ollama ran out of memory for this model at a context of {size}. Pick a smaller model or lower the context size in the brain's settings.", { size: contextSize }) : say("Ollama ran out of memory for this model. Pick a smaller model or lower the context size in the brain's settings."));
+    else err = new LocalAiError(detail || say("Ollama returned an error ({status}).", { status: res.status }));
     err.status = res.status;
     err.detail = detail;
     return err;
@@ -52,8 +53,8 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, numGpu = undefined, s
       res = await fetch(`${base}${path}`, options);
     } catch (err) {
       if (err.name === "AbortError") throw err;
-      if (err.name === "TimeoutError") throw new LocalAiError(`Ollama at ${where} didn't answer in time.`);
-      throw new LocalAiError(`Couldn't reach Ollama at ${where}. Is it running? (Start it with: ollama serve)`);
+      if (err.name === "TimeoutError") throw new LocalAiError(say("Ollama at {where} didn't answer in time.", { where }));
+      throw new LocalAiError(say("Couldn't reach Ollama at {where}. Is it running? (Start it with: ollama serve)", { where }));
     }
     if (!res.ok) throw await toError(res, model);
     return res;
@@ -124,7 +125,7 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, numGpu = undefined, s
       } catch {
         return;
       }
-      if (chunk.error) throw new LocalAiError(typeof chunk.error === "string" ? chunk.error : chunk.error.message || "Ollama stopped.");
+      if (chunk.error) throw new LocalAiError(typeof chunk.error === "string" ? chunk.error : chunk.error.message || say("Ollama stopped."));
       const message = chunk.message;
       if (!message) return;
       if (message.content) {

@@ -15,6 +15,7 @@ const keys = require("./keys");
 const settings = require("./settings");
 const usage = require("./usage");
 const wrapper = require("./ai-wrapper");
+const { say } = require("./say");
 
 // The providers are in providers.js ("gemini" is Google's cloud API; "local" is any OpenAI-compatible
 // server: Ollama, LM Studio, llama.cpp, vLLM…, see openai.js; "openai" is any cloud service with that API)
@@ -30,7 +31,7 @@ function apiFor(brain) {
 
 // Private mode (Settings → AI & privacy): only local AI, nothing goes to the internet
 const privateMode = () => settings.get().privacy?.localOnly === true;
-const PRIVATE_MESSAGE = "Private mode is on, so only a local AI can answer. Add a local AI, or turn Private mode off in Settings → AI & privacy.";
+const privateMessage = () => say("Private mode is on, so only a local AI can answer. Add a local AI, or turn Private mode off in Settings → AI & privacy.");
 
 // Local servers rarely have a key; a service of your own address may have none; the others always do
 const needsKey = (brain) => !isLocalProvider(brain.provider) && brain.service !== "custom";
@@ -78,7 +79,7 @@ function publicState() {
 
 function find(id) {
   const brain = load().brains.find((b) => b.id === id);
-  if (!brain) throw new Error("That AI brain no longer exists.");
+  if (!brain) throw new Error(say("That AI brain no longer exists."));
   return brain;
 }
 
@@ -115,7 +116,7 @@ function localFields({ protocol, baseUrl, speechUrl, speechModel, contextSize, k
 // A cloud service of the OpenAI kind: which one (services.js), and its address (the service's, unless it is your own)
 function serviceFields({ service, baseUrl }) {
   const entry = services.cloud(service);
-  if (!entry || entry.native) throw new Error("That cloud service isn't known. Pick one from the list, or \"Any other service\" and give its address.");
+  if (!entry || entry.native) throw new Error(say("That cloud service isn't known. Pick one from the list, or \"Any other service\" and give its address."));
   const address = entry.custom ? baseUrl : baseUrl || entry.baseUrl;
   return { service: entry.id, baseUrl: openai.cloudUrl(address) };
 }
@@ -175,12 +176,12 @@ function defaultName(provider, fields, model) {
 // ---------- Asking about models ----------
 async function listModels({ id, key, provider = "gemini", protocol, baseUrl, service }) {
   key = typeof key === "string" ? key.trim() : "";
-  if (privateMode() && !(id ? isLocalProvider(find(Number(id)).provider) : isLocalProvider(provider))) throw new Error(PRIVATE_MESSAGE);
+  if (privateMode() && !(id ? isLocalProvider(find(Number(id)).provider) : isLocalProvider(provider))) throw new Error(privateMessage());
   if (id) {
     const brain = find(Number(id));
     return apiFor(brain).listModels(key || keyFor(brain));
   }
-  if (!PROVIDERS[provider]) throw new Error("That kind of AI isn't supported.");
+  if (!PROVIDERS[provider]) throw new Error(say("That kind of AI isn't supported."));
   if (!isLocalProvider(provider) && provider === "gemini" && !key) return [];
   if (provider === "openai" && !key && services.cloud(service)?.models !== "static" && service !== "custom" && service !== "openrouter") return [];
   const fields = providerFields(provider, { protocol, baseUrl, service });
@@ -193,16 +194,16 @@ async function listModels({ id, key, provider = "gemini", protocol, baseUrl, ser
 async function saveBrain({ id, provider, name, model, key, protocol, baseUrl, service, speechUrl, speechModel, contextSize, keepAlive, params, note }) {
   key = typeof key === "string" ? key.trim() : key;
   id = id ? Number(id) : id;
-  if (!PROVIDERS[provider]) throw new Error("That kind of AI isn't supported.");
+  if (!PROVIDERS[provider]) throw new Error(say("That kind of AI isn't supported."));
   const existing = id ? find(id) : null;
-  if (existing && existing.provider !== provider) throw new Error("A brain can't change its provider. Add a new one instead.");
+  if (existing && existing.provider !== provider) throw new Error(say("A brain can't change its provider. Add a new one instead."));
   const local = isLocalProvider(provider);
-  if (privateMode() && !local) throw new Error(PRIVATE_MESSAGE);
+  if (privateMode() && !local) throw new Error(privateMessage());
   const extra = providerFields(provider, { protocol, baseUrl, service, speechUrl, speechModel, contextSize, keepAlive }, existing || {});
   const target = { provider, ...extra };
   const plainKey = key || (existing && keyFor(existing)) || "";
   const keyless = local || extra.service === "custom";
-  if (!keyless && !plainKey) throw new Error("Paste an API key first.");
+  if (!keyless && !plainKey) throw new Error(say("Paste an API key first."));
 
   const api = apiFor(target);
   let models = [];
@@ -214,12 +215,12 @@ async function saveBrain({ id, provider, name, model, key, protocol, baseUrl, se
   }
   if (!model) {
     model = local ? models[0] : pickDefaultModel(models, provider);
-    if (!model) throw new Error("This AI server has no models yet. Pull or load one first (for Ollama: ollama pull llama3.2).");
+    if (!model) throw new Error(say("This AI server has no models yet. Pull or load one first (for Ollama: ollama pull llama3.2)."));
   }
   // A service with a fixed list of models still takes a name you type (it may have newer ones)
   const typed = !local && services.cloud(extra.service)?.models === "static";
   if (models.length && !typed && !(local ? hasModel(models, model) : models.includes(model))) {
-    throw new Error(`The model "${model}" isn't available${local ? " on this AI server" : " with this key"}.`);
+    throw new Error(local ? say("The model \"{model}\" isn't available on this AI server.", { model }) : say("The model \"{model}\" isn't available with this key.", { model }));
   }
   await api.checkModel({ key: plainKey, model });
 
@@ -254,8 +255,8 @@ async function saveBrain({ id, provider, name, model, key, protocol, baseUrl, se
 // Several models of one server or key at once: the key (or the server) is checked once, each model once.
 // → { state, added: [model], skipped: [model], failed: [{ model, error }] }
 async function saveMany({ provider, key, protocol, baseUrl, service, models, params, speechUrl, speechModel, contextSize, keepAlive } = {}) {
-  if (!Array.isArray(models) || !models.length) throw new Error("Pick at least one model.");
-  if (models.length > 60) throw new Error("That's a lot at once: pick up to 60 models.");
+  if (!Array.isArray(models) || !models.length) throw new Error(say("Pick at least one model."));
+  if (models.length > 60) throw new Error(say("That's a lot at once: pick up to 60 models."));
   const out = { added: [], skipped: [], failed: [] };
   const same = (b, extra, model) => b.provider === provider && b.model === model && (b.baseUrl || "") === (extra.baseUrl || "") && (b.service || "") === (extra.service || "");
   const fields = providerFields(provider, { protocol, baseUrl, service });
@@ -294,7 +295,7 @@ function updateBrain(id, { name, enabled, params, note } = {}) {
 function moveBrain(id, direction) {
   const s = load();
   const at = s.brains.findIndex((b) => b.id === id);
-  if (at < 0) throw new Error("That AI brain no longer exists.");
+  if (at < 0) throw new Error(say("That AI brain no longer exists."));
   const to = at + (direction === "up" ? -1 : 1);
   if (to >= 0 && to < s.brains.length) [s.brains[at], s.brains[to]] = [s.brains[to], s.brains[at]];
   persist();
@@ -393,7 +394,7 @@ function getForChat(id) {
     s.brains.find((b) => b.id === s.defaultBrainId && usable(b)) ||
     (privateMode() ? s.brains.find((b) => b.enabled && usable(b)) : null);
   if (!brain) {
-    if (privateMode() && s.brains.length) throw new Error(PRIVATE_MESSAGE);
+    if (privateMode() && s.brains.length) throw new Error(privateMessage());
     return null;
   }
   return materialize(brain);
@@ -411,10 +412,10 @@ async function warm({ brainId, voice } = {}) {
 
 async function testBrain(id) {
   const brain = id ? find(id) : getForChat(null);
-  if (!brain) throw new Error("No active AI brain configured.");
-  if (privateMode() && !isLocalProvider(brain.provider)) throw new Error(PRIVATE_MESSAGE);
+  if (!brain) throw new Error(say("No active AI brain configured."));
+  if (privateMode() && !isLocalProvider(brain.provider)) throw new Error(privateMessage());
   const plainKey = keyFor(brain);
-  if (!plainKey && needsKey(brain)) throw new Error("No API key found for this brain.");
+  if (!plainKey && needsKey(brain)) throw new Error(say("No API key found for this brain."));
 
   const api = apiFor(brain);
   const start = Date.now();
@@ -441,12 +442,12 @@ async function testBrain(id) {
 
 async function testConfig({ key, provider = "gemini", model, protocol, baseUrl, service }) {
   key = typeof key === "string" ? key.trim() : key;
-  if (!PROVIDERS[provider]) throw new Error("That kind of AI isn't supported.");
+  if (!PROVIDERS[provider]) throw new Error(say("That kind of AI isn't supported."));
   const local = isLocalProvider(provider);
-  if (privateMode() && !local) throw new Error(PRIVATE_MESSAGE);
+  if (privateMode() && !local) throw new Error(privateMessage());
   const fields = providerFields(provider, { protocol, baseUrl, service });
   const keyless = local || fields.service === "custom";
-  if (!keyless && !key) throw new Error("Paste an API key first.");
+  if (!keyless && !key) throw new Error(say("Paste an API key first."));
   const api = apiFor({ provider, ...fields });
   const start = Date.now();
   const models = await api.listModels(key || "");

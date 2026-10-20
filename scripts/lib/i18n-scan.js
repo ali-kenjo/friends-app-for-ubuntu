@@ -72,15 +72,15 @@ const unescapeJs = (quote, body) => {
   return JSON.parse(`"${body.replace(/\\'/g, "'").replace(/"/g, '\\"').replace(/\\\\"/g, '\\"')}"`);
 };
 
-// t("…") and tp("…", "…", n) with literal texts
-function jsStrings(code) {
+// t("…") and tp("…", "…", n) with literal texts (the helper's own sentences are say("…") and sayN("…", "…", n))
+function jsStrings(code, one = "t", many = "tp") {
   const keys = new Set();
   const plurals = new Set();
   const lit = '("(?:[^"\\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\\n]|\\\\.)*\'|`[^`$\\\\]*`)';
   const lines = code.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l));
   const text = lines.join("\n");
-  for (const m of text.matchAll(new RegExp(`(?<![\\w.$])t\\(\\s*${lit}`, "g"))) keys.add(unescapeJs(m[1][0], m[1].slice(1, -1)));
-  for (const m of text.matchAll(new RegExp(`(?<![\\w.$])tp\\(\\s*${lit}\\s*,\\s*${lit}`, "g"))) plurals.add(`${unescapeJs(m[1][0], m[1].slice(1, -1))}|${unescapeJs(m[2][0], m[2].slice(1, -1))}`);
+  for (const m of text.matchAll(new RegExp(`(?<![\\w.$])${one}\\(\\s*${lit}`, "g"))) keys.add(unescapeJs(m[1][0], m[1].slice(1, -1)));
+  for (const m of text.matchAll(new RegExp(`(?<![\\w.$])${many}\\(\\s*${lit}\\s*,\\s*${lit}`, "g"))) plurals.add(`${unescapeJs(m[1][0], m[1].slice(1, -1))}|${unescapeJs(m[2][0], m[2].slice(1, -1))}`);
   return { keys, plurals };
 }
 
@@ -148,6 +148,12 @@ function scan() {
   }
   for (const k of elsewhere()) (keys.add(k), !sources.has(k) && sources.set(k, "src/js/i18n/elsewhere.js"));
   for (const k of serverStrings()) (keys.add(k), !sources.has(k) && sources.set(k, "server/"));
+  for (const file of walk(path.join(root, "server"))) {
+    const found = jsStrings(fs.readFileSync(file, "utf8"), "say", "sayN");
+    const rel = path.relative(root, file);
+    for (const k of found.keys) (keys.add(k), !sources.has(k) && sources.set(k, rel));
+    for (const k of found.plurals) (plurals.add(k), !sources.has(k) && sources.set(k, rel));
+  }
   return { keys, plurals, html: page.html, sources };
 }
 

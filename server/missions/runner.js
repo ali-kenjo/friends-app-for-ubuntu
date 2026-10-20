@@ -23,6 +23,7 @@ const models = require("../models");
 const specialists = require("../specialists");
 const localNotes = require("../local-notes");
 const logger = require("../logger");
+const { say, sayN } = require("../say");
 const store = require("./store");
 const planner = require("./plan");
 const manager = require("./manager");
@@ -150,7 +151,7 @@ async function prepare(m) {
         m.status = "clarifying";
         line(m, "questions", `${questions.length} question${questions.length === 1 ? "" : "s"} before planning`);
         save(m);
-        emit(m, "questions", { notify: { title: "A few questions first", body: questions.map((q) => `• ${q.text}`).join("\n") }, questions });
+        emit(m, "questions", { notify: { title: say("A few questions first"), body: questions.map((q) => `• ${q.text}`).join("\n") }, questions });
         return;
       }
     }
@@ -167,7 +168,7 @@ async function prepare(m) {
     line(m, "plan", `The plan is ready: ${p.steps.length} steps`);
     store.audit(m.id, { type: "plan", steps: p.steps.length, risk: p.risk, actions: p.actions.length });
     save(m);
-    emit(m, "plan-ready", { notify: { title: "A plan to approve", body: `${m.title}: ${p.steps.length} steps. Open it to approve.` } });
+    emit(m, "plan-ready", { notify: { title: say("A plan to approve"), body: sayN("{title}: {n} step. Open it to approve.", "{title}: {n} steps. Open it to approve.", p.steps.length, { title: m.title }) } });
   } catch (err) {
     await settle(m, err, "planning");
   } finally {
@@ -191,7 +192,7 @@ async function settle(m, err, where) {
     line(m, "paused", err.message);
     save(m);
     scheduleResume(m, err.until);
-    emit(m, "paused", { notify: { title: "Waiting for Gemini", body: err.message } });
+    emit(m, "paused", { notify: { title: say("Waiting for Gemini"), body: err.message } });
     return;
   }
   if (err.name === "LimitReached") {
@@ -199,7 +200,7 @@ async function settle(m, err, where) {
     m.pause = { kind: "limit", message: `${err.message} It stopped there. You can continue (the limit doubles) or stop for good.`, which: err.which };
     line(m, "paused", err.message);
     save(m);
-    emit(m, "paused", { notify: { title: "Mission paused", body: m.pause.message } });
+    emit(m, "paused", { notify: { title: say("Mission paused"), body: m.pause.message } });
     return;
   }
   if (err instanceof router.RouteError || err.code === "NO_MANAGER") {
@@ -208,7 +209,7 @@ async function settle(m, err, where) {
     m.pause = { kind: "private", message: err.message };
     line(m, "paused", err.message);
     save(m);
-    emit(m, "paused", { notify: { title: "Mission paused", body: err.message } });
+    emit(m, "paused", { notify: { title: say("Mission paused"), body: err.message } });
     return;
   }
   logger.warn(`Mission ${m.id} (${where}) failed:`, err.message);
@@ -218,7 +219,7 @@ async function settle(m, err, where) {
   line(m, "failed", err.message);
   store.audit(m.id, { type: "failed", where, error: err.message });
   save(m);
-  emit(m, "failed", { notify: { title: "A mission didn't work out", body: `${m.title}: ${clip(err.message, 200)}` } });
+  emit(m, "failed", { notify: { title: say("A mission didn't work out"), body: `${m.title}: ${clip(err.message, 200)}` } });
 }
 
 // ---------- 2. Your answers, edits and approval ----------
@@ -448,7 +449,7 @@ function requestApproval(m, entry, { action, why, step: s }, addPaused = () => {
     line(m, "approval", `Waiting for you: ${action.summary}`);
     store.audit(m.id, { type: "approval-asked", request });
     save(m);
-    emit(m, "approval", { request, notify: { title: "A mission needs your OK", body: `${m.title}: ${action.summary}`, request } });
+    emit(m, "approval", { request, notify: { title: say("A mission needs your OK"), body: `${m.title}: ${action.summary}`, request } });
     entry.approvals.set(request.id, (allowed) => {
       entry.approvals.delete(request.id);
       addPaused(now() - asked);
@@ -676,7 +677,7 @@ async function runStep(m, entry, s, belt, c, signal) {
     emit(m, "step", { step: s.id });
     // Halfway: a short word (only for longer plans)
     const doneCount = m.plan.steps.filter((x) => x.status === "done").length;
-    if (m.plan.steps.length >= 4 && doneCount === Math.ceil(m.plan.steps.length / 2)) emit(m, "halfway", { notify: { title: "Halfway there", body: `${m.title}: ${doneCount} of ${m.plan.steps.length} steps done.` } });
+    if (m.plan.steps.length >= 4 && doneCount === Math.ceil(m.plan.steps.length / 2)) emit(m, "halfway", { notify: { title: say("Halfway there"), body: say("{title}: {done} of {total} steps done.", { title: m.title, done: doneCount, total: m.plan.steps.length }) } });
     return;
   }
   s.status = "failed";
@@ -732,7 +733,7 @@ async function finish(m, entry, c, signal) {
   line(m, "done", note ? `Done. The report is in your vault: ${note}` : "Done");
   store.audit(m.id, { type: "done", note });
   save(m);
-  emit(m, "done", { notify: { title: "A mission is done", body: `${title}${note ? ` (saved in your notes as ${note})` : ""}` } });
+  emit(m, "done", { notify: { title: say("A mission is done"), body: `${title}${note ? ` ${say("(saved in your notes as {note})", { note })}` : ""}` } });
 }
 
 function fallbackReport(m, facts) {

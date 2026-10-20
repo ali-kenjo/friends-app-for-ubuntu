@@ -13,6 +13,7 @@
 // token limit's name, a JSON mode) is learned from its answer once and left out afterwards.
 const logger = require("./logger");
 const voice = require("./voice");
+const { say } = require("./say");
 
 class LocalAiError extends Error {}
 
@@ -198,14 +199,14 @@ function create({ baseUrl, speechUrl = "", speechModel = "", cloud = false, labe
     } catch {}
     logger.warn(`AI ${where} answered ${res.status}: ${detail || res.statusText}`);
     let err;
-    if (res.status === 401 || res.status === 403) err = new LocalAiError(cloud ? `${who} didn't accept the API key. Check it in Settings → AI & privacy.` : "This AI server wants an API key, or didn't accept yours. Check it in Settings → AI & privacy.");
-    else if (res.status === 402 || (cloud && /insufficient|quota|billing|credit|balance/i.test(detail))) err = new LocalAiError(`${who} says there's no credit or quota left on this key. ${detail ? detail.slice(0, 160) : ""}`.trim());
-    else if (res.status === 429) err = new LocalAiError(`${who} is limiting requests right now (too many, or a daily limit). Wait a moment, or use another AI.`);
+    if (res.status === 401 || res.status === 403) err = new LocalAiError(cloud ? say("{who} didn't accept the API key. Check it in Settings → AI & privacy.", { who }) : say("This AI server wants an API key, or didn't accept yours. Check it in Settings → AI & privacy."));
+    else if (res.status === 402 || (cloud && /insufficient|quota|billing|credit|balance/i.test(detail))) err = new LocalAiError(`${say("{who} says there's no credit or quota left on this key.", { who })} ${detail ? detail.slice(0, 160) : ""}`.trim());
+    else if (res.status === 429) err = new LocalAiError(say("{who} is limiting requests right now (too many, or a daily limit). Wait a moment, or use another AI.", { who }));
     else if (res.status === 404 || /model .*(not found|does not exist)|not found, try pulling/i.test(detail)) {
-      err = new LocalAiError(`The model "${model || ""}" isn't available on this AI server. ${/ollama|11434/i.test(where + detail) ? `Get it with: ollama pull ${model || "<model>"}` : "Load it in the server, or pick another model in Settings → AI & privacy."}`);
-    } else if (/context|too long|too many tokens|exceeds/i.test(detail)) err = new LocalAiError("The conversation doesn't fit into the model's context window. Start a new chat, lower the context window in Settings → AI & privacy, or raise the context size in your AI server.");
-    else if (res.status >= 500) err = new LocalAiError(`The AI server had a problem: ${detail || res.status}`);
-    else err = new LocalAiError(detail || `The AI server returned an error (${res.status}).`);
+      err = new LocalAiError(`${say("The model \"{model}\" isn't available on this AI server.", { model: model || "" })} ${/ollama|11434/i.test(where + detail) ? say("Get it with: ollama pull {model}", { model: model || "<model>" }) : say("Load it in the server, or pick another model in Settings → AI & privacy.")}`);
+    } else if (/context|too long|too many tokens|exceeds/i.test(detail)) err = new LocalAiError(say("The conversation doesn't fit into the model's context window. Start a new chat, lower the context window in Settings → AI & privacy, or raise the context size in your AI server."));
+    else if (res.status >= 500) err = new LocalAiError(say("The AI server had a problem: {detail}", { detail: detail || res.status }));
+    else err = new LocalAiError(detail || say("The AI server returned an error ({status}).", { status: res.status }));
     err.status = res.status;
     err.detail = detail;
     err.retryable = res.status === 429 || res.status >= 500;
@@ -218,8 +219,8 @@ function create({ baseUrl, speechUrl = "", speechModel = "", cloud = false, labe
       res = await fetch(url, options);
     } catch (err) {
       if (err.name === "AbortError") throw err;
-      if (err.name === "TimeoutError") throw Object.assign(new LocalAiError(`${cloud ? who : `The AI server at ${where}`} didn't answer in time.`), { retryable: true });
-      throw Object.assign(new LocalAiError(cloud ? `Couldn't reach ${who}. Check your internet connection.` : `Couldn't reach the AI server at ${where}. Is it running?`), { retryable: true });
+      if (err.name === "TimeoutError") throw Object.assign(new LocalAiError(cloud ? say("{who} didn't answer in time.", { who }) : say("The AI server at {where} didn't answer in time.", { where })), { retryable: true });
+      throw Object.assign(new LocalAiError(cloud ? say("Couldn't reach {who}. Check your internet connection.", { who }) : say("Couldn't reach the AI server at {where}. Is it running?", { where })), { retryable: true });
     }
     if (!res.ok) throw await toError(res, model);
     return res;
@@ -359,12 +360,12 @@ function create({ baseUrl, speechUrl = "", speechModel = "", cloud = false, labe
     return own ? { base: own, own: true } : null;
   }
 
-  const NO_VOICE = "Listening needs local voice. Set it up in Settings → AI & privacy (Local voice), or fill in a speech server under Voice in this brain's settings. You can also use a Gemini brain for voice.";
+  const noVoice = () => say("Listening needs local voice. Set it up in Settings → AI & privacy (Local voice), or fill in a speech server under Voice in this brain's settings. You can also use a Gemini brain for voice.");
 
   // Speech to text: POST /audio/transcriptions, as OpenAI, LocalAI, speaches and Whisper servers offer it
   async function transcribe({ key, audio }) {
     const target = await speechTarget();
-    if (!target) throw new LocalAiError(NO_VOICE);
+    if (!target) throw new LocalAiError(noVoice());
     const form = new FormData();
     form.append("file", new Blob([Buffer.from(audio, "base64")], { type: "audio/wav" }), "speech.wav");
     form.append("model", speechModel || (target.own ? "whisper" : "whisper-1"));
@@ -396,17 +397,17 @@ function create({ baseUrl, speechUrl = "", speechModel = "", cloud = false, labe
 function normalizeUrl(value, { required = true, protocol = "openai" } = {}) {
   const text = String(value || "").trim();
   if (!text) {
-    if (required) throw new Error("Enter the address of your AI server, e.g. http://127.0.0.1:11434/v1");
+    if (required) throw new Error(say("Enter the address of your AI server, e.g. http://127.0.0.1:11434/v1"));
     return "";
   }
   let url;
   try {
     url = new URL(/^[a-z]+:\/\//i.test(text) ? text : `http://${text}`);
   } catch {
-    throw new Error(`"${text}" isn't a valid address.`);
+    throw new Error(say("\"{text}\" isn't a valid address.", { text }));
   }
-  if (!["http:", "https:"].includes(url.protocol)) throw new Error("The address must start with http:// or https://");
-  if (url.username || url.password) throw new Error("Put the API key in the key field, not in the address.");
+  if (!["http:", "https:"].includes(url.protocol)) throw new Error(say("The address must start with http:// or https://"));
+  if (url.username || url.password) throw new Error(say("Put the API key in the key field, not in the address."));
   let pathname = url.pathname.replace(/\/+$/, "");
   if (protocol === "ollama") return `${url.origin}${pathname.replace(/\/(v1|api)$/, "")}`;
   if (!pathname) pathname = "/v1";
@@ -416,15 +417,15 @@ function normalizeUrl(value, { required = true, protocol = "openai" } = {}) {
 // The address of a cloud service as it is: https, no key in it, no /v1 added (each service has its own path)
 function cloudUrl(value) {
   const text = String(value || "").trim();
-  if (!text) throw new Error("Enter the address of the service, e.g. https://api.example.com/v1");
+  if (!text) throw new Error(say("Enter the address of the service, e.g. https://api.example.com/v1"));
   let url;
   try {
     url = new URL(/^[a-z]+:\/\//i.test(text) ? text : `https://${text}`);
   } catch {
-    throw new Error(`"${text}" isn't a valid address.`);
+    throw new Error(say("\"{text}\" isn't a valid address.", { text }));
   }
-  if (!["http:", "https:"].includes(url.protocol)) throw new Error("The address must start with https://");
-  if (url.username || url.password) throw new Error("Put the API key in the key field, not in the address.");
+  if (!["http:", "https:"].includes(url.protocol)) throw new Error(say("The address must start with https://"));
+  if (url.username || url.password) throw new Error(say("Put the API key in the key field, not in the address."));
   return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }
 

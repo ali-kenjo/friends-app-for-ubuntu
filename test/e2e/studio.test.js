@@ -51,7 +51,7 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     server = start(0, "127.0.0.1");
     await new Promise((resolve) => (server.listening ? resolve() : server.on("listening", resolve)));
     base = `http://127.0.0.1:${server.address().port}`;
-    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--accept-lang=en-US,en", "--disable-gpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
     page = await browser.newPage();
     await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] }));
     await page.setViewport({ width: 1280, height: 900 });

@@ -8,6 +8,7 @@
 const usage = require("./usage");
 const redact = require("./redact");
 const logger = require("./logger");
+const { say } = require("./say");
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const RETRY_MS = () => Number(process.env.FRIENDS_RETRY_MS ?? 800);
@@ -15,7 +16,7 @@ const RETRY_MS = () => Number(process.env.FRIENDS_RETRY_MS ?? 800);
 const isTransient = (err) => err && err.name !== "AbortError" && (err.retryable === true || /ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|fetch failed/i.test(String(err.message)));
 
 function limitError(brain, limit) {
-  return Object.assign(new Error(`${brain.name || "This AI"} has used its daily limit of ${limit} requests. It's counted again tomorrow, or raise the limit in its settings.`), { limit: true });
+  return Object.assign(new Error(say("{name} has used its daily limit of {limit} requests. It's counted again tomorrow, or raise the limit in its settings.", { name: brain.name || say("This AI"), limit })), { limit: true });
 }
 
 // fn(signal, arm, hold): runs with a signal that also fires when nothing happened for `seconds`. arm() says "something
@@ -40,7 +41,7 @@ async function withIdle(parent, seconds, name, fn) {
   try {
     return await fn(controller.signal, arm, hold);
   } catch (err) {
-    if (timedOut) throw Object.assign(new Error(`${name} didn't answer within ${seconds} seconds. Wait longer in Settings → AI & privacy → Answers, or use another AI.`), { timeout: true });
+    if (timedOut) throw Object.assign(new Error(say("{name} didn't answer within {seconds} seconds. Wait longer in Settings → AI & privacy → Answers, or use another AI.", { name, seconds })), { timeout: true });
     throw err;
   } finally {
     hold();

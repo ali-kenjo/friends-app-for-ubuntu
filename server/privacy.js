@@ -10,6 +10,7 @@ const episodes = require("./episodes");
 const usage = require("./usage");
 const connectors = require("./connectors");
 const logger = require("./logger");
+const { say } = require("./say");
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -42,7 +43,7 @@ function summary(settings = settingsModule.get()) {
 function clear(what) {
   const done = {};
   const want = (x) => what === x || what === "all";
-  if (!["chats", "memories", "notes", "episodes", "usage", "all"].includes(what)) throw new Error("That isn't something Friends keeps.");
+  if (!["chats", "memories", "notes", "episodes", "usage", "all"].includes(what)) throw new Error(say("That isn't something Friends keeps."));
   if (want("chats")) {
     const list = chats.list();
     for (const c of list) chats.remove(c.id);

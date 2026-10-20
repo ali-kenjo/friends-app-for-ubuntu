@@ -233,4 +233,45 @@ describe("Telegram", () => {
       await waitFor(() => said(/Laptops: done|Long: stopped|Asky/), 5000, "the list");
     });
   });
+
+  describe("In the person's language", () => {
+    const pick = (language) => settings.set({ ...settings.get(), ui: { ...settings.get().ui, language } });
+    after(() => pick("auto"));
+
+    test("German picked in Settings: the bot answers in German", async () => {
+      pick("de");
+      say("/stop");
+      await waitFor(() => said(/Es lief nichts/), 5000, "the German answer");
+      say("/help");
+      await waitFor(() => said(/Hallo! Ich bin dein Friends-Begleiter/), 5000, "the German help");
+      say("/remind call the bank in 1");
+      await waitFor(() => said(/Erinnerung an „call the bank“ in 1 Minute gesetzt/), 5000, "the singular");
+    });
+
+    test("Arabic picked: Arabic, with a plural that fits the number", async () => {
+      pick("ar");
+      say("/remind x in 2");
+      await waitFor(() => said(/بعد دقيقتين/), 5000, "the dual");
+      say("/remind y in 30");
+      await waitFor(() => said(/بعد 30 دقيقة/), 5000, "the many");
+    });
+
+    test("auto follows the browser the page reported, and English is the way out", async () => {
+      const { noteBrowser, language } = require("../server/say");
+      pick("auto");
+      noteBrowser("de-DE,de;q=0.9,en;q=0.8");
+      assert.strictEqual(language(), "de");
+      noteBrowser("fr-FR,fr;q=0.9");
+      assert.strictEqual(language(), "en", "nothing it knows: English, like the page");
+      noteBrowser("ar-EG,en;q=0.5");
+      assert.strictEqual(language(), "ar");
+      noteBrowser("*");
+      assert.strictEqual(language(), "ar", "a header that says nothing changes nothing");
+      pick("en");
+      say("/stop");
+      await waitFor(() => said(/Nothing was running/), 5000, "English again");
+      pick("auto");
+      noteBrowser("en");
+    });
+  });
 });

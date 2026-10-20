@@ -15,6 +15,7 @@ const logger = require("./logger");
 const life = require("./life");
 const localNotes = require("./local-notes");
 const { looksLikeMission } = require("../src/js/missions/detect.mjs");
+const { say, sayN } = require("./say");
 
 const TOKEN_KEY = "telegram-bot-token";
 const API = () => process.env.FRIENDS_TELEGRAM_API || "https://api.telegram.org";
@@ -38,18 +39,18 @@ const setHandlers = (h) => (handlers = { ...handlers, ...h });
 
 // ---------- The Telegram API ----------
 async function apiCall(method, params = {}, token = getToken(), timeoutMs = 35000) {
-  if (!token) throw new Error("No Telegram bot token configured.");
+  if (!token) throw new Error(say("No Telegram bot token configured."));
   let res;
   try {
     res = await fetch(`${API()}/bot${token}/${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(params), signal: AbortSignal.timeout(timeoutMs) });
   } catch (err) {
-    throw new Error(err.name === "TimeoutError" ? "Telegram API timeout" : `Couldn't reach Telegram: ${err.message}`);
+    throw new Error(err.name === "TimeoutError" ? say("Telegram API timeout") : say("Couldn't reach Telegram: {reason}", { reason: err.message }));
   }
   let data;
   try {
     data = await res.json();
   } catch {
-    throw new Error(`Telegram answered ${res.status}, which isn't readable.`);
+    throw new Error(say("Telegram answered {status}, which isn't readable.", { status: res.status }));
   }
   if (!data.ok) throw new Error(data.description || `Telegram error ${res.status}`);
   return data.result;
@@ -87,22 +88,23 @@ function saveToken(token) {
 }
 
 async function testConnection(token = getToken()) {
-  if (!token) throw new Error("No token yet. Paste the token from @BotFather and press Save.");
+  if (!token) throw new Error(say("No token yet. Paste the token from @BotFather and press Save."));
   const me = await apiCall("getMe", {}, token, 15000);
   botUsername = me.username || botUsername;
   return { ok: true, bot: me };
 }
 
 // ---------- Commands ----------
-const HELP = [
-  "Hello! I'm your Friends companion.",
-  "",
-  "Just write to me, or use:",
-  "/mission <goal>: I make a plan, you approve it once, and I do it in the background",
-  "/missions: what's going on",
-  "/stop: stop every mission right now",
-  "/today, /tasks, /remind <text> in <minutes>, /note <text>",
-].join("\n");
+const help = () =>
+  [
+    say("Hello! I'm your Friends companion."),
+    "",
+    say("Just write to me, or use:"),
+    say("/mission <goal>: I make a plan, you approve it once, and I do it in the background"),
+    say("/missions: what's going on"),
+    say("/stop: stop every mission right now"),
+    say("/today, /tasks, /remind <text> in <minutes>, /note <text>"),
+  ].join("\n");
 
 const runner = () => require("./missions/runner");
 const store = () => require("./missions/store");
@@ -112,13 +114,13 @@ const short = (text, n = 160) => String(text || "").replace(/\s+/g, " ").trim().
 // What a plan looks like in a message (the actions are what you approve)
 function planMessage(m) {
   const p = m.plan;
-  const lines = [`A plan to approve: ${m.title}`, "", p.summary || "", "", "Steps:"];
+  const lines = [say("A plan to approve: {title}", { title: m.title }), "", p.summary || "", "", say("Steps:")];
   p.steps.forEach((s, i) => lines.push(`${i + 1}. ${s.title}`));
   const actions = p.actions || [];
-  lines.push("", actions.length ? "Approving covers exactly this, and nothing else:" : "It changes nothing outside its own folder.");
+  lines.push("", actions.length ? say("Approving covers exactly this, and nothing else:") : say("It changes nothing outside its own folder."));
   for (const a of actions.slice(0, 14)) lines.push(`• [${a.risk}] ${a.summary}`);
-  if (actions.length > 14) lines.push(`… and ${actions.length - 14} more (see the app)`);
-  lines.push("", `Limits: ${p.limits.maxMinutes} min, ${p.limits.maxSteps} steps, ${p.limits.maxCloudCalls} cloud calls.${m.private ? " Private: only models on this computer." : ""}`);
+  if (actions.length > 14) lines.push(say("… and {count} more (see the app)", { count: actions.length - 14 }));
+  lines.push("", say("Limits: {minutes} min, {steps} steps, {calls} cloud calls.", { minutes: p.limits.maxMinutes, steps: p.limits.maxSteps, calls: p.limits.maxCloudCalls }) + (m.private ? ` ${say("Private: only models on this computer.")}` : ""));
   return lines.join("\n");
 }
 
@@ -129,48 +131,48 @@ async function handleCommand(chatId, text) {
   switch (name) {
     case "/start":
     case "/help":
-      return sendMessage(chatId, HELP);
+      return sendMessage(chatId, help());
     case "/today":
     case "/briefing": {
       const t = life.today();
-      return sendMessage(chatId, [`Today (${t.date}):`, ...life.agenda()].join("\n"));
+      return sendMessage(chatId, [say("Today ({date}):", { date: t.date }), ...life.agenda()].join("\n"));
     }
     case "/tasks": {
       const tasks = life.listTasks().filter((t) => !t.done);
-      if (!tasks.length) return sendMessage(chatId, "No open tasks.");
-      return sendMessage(chatId, `Open tasks:\n${tasks.slice(0, 15).map((t) => `• ${t.title}${t.due ? ` (due ${t.due})` : ""}`).join("\n")}`);
+      if (!tasks.length) return sendMessage(chatId, say("No open tasks."));
+      return sendMessage(chatId, `${say("Open tasks:")}\n${tasks.slice(0, 15).map((t) => `• ${t.title}${t.due ? ` (${say("due {date}", { date: t.due })})` : ""}`).join("\n")}`);
     }
     case "/remind": {
       const match = arg.match(/^(.*?)\s+in\s+(\d+)\s*(?:m|min|mins|minutes)?$/i);
-      if (!match) return sendMessage(chatId, "Say it like this: /remind call the bank in 30");
+      if (!match) return sendMessage(chatId, say("Say it like this: /remind call the bank in 30"));
       life.addReminder({ text: match[1].trim(), inMinutes: Number(match[2]) });
-      return sendMessage(chatId, `Reminder set for “${match[1].trim()}” in ${match[2]} minute(s).`);
+      return sendMessage(chatId, sayN("Reminder set for “{text}” in {n} minute.", "Reminder set for “{text}” in {n} minutes.", Number(match[2]), { text: match[1].trim() }));
     }
     case "/note": {
-      if (!arg) return sendMessage(chatId, "Say it like this: /note a thought");
+      if (!arg) return sendMessage(chatId, say("Say it like this: /note a thought"));
       await localNotes.appendToNote("today", arg);
-      return sendMessage(chatId, "Added to today's note.");
+      return sendMessage(chatId, say("Added to today's note."));
     }
     case "/mission": {
-      if (!arg) return sendMessage(chatId, "Tell me the goal: /mission research the three best budget laptops and write me a short report");
+      if (!arg) return sendMessage(chatId, say("Tell me the goal: /mission research the three best budget laptops and write me a short report"));
       return startMission(chatId, arg);
     }
     case "/missions":
     case "/status": {
       const list = runner().list().filter((m) => !["done", "failed", "stopped"].includes(m.status) || Date.now() - m.updatedAt < 24 * 3600 * 1000);
-      if (!list.length) return sendMessage(chatId, "No missions right now. Start one with /mission <goal>.");
+      if (!list.length) return sendMessage(chatId, say("No missions right now. Start one with /mission <goal>."));
       const lines = list.slice(0, 8).map((m) => `• ${m.title}: ${statusText(m)}`);
       const models = require("./models").status();
-      if (models.loaded) lines.push("", `Model loaded: ${models.loaded.model}${models.loaded.role ? ` (${models.loaded.role})` : ""}`);
+      if (models.loaded) lines.push("", say("Model loaded: {model}", { model: models.loaded.model }) + (models.loaded.role ? ` (${models.loaded.role})` : ""));
       return sendMessage(chatId, lines.join("\n"));
     }
     case "/stop": {
       const live = runner().list().filter((m) => ["planning", "clarifying", "awaiting_approval", "running", "paused"].includes(m.status));
       for (const m of live) runner().stop(m.id);
-      return sendMessage(chatId, live.length ? `Stopped ${live.length} mission${live.length === 1 ? "" : "s"}.` : "Nothing was running.");
+      return sendMessage(chatId, live.length ? sayN("Stopped {n} mission.", "Stopped {n} missions.", live.length) : say("Nothing was running."));
     }
     default:
-      return sendMessage(chatId, `I don't know ${name}. ${HELP}`);
+      return sendMessage(chatId, `${say("I don't know {name}.", { name })} ${help()}`);
   }
 }
 
@@ -178,15 +180,21 @@ function statusText(m) {
   const p = m.progress;
   switch (m.status) {
     case "running":
-      return `running${p.total ? `, ${p.done} of ${p.total} steps` : ""}${p.current ? ` (${p.current.title})` : ""}`;
+      return `${say("running")}${p.total ? say(", {done} of {total} steps", { done: p.done, total: p.total }) : ""}${p.current ? ` (${p.current.title})` : ""}`;
     case "paused":
-      return `paused: ${short(m.pause?.message || m.pause?.kind, 90)}`;
+      return say("paused: {reason}", { reason: short(m.pause?.message || m.pause?.kind, 90) });
     case "awaiting_approval":
-      return "waiting for your approval";
+      return say("waiting for your approval");
     case "clarifying":
-      return "waiting for your answers";
+      return say("waiting for your answers");
     case "done":
-      return "done";
+      return say("done");
+    case "planning":
+      return say("making a plan");
+    case "failed":
+      return say("didn't work out");
+    case "stopped":
+      return say("stopped");
     default:
       return m.status;
   }
@@ -198,9 +206,9 @@ function startMission(chatId, goal) {
     const mission = store().get(m.id);
     mission.telegramChat = String(chatId);
     store().save(mission);
-    return sendMessage(chatId, `On it: ${short(goal, 120)}\nI'll make a plan (and ask if I need to). Stop me any time with /stop.`);
+    return sendMessage(chatId, say("On it: {goal}\nI'll make a plan (and ask if I need to). Stop me any time with /stop.", { goal: short(goal, 120) }));
   } catch (err) {
-    return sendMessage(chatId, `Couldn't start it: ${err.message}`);
+    return sendMessage(chatId, say("Couldn't start it: {reason}", { reason: err.message }));
   }
 }
 
@@ -213,7 +221,7 @@ async function handleMessage(msg) {
     const s = settingsModule.get();
     settingsModule.set({ ...s, telegram: { ...s.telegram, allowedUserIds: [fromId] } });
     allowed = [fromId];
-    await sendMessage(msg.chat.id, `Nice to meet you. Your Telegram id is ${fromId}: it's saved as the only one allowed to talk to me. Change it in Settings → Telegram.\n\n${HELP}`);
+    await sendMessage(msg.chat.id, `${say("Nice to meet you. Your Telegram id is {id}: it's saved as the only one allowed to talk to me. Change it in Settings → Telegram.", { id: fromId })}\n\n${help()}`);
     return;
   }
   if (!allowed.includes(fromId)) {
@@ -222,7 +230,7 @@ async function handleMessage(msg) {
   }
   const chatId = msg.chat?.id;
   const text = (msg.text || "").trim();
-  if (!text) return sendMessage(chatId, "I can read text for now. Write it, and I'll help.");
+  if (!text) return sendMessage(chatId, say("I can read text for now. Write it, and I'll help."));
 
   if (text.startsWith("/")) return handleCommand(chatId, text);
 
@@ -236,7 +244,7 @@ async function handleMessage(msg) {
     const answers = qs.map((q, i) => ({ id: q.id, text: lines.length === qs.length ? lines[i] : text }));
     try {
       runner().answer(mission.id, answers);
-      return sendMessage(chatId, "Thanks, making the plan.");
+      return sendMessage(chatId, say("Thanks, making the plan."));
     } catch (err) {
       return sendMessage(chatId, err.message);
     }
@@ -247,8 +255,8 @@ async function handleMessage(msg) {
     const key = Math.random().toString(36).slice(2, 8);
     suggestions.set(key, { text, chatId });
     if (suggestions.size > 50) suggestions.delete(suggestions.keys().next().value);
-    return sendMessage(chatId, "That sounds like something to carry out in the background. Make it a mission? (I'll make a plan first, and you approve it.)", {
-      buttons: [[{ text: "Start a mission", data: `s:${key}:go` }, { text: "Just talk", data: `s:${key}:chat` }]],
+    return sendMessage(chatId, say("That sounds like something to carry out in the background. Make it a mission? (I'll make a plan first, and you approve it.)"), {
+      buttons: [[{ text: say("Start a mission"), data: `s:${key}:go` }, { text: say("Just talk"), data: `s:${key}:chat` }]],
     });
   }
 
@@ -256,13 +264,13 @@ async function handleMessage(msg) {
 }
 
 async function chatReply(chatId, text) {
-  if (!handlers.chat) return sendMessage(chatId, "No AI is set up yet. Add one in Settings → AI & privacy.");
+  if (!handlers.chat) return sendMessage(chatId, say("No AI is set up yet. Add one in Settings → AI & privacy."));
   apiCall("sendChatAction", { chat_id: chatId, action: "typing" }).catch(() => {});
   try {
     const reply = await handlers.chat(text, { platform: "telegram" });
     if (reply) await sendMessage(chatId, reply);
   } catch (err) {
-    await sendMessage(chatId, `Couldn't answer: ${err.message}`);
+    await sendMessage(chatId, say("Couldn't answer: {reason}", { reason: err.message }));
   }
 }
 
@@ -272,38 +280,38 @@ async function handleCallback(cb) {
   const chatId = cb.message?.chat?.id;
   const answer = (text) => apiCall("answerCallbackQuery", { callback_query_id: cb.id, text: String(text || "").slice(0, 150) }).catch(() => {});
   const clear = () => cb.message && apiCall("editMessageReplyMarkup", { chat_id: chatId, message_id: cb.message.message_id, reply_markup: { inline_keyboard: [] } }).catch(() => {});
-  if (!allowedIds().includes(fromId)) return answer("Not allowed.");
+  if (!allowedIds().includes(fromId)) return answer(say("Not allowed."));
   const [kind, id, extra, verdict] = String(cb.data || "").split(":");
   try {
     if (kind === "m") {
       if (extra === "approve") {
         runner().approve(id);
         await clear();
-        await answer("Approved");
-        return sendMessage(chatId, "Approved. It's running in the background. I'll tell you when it's done, and /stop stops it.");
+        await answer(say("Approved"));
+        return sendMessage(chatId, say("Approved. It's running in the background. I'll tell you when it's done, and /stop stops it."));
       }
       if (extra === "stop") {
         runner().stop(id);
         await clear();
-        await answer("Stopped");
-        return sendMessage(chatId, "Stopped.");
+        await answer(say("Stopped"));
+        return sendMessage(chatId, say("Stopped."));
       }
     } else if (kind === "d") {
       const m = store().find(id);
       const request = m?.pause?.request;
       if (!request || !request.id.startsWith(extra)) {
         await clear();
-        return answer("That was already answered.");
+        return answer(say("That was already answered."));
       }
       runner().decide(id, request.id, verdict === "y");
       await clear();
-      return answer(verdict === "y" ? "Allowed" : "Declined");
+      return answer(verdict === "y" ? say("Allowed") : say("Declined"));
     } else if (kind === "s") {
       const pending = suggestions.get(id);
       suggestions.delete(id);
       await clear();
-      if (!pending) return answer("That's gone, write it again.");
-      await answer(extra === "go" ? "Starting" : "OK");
+      if (!pending) return answer(say("That's gone, write it again."));
+      await answer(extra === "go" ? say("Starting") : say("OK"));
       return extra === "go" ? startMission(chatId, pending.text) : chatReply(chatId, pending.text);
     }
   } catch (err) {
@@ -325,18 +333,18 @@ async function onMissionEvent(e) {
   const id = e.mission?.id;
   const chats = chatsFor(id);
   if (e.type === "questions") {
-    const text = `A few questions before I plan:\n${e.questions.map((q, i) => `${i + 1}. ${q.text}`).join("\n")}\n\nAnswer in one message (one line per question).`;
+    const text = `${say("A few questions before I plan:")}\n${e.questions.map((q, i) => `${i + 1}. ${q.text}`).join("\n")}\n\n${say("Answer in one message (one line per question).")}`;
     for (const c of chats) {
       awaitingAnswers.set(String(c), id);
       await sendMessage(c, text);
     }
   } else if (e.type === "plan-ready") {
     const m = runner().get(id);
-    for (const c of chats) await sendMessage(c, planMessage(m), { buttons: [[{ text: "Approve", data: `m:${id}:approve` }, { text: "Stop", data: `m:${id}:stop` }]] });
+    for (const c of chats) await sendMessage(c, planMessage(m), { buttons: [[{ text: say("Approve"), data: `m:${id}:approve` }, { text: say("Stop"), data: `m:${id}:stop` }]] });
   } else if (e.type === "approval" && e.request) {
     const r = e.request;
-    const text = `${e.mission.title} needs your OK:\n${r.summary}\n\nWhy it asks: ${r.why || "it isn't in the approved plan"}.`;
-    for (const c of chats) await sendMessage(c, text, { buttons: [[{ text: "Allow", data: `d:${id}:${r.id.slice(0, 8)}:y` }, { text: "No", data: `d:${id}:${r.id.slice(0, 8)}:n` }]] });
+    const text = say("{title} needs your OK:\n{summary}\n\nWhy it asks: {why}.", { title: e.mission.title, summary: r.summary, why: r.why || say("it isn't in the approved plan") });
+    for (const c of chats) await sendMessage(c, text, { buttons: [[{ text: say("Allow"), data: `d:${id}:${r.id.slice(0, 8)}:y` }, { text: say("No"), data: `d:${id}:${r.id.slice(0, 8)}:n` }]] });
   } else if (e.notify) {
     for (const c of chats) await sendMessage(c, `${e.notify.title}\n${e.notify.body}`);
   }
