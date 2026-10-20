@@ -52,7 +52,7 @@ The same app in its own window, with a launcher entry and icon. It runs the help
 ./scripts/install.sh --desktop          # dependencies + the Electron download (~100 MB)
 npm run desktop                         # try it from the project folder (runs with --no-sandbox)
 npm run dist                            # builds dist/friends_<version>_amd64.deb
-sudo apt install ./dist/friends_0.5.1_amd64.deb
+sudo apt install ./dist/friends_0.6.0_amd64.deb
 ```
 
 Or download the `.deb` or the **AppImage** from the [Releases](../../releases) page. The AppImage is a single file that runs without installing anything (`chmod +x Friends-*.AppImage && ./Friends-*.AppImage`; build it yourself with `npm run dist:appimage`). On a recent Ubuntu it needs FUSE 2 (`sudo apt install libfuse2t64`), or start it with `--appimage-extract-and-run`. It starts without Chromium's sandbox (an AppImage can't hold the setuid helper), so prefer the `.deb` for everyday use; both keep their data in `~/.config/friends`. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).

@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased (0.6.0): a companion with an assistant behind it
+## 0.6.0: A companion with an assistant behind it
+
+Friends is now a companion you talk to with an assistant behind it: three places (Talk, Missions, Today), a new look, missions that plan, ask for your approval and run in the background, specialist models that fit a small graphics card, any AI you want to add, and a helper that speaks your language. There is also an AppImage next to the `.deb`, and Friends tells you when a newer release exists.
 
 ### AI & privacy, rebuilt (after the five phases)
 - **Bugs fixed.** The Default badge showed `${t("Default")}` as text. The page saved the whole settings file, so a stale copy overwrote what the helper had changed meanwhile (a specialist's model chosen in Settings was undone by the next switch you flipped): it now sends only what changed (`PATCH /api/settings`), and takes the helper's cleaned values back. A select whose saved value isn't one of its choices is no longer blank. An unknown provider no longer breaks the list. Adding an AI no longer steals focus, and a stale "2 models available" is gone.

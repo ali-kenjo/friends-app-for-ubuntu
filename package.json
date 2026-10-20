@@ -1,6 +1,6 @@
 {
   "name": "friends",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "A personal AI chat app",
   "private": true,
   "main": "electron/main.js",
@@ -15,7 +15,7 @@
     "check": "node scripts/check.js",
     "desktop": "electron . --no-sandbox",
     "dist": "node scripts/build-deb.js",
-  "dist:appimage": "node scripts/build-appimage.js",
+    "dist:appimage": "node scripts/build-appimage.js",
     "update": "bash scripts/update.sh",
     "backup": "node scripts/backup.js",
     "doctor": "node scripts/doctor.js",
