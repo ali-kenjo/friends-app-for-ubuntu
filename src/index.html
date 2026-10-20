@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/shell.css">
   <link rel="stylesheet" href="css/missions.css">
+  <link rel="stylesheet" href="css/ai.css">
   <link rel="stylesheet" href="css/rtl.css">
   <link rel="stylesheet" href="css/a11y.css">
   <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/addons/"}}</script>
@@ -198,17 +199,17 @@
               <div class="onboarding-option-head">
                 <span class="onboarding-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 0 9.5z"/></svg></span>
                 <div>
-                  <h3>Gemini, Google's cloud AI</h3>
-                  <p>Faster and smarter. Your messages are sent to Google to be answered.</p>
+                  <h3>A cloud AI: Gemini, ChatGPT, Claude…</h3>
+                  <p>Faster and smarter. Your messages are sent to the company to be answered. Paste a key and Friends recognises the service.</p>
                 </div>
               </div>
               <label class="onboarding-key">
-                <span class="row-label">Your free key</span>
+                <span class="row-label">Your key</span>
                 <input class="field" type="password" name="key" id="onb-key" autocomplete="off" spellcheck="false" placeholder="Paste it here" required>
               </label>
               <div class="onboarding-actions">
-                <a class="btn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Get a free key</a>
-                <button type="submit" class="btn btn-primary" id="onb-cloud-save">Connect Gemini</button>
+                <a class="btn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Get a free Gemini key</a>
+                <button type="submit" class="btn btn-primary" id="onb-cloud-save">Connect</button>
               </div>
               <p class="form-error" id="onb-cloud-error" role="alert" hidden></p>
             </form>
@@ -652,7 +653,7 @@
           <h3>AI &amp; privacy</h3>
 
           <div class="ai-overview" id="ai-overview">
-            <!-- Diagnostics & Live Status Banner -->
+            <!-- The AI in use, and whether it answers -->
             <div class="ai-status-card" id="ai-status-card">
               <div class="ai-status-left">
                 <div class="ai-status-indicator">
@@ -668,395 +669,627 @@
             </div>
             <div class="ai-ping-status" id="ai-ping-status" hidden></div>
 
-            <!-- Privacy & local AI -->
-            <div class="subhead">
-              <div>
-                <div class="subhead-title">Privacy and local AI</div>
-                <p class="hint">Run models on this computer, so your chats never leave it.</p>
-              </div>
+            <div class="subtabs" id="ai-subtabs" role="tablist" aria-label="AI &amp; privacy sections">
+              <button type="button" class="subtab active" role="tab" id="subtab-ais" data-subtab="ais" aria-controls="subpane-ais" aria-selected="true">Your AIs</button>
+              <button type="button" class="subtab" role="tab" id="subtab-answers" data-subtab="answers" aria-controls="subpane-answers" aria-selected="false" tabindex="-1">Answers</button>
+              <button type="button" class="subtab" role="tab" id="subtab-privacy" data-subtab="privacy" aria-controls="subpane-privacy" aria-selected="false" tabindex="-1">Privacy</button>
+              <button type="button" class="subtab" role="tab" id="subtab-device" data-subtab="device" aria-controls="subpane-device" aria-selected="false" tabindex="-1">This computer</button>
             </div>
 
-            <div class="explain" id="local-vs-cloud">
-              <div class="explain-item">
-                <span class="explain-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
-                <p data-i18n-html="explain.local"><strong>Local AI</strong> runs on this computer. Your messages never leave it, and it works offline. It can be slower on an older computer.</p>
-              </div>
-              <div class="explain-item">
-                <span class="explain-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 0 9.5z"/></svg></span>
-                <p data-i18n-html="explain.cloud"><strong>Cloud AI</strong> (Gemini) runs on Google's servers. It is faster and smarter, but your messages are sent to Google to be answered.</p>
-              </div>
-            </div>
-
-            <label class="row">
-              <div>
-                <div class="row-label">Private mode</div>
-                <div class="row-desc">Only a local AI answers. Gemini, Google sign-in, GitHub search and news are switched off; nothing is sent to the internet.</div>
-              </div>
-              <input type="checkbox" class="toggle" data-setting="privacy.localOnly" id="private-mode-toggle">
-            </label>
-            <p class="form-error" id="private-mode-note" hidden></p>
-
-            <div class="local-card" id="local-card" aria-live="polite">
-              <div class="local-card-head">
+            <!-- ===== Your AIs ===== -->
+            <div class="subpane active" id="subpane-ais" data-subpane="ais" role="tabpanel" aria-labelledby="subtab-ais">
+              <div class="subhead">
                 <div>
-                  <div class="row-label">Local AI on this computer</div>
-                  <div class="row-desc" id="local-card-status">Looking for AI model servers…</div>
+                  <div class="subhead-title">Add an AI</div>
+                  <p class="hint">Run models on this computer, or use a cloud service. Add as many as you like.</p>
                 </div>
-                <button type="button" class="btn small" id="local-refresh">Look again</button>
+                <button type="button" class="btn btn-primary" id="brain-add">
+                  <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Add an AI</span>
+                </button>
               </div>
-              <div class="local-servers" id="local-servers"></div>
-              <div class="local-help" id="local-help" hidden>
-                <p>No local AI found yet. To get one:</p>
-                <ol>
-                  <li data-i18n-html="local.help1">Install <strong>Ollama</strong> from <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">ollama.com/download</a> (or LM Studio, Jan, llama.cpp…).</li>
-                  <li data-i18n-html="local.help2">Get a model, e.g. run <code>ollama pull llama3.2</code> in a terminal.</li>
-                  <li data-i18n-html="local.help3">Click <em>Look again</em>. It appears here, one click adds it.</li>
-                </ol>
-              </div>
-              <button type="button" class="btn" id="local-add-manual">Add a local AI by address…</button>
 
-              <div class="local-voice" id="local-voice">
-                <div>
-                  <div class="row-label">Local voice</div>
-                  <div class="row-desc" id="local-voice-status">Talk to a local AI and hear it answer, all on this computer.</div>
+              <form class="smart-add" id="smart-add" autocomplete="off">
+                <label class="smart-label" for="smart-input">Paste an API key or a server address</label>
+                <div class="smart-row">
+                  <input class="field" id="smart-input" type="text" placeholder="sk-…, AIza…, gsk_…, or http://localhost:1234" spellcheck="false" autocomplete="off">
+                  <button type="submit" class="btn" id="smart-go">Continue</button>
                 </div>
-                <button type="button" class="btn small" id="local-voice-btn">Set up</button>
+                <p class="row-desc" id="smart-hint">Friends works out which service it belongs to.</p>
+              </form>
+
+              <div class="local-card" id="local-card" aria-live="polite">
+                <div class="local-card-head">
+                  <div>
+                    <div class="row-label">AI on this computer</div>
+                    <div class="row-desc" id="local-card-status">Looking for AI model servers…</div>
+                  </div>
+                  <button type="button" class="btn small" id="local-refresh">Look again</button>
+                </div>
+                <div class="local-servers" id="local-servers"></div>
+                <div class="local-help" id="local-help" hidden>
+                  <p>No AI server is running on this computer yet. To get one:</p>
+                  <ol>
+                    <li data-i18n-html="local.help1">Install <strong>Ollama</strong> from <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">ollama.com/download</a> (or LM Studio, Jan, llama.cpp…).</li>
+                    <li data-i18n-html="local.help2">Get a model, e.g. run <code>ollama pull llama3.2</code> in a terminal. <em>This computer</em> suggests ones that fit.</li>
+                    <li data-i18n-html="local.help3">Click <em>Look again</em>. It appears here, one click adds it.</li>
+                  </ol>
+                </div>
+                <div class="local-voice" id="local-voice">
+                  <div>
+                    <div class="row-label">Local voice</div>
+                    <div class="row-desc" id="local-voice-status">Talk to a local AI and hear it answer, all on this computer.</div>
+                  </div>
+                  <button type="button" class="btn small" id="local-voice-btn">Set up</button>
+                </div>
               </div>
+
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">Your AIs</div>
+                  <p class="hint" id="brain-list-hint">The AIs Friends can use. The star marks the default; the arrows set the order they are tried in.</p>
+                </div>
+              </div>
+              <ul class="brain-list" id="brain-list"></ul>
+              <p class="form-error" id="brain-list-error" hidden></p>
             </div>
 
-            <!-- Which AI answers -->
-            <div class="subhead">
-              <div>
-                <div class="subhead-title">Which AI answers</div>
-                <p class="hint">Use a local AI, a cloud AI, or both, and let Friends choose per message.</p>
-              </div>
-            </div>
-
-            <label class="row">
-              <div>
-                <div class="row-label">Mode</div>
-                <div class="row-desc" id="routing-mode-desc">The same choice is in the model menu next to the message box.</div>
-              </div>
-              <select class="field" data-setting="routing.mode" id="routing-mode">
-                <option value="fixed">One AI (the one you pick)</option>
-                <option value="auto">Auto</option>
-                <option value="dynamic">Dynamic</option>
-                <option value="fastest">Fastest</option>
-                <option value="local">Local only</option>
-                <option value="cloud">Cloud only</option>
-              </select>
-            </label>
-
-            <div class="routing-options" id="routing-options">
-              <label class="row" data-for="auto dynamic fastest">
+            <!-- ===== Answers ===== -->
+            <div class="subpane" id="subpane-answers" data-subpane="answers" role="tabpanel" aria-labelledby="subtab-answers">
+              <div class="subhead">
                 <div>
-                  <div class="row-label">Ask before using the cloud</div>
-                  <div class="row-desc">In Auto, Dynamic and Fastest, your message only goes to Gemini after you agree</div>
+                  <div class="subhead-title">Which AI answers</div>
+                  <p class="hint">Use a local AI, a cloud AI, or both, and let Friends choose per message.</p>
                 </div>
-                <select class="field" data-setting="routing.askBeforeCloud">
-                  <option value="chat">Once per chat</option>
-                  <option value="always">Every time</option>
-                  <option value="never">Never ask</option>
+              </div>
+
+              <label class="row">
+                <div>
+                  <div class="row-label">Mode</div>
+                  <div class="row-desc" id="routing-mode-desc">The same choice is in the model menu next to the message box.</div>
+                </div>
+                <select class="field" data-setting="routing.mode" id="routing-mode">
+                  <option value="fixed">One AI (the one you pick)</option>
+                  <option value="auto">Auto</option>
+                  <option value="dynamic">Dynamic</option>
+                  <option value="fastest">Fastest</option>
+                  <option value="local">Local only</option>
+                  <option value="cloud">Cloud only</option>
                 </select>
               </label>
 
-              <details class="advanced" id="routing-advanced">
-                <summary>More routing rules</summary>
-              <div class="row-label routing-sub" data-for="auto dynamic">Auto and Dynamic send a message to the cloud when…</div>
-              <label class="row" data-for="auto dynamic">
-                <div><div class="row-label">It has a PDF or picture</div><div class="row-desc">Local models can't read PDFs, and most can't see pictures</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.auto.attachments">
+              <div class="routing-options" id="routing-options">
+                <label class="row" data-for="auto dynamic fastest">
+                  <div>
+                    <div class="row-label">Ask before using the cloud</div>
+                    <div class="row-desc">In Auto, Dynamic and Fastest, your message only goes to a cloud AI after you agree</div>
+                  </div>
+                  <select class="field" data-setting="routing.askBeforeCloud">
+                    <option value="chat">Once per chat</option>
+                    <option value="always">Every time</option>
+                    <option value="never">Never ask</option>
+                  </select>
+                </label>
+
+                <details class="advanced" id="routing-advanced">
+                  <summary>More routing rules</summary>
+                  <div class="row-label routing-sub" data-for="auto dynamic">Auto and Dynamic send a message to the cloud when…</div>
+                  <label class="row" data-for="auto dynamic">
+                    <div><div class="row-label">It has a PDF or picture</div><div class="row-desc">Local models can't read PDFs, and most can't see pictures</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.auto.attachments">
+                  </label>
+                  <label class="row" data-for="auto dynamic">
+                    <div><div class="row-label">The chat is very long</div><div class="row-desc">When it no longer fits the local model's memory</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.auto.longChats">
+                  </label>
+                  <label class="row" data-for="auto dynamic">
+                    <div><div class="row-label">It's a hard question</div><div class="row-desc">Long, detailed, code or multi-step requests</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.auto.hardQuestions">
+                  </label>
+                  <label class="row" data-for="auto dynamic">
+                    <div><div class="row-label">Keep voice answers local</div><div class="row-desc">Spoken answers use the local AI when there is one, for speed</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.auto.voiceLocal">
+                  </label>
+
+                  <div class="row-label routing-sub" data-for="dynamic">Dynamic mode</div>
+                  <label class="row" data-for="dynamic">
+                    <div><div class="row-label">Switch when the local AI is slow or fails</div><div class="row-desc">If it stays silent, errors or sends nothing, the cloud answers instead, and the local AI is left alone for 10 minutes</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.dynamic.escalate">
+                  </label>
+                  <label class="row" data-for="dynamic">
+                    <div><div class="row-label">Patience with the local AI</div><div class="row-desc">How long it may stay silent before the cloud takes over. Loading a model counts; slow thinkers need more</div></div>
+                    <select class="field" data-setting="routing.dynamic.slowSeconds" data-type="number">
+                      <option value="15">15 seconds</option>
+                      <option value="30">30 seconds</option>
+                      <option value="45">45 seconds</option>
+                      <option value="90">90 seconds</option>
+                      <option value="180">3 minutes</option>
+                    </select>
+                  </label>
+                </details>
+              </div>
+
+              <label class="row">
+                <div>
+                  <div class="row-label">Language of the answers</div>
+                  <div class="row-desc">The AI answers in the language you write in. Choose one to make it always answer in that language.</div>
+                </div>
+                <select class="field" data-setting="aiControl.replyLanguage">
+                  <option value="auto">The language I write in</option>
+                  <option value="en">English</option>
+                  <option value="de">Deutsch</option>
+                  <option value="ar">العربية</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                  <option value="it">Italiano</option>
+                  <option value="pt">Português</option>
+                  <option value="nl">Nederlands</option>
+                  <option value="pl">Polski</option>
+                  <option value="tr">Türkçe</option>
+                  <option value="ru">Русский</option>
+                  <option value="uk">Українська</option>
+                  <option value="fa">فارسی</option>
+                  <option value="hi">हिन्दी</option>
+                  <option value="zh">中文</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                </select>
               </label>
-              <label class="row" data-for="auto dynamic">
-                <div><div class="row-label">The chat is very long</div><div class="row-desc">When it no longer fits the local model's memory</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.auto.longChats">
+              <label class="row">
+                <div>
+                  <div class="row-label">If the AI fails</div>
+                  <div class="row-desc">When the AI you chose can't answer, try the next one in your list. A local AI never falls back to the cloud, or the other way round.</div>
+                </div>
+                <select class="field" data-setting="routing.fallback">
+                  <option value="off">Say so</option>
+                  <option value="same-kind">Try the next one of the same kind</option>
+                </select>
               </label>
-              <label class="row" data-for="auto dynamic">
-                <div><div class="row-label">It's a hard question</div><div class="row-desc">Long, detailed, code or multi-step requests</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.auto.hardQuestions">
-              </label>
-              <label class="row" data-for="auto dynamic">
-                <div><div class="row-label">Keep voice answers local</div><div class="row-desc">Spoken answers use the local AI when there is one, for speed</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.auto.voiceLocal">
+              <label class="row">
+                <div>
+                  <div class="row-label">AI for small jobs</div>
+                  <div class="row-desc">Follow-up suggestions, summaries of long chats and moods. A small, quick one is enough.</div>
+                </div>
+                <select class="field" data-setting="routing.taskBrain" data-type="number" id="task-brain">
+                  <option value="0">Chosen by the mode</option>
+                </select>
               </label>
 
-              <div class="row-label routing-sub" data-for="dynamic">Dynamic mode</div>
-              <label class="row" data-for="dynamic">
-                <div><div class="row-label">Switch when the local AI is slow or fails</div><div class="row-desc">If it stays silent, errors or sends nothing, the cloud answers instead, and the local AI is left alone for 10 minutes</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.dynamic.escalate">
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">How it thinks</div>
+                  <p class="hint">Faster answers, or slower and more thorough ones.</p>
+                </div>
+              </div>
+
+              <div class="row-label" id="effort-label">Thinking effort</div>
+              <div class="choice-grid" id="reasoning-effort-grid" role="radiogroup" aria-labelledby="effort-label">
+                <button type="button" class="choice" data-effort="fast" role="radio" aria-checked="false">
+                  <span class="choice-title">Fast</span>
+                  <span class="choice-desc">Concise, low-latency</span>
+                </button>
+                <button type="button" class="choice selected" data-effort="balanced" role="radio" aria-checked="true">
+                  <span class="choice-title">Balanced</span>
+                  <span class="choice-desc">Recommended</span>
+                </button>
+                <button type="button" class="choice" data-effort="deep" role="radio" aria-checked="false">
+                  <span class="choice-title">Deep</span>
+                  <span class="choice-desc">Step-by-step analysis</span>
+                </button>
+              </div>
+
+              <div class="row">
+                <div>
+                  <div class="row-label">How much of the chat it sees</div>
+                  <div class="row-desc">The number of recent messages that are sent along with your new one</div>
+                </div>
+                <div class="slider">
+                  <span id="context-val-label" class="slider-badge">20</span>
+                  <input type="range" class="range" min="5" max="50" step="5" value="20" data-setting="aiControl.contextWindow" id="context-window-slider">
+                </div>
+              </div>
+              <label class="row">
+                <div>
+                  <div class="row-label">Tools for a local AI</div>
+                  <div class="row-desc">Small models work better with fewer tools (and each takes room in their memory)</div>
+                </div>
+                <select class="field" data-setting="aiControl.localTools">
+                  <option value="essential">Essential</option>
+                  <option value="all">All</option>
+                </select>
               </label>
-              <label class="row" data-for="dynamic">
-                <div><div class="row-label">Patience with the local AI</div><div class="row-desc">How long it may stay silent before the cloud takes over. Loading a model counts; slow thinkers need more</div></div>
-                <select class="field" data-setting="routing.dynamic.slowSeconds" data-type="number">
+              <label class="row">
+                <div>
+                  <div class="row-label">Confirm Google actions</div>
+                  <div class="row-desc">Ask before sending an email or changing your calendar</div>
+                </div>
+                <input type="checkbox" class="toggle" checked data-setting="aiControl.confirmTools">
+              </label>
+
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">Limits</div>
+                  <p class="hint">For every AI. Each AI can have its own in its settings, and those win.</p>
+                </div>
+              </div>
+              <label class="row">
+                <div>
+                  <div class="row-label">Longest reply</div>
+                  <div class="row-desc">Stops a reply after this many tokens (about three quarters of a word each). It keeps a cloud bill small.</div>
+                </div>
+                <select class="field" data-setting="aiControl.maxTokens" data-type="number">
+                  <option value="0">The AI's own limit</option>
+                  <option value="256">Short (256)</option>
+                  <option value="512">Medium (512)</option>
+                  <option value="1024">Long (1,024)</option>
+                  <option value="2048">Very long (2,048)</option>
+                  <option value="4096">4,096</option>
+                  <option value="8192">8,192</option>
+                </select>
+              </label>
+              <label class="row">
+                <div>
+                  <div class="row-label">How long to wait for an AI</div>
+                  <div class="row-desc">If it stays silent this long, Friends gives up on it (and tries the next one if you chose that above)</div>
+                </div>
+                <select class="field" data-setting="aiControl.timeoutSeconds" data-type="number">
+                  <option value="0">As long as it takes</option>
                   <option value="15">15 seconds</option>
                   <option value="30">30 seconds</option>
-                  <option value="45">45 seconds</option>
-                  <option value="90">90 seconds</option>
-                  <option value="180">3 minutes</option>
+                  <option value="60">1 minute</option>
+                  <option value="120">2 minutes</option>
+                  <option value="300">5 minutes</option>
                 </select>
               </label>
-              </details>
+              <label class="row">
+                <div>
+                  <div class="row-label">Try again when it's busy</div>
+                  <div class="row-desc">A request that fails for a passing reason (busy, no connection) is tried again before anything is shown</div>
+                </div>
+                <select class="field" data-setting="aiControl.retries" data-type="number">
+                  <option value="0">Don't</option>
+                  <option value="1">Once</option>
+                  <option value="2">Twice</option>
+                  <option value="3">Three times</option>
+                </select>
+              </label>
             </div>
 
-            <!-- AI Reasoning & Execution Policy -->
-            <div class="subhead">
-              <div>
-                <div class="subhead-title">How it thinks</div>
-                <p class="hint">Faster answers, or slower and more thorough ones.</p>
+            <!-- ===== Privacy ===== -->
+            <div class="subpane" id="subpane-privacy" data-subpane="privacy" role="tabpanel" aria-labelledby="subtab-privacy">
+              <div class="explain" id="local-vs-cloud">
+                <div class="explain-item">
+                  <span class="explain-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+                  <p data-i18n-html="explain.local"><strong>Local AI</strong> runs on this computer. Your messages never leave it, and it works offline. It can be slower on an older computer.</p>
+                </div>
+                <div class="explain-item">
+                  <span class="explain-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 0 9.5z"/></svg></span>
+                  <p data-i18n-html="explain.cloud"><strong>Cloud AI</strong> (Gemini, ChatGPT, Claude…) runs on a company's servers. It is faster and smarter, but your messages are sent there to be answered.</p>
+                </div>
               </div>
-            </div>
 
-            <div class="row-label" id="effort-label">Thinking effort</div>
-            <div class="choice-grid" id="reasoning-effort-grid" role="radiogroup" aria-labelledby="effort-label">
-              <button type="button" class="choice" data-effort="fast" role="radio" aria-checked="false">
-                <span class="choice-title">Fast</span>
-                <span class="choice-desc">Concise, low-latency</span>
-              </button>
-              <button type="button" class="choice selected" data-effort="balanced" role="radio" aria-checked="true">
-                <span class="choice-title">Balanced</span>
-                <span class="choice-desc">Recommended</span>
-              </button>
-              <button type="button" class="choice" data-effort="deep" role="radio" aria-checked="false">
-                <span class="choice-title">Deep</span>
-                <span class="choice-desc">Step-by-step analysis</span>
-              </button>
-            </div>
+              <label class="row">
+                <div>
+                  <div class="row-label">Private mode</div>
+                  <div class="row-desc">Only a local AI answers. Cloud AIs, Google sign-in, GitHub search and news are switched off; nothing is sent to the internet.</div>
+                </div>
+                <input type="checkbox" class="toggle" data-setting="privacy.localOnly" id="private-mode-toggle">
+              </label>
+              <p class="form-error" id="private-mode-note" hidden></p>
 
-            <details class="advanced">
-              <summary>Advanced: how much it sees, and its tools</summary>
-            <div class="row">
-              <div>
-                <div class="row-label">How much of the chat it sees</div>
-                <div class="row-desc">The number of recent messages that are sent along with your new one</div>
+              <div class="leaving-card card" id="leaving-card">
+                <div class="row-label">What could leave this computer now</div>
+                <ul class="leaving-list" id="leaving-list"></ul>
+                <p class="row-desc" id="leaving-note"></p>
               </div>
-              <div class="slider">
-                <span id="context-val-label" class="slider-badge">20</span>
-                <input type="range" class="range" min="5" max="50" step="5" value="20" data-setting="aiControl.contextWindow" id="context-window-slider">
+
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">Hide from cloud AIs</div>
+                  <p class="hint">These are swapped for a placeholder like [email] before a message goes to a cloud AI. A local AI sees everything.</p>
+                </div>
               </div>
-            </div>
+              <label class="row">
+                <div><div class="row-label">Keys and passwords</div><div class="row-desc">API keys, tokens and private keys</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.redact.keys">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Card numbers</div><div class="row-desc">Numbers that pass a card check</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.redact.cards">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Email addresses</div><div class="row-desc">Yours and other people's, in what you write and what a tool reads out</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.redact.emails">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Phone numbers</div><div class="row-desc">With a plus sign or separators; plain numbers and dates stay</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.redact.phones">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Share my memories and notes with cloud AIs</div><div class="row-desc">Switch off to keep what you asked it to remember, its notes, your notes vault and what it remembers of past chats from cloud AIs</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.shareMemoryWithCloud">
+              </label>
 
-            <div class="row">
-              <div>
-                <div class="row-label">Tools for a local AI</div>
-                <div class="row-desc">Small models work better with fewer tools (and each takes room in their memory)</div>
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">Your data on this computer</div>
+                  <p class="hint" id="privacy-counts">Looking…</p>
+                </div>
               </div>
-              <select class="field" data-setting="aiControl.localTools">
-                <option value="essential">Essential</option>
-                <option value="all">All</option>
-              </select>
-            </div>
-
-            </details>
-
-            <label class="row">
-              <div>
-                <div class="row-label">Confirm Google actions</div>
-                <div class="row-desc">Ask before sending an email or changing your calendar</div>
+              <label class="row">
+                <div><div class="row-label">Delete old chats</div><div class="row-desc">Chats you haven't opened or written in for this long are deleted</div></div>
+                <select class="field" data-setting="privacy.keepChatsDays" data-type="number">
+                  <option value="0">Never</option>
+                  <option value="7">After 7 days</option>
+                  <option value="30">After 30 days</option>
+                  <option value="90">After 90 days</option>
+                  <option value="180">After 6 months</option>
+                  <option value="365">After a year</option>
+                </select>
+              </label>
+              <label class="row">
+                <div><div class="row-label">Check for updates</div><div class="row-desc">Asks GitHub's public releases page once a day. Nothing about you is sent. Not in Private mode.</div></div>
+                <input type="checkbox" class="toggle" data-setting="updates.check">
+              </label>
+              <div class="clear-row">
+                <button type="button" class="btn small" data-clear="chats">Delete all chats</button>
+                <button type="button" class="btn small" data-clear="memories">Delete my memories</button>
+                <button type="button" class="btn small" data-clear="notes">Delete its notes</button>
+                <button type="button" class="btn small" data-clear="episodes">Forget past chats</button>
+                <button type="button" class="btn small" data-clear="usage">Reset usage counts</button>
+                <span class="test-feedback" id="clear-feedback" role="status"></span>
               </div>
-              <input type="checkbox" class="toggle" checked data-setting="aiControl.confirmTools">
-            </label>
 
-            <!-- Brains Management -->
-            <div class="subhead">
-              <div>
-                <div class="subhead-title">Your AIs</div>
-                <p class="hint">The AIs Friends can use. Add as many as you like, and pick which one is the default.</p>
+              <div class="subhead" id="permissions-section">
+                <div>
+                  <div class="subhead-title">Permissions and file access</div>
+                  <p class="hint">Choose what the AI is allowed to do on your computer.</p>
+                </div>
               </div>
-              <button class="btn btn-primary" id="brain-add">
-                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Add an AI</span>
-              </button>
-            </div>
 
-            <div class="preset-chips">
-              <span class="preset-label">Quick add:</span>
-              <button type="button" class="chip preset-btn" data-preset="flash">2.5 Flash (fast)</button>
-              <button type="button" class="chip preset-btn" data-preset="pro">2.5 Pro (deep)</button>
-              <button type="button" class="chip preset-btn" data-preset="flash2">2.0 Flash (voice)</button>
-              <button type="button" class="chip preset-btn" data-preset="local">Local AI (private)</button>
-            </div>
-
-            <ul class="brain-list" id="brain-list"></ul>
-            <p class="form-error" id="brain-list-error" hidden></p>
-
-            <div class="subhead" id="permissions-section">
-              <div>
-                <div class="subhead-title">Permissions and file access</div>
-                <p class="hint">Choose what the AI is allowed to do on your computer.</p>
+              <div class="form-field">
+                <div>
+                  <div class="row-label">Allowed folders</div>
+                  <div class="row-desc">The AI can only work inside these folders.</div>
+                </div>
+                <ul class="folder-list" id="folder-list"></ul>
+                <form class="folder-add" id="folder-add" hidden>
+                  <input class="field" name="path" placeholder="e.g. ~/Documents/Projects" autocomplete="off" spellcheck="false" required>
+                  <button type="submit" class="btn btn-primary">Add</button>
+                  <button type="button" class="btn" id="folder-add-cancel">Cancel</button>
+                </form>
+                <button class="btn add-folder-btn" id="folder-add-open">
+                  <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Add folder</span>
+                </button>
               </div>
-            </div>
 
-            <div class="form-field">
-              <div>
-                <div class="row-label">Allowed folders</div>
-                <div class="row-desc">The AI can only work inside these folders.</div>
+              <div class="perm-grid" id="perm-grid">
+                <span></span>
+                <span class="perm-head">Create</span>
+                <span class="perm-head">Read</span>
+                <span class="perm-head">Edit</span>
+                <span class="perm-head">Delete</span>
+
+                <span class="perm-row-label">
+                  <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>
+                  Files
+                </span>
+                <input type="checkbox" class="perm-check" data-row="files" data-perm="create" aria-label="Create files">
+                <input type="checkbox" class="perm-check" data-row="files" data-perm="read" aria-label="Read files" checked>
+                <input type="checkbox" class="perm-check" data-row="files" data-perm="edit" aria-label="Edit files">
+                <input type="checkbox" class="perm-check" data-row="files" data-perm="delete" aria-label="Delete files">
+
+                <span class="perm-row-label">
+                  <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                  Folders
+                </span>
+                <input type="checkbox" class="perm-check" data-row="folders" data-perm="create" aria-label="Create folders">
+                <input type="checkbox" class="perm-check" data-row="folders" data-perm="read" aria-label="Read folders" checked>
+                <input type="checkbox" class="perm-check" data-row="folders" data-perm="edit" aria-label="Edit folders">
+                <input type="checkbox" class="perm-check" data-row="folders" data-perm="delete" aria-label="Delete folders">
               </div>
-              <ul class="folder-list" id="folder-list"></ul>
-              <form class="folder-add" id="folder-add" hidden>
-                <input class="field" name="path" placeholder="e.g. ~/Documents/Projects" autocomplete="off" spellcheck="false" required>
-                <button type="submit" class="btn btn-primary">Add</button>
-                <button type="button" class="btn" id="folder-add-cancel">Cancel</button>
-              </form>
-              <button class="btn add-folder-btn" id="folder-add-open">
-                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Add folder</span>
-              </button>
+              <p class="row-desc">Read = open files and see what's inside folders. Edit includes renaming and moving.</p>
+
+              <label class="row">
+                <div><div class="row-label">Ask before acting</div><div class="row-desc">Confirm each action before the AI does it</div></div>
+                <input type="checkbox" class="toggle" checked data-setting="permissions.askBeforeActing">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Use the trash</div><div class="row-desc">Deleted items go to the trash so you can restore them</div></div>
+                <input type="checkbox" class="toggle" checked data-setting="permissions.useTrash">
+              </label>
             </div>
 
-            <div class="perm-grid" id="perm-grid">
-              <span></span>
-              <span class="perm-head">Create</span>
-              <span class="perm-head">Read</span>
-              <span class="perm-head">Edit</span>
-              <span class="perm-head">Delete</span>
+            <!-- ===== This computer ===== -->
+            <div class="subpane" id="subpane-device" data-subpane="device" role="tabpanel" aria-labelledby="subtab-device">
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">What Friends found</div>
+                  <p class="hint">Friends looks at this computer by itself and fits local AI to it. Nothing here leaves it.</p>
+                </div>
+                <button type="button" class="btn small" id="device-refresh">Look again</button>
+              </div>
+              <div class="device-card card" id="device-card" aria-live="polite">
+                <div class="device-head" id="device-head">Looking at this computer…</div>
+                <dl class="device-facts" id="device-facts"></dl>
+              </div>
 
-              <span class="perm-row-label">
-                <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>
-                Files
-              </span>
-              <input type="checkbox" class="perm-check" data-row="files" data-perm="create" aria-label="Create files">
-              <input type="checkbox" class="perm-check" data-row="files" data-perm="read" aria-label="Read files" checked>
-              <input type="checkbox" class="perm-check" data-row="files" data-perm="edit" aria-label="Edit files">
-              <input type="checkbox" class="perm-check" data-row="files" data-perm="delete" aria-label="Delete files">
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">What suits it</div>
+                  <p class="hint" id="device-fit">…</p>
+                </div>
+              </div>
+              <ul class="device-picks" id="device-picks"></ul>
+              <div class="actions-row">
+                <button type="button" class="btn small" id="device-open-specialists" data-open-tab="specialists">Set them up in Specialists</button>
+              </div>
 
-              <span class="perm-row-label">
-                <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-                Folders
-              </span>
-              <input type="checkbox" class="perm-check" data-row="folders" data-perm="create" aria-label="Create folders">
-              <input type="checkbox" class="perm-check" data-row="folders" data-perm="read" aria-label="Read folders" checked>
-              <input type="checkbox" class="perm-check" data-row="folders" data-perm="edit" aria-label="Edit folders">
-              <input type="checkbox" class="perm-check" data-row="folders" data-perm="delete" aria-label="Delete folders">
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">How hard it may work</div>
+                  <p class="hint">Automatic follows what this computer is. Change it if you want a quieter or a faster one.</p>
+                </div>
+              </div>
+              <label class="row">
+                <div><div class="row-label">Profile</div><div class="row-desc" id="device-profile-desc">Sets the context size and how long a model stays loaded for a new local AI, and how many missions run at once.</div></div>
+                <select class="field" data-setting="device.profile" id="device-profile">
+                  <option value="auto">Automatic</option>
+                  <option value="light">Light: quiet and cool</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="performance">Performance: as much as it can</option>
+                </select>
+              </label>
+              <label class="row">
+                <div><div class="row-label">Graphics card for local AI</div><div class="row-desc">Switch off to keep local models on the processor, for example when the card is busy or its driver misbehaves</div></div>
+                <select class="field" data-setting="device.gpu">
+                  <option value="auto">Use it when there is one</option>
+                  <option value="off">Don't use it</option>
+                </select>
+              </label>
+              <label class="row">
+                <div><div class="row-label">Save battery</div><div class="row-desc">On battery, repeating missions wait until the charger is back, and a model isn't kept loaded for long</div></div>
+                <input type="checkbox" class="toggle" data-setting="device.saveBattery">
+              </label>
+
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">This screen</div>
+                  <p class="hint">The window you are looking at now (it can be another device than the one Friends runs on).</p>
+                </div>
+              </div>
+              <div class="device-card card" id="browser-card"><dl class="device-facts" id="browser-facts"></dl></div>
             </div>
-            <p class="row-desc">Read = open files and see what's inside folders. Edit includes renaming and moving.</p>
-
-            <label class="row">
-              <div><div class="row-label">Ask before acting</div><div class="row-desc">Confirm each action before the AI does it</div></div>
-              <input type="checkbox" class="toggle" checked data-setting="permissions.askBeforeActing">
-            </label>
-            <label class="row">
-              <div><div class="row-label">Use the trash</div><div class="row-desc">Deleted items go to the trash so you can restore them</div></div>
-              <input type="checkbox" class="toggle" checked data-setting="permissions.useTrash">
-            </label>
           </div>
 
-          <!-- Add / edit an AI brain -->
-          <form class="brain-form" id="brain-form" hidden>
-            <button type="button" class="back-link" id="brain-back">
+          <!-- Add / edit an AI -->
+          <div class="ai-add" id="ai-add" hidden>
+            <button type="button" class="back-link" id="ai-add-back">
               <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
               <span>Back to AI &amp; privacy</span>
             </button>
-            <div class="subhead-title" id="brain-form-title">Add an AI</div>
+            <div class="subhead-title" id="ai-add-title">Add an AI</div>
 
-            <div class="form-field">
-              <span class="row-label">Provider</span>
-              <div class="provider-grid" id="provider-grid"></div>
+            <!-- Step 1: which service -->
+            <div id="ai-pick">
+              <label class="form-field">
+                <span class="row-label">Find a service</span>
+                <input class="field" id="ai-search" type="search" placeholder="Ollama, ChatGPT, Claude, Groq, OpenRouter…" autocomplete="off" spellcheck="false">
+              </label>
+              <div class="subhead-title small">On this computer</div>
+              <div class="service-grid" id="service-grid-local"></div>
+              <div class="subhead-title small">Cloud services</div>
+              <div class="service-grid" id="service-grid-cloud"></div>
+              <p class="row-desc" id="service-none" hidden>Nothing matches. Try "Any other service" and give its address.</p>
             </div>
 
-            <label class="form-field">
-              <span class="row-label">Name</span>
-              <input class="field" name="name" placeholder="e.g. Gemini Fast or Claude Work" autocomplete="off">
-            </label>
+            <!-- Step 2: connect, pick models -->
+            <form class="ai-form" id="ai-form" hidden autocomplete="off">
+              <div class="ai-form-head" id="ai-form-head"></div>
+              <p class="row-desc" id="ai-form-about"></p>
 
-            <div class="form-field" id="local-presets-field" hidden>
-              <span class="row-label">Your AI server</span>
-              <div class="preset-row" id="local-presets"></div>
-              <span class="row-desc">Runs on this computer, so your chats never leave it. Any server that speaks the OpenAI API works, open source or not.</span>
-            </div>
+              <label class="form-field" id="field-name">
+                <span class="row-label">Name</span>
+                <input class="field" name="name" autocomplete="off" placeholder="e.g. Fast cloud, or Writing helper">
+              </label>
 
-            <label class="form-field" id="baseurl-field" hidden>
-              <span class="row-label">Server address</span>
-              <input class="field" name="baseUrl" type="text" placeholder="http://127.0.0.1:11434/v1" autocomplete="off" spellcheck="false">
-            </label>
+              <label class="form-field" id="field-baseurl">
+                <span class="row-label" id="baseurl-label">Address</span>
+                <input class="field" name="baseUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://api.example.com/v1">
+                <span class="row-desc" id="baseurl-desc"></span>
+              </label>
 
-            <div class="form-field" id="model-select-field">
-              <span class="row-label">Model</span>
-              <div class="model-curated-grid" id="model-curated-grid">
-                <button type="button" class="model-card selected" data-model="gemini-2.5-flash">
-                  <div class="model-card-badge">Fast, and voice</div>
-                  <div class="model-card-name">Gemini 2.5 Flash</div>
-                  <div class="model-card-desc">Quickest answers: great for everyday chats and voice</div>
-                </button>
-                <button type="button" class="model-card" data-model="gemini-2.5-pro">
-                  <div class="model-card-badge">Deep thinking</div>
-                  <div class="model-card-name">Gemini 2.5 Pro</div>
-                  <div class="model-card-desc">Careful reasoning, research and coding</div>
-                </button>
-                <button type="button" class="model-card" data-model="gemini-2.0-flash">
-                  <div class="model-card-badge">Multimodal</div>
-                  <div class="model-card-name">Gemini 2.0 Flash</div>
-                  <div class="model-card-desc">Fast, and handles pictures and audio</div>
-                </button>
-                <button type="button" class="model-card" data-model="custom">
-                  <div class="model-card-badge">Custom</div>
-                  <div class="model-card-name">Other model…</div>
-                  <div class="model-card-desc">Pick from the list or type a name</div>
-                </button>
+              <label class="form-field" id="field-key">
+                <span class="row-label" id="key-label">API key</span>
+                <span class="key-input">
+                  <input class="field" name="key" type="password" autocomplete="off" spellcheck="false">
+                  <button type="button" class="icon-btn small" id="key-toggle" title="Show key" aria-label="Show key">
+                    <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </span>
+                <span class="row-desc" id="key-desc"></span>
+              </label>
+
+              <div class="form-test-bar">
+                <button type="button" class="btn" id="ai-connect-go">Connect and list models</button>
+                <span class="test-feedback" id="ai-connect-status" role="status"></span>
               </div>
-            </div>
 
-            <label class="form-field" id="model-custom-wrapper" hidden>
-              <span class="row-label" id="model-label">Custom model name</span>
-              <input class="field" name="model" list="model-options" autocomplete="off" spellcheck="false" placeholder="Leave empty to pick automatically">
-              <datalist id="model-options"></datalist>
-            </label>
+              <div class="form-field" id="field-models" hidden>
+                <span class="row-label" id="models-label">Models</span>
+                <div class="model-tools">
+                  <input class="field" id="ai-model-filter" type="search" placeholder="Filter the list" aria-label="Filter the models" autocomplete="off" spellcheck="false">
+                  <button type="button" class="btn small" id="ai-model-none">Select none</button>
+                </div>
+                <ul class="model-list" id="ai-model-list" role="group" aria-labelledby="models-label"></ul>
+                <p class="row-desc" id="ai-model-count"></p>
+                <label class="form-field" id="field-model-typed">
+                  <span class="row-label">Another model name</span>
+                  <input class="field" name="model" list="model-options" autocomplete="off" spellcheck="false" placeholder="Type a name that isn't in the list">
+                  <datalist id="model-options"></datalist>
+                </label>
+              </div>
 
-            <label class="form-field" id="key-field">
-              <span class="row-label" id="key-label">API key</span>
-              <span class="key-input">
-                <input class="field" name="key" type="password" autocomplete="off" spellcheck="false">
-                <button type="button" class="icon-btn small" id="key-toggle" title="Show key">
-                  <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-              </span>
-              <span class="row-desc" id="key-desc" data-i18n-html="key.desc">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></span>
-            </label>
+              <details class="advanced" id="ai-own-settings">
+                <summary>This AI's own settings</summary>
+                <div class="own-grid">
+                  <label class="form-field"><span class="row-label">Temperature</span><input class="field" name="temperature" type="number" min="0" max="2" step="any" placeholder="The character's"><span class="row-desc">Lower is steadier, higher is more inventive. Empty keeps the character's own.</span></label>
+                  <label class="form-field"><span class="row-label">Longest reply (tokens)</span><input class="field" name="maxTokens" type="number" min="0" step="any" placeholder="Same as in Answers"><span class="row-desc">Empty uses the limit in Answers.</span></label>
+                  <label class="form-field"><span class="row-label">Top-p</span><input class="field" name="topP" type="number" min="0" max="1" step="any" placeholder="The AI's own"><span class="row-desc">An alternative to temperature. Most people leave it empty.</span></label>
+                  <label class="form-field"><span class="row-label">Wait for it (seconds)</span><input class="field" name="timeoutSeconds" type="number" min="0" step="any" placeholder="Same as in Answers"><span class="row-desc">How long it may stay silent before Friends gives up.</span></label>
+                  <label class="form-field"><span class="row-label">Daily limit (requests)</span><input class="field" name="dailyLimit" type="number" min="0" step="any" placeholder="No limit"><span class="row-desc">After this many today, Friends uses another AI. Keeps a cloud bill in check.</span></label>
+                  <label class="form-field"><span class="row-label">Tools</span>
+                    <select class="field" name="tools"><option value="auto">Use them</option><option value="off">Don't use tools with this AI</option></select>
+                    <span class="row-desc">Some small models answer worse when they are offered tools.</span></label>
+                  <label class="form-field"><span class="row-label">Pictures</span>
+                    <select class="field" name="vision"><option value="auto">Guess from its name</option><option value="yes">It can see pictures</option><option value="no">It can't</option></select>
+                    <span class="row-desc">Decides whether a message with a picture needs another AI.</span></label>
+                </div>
+                <label class="form-field"><span class="row-label">Extra instructions</span><textarea class="field textarea wide" name="systemPrefix" rows="3" maxlength="2000" placeholder="e.g. Always answer in German."></textarea><span class="row-desc">Added in front of the character's instructions for this AI only.</span></label>
+                <label class="form-field"><span class="row-label">Note to yourself</span><input class="field" name="note" maxlength="300" placeholder="e.g. Best for code"></label>
 
-            <details class="form-field advanced" id="ollama-field" hidden>
-              <summary class="row-label">Advanced: memory use</summary>
-              <span class="row-label">Context size</span>
-              <select class="field" name="contextSize">
-                <option value="0">Ollama's default (4096)</option>
-                <option value="4096">4096 tokens</option>
-                <option value="8192" selected>8192 tokens (recommended)</option>
-                <option value="16384">16384 tokens</option>
-                <option value="32768">32768 tokens</option>
-                <option value="65536">65536 tokens</option>
-                <option value="131072">131072 tokens</option>
-              </select>
-              <span class="row-desc">How much of the chat the model sees at once. Too small and long chats get cut off; larger needs more memory.</span>
-              <span class="row-label">Keep the model loaded</span>
-              <select class="field" name="keepAlive">
-                <option value="0">Ollama's default (5 minutes)</option>
-                <option value="15">15 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="240">4 hours</option>
-                <option value="1440">All day</option>
-              </select>
-              <span class="row-desc">Loaded models answer at once; unloading frees memory.</span>
-            </details>
+                <div class="own-ollama" id="ollama-field" hidden>
+                  <span class="row-label">Memory use (Ollama)</span>
+                  <label class="form-field"><span class="row-label">Context size</span>
+                    <select class="field" name="contextSize">
+                      <option value="0">Ollama's default (4096)</option>
+                      <option value="2048">2048 tokens</option>
+                      <option value="4096">4096 tokens</option>
+                      <option value="8192" selected>8192 tokens (recommended)</option>
+                      <option value="16384">16384 tokens</option>
+                      <option value="32768">32768 tokens</option>
+                      <option value="65536">65536 tokens</option>
+                      <option value="131072">131072 tokens</option>
+                    </select>
+                    <span class="row-desc" id="context-hint">How much of the chat the model sees at once. Too small and long chats get cut off; larger needs more memory.</span></label>
+                  <label class="form-field"><span class="row-label">Keep the model loaded</span>
+                    <select class="field" name="keepAlive">
+                      <option value="0">Ollama's default (5 minutes)</option>
+                      <option value="5">5 minutes</option>
+                      <option value="15">15 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="240">4 hours</option>
+                      <option value="1440">All day</option>
+                    </select>
+                    <span class="row-desc">Loaded models answer at once; unloading frees memory.</span></label>
+                </div>
+                <div class="own-speech" id="speech-field" hidden>
+                  <span class="row-label">Voice (optional)</span>
+                  <span class="row-desc" data-i18n-html="speech.desc">Only for your own speech-to-text server (OpenAI-style <code>/audio/transcriptions</code>). Not needed if you set up <strong>Local voice</strong> under Your AIs.</span>
+                  <input class="field" name="speechUrl" type="text" placeholder="Speech server address, e.g. http://127.0.0.1:8000/v1" autocomplete="off" spellcheck="false">
+                  <input class="field" name="speechModel" type="text" placeholder="Speech model, e.g. Systran/faster-whisper-small" autocomplete="off" spellcheck="false">
+                </div>
+              </details>
 
-            <details class="form-field" id="speech-field" hidden>
-              <summary class="row-label">Voice (optional)</summary>
-              <span class="row-desc" data-i18n-html="speech.desc">Only for your own speech-to-text server (OpenAI-style <code>/audio/transcriptions</code>). Not needed if you set up <strong>Local voice</strong> under Privacy & local AI, which listens and speaks on this computer.</span>
-              <input class="field" name="speechUrl" type="text" placeholder="Speech server address, e.g. http://127.0.0.1:8000/v1" autocomplete="off" spellcheck="false">
-              <input class="field" name="speechModel" type="text" placeholder="Speech model, e.g. Systran/faster-whisper-small" autocomplete="off" spellcheck="false">
-            </details>
-
-            <div class="form-test-bar">
-              <button type="button" class="btn small" id="brain-test-btn">
-                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                <span>Test the key and connection</span>
-              </button>
-              <span class="test-feedback" id="brain-test-feedback"></span>
-            </div>
-
-            <p class="form-error" id="brain-form-error" hidden></p>
-            <div class="form-actions">
-              <button type="button" class="btn" id="brain-cancel">Cancel</button>
-              <button type="submit" class="btn btn-primary" id="brain-save">Save</button>
-            </div>
-          </form>
+              <p class="form-error" id="ai-form-error" hidden></p>
+              <div class="ai-add-result" id="ai-add-result" role="status" hidden></div>
+              <div class="form-actions">
+                <button type="button" class="btn" id="ai-form-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="ai-form-save" disabled>Add</button>
+              </div>
+            </form>
+          </div>
         </section>
 
         <!-- Memory -->
@@ -1504,11 +1737,11 @@
         <!-- Specialists -->
         <section class="pane" data-pane="specialists" id="pane-specialists" role="tabpanel" aria-labelledby="tab-specialists">
           <h3>Specialists</h3>
-          <p class="hint">Small AI models on this computer, each with a job. The manager (Gemini) hands steps of a mission to the right one. On a graphics card with 6 GB only one big model fits at a time, so Friends loads and unloads them for you, and keeps steps that use the same model together.</p>
+          <p class="hint">Small AI models on this computer, each with a job. The manager (Gemini) hands steps of a mission to the right one. When memory is limited only one big model fits at a time, so Friends loads and unloads them for you, and keeps steps that use the same model together.</p>
           <div class="spec-status card" id="spec-status" role="status"></div>
           <div class="spec-setup card" id="spec-setup" hidden>
             <div>
-              <div class="row-label">Pick models for my graphics card</div>
+              <div class="row-label">Pick models for my computer</div>
               <div class="row-desc" id="spec-setup-text"></div>
             </div>
             <div class="actions-row">

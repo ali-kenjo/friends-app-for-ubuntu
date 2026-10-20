@@ -186,6 +186,20 @@ async function main() {
           await page.evaluate((t) => document.querySelector(`.modal-nav .tab[data-tab="${t}"]`)?.click(), tab);
           await sleep(350);
           await shot(`11-settings-${tab}`, theme, width, lang);
+          // AI & privacy: each of its sections, and the add form
+          if (tab === "ai-control") {
+            for (const section of ["answers", "privacy", "device"]) {
+              await page.evaluate((n) => document.querySelector(`.subtab[data-subtab="${n}"]`)?.click(), section);
+              await sleep(500);
+              await shot(`11-settings-ai-${section}`, theme, width, lang);
+            }
+            await page.evaluate(() => document.querySelector('.subtab[data-subtab="ais"]')?.click());
+            await page.evaluate(() => document.getElementById("brain-add")?.click());
+            await sleep(500);
+            await shot("11-settings-ai-add", theme, width, lang);
+            await page.evaluate(() => document.getElementById("ai-add-back")?.click());
+            await sleep(300);
+          }
         }
         await closeAll();
 

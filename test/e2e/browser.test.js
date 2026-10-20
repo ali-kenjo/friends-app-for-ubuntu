@@ -76,12 +76,14 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  const openAiControl = async () => {
+  // Settings → AI & privacy, on one of its sections (Your AIs, Answers, Privacy, This computer)
+  const openAiControl = async (section = "ais") => {
     await page.evaluate(() => {
       document.getElementById("settings-btn")?.click();
       document.querySelector('.modal-nav .tab[data-tab="ai-control"]')?.click();
     });
-    await page.waitForSelector("#local-card", { visible: true });
+    await page.evaluate((name) => document.querySelector(`.subtab[data-subtab="${name}"]`).click(), section);
+    await page.waitForSelector(`#subpane-${section}`, { visible: true });
   };
 
   test("starts offline: it asks no other website for anything, and has no errors", () => {
@@ -95,7 +97,9 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
     const text = await page.$eval("#local-card", (el) => el.innerText);
     assert.match(text, /Fake Ollama/);
     assert.match(text, /tiny:latest/);
-    assert.ok(await page.$("#private-mode-toggle"));
+    await openAiControl("privacy");
+    assert.ok(await page.$eval("#private-mode-toggle", (el) => el.offsetParent !== null), "Private mode is in Privacy");
+    await openAiControl("ais");
   });
 
   test("one click adds the model, and a message gets the local answer", async () => {
@@ -112,7 +116,7 @@ describe("The page in Chrome", { skip: !CHROME && "no Chrome found" }, () => {
   });
 
   test("Private mode hides what needs the internet and refuses it", async () => {
-    await openAiControl();
+    await openAiControl("privacy");
     await page.click("#private-mode-toggle");
     await page.waitForFunction(() => document.documentElement.dataset.private === "true");
     const visible = await page.evaluate(() => [...document.querySelectorAll(".prompt-chip")].filter((c) => c.offsetParent).map((c) => c.textContent));

@@ -223,12 +223,23 @@ function matchesPattern(name, pattern) {
 }
 
 // One look at everything that can start by itself
+// On battery (and "save battery" in Settings → AI & privacy → This computer is on) the missions that would start a model
+// wait for the charger; a schedule that is due then fires once it's back. Watching the computer needs no model, so it goes on.
+async function onBattery() {
+  if (settingsModule.get().device?.saveBattery === false) return false;
+  const hw = await require("../hardware").live().catch(() => null);
+  return hw?.battery?.onBattery === true;
+}
+
 async function tick(now = Date.now()) {
+  const saving = await onBattery();
   for (const a of load()) {
     if (!a.enabled) continue;
     try {
       if (a.watch) {
         if (!a.lastRun || now - a.lastRun >= a.watch.everyMinutes * 60000) await check(a);
+      } else if (saving && (a.schedule || a.trigger?.kind === "file")) {
+        continue;
       } else if (a.schedule) {
         if (a.nextRun && now >= a.nextRun) start(a, `its schedule (${describe(a)})`, now);
       } else if (a.trigger?.kind === "file") {

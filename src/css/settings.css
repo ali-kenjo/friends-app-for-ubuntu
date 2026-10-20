@@ -592,8 +592,9 @@ label.row {
   gap: var(--space-1);
 }
 
+/* A rule for a mode that isn't the one chosen: quieter, but still readable (4.5:1) */
 .routing-options .is-inactive {
-  opacity: 0.62;
+  opacity: 0.85;
 }
 
 .routing-options .routing-sub {

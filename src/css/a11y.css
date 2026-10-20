@@ -54,7 +54,7 @@
   :is(.icon-btn, .btn, .btn-sm, .chip, .prompt-chip, .ws-pill, .status-quiet, .plus-item, .segmented-btn, .chat-list-toggle, .home-mission-note, .brand, .mission-link, .step-more > summary, .tab, .nav-item, .chat-link, .life-tab, .model-item, .model-picker,
     .send-btn, .code-copy, .voice-theme-btn, .voice-top-btn, .seg button, .voice-seg button, .msg-action, .choice, .color, .link-btn, .life-item button,
     .habit-check, .character-chip, .field, select, summary, .mood-pick button, .model-card, .provider, .search-result, .settings-result,
-    .gsi-material-button, .app-link, .back-link) {
+    .gsi-material-button, .app-link, .back-link, .subtab) {
     min-height: 44px;
     min-width: 44px;
   }

@@ -19,23 +19,41 @@ const sameModel = (a, b) => a === b || a === `${b}:latest` || b === `${a}:latest
 const mb = (bytes) => Math.round(bytes / 1024 / 1024);
 
 // ---------- The card ----------
-// { name, totalMb, usedMb, freeMb } or null (no NVIDIA card, or no nvidia-smi). Tests can say what it is:
+// { name, totalMb, usedMb, freeMb, vendor } or null (nothing that runs models faster than the processor). An NVIDIA card
+// is asked live (nvidia-smi); an AMD card, or a Mac's shared memory, comes from hardware.js. Tests can say what it is:
 // FRIENDS_FAKE_GPU='{"totalMb":6144,"usedMb":300}' (or "none")
-function gpu() {
-  if (process.env.FRIENDS_FAKE_GPU) {
-    if (process.env.FRIENDS_FAKE_GPU === "none") return Promise.resolve(null);
-    const f = JSON.parse(process.env.FRIENDS_FAKE_GPU);
-    return Promise.resolve({ name: f.name || "Fake GPU", totalMb: f.totalMb, usedMb: f.usedMb ?? 0, freeMb: f.totalMb - (f.usedMb ?? 0) });
-  }
+function nvidia() {
   return new Promise((resolve) =>
     execFile("nvidia-smi", ["--query-gpu=name,memory.total,memory.used,memory.free", "--format=csv,noheader,nounits"], { timeout: 4000 }, (err, out) => {
       if (err) return resolve(null);
       const line = String(out).split("\n").find(Boolean);
       if (!line) return resolve(null);
       const [name, total, used, free] = line.split(",").map((s) => s.trim());
-      resolve({ name, totalMb: Number(total), usedMb: Number(used), freeMb: Number(free) });
+      resolve({ name, totalMb: Number(total), usedMb: Number(used), freeMb: Number(free), vendor: "nvidia" });
     })
   );
+}
+
+async function gpu() {
+  if (process.env.FRIENDS_FAKE_GPU) {
+    if (process.env.FRIENDS_FAKE_GPU === "none") return null;
+    const f = JSON.parse(process.env.FRIENDS_FAKE_GPU);
+    return { name: f.name || "Fake GPU", totalMb: f.totalMb, usedMb: f.usedMb ?? 0, freeMb: f.totalMb - (f.usedMb ?? 0), vendor: f.vendor || "nvidia" };
+  }
+  const card = await nvidia();
+  if (card) return card;
+  const hardware = require("./hardware");
+  const hw = await hardware.live().catch(() => null);
+  if (!hw) return null;
+  const other = hw.gpus.find((g) => g.usable && !g.shared && g.vramMb > 0 && g.vendor !== "nvidia");
+  if (other) return { name: other.name, totalMb: other.vramMb, usedMb: other.usedMb, freeMb: other.freeMb, vendor: other.vendor };
+  if (hw.fit.engine === "metal") {
+    // Apple silicon: one pool of memory; what the GPU may take of it is the budget
+    const totalMb = hw.fit.budgetMb + MARGIN_MB;
+    const freeMb = Math.max(0, Math.min(hw.fit.budgetMb, Math.round(hw.memory.availableMb * 0.9)));
+    return { name: hw.gpus.find((g) => g.unified)?.name || "Apple silicon", totalMb, usedMb: totalMb - freeMb, freeMb, vendor: "apple", unified: true };
+  }
+  return null;
 }
 
 function ram() {
@@ -155,6 +173,8 @@ async function prepare(brain, info = {}) {
   const card = await gpu();
   const there = present.find((m) => sameModel(m.name, target.model));
   let decision = place(est, card, there ? there.sizeVram / 1024 / 1024 : 0);
+  // "Don't use the graphics card" (Settings → AI & privacy → This computer): everything runs on the processor
+  if (require("./settings").get().device?.gpu === "off") decision = { placement: "cpu", availableMb: 0 };
   // It doesn't fit and the role has a smaller one that does
   if (decision.placement === "cpu" && info.fallbackModel && !sameModel(info.fallbackModel, target.model)) {
     const smaller = { ...target, model: info.fallbackModel };

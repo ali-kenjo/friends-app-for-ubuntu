@@ -1,5 +1,5 @@
 // Which AI answers a message: a local one (on this computer), a cloud one
-// (Gemini), or both, by the mode in Settings → AI & privacy.
+// (Gemini, ChatGPT, Claude…), or both, by the mode in Settings → AI & privacy.
 //
 //   fixed    the one brain chosen in the model menu (no routing)
 //   local    only a local AI
@@ -51,7 +51,9 @@ function cloudReason({ text = "", attachments = [], messages = [], settings, loc
     const pdf = attachments.find((a) => a.mime === "application/pdf");
     if (pdf) return `${pdf.name} is a PDF, which local models can't read`;
     const image = attachments.find((a) => String(a.mime).startsWith("image/"));
-    if (image && !(local && VISION.test(local.model))) return "This has a picture, and the local model can't see pictures";
+    // An AI can be told it sees pictures (or doesn't) in its own settings; otherwise its name is all there is to go by
+    const sees = local?.params?.vision === "yes" || (local?.params?.vision !== "no" && local && VISION.test(local.model));
+    if (image && !sees) return "This has a picture, and the local model can't see pictures";
   }
   if (rules.longChats) {
     const window = settings.aiControl?.contextWindow || 20;
@@ -89,7 +91,7 @@ function plan(input) {
           ? deps.privateMode
             ? "Private mode is on, so only a local AI can answer. Add one in Settings → AI & privacy."
             : `${how} needs a local AI. Add one in Settings → AI & privacy.`
-          : `${how} needs a cloud AI (Gemini). Add one in Settings → AI & privacy.`
+          : `${how} needs a cloud AI. Add one in Settings → AI & privacy.`
       );
     }
     return step(kind, "", brain);
@@ -103,7 +105,12 @@ function plan(input) {
   if (mode === "fixed") {
     const chosen = deps.chosen(preferId);
     if (!chosen) return { ...base, steps: [] };
-    return { ...base, steps: [{ kind: chosen.kind, brain: chosen, reason: "The AI you chose" }] };
+    const steps = [{ kind: chosen.kind, brain: chosen, reason: "The AI you chose" }];
+    // "If it fails, try the next one" (Settings → Answers): only of the same kind, so nothing local goes to the cloud
+    if (settings.routing.fallback === "same-kind" && deps.others) {
+      for (const other of deps.others(chosen.kind, chosen.id)) steps.push({ kind: other.kind, brain: other, reason: "The AI you chose didn't answer, so the next one was tried" });
+    }
+    return { ...base, steps };
   }
 
   if (mode === "local") {

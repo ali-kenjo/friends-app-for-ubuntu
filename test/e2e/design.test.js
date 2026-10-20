@@ -151,14 +151,20 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
       await page.evaluate(() => document.getElementById("settings-close").click());
     });
 
-    test("an advanced setting is folded until you look for it", async () => {
+    test("a folded setting in a section that isn't showing: the search opens the section and the fold", async () => {
+      // (the fine routing rules only show for the modes that use them)
+      await page.evaluate(() => fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ routing: { mode: "auto" } }) }));
+      await page.reload({ waitUntil: "networkidle2" });
       await page.evaluate(() => document.getElementById("settings-btn").click());
       await page.focus("#settings-search");
-      await page.keyboard.type("how much");
+      await page.keyboard.type("patience");
       await page.waitForSelector(".settings-result");
       await press("Enter");
-      await page.waitForFunction(() => document.querySelector("#pane-ai-control details.advanced[open]"));
+      await page.waitForFunction(() => document.querySelector("#routing-advanced[open]"));
+      assert.strictEqual(await page.$eval("#subtab-answers", (el) => el.getAttribute("aria-selected")), "true", "Answers is the section showing now");
+      assert.ok(await page.$eval("#subpane-answers", (el) => el.offsetParent !== null));
       await page.evaluate(() => document.getElementById("settings-close").click());
+      await page.evaluate(() => fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ routing: { mode: "fixed" } }) }));
     });
   });
 
@@ -228,6 +234,27 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
           });
           assert.ok(over.page <= 0 && over.pane <= 1, `${tab} at ${width}px: ${JSON.stringify(over)}`);
         }
+        // AI & privacy: each of its sections, and the add form (the longest words are in German)
+        await page.evaluate(() => document.querySelector('.tab[data-tab="ai-control"]').click());
+        const fits = async (what) => {
+          await sleep(150);
+          const over = await page.evaluate(() => {
+            const body = document.querySelector(".modal-body");
+            return { page: document.documentElement.scrollWidth - innerWidth, pane: body.scrollWidth - body.clientWidth };
+          });
+          assert.ok(over.page <= 0 && over.pane <= 1, `${what} at ${width}px: ${JSON.stringify(over)}`);
+        };
+        for (const section of ["ais", "answers", "privacy", "device"]) {
+          await page.evaluate((n) => document.querySelector(`.subtab[data-subtab="${n}"]`).click(), section);
+          await fits(`AI & privacy, ${section}`);
+        }
+        await page.evaluate(() => document.querySelector('.subtab[data-subtab="ais"]').click());
+        await page.evaluate(() => document.getElementById("brain-add").click());
+        await fits("the add picker");
+        await page.evaluate(() => document.querySelector('#service-grid-cloud .service-tile[data-id="groq"]').click());
+        await page.evaluate(() => (document.getElementById("ai-own-settings").open = true));
+        await fits("the add form");
+        await page.evaluate(() => document.getElementById("ai-add-back").click());
         await page.evaluate(() => document.getElementById("settings-close").click());
       }
     });

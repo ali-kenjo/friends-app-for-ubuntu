@@ -35,13 +35,20 @@ async function assistant() {
   } catch (err) {
     warn(`Couldn't look at the specialists: ${err.message}`);
   }
+  // What this computer is (server/hardware.js), and what that means for local AI
+  const hw = await require("../server/hardware").live().catch(() => null);
+  if (hw) {
+    const form = { laptop: "Laptop", desktop: "Desktop computer", server: "Server", "single-board": "Single-board computer" }[hw.formFactor] || "Computer";
+    ok(`${form}: ${hw.cpu.model || hw.os.name}, ${gb(hw.memory.totalMb)} memory (${gb(hw.memory.availableMb)} free), ${hw.os.name}${hw.container !== "none" ? `, in ${hw.container}` : ""}`);
+    const card = hw.gpus.find((g) => g.usable && !g.shared) || hw.gpus.find((g) => g.unified);
+    if (card && card.unified) ok(`${card.name}: shares the computer's memory; models may use about ${gb(hw.fit.budgetMb)}`);
+    else if (card) ok(`${card.name}: ${gb(card.vramMb)}, ${gb(card.freeMb)} free now. Local models are loaded one at a time to fit it`);
+    else warn("No graphics card that local models can use: they run on the processor, which is slow", "Fine for small models; for speed use a card with 6 GB or more and its driver (nvidia-smi or rocm-smi must work)");
+    if (!hw.fit.canRunLocal) warn(`Only about ${gb(hw.fit.budgetMb)} of memory can go to a local model`, "Use a cloud AI for the heavy parts, or free some memory");
+    else ok(`Models up to about ${hw.fit.maxParamsB} billion parameters run well here (${hw.fit.tier} tier, ${hw.fit.engine})`);
+    if (hw.battery.present && hw.battery.onBattery) console.log(`${paint(2, "·")} On battery (${hw.battery.percent ?? "?"}%): repeating missions wait for the charger`);
+  }
   if (view) {
-    // The graphics card
-    const card = view.vram.gpu;
-    if (card) ok(`${card.name}: ${gb(card.totalMb)}, ${gb(card.freeMb)} free now. Local models are loaded one at a time to fit it`);
-    else warn("No NVIDIA graphics card found: local models run on the processor, which is slow", "Fine for small models; for speed use a card with 6 GB or more and its driver (nvidia-smi must work)");
-    console.log(`${paint(2, "·")} Memory: ${gb(view.vram.ram.availableMb)} free of ${gb(view.vram.ram.totalMb)}`);
-
     // Ollama and the specialists
     if (!view.running) {
       warn(`Ollama isn't answering at ${view.baseUrl}: Missions have no specialist models to use`, "Install it (https://ollama.com/download) and start it: ollama serve");

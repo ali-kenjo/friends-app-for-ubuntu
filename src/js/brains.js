@@ -1,257 +1,216 @@
-// ---------- AI brains & Intelligence Control ----------
+// ---------- Settings → AI & privacy → Your AIs ----------
+// The list of AIs, adding one (from a pasted key or address, or by picking a service; several models at once), editing
+// one (its own settings), what runs on this computer, and local voice. The helper keeps the brains (server/brains.js);
+// this draws them and sends what you choose. Answers, Privacy and This computer are ai-answers.js, ai-privacy.js, ai-device.js.
 import { api as helper } from "./api.js";
-import { getSettings, onSettings, updateSettings } from "./store.js";
+import { getSettings, onSettings } from "./store.js";
 import { t, tp, nf } from "./i18n.js";
 import { announce } from "./a11y.js";
 import { skeleton } from "./ui.js";
-
-// Brains are stored by the helper; this module handles model management & AI control.
-const PROVIDERS = {
-  gemini: { label: "Gemini", company: "Google", color: "#4f8df5", available: true },
-  local: { label: t("Local AI"), company: t("On this computer"), color: "#3fa56b", available: true },
-  claude: { label: "Claude", company: "Anthropic", color: "#d97757" },
-  chatgpt: { label: "ChatGPT", company: "OpenAI", color: "#10a37f" },
-  deepseek: { label: "DeepSeek", company: "DeepSeek", color: "#4d6bfe" },
-  mistral: { label: "Mistral", company: "Mistral AI", color: "#fa520f" },
-  grok: { label: "Grok", company: "xAI", color: "#71767b" },
-};
-
-// Servers that run models on your computer; each speaks the OpenAI API
-// (Ollama is used through its own API, which lets Friends set the context size)
-const LOCAL_SERVERS = [
-  { label: "Ollama", url: "http://127.0.0.1:11434", protocol: "ollama" },
-  { label: "LM Studio", url: "http://127.0.0.1:1234/v1" },
-  { label: "llama.cpp", url: "http://127.0.0.1:8080/v1" },
-  { label: "Jan", url: "http://127.0.0.1:1337/v1" },
-  { label: "vLLM", url: "http://127.0.0.1:8000/v1" },
-  { label: "LocalAI", url: "http://127.0.0.1:8080/v1" },
-  { label: "KoboldCpp", url: "http://127.0.0.1:5001/v1" },
-  { label: t("Other…"), url: "" },
-];
-const DEFAULT_CONTEXT = 8192;
-// A typed address on Ollama's port is Ollama
-const protocolFor = (url) => (/:11434(\/|$)/.test(url) ? "ollama" : "openai");
-
-const CURATED_MODELS = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-3.8-flash"];
+import { h } from "./h.js";
+import { loadServices, services, cloudService, localService, localByAddress, describe, logo } from "./ai-services.js";
 
 const api = helper.brains;
+const DEFAULT_CONTEXT = 8192;
 
 let brains = [];
 let loadedBrains = false; // the helper hasn't told us yet: the list shows grey bars, not "No AI yet"
 let defaultBrainId = null;
-let editingId = null; // null while adding a new brain
+let usage = {}; // today's calls per AI id
 let confirmDeleteId = null;
-let formProvider = "gemini";
-let selectedCuratedModel = "gemini-2.5-flash";
-let presetGiven = false; // the form was opened from a quick-add preset
-let formProtocol = "openai"; // how a local brain is talked to: "ollama" or "openai"
+let detected = []; // the AI servers running on this computer
+let detecting = false;
 
-const aiOverview = document.getElementById("ai-overview");
-const brainList = document.getElementById("brain-list");
-const listError = document.getElementById("brain-list-error");
-const brainForm = document.getElementById("brain-form");
-const formError = document.getElementById("brain-form-error");
-const saveBtn = document.getElementById("brain-save");
-const providerGrid = document.getElementById("provider-grid");
-const modelOptions = document.getElementById("model-options");
-const baseUrlField = document.getElementById("baseurl-field");
-const localPresetsField = document.getElementById("local-presets-field");
-const localPresets = document.getElementById("local-presets");
-const modelSelectField = document.getElementById("model-select-field");
-const speechField = document.getElementById("speech-field");
-const keyLabel = document.getElementById("key-label");
-const keyDesc = document.getElementById("key-desc");
-const ollamaField = document.getElementById("ollama-field");
-const GEMINI_KEY_DESC = keyDesc.innerHTML;
-const keyToggle = document.getElementById("key-toggle");
-
-// Status & diagnostic elements
-const activeBrainName = document.getElementById("ai-active-brain-name");
-const activeBrainMeta = document.getElementById("ai-active-brain-meta");
-const pingBtn = document.getElementById("ai-ping-btn");
-const pingStatus = document.getElementById("ai-ping-status");
-
-// Form test elements
-const modelCuratedGrid = document.getElementById("model-curated-grid");
-const modelCustomWrapper = document.getElementById("model-custom-wrapper");
-const brainTestBtn = document.getElementById("brain-test-btn");
-const brainTestFeedback = document.getElementById("brain-test-feedback");
-
-// Policy elements
-const reasoningGrid = document.getElementById("reasoning-effort-grid");
-const contextSlider = document.getElementById("context-window-slider");
-const contextValLabel = document.getElementById("context-val-label");
+const $ = (id) => document.getElementById(id);
+const aiOverview = $("ai-overview");
+const brainList = $("brain-list");
+const listError = $("brain-list-error");
+const aiAdd = $("ai-add");
+const form = $("ai-form");
+const formError = $("ai-form-error");
+const saveBtn = $("ai-form-save");
 
 const ICONS = {
   star: '<svg viewBox="0 0 24 24"><polygon points="12 3 14.8 8.8 21 9.6 16.5 14 17.6 20.2 12 17.2 6.4 20.2 7.5 14 3 9.6 9.2 8.8"/></svg>',
   edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><line x1="13.5" y1="6.5" x2="17.5" y2="10.5"/></svg>',
   trash: '<svg viewBox="0 0 24 24"><polyline points="4 7 20 7"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>',
   lightning: '<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  up: '<svg viewBox="0 0 24 24"><polyline points="6 15 12 9 18 15"/></svg>',
+  down: '<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>',
 };
 
-// What a brain's list entry says about its credentials or where it runs
-function maskKey(hint, brain) {
-  if (brain?.provider === "local") return brain.baseUrl.replace(/^https?:\/\//, "").replace(/\/v1$/, "");
-  if (!hint) return t("No key");
-  if (hint === "env") return t("System key (Google AI Studio)");
-  return "••••" + hint;
-}
-
-function logoFor(provider) {
-  const p = PROVIDERS[provider] || PROVIDERS.custom;
-  const el = document.createElement("div");
-  el.className = "brain-logo";
-  el.style.setProperty("--c", p.color);
-  el.textContent = p.label[0];
-  return el;
-}
+const icon = (name) => h("span", { class: "ico", html: ICONS[name], "aria-hidden": "true" });
 
 function showError(el, message) {
   if (!el) return;
-  el.textContent = message || "";
+  el.textContent = message ? t(message) : "";
   el.hidden = !message;
 }
 
-// Take the latest state from the helper and redraw
+// What a brain's list entry says about its credentials or where it runs
+function maskKey(brain) {
+  if (brain.kind === "local") return String(brain.baseUrl || "").replace(/^https?:\/\//, "").replace(/\/(v1|engines\/v1)$/, "");
+  if (brain.service === "custom") return String(brain.baseUrl || "").replace(/^https?:\/\//, "");
+  if (!brain.keyHint) return t("No key");
+  if (brain.keyHint === "env") return t("System key (Google AI Studio)");
+  return "••••" + brain.keyHint;
+}
+
+// ---------- The list ----------
 function apply(state) {
   loadedBrains = true;
   brains = state.brains || [];
   defaultBrainId = state.defaultBrainId;
   renderBrains();
-  updateDiagnosticBanner();
+  updateBanner();
 }
 
 // The first-run guide (onboarding.js) added an AI itself
 document.addEventListener("friends:brains-apply", (e) => apply(e.detail));
 
-function updateDiagnosticBanner() {
+async function refreshUsage() {
+  try {
+    usage = (await helper.usage.get()).byBrain || {};
+    renderBrains();
+  } catch {}
+}
+
+function updateBanner() {
   const def = brains.find((b) => b.id === defaultBrainId) || brains[0];
+  const name = $("ai-active-brain-name");
+  const meta = $("ai-active-brain-meta");
   if (!def) {
-    if (activeBrainName) activeBrainName.textContent = t("No AI connected");
-    if (activeBrainMeta) activeBrainMeta.textContent = t("Add an AI below to start chatting");
+    name.textContent = t("No AI connected");
+    meta.textContent = t("Add an AI below to start chatting");
     return;
   }
-  const provider = PROVIDERS[def.provider] || { company: t("Custom") };
-  if (activeBrainName) activeBrainName.textContent = t("{name} (default)", { name: def.name });
-  if (activeBrainMeta) activeBrainMeta.textContent = `${provider.company} · ${def.model} · ${maskKey(def.keyHint, def)}`;
+  const d = describe(def);
+  name.textContent = t("{name} (default)", { name: def.name });
+  meta.textContent = `${d.label} · ${def.model} · ${maskKey(def)}`;
+}
+
+function usageLine(b) {
+  const u = usage[b.id];
+  const limit = b.params?.dailyLimit;
+  if (!u || !u.calls) return limit ? t("Not used today · limit: {n} a day", { n: nf(limit) }) : t("Not used today");
+  const bits = [limit ? t("{n} of {limit} requests today", { n: nf(u.calls), limit: nf(limit) }) : tp("{n} request today", "{n} requests today", u.calls)];
+  if (u.avgMs) bits.push(t("{ms} ms on average", { ms: nf(u.avgMs) }));
+  if (u.errors) bits.push(tp("{n} failed", "{n} failed", u.errors));
+  return bits.join(" · ");
+}
+
+function brainRow(b, index) {
+  const d = describe(b);
+  const isDefault = b.id === defaultBrainId;
+  const priv = getSettings()?.privacy?.localOnly === true;
+  if (confirmDeleteId === b.id) {
+    return h(
+      "li",
+      { class: "brain confirm", "data-id": b.id },
+      h("span", { role: "alert", text: t("Delete {name}?", { name: b.name }) }),
+      h("div", { class: "brain-actions" }, h("button", { type: "button", class: "btn", "data-action": "cancel-delete", text: t("Cancel") }), h("button", { type: "button", class: "btn btn-danger", "data-action": "confirm-delete", text: t("Delete") }))
+    );
+  }
+  const u = usage[b.id];
+  const act = (action, name, labelText, body, extra = {}) => h("button", { type: "button", class: `icon-btn small ${extra.class || ""}`.trim(), "data-action": action, title: labelText, "aria-label": t("{action}: {name}", { action: labelText, name }), "aria-pressed": extra.pressed, disabled: extra.disabled }, body);
+  return h(
+    "li",
+    { class: `brain${isDefault ? " is-default" : ""}${!b.enabled ? " is-off" : ""}${priv && b.kind !== "local" ? " is-blocked" : ""}`, "data-id": b.id },
+    logo(d.label, d.color),
+    h(
+      "div",
+      { class: "brain-info" },
+      h("div", { class: "brain-name" }, h("span", { text: b.name }), isDefault ? h("span", { class: "badge", text: t("Default") }) : null, h("span", { class: `tag kind-${b.kind}`, text: b.kind === "local" ? t("On this computer") : t("Cloud") })),
+      h("div", { class: "brain-meta", text: `${d.label} · ${b.model} · ${maskKey(b)}` }),
+      h("div", { class: `brain-usage${u?.errors ? " has-errors" : ""}`, title: u?.lastError || "", text: usageLine(b) }),
+      b.note ? h("div", { class: "brain-note row-desc", text: b.note }) : null
+    ),
+    h(
+      "div",
+      { class: "brain-actions" },
+      act("test", b.name, t("Test the connection"), icon("lightning")),
+      h("input", { type: "checkbox", class: "toggle", "data-action": "toggle", title: isDefault ? t("The default AI stays on") : t("On / off"), "aria-label": t("{name} on", { name: b.name }), checked: b.enabled, disabled: isDefault }),
+      act("up", b.name, t("Move up"), icon("up"), { disabled: index === 0 }),
+      act("down", b.name, t("Move down"), icon("down"), { disabled: index === brains.length - 1 }),
+      act("default", b.name, isDefault ? t("The default AI") : t("Make default"), icon("star"), { class: isDefault ? "star-on" : "", pressed: String(isDefault) }),
+      act("edit", b.name, t("Edit"), icon("edit")),
+      act("delete", b.name, t("Delete"), icon("trash"), { class: "danger" })
+    )
+  );
 }
 
 function renderBrains() {
-  brainList.innerHTML = "";
+  brainList.replaceChildren();
   if (!loadedBrains) {
     brainList.append(skeleton("li"));
     return;
   }
-
-  if (!brains.length) {
-    brainList.innerHTML = '<li class="brain-empty"></li>';
-    brainList.querySelector("li").textContent = t("No AI yet. Add one to start chatting.");
-    document.dispatchEvent(new CustomEvent("friends:brains-changed", { detail: { brains, defaultBrainId } }));
-    return;
-  }
-
-  brains.forEach((b) => {
-    const li = document.createElement("li");
-    li.className = "brain";
-    li.dataset.id = b.id;
-
-    if (confirmDeleteId === b.id) {
-      li.classList.add("confirm");
-      li.innerHTML = `
-        <span role="alert"></span>
-        <div class="brain-actions">
-          <button class="btn" data-action="cancel-delete">${t("Cancel")}</button>
-          <button class="btn btn-danger" data-action="confirm-delete">${t("Delete")}</button>
-        </div>`;
-      li.querySelector("span").textContent = t("Delete {name}?", { name: b.name });
-      brainList.append(li);
-      return;
-    }
-
-    const isDefault = b.id === defaultBrainId;
-    li.classList.toggle("is-default", isDefault);
-    li.classList.toggle("is-off", !b.enabled);
-    li.innerHTML = `
-      <div class="brain-info">
-        <div class="brain-name"><span></span>${isDefault ? '<span class="badge">${t("Default")}</span>' : ""}</div>
-        <div class="brain-meta"></div>
-      </div>
-      <div class="brain-actions">
-        <button class="icon-btn small" data-action="test" title="${t("Test the connection")}" aria-label="${t("Test the connection to {name}", { name: b.name })}">${ICONS.lightning}</button>
-        <input type="checkbox" class="toggle" data-action="toggle" title="${isDefault ? t("The default AI stays on") : t("On / off")}" aria-label="${t("{name} on", { name: b.name })}"
-          ${b.enabled ? "checked" : ""} ${isDefault ? "disabled" : ""}>
-        <button class="icon-btn small ${isDefault ? "star-on" : ""}" data-action="default" title="${isDefault ? t("The default AI") : t("Make default")}" aria-label="${isDefault ? t("{name} is the default AI", { name: b.name }) : t("Make {name} the default", { name: b.name })}" aria-pressed="${isDefault}">${ICONS.star}</button>
-        <button class="icon-btn small" data-action="edit" title="${t("Edit")}" aria-label="${t("Edit {name}", { name: b.name })}">${ICONS.edit}</button>
-        <button class="icon-btn small danger" data-action="delete" title="${t("Delete")}" aria-label="${t("Delete {name}", { name: b.name })}">${ICONS.trash}</button>
-      </div>`;
-    li.prepend(logoFor(b.provider));
-    li.querySelector(".brain-name span").textContent = b.name;
-    const meta = li.querySelector(".brain-meta");
-    meta.textContent = `${PROVIDERS[b.provider]?.company || t("AI")} · ${b.model} · ${maskKey(b.keyHint, b)}`;
-    brainList.append(li);
-  });
-
-  // The model picker in the composer follows these changes
+  if (!brains.length) brainList.append(h("li", { class: "brain-empty", text: t("No AI yet. Add one to start chatting.") }));
+  else brains.forEach((b, i) => brainList.append(brainRow(b, i)));
+  // The model picker in the composer, and the other parts of this section, follow these changes
   document.dispatchEvent(new CustomEvent("friends:brains-changed", { detail: { brains, defaultBrainId } }));
 }
 
 // Run a change in the helper, then redraw with the result
-async function update(action) {
+async function update(action, { focus } = {}) {
   showError(listError, "");
   try {
     apply(await action());
+    if (focus) document.querySelector(`.brain[data-id="${focus.id}"] [data-action="${focus.action}"]:not(:disabled)`)?.focus();
   } catch (err) {
     showError(listError, err.message);
     renderBrains();
   }
 }
 
-// Ping / Test a single brain
-async function testSingleBrain(id, triggerBtn) {
-  const brainLi = triggerBtn.closest(".brain");
-  const meta = brainLi?.querySelector(".brain-meta");
-  const origText = meta ? meta.textContent : "";
-  triggerBtn.disabled = true;
+// Ping / test a single brain
+async function testSingleBrain(id, button) {
+  const li = button.closest(".brain");
+  const meta = li?.querySelector(".brain-meta");
+  const original = meta ? meta.textContent : "";
+  button.disabled = true;
   if (meta) {
     meta.textContent = t("Testing connection…");
     meta.classList.remove("error");
   }
-
   try {
     const res = await api.test(id);
-    if (meta) meta.textContent = `✓ ${t("{ms} ms latency", { ms: nf(res.latencyMs) })} · ${t("{model} verified", { model: res.model })}`;
-    if (meta) announce(meta.textContent);
+    if (meta) {
+      meta.textContent = `✓ ${t("{ms} ms latency", { ms: nf(res.latencyMs) })} · ${t("{model} verified", { model: res.model })}`;
+      announce(meta.textContent);
+    }
   } catch (err) {
     if (meta) {
-      meta.textContent = t("Connection error: {message}", { message: err.message });
+      meta.textContent = t("Connection error: {message}", { message: t(err.message) });
       meta.classList.add("error");
       announce(meta.textContent, { urgent: true });
     }
   } finally {
-    triggerBtn.disabled = false;
+    button.disabled = false;
     setTimeout(() => {
       if (meta && (meta.textContent.includes("✓") || meta.classList.contains("error"))) {
-        const b = brains.find((x) => x.id === id);
         meta.classList.remove("error");
-        if (b) meta.textContent = `${PROVIDERS[b.provider]?.company || t("AI")} · ${b.model} · ${maskKey(b.keyHint, b)}`;
+        meta.textContent = original;
       }
     }, 4500);
   }
 }
 
-// Brain list actions
 brainList.addEventListener("click", (e) => {
   const btn = e.target.closest("[data-action]");
   if (!btn || btn.dataset.action === "toggle") return;
   const id = Number(btn.closest(".brain").dataset.id);
-
   switch (btn.dataset.action) {
     case "test":
       return testSingleBrain(id, btn);
     case "default":
       return update(() => api.setDefault(id));
+    case "up":
+    case "down":
+      return update(() => api.move(id, btn.dataset.action), { focus: { id, action: btn.dataset.action } });
     case "edit":
-      return openBrainForm(id);
+      return openEdit(id);
     case "delete":
       confirmDeleteId = id;
       break;
@@ -263,6 +222,7 @@ brainList.addEventListener("click", (e) => {
       return update(() => api.remove(id));
   }
   renderBrains();
+  if (btn.dataset.action === "delete") document.querySelector(`.brain[data-id="${id}"] [data-action="cancel-delete"]`)?.focus();
 });
 
 brainList.addEventListener("change", (e) => {
@@ -271,448 +231,82 @@ brainList.addEventListener("change", (e) => {
   update(() => api.setEnabled(id, e.target.checked));
 });
 
-// Diagnostic Header Ping Button
-if (pingBtn) {
-  pingBtn.addEventListener("click", async () => {
-    pingBtn.disabled = true;
-    pingBtn.innerHTML = `<span>${t("Pinging…")}</span>`;
-    showError(pingStatus, "");
-    pingStatus.className = "ai-ping-status";
-    pingStatus.hidden = false;
-    pingStatus.textContent = t("Testing the connection and how fast it answers…");
-
-    try {
-      const activeId = defaultBrainId || brains[0]?.id;
-      const res = await api.test(activeId);
-      pingStatus.className = "ai-ping-status ok";
-      pingStatus.textContent = `✓ ${t("Online · answers in {ms} ms · {model} is ready for chat and voice", { ms: nf(res.latencyMs), model: res.model })}`;
-      announce(pingStatus.textContent);
-    } catch (err) {
-      pingStatus.className = "ai-ping-status error";
-      pingStatus.textContent = t("Connection error: {message}", { message: err.message });
-      announce(pingStatus.textContent, { urgent: true });
-    } finally {
-      pingBtn.disabled = false;
-      pingBtn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>${t("Test connection")}</span>`;
-    }
-  });
-}
-
-// Provider tiles in the form
-Object.entries(PROVIDERS).forEach(([key, p]) => {
-  const tile = document.createElement("button");
-  tile.type = "button";
-  tile.className = "provider";
-  tile.dataset.provider = key;
-  tile.disabled = !p.available;
-  tile.append(logoFor(key), p.label);
-  if (!p.available) {
-    const soon = document.createElement("span");
-    soon.className = "soon";
-    soon.textContent = t("Soon");
-    tile.append(soon);
-  }
-  tile.addEventListener("click", () => selectProvider(key));
-  providerGrid.append(tile);
-});
-
-function selectProvider(key) {
-  const prev = PROVIDERS[formProvider];
-  const f = brainForm.elements;
-  const changed = key !== formProvider;
-  formProvider = key;
-
-  providerGrid.querySelectorAll(".provider").forEach((t) =>
-    t.classList.toggle("selected", t.dataset.provider === key)
-  );
-
-  // Keep an auto-filled name in sync with the chosen provider
-  if (!f.name.value || (changed && f.name.value === prev.label)) f.name.value = PROVIDERS[key].label;
-
-  const local = key === "local";
-  baseUrlField.hidden = !local;
-  localPresetsField.hidden = !local;
-  speechField.hidden = !local;
-  ollamaField.hidden = !local || formProtocol !== "ollama";
-  modelSelectField.hidden = local;
-  modelCustomWrapper.hidden = !local && selectedCuratedModel !== "custom";
-  f.baseUrl.required = local;
-  f.key.required = !local && !editingId && !presetGiven;
-  keyLabel.textContent = local ? t("API key (optional)") : t("API key");
-  document.getElementById("model-label").textContent = local ? t("Model") : t("Custom model name");
-  keyDesc.innerHTML = local ? t("Most local servers need none. Leave empty unless yours asks for one.") : GEMINI_KEY_DESC;
-  if (local && changed) {
-    if (!f.baseUrl.value) pickLocalServer(LOCAL_SERVERS[0].url);
-    else loadModels(localQuery());
-  }
-}
-
-// What the form says about a local server, for the helper
-const localQuery = () => {
-  const f = brainForm.elements;
-  return { provider: "local", protocol: formProtocol, baseUrl: f.baseUrl.value.trim(), key: f.key.value.trim() };
-};
-
-function setProtocol(protocol) {
-  const f = brainForm.elements;
-  formProtocol = protocol;
-  ollamaField.hidden = formProvider !== "local" || protocol !== "ollama";
-  // A new Ollama brain starts with a context that fits a normal chat
-  if (protocol === "ollama" && !editingId && f.contextSize.value === "0") f.contextSize.value = String(DEFAULT_CONTEXT);
-}
-
-function pickLocalServer(url, protocol = protocolFor(url)) {
-  const f = brainForm.elements;
-  localPresets.querySelectorAll(".preset-btn").forEach((b) => b.classList.toggle("selected", b.dataset.url === url));
-  setProtocol(protocol);
-  if (url) {
-    f.baseUrl.value = url;
-    f.model.value = "";
-    loadModels(localQuery(), { fill: true });
-  } else {
-    f.baseUrl.focus();
-  }
-}
-
-LOCAL_SERVERS.forEach((s) => {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "chip preset-btn";
-  btn.dataset.url = s.url;
-  btn.textContent = s.label;
-  btn.addEventListener("click", () => pickLocalServer(s.url, s.protocol));
-  localPresets.append(btn);
-});
-
-brainForm.elements.baseUrl.addEventListener("change", () => {
-  if (formProvider !== "local") return;
-  const url = brainForm.elements.baseUrl.value.trim();
-  const preset = LOCAL_SERVERS.find((s) => s.url && s.url === url);
-  setProtocol(preset ? preset.protocol || "openai" : protocolFor(url));
-  localPresets.querySelectorAll(".preset-btn").forEach((b) => b.classList.toggle("selected", b.dataset.url === url));
-  loadModels(localQuery(), { fill: true });
-});
-
-// Fill the model suggestions with what this key can actually use
-let modelsRequest = 0;
-async function loadModels(query, { fill = false } = {}) {
-  const f = brainForm.elements;
-  const mine = ++modelsRequest;
-  modelOptions.innerHTML = "";
-  f.model.placeholder = t("Loading models…");
-  const placeholder = query.provider === "local" ? t("Pick or type a model name") : t("Leave empty to pick automatically");
+// The test button in the banner: the default AI
+const pingBtn = $("ai-ping-btn");
+const pingStatus = $("ai-ping-status");
+pingBtn?.addEventListener("click", async () => {
+  pingBtn.disabled = true;
+  pingBtn.querySelector("span").textContent = t("Pinging…");
+  pingStatus.className = "ai-ping-status";
+  pingStatus.hidden = false;
+  pingStatus.textContent = t("Testing the connection and how fast it answers…");
   try {
-    const models = await api.models(query);
-    if (mine !== modelsRequest) return; // a newer lookup is running
-    models.forEach((m) => modelOptions.append(new Option(m)));
-    f.model.placeholder = placeholder;
-    if (fill && !f.model.value && models.length) f.model.value = models[0];
-    showError(formError, "");
+    const res = await api.test(defaultBrainId || brains[0]?.id);
+    pingStatus.className = "ai-ping-status ok";
+    pingStatus.textContent = `✓ ${t("Online · answers in {ms} ms · {model} is ready for chat and voice", { ms: nf(res.latencyMs), model: res.model })}`;
+    announce(pingStatus.textContent);
   } catch (err) {
-    if (mine !== modelsRequest) return;
-    f.model.placeholder = placeholder;
-    showError(formError, err.message);
-  }
-}
-
-// Select curated model card in form
-function selectCuratedModel(modelKey) {
-  selectedCuratedModel = modelKey;
-  const f = brainForm.elements;
-
-  modelCuratedGrid?.querySelectorAll(".model-card").forEach((card) => {
-    card.classList.toggle("selected", card.dataset.model === modelKey);
-  });
-
-  if (modelKey === "custom") {
-    if (modelCustomWrapper) modelCustomWrapper.hidden = false;
-    f.model.focus();
-  } else {
-    if (modelCustomWrapper) modelCustomWrapper.hidden = true;
-    f.model.value = modelKey;
-  }
-}
-
-modelCuratedGrid?.addEventListener("click", (e) => {
-  const card = e.target.closest(".model-card");
-  if (!card) return;
-  selectCuratedModel(card.dataset.model);
-});
-
-// Quick Add Presets
-document.querySelectorAll(".preset-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const preset = btn.dataset.preset;
-    if (preset === "flash") {
-      openBrainForm(null, { name: "Gemini 2.5 Flash", model: "gemini-2.5-flash" });
-    } else if (preset === "pro") {
-      openBrainForm(null, { name: "Gemini 2.5 Pro", model: "gemini-2.5-pro" });
-    } else if (preset === "flash2") {
-      openBrainForm(null, { name: "Gemini 2.0 Flash", model: "gemini-2.0-flash" });
-    } else if (preset === "local") {
-      openBrainForm(null, { name: t("Local AI"), provider: "local", protocol: "ollama" });
-    }
-  });
-});
-
-function openBrainForm(id = null, preset = null) {
-  const brain = brains.find((b) => b.id === id);
-  const f = brainForm.elements;
-  editingId = brain ? id : null;
-  confirmDeleteId = null;
-
-  brainForm.reset();
-  showError(formError, "");
-  if (brainTestFeedback) {
-    brainTestFeedback.textContent = "";
-    brainTestFeedback.className = "test-feedback";
-  }
-  modelOptions.innerHTML = "";
-  f.key.type = "password";
-  document.getElementById("brain-form-title").textContent = brain ? t("Edit this AI") : t("Add an AI");
-  f.name.value = brain ? brain.name : (preset ? preset.name : "");
-  
-  const provider = brain ? brain.provider : preset?.provider || "gemini";
-  const targetModel = brain ? brain.model : preset?.model || (provider === "gemini" ? "gemini-2.5-flash" : "");
-  f.model.value = targetModel;
-  f.model.placeholder = t("Leave empty to pick automatically");
-
-  // Highlight curated model card or custom
-  if (CURATED_MODELS.includes(targetModel)) {
-    selectCuratedModel(targetModel);
-  } else {
-    selectCuratedModel("custom");
-    f.model.value = targetModel;
-  }
-
-  // When editing, an empty key field keeps the saved key
-  presetGiven = Boolean(preset);
-  f.key.placeholder = brain && brain.keyHint ? `${maskKey(brain.keyHint, brain)} — ${t("leave empty to keep")}` : provider === "local" ? t("Usually none") : t("Paste your API key");
-  formProtocol = brain?.protocol === "ollama" ? "ollama" : "openai";
-  if (preset?.protocol) formProtocol = preset.protocol;
-  f.contextSize.value = String(brain?.contextSize ?? (formProtocol === "ollama" && !brain ? DEFAULT_CONTEXT : 0));
-  f.keepAlive.value = String(brain?.keepAlive ?? 0);
-  if (brain?.provider === "local") {
-    f.baseUrl.value = brain.baseUrl || "";
-    localPresets.querySelectorAll(".preset-btn").forEach((b) => b.classList.toggle("selected", b.dataset.url === brain.baseUrl));
-    f.speechUrl.value = brain.speechUrl || "";
-    f.speechModel.value = brain.speechModel || "";
-    speechField.open = Boolean(brain.speechUrl);
-  } else {
-    speechField.open = false;
-  }
-
-  formProvider = provider === "local" && !brain ? "gemini" : provider; // so choosing "local" below counts as a change
-  selectProvider(provider);
-  if (brain) loadModels({ id: brain.id });
-
-  aiOverview.hidden = true;
-  brainForm.hidden = false;
-  f.name.focus();
-}
-
-function closeBrainForm() {
-  brainForm.hidden = true;
-  aiOverview.hidden = false;
-  renderBrains();
-}
-
-// Form test button: verify key & model before saving
-if (brainTestBtn) {
-  brainTestBtn.addEventListener("click", async () => {
-    const f = brainForm.elements;
-    const key = f.key.value.trim();
-    const model = f.model.value.trim();
-    brainTestBtn.disabled = true;
-    if (brainTestFeedback) {
-      brainTestFeedback.className = "test-feedback";
-      brainTestFeedback.textContent = t("Testing…");
-    }
-
-    try {
-      let res;
-      if (editingId && !key) {
-        res = await api.test(editingId);
-      } else {
-        res = await api.testConfig({ key, provider: formProvider, model, protocol: formProtocol, baseUrl: f.baseUrl.value.trim() });
-      }
-      if (brainTestFeedback) {
-        brainTestFeedback.className = "test-feedback ok";
-        brainTestFeedback.textContent = formProvider === "local"
-          ? `✓ ${t("Server reachable ({ms} ms)", { ms: nf(res.latencyMs) })} · ${tp("{n} model available", "{n} models available", res.modelsCount ?? 0)}`
-          : `✓ ${t("Key works ({ms} ms)", { ms: nf(res.latencyMs) })} · ${tp("{n} model available", "{n} models available", res.modelsCount ?? 0)}`;
-      announce(brainTestFeedback.textContent);
-      }
-    } catch (err) {
-      if (brainTestFeedback) {
-        brainTestFeedback.className = "test-feedback error";
-        brainTestFeedback.textContent = err.message;
-      }
-    } finally {
-      brainTestBtn.disabled = false;
-    }
-  });
-}
-
-// A newly pasted key: fetch its models once the field is left
-brainForm.elements.key.addEventListener("change", (e) => {
-  const key = e.target.value.trim();
-  showError(formError, "");
-  if (formProvider === "local") loadModels(localQuery());
-  else if (key) loadModels({ key });
-});
-
-brainForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const f = brainForm.elements;
-  const data = {
-    id: editingId,
-    provider: formProvider,
-    name: f.name.value.trim() || PROVIDERS[formProvider].label,
-    model: f.model.value.trim(),
-  };
-  if (f.key.value.trim()) data.key = f.key.value.trim();
-  if (formProvider === "local") {
-    data.protocol = formProtocol;
-    if (formProtocol === "ollama") {
-      data.contextSize = Number(f.contextSize.value) || 0;
-      data.keepAlive = Number(f.keepAlive.value) || 0;
-    }
-    data.baseUrl = f.baseUrl.value.trim();
-    data.speechUrl = f.speechUrl.value.trim();
-    data.speechModel = f.speechModel.value.trim();
-  }
-
-  showError(formError, "");
-  saveBtn.disabled = true;
-  saveBtn.textContent = formProvider === "local" ? t("Checking the server…") : t("Checking the key…");
-  try {
-    apply(await api.save(data));
-    closeBrainForm();
-  } catch (err) {
-    showError(formError, err.message);
+    pingStatus.className = "ai-ping-status error";
+    pingStatus.textContent = t("Connection error: {message}", { message: t(err.message) });
+    announce(pingStatus.textContent, { urgent: true });
   } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = t("Save");
+    pingBtn.disabled = false;
+    pingBtn.querySelector("span").textContent = t("Test connection");
   }
 });
 
-keyToggle.addEventListener("click", () => {
-  const input = brainForm.elements.key;
-  const show = input.type === "password";
-  input.type = show ? "text" : "password";
-  keyToggle.title = show ? t("Hide the key") : t("Show the key");
-  keyToggle.setAttribute("aria-label", keyToggle.title);
-});
+// ---------- On this computer ----------
+const localServers = $("local-servers");
+const localStatus = $("local-card-status");
+const localHelp = $("local-help");
 
-document.getElementById("brain-add").addEventListener("click", () => openBrainForm());
-document.getElementById("brain-back").addEventListener("click", closeBrainForm);
-document.getElementById("brain-cancel").addEventListener("click", closeBrainForm);
-
-// Reasoning Effort Switcher
-reasoningGrid?.addEventListener("click", (e) => {
-  const choice = e.target.closest("[data-effort]");
-  if (!choice) return;
-  const effort = choice.dataset.effort;
-  updateSettings((s) => {
-    if (!s.aiControl) s.aiControl = {};
-    s.aiControl.reasoningEffort = effort;
-  });
-});
-
-// Context slider label live sync
-contextSlider?.addEventListener("input", (e) => {
-  if (contextValLabel) contextValLabel.textContent = tp("{n} message", "{n} messages", Number(e.target.value));
-});
-
-// Sync AI Control settings
-onSettings((s) => {
-  const ai = s.aiControl || {};
-  if (reasoningGrid) {
-    reasoningGrid.querySelectorAll("[data-effort]").forEach((btn) => {
-      const isSelected = btn.dataset.effort === (ai.reasoningEffort || "balanced");
-      btn.classList.toggle("selected", isSelected);
-      btn.setAttribute("aria-checked", isSelected);
-    });
-  }
-  if (contextValLabel && ai.contextWindow) {
-    contextValLabel.textContent = tp("{n} message", "{n} messages", ai.contextWindow);
-  }
-});
-
-// ----- Privacy & local AI -----
-const localServers = document.getElementById("local-servers");
-const localStatus = document.getElementById("local-card-status");
-const localHelp = document.getElementById("local-help");
-const privateNote = document.getElementById("private-mode-note");
-let detected = [];
-let detecting = false;
-
-const isPrivate = () => getSettings()?.privacy?.localOnly === true;
+const sameServer = (a, b) => String(a || "").replace(/\/(v1|engines\/v1)$/, "") === String(b || "").replace(/\/(v1|engines\/v1)$/, "");
+const hasModel = (server, model) => brains.some((b) => b.provider === "local" && sameServer(b.baseUrl, server.url) && b.model.replace(/:latest$/, "") === model.replace(/:latest$/, ""));
 
 function renderLocal() {
-  localServers.innerHTML = "";
+  localServers.replaceChildren();
   const running = detected.filter((s) => s.running);
   localHelp.hidden = running.length > 0 || detecting;
-  localStatus.textContent = detecting
-    ? t("Looking for AI model servers…")
-    : running.length
-      ? t("{names} found. Add a model with one click.", { names: running.map((s) => s.label).join(", ") })
-      : t("No local AI server is running.");
+  localStatus.textContent = detecting ? t("Looking for AI model servers…") : running.length ? t("{names} found. Add a model with one click.", { names: running.map((s) => s.label).join(", ") }) : t("No local AI server is running.");
 
   for (const server of running) {
-    const box = document.createElement("div");
-    box.className = "local-server";
-    const name = document.createElement("div");
-    name.className = "local-server-name";
-    name.innerHTML = '<span class="dot"></span><span class="label"></span><span class="meta"></span>';
-    name.querySelector(".label").textContent = server.label;
-    name.querySelector(".meta").textContent = `${tp("{n} model", "{n} models", server.models.length)} · ${server.url.replace(/^https?:\/\//, "")}`;
-    box.append(name);
-
-    const models = document.createElement("div");
-    models.className = "local-models";
-    if (!server.models.length) {
-      const none = document.createElement("span");
-      none.className = "row-desc";
-      none.textContent = server.protocol === "ollama" ? t("No models yet. Run: ollama pull llama3.2") : t("No model is loaded yet. Load one in the server.");
-      models.append(none);
-    }
+    const fresh = server.models.filter((m) => !hasModel(server, m));
+    const models = h("div", { class: "local-models" });
+    if (!server.models.length) models.append(h("span", { class: "row-desc", text: server.protocol === "ollama" ? t("No models yet. Run: ollama pull llama3.2") : t("No model is loaded yet. Load one in the server.") }));
     for (const model of server.models) {
-      const chip = document.createElement("span");
-      chip.className = "local-model";
-      const label = document.createElement("span");
-      label.textContent = model;
-      chip.append(label);
-      if (brains.some((b) => b.provider === "local" && b.baseUrl.replace(/\/v1$/, "") === server.url.replace(/\/v1$/, "") && b.model.replace(/:latest$/, "") === model.replace(/:latest$/, ""))) {
-        const done = document.createElement("span");
-        done.className = "added";
-        done.textContent = t("✓ Added");
-        chip.append(done);
-      } else {
-        const add = document.createElement("button");
-        add.type = "button";
-        add.className = "btn";
-        add.textContent = t("Add");
-        add.setAttribute("aria-label", t("Add {model}", { model }));
-        add.addEventListener("click", () => addDetected(server, model, add));
+      const chip = h("span", { class: "local-model" }, h("span", { text: model }));
+      if (hasModel(server, model)) chip.append(h("span", { class: "added", text: t("✓ Added") }));
+      else {
+        const add = h("button", { type: "button", class: "btn", text: t("Add"), "aria-label": t("Add {model}", { model }) });
+        add.addEventListener("click", () => addDetected(server, [model], add));
         chip.append(add);
       }
       models.append(chip);
     }
-    box.append(models);
-    localServers.append(box);
+    const head = h("div", { class: "local-server-name" }, h("span", { class: "dot" }), h("span", { class: "label", text: server.label }), h("span", { class: "meta", text: `${tp("{n} model", "{n} models", server.models.length)} · ${server.url.replace(/^https?:\/\//, "")}` }));
+    if (fresh.length > 1) {
+      const all = h("button", { type: "button", class: "btn small", text: tp("Add all {n}", "Add all {n}", fresh.length) });
+      all.addEventListener("click", () => addDetected(server, fresh, all));
+      head.append(all);
+    }
+    localServers.append(h("div", { class: "local-server" }, head, models));
   }
 }
 
-async function addDetected(server, model, button) {
+async function addDetected(server, models, button) {
   button.disabled = true;
   button.textContent = t("Loading…"); // the first request loads the model, which can take a moment
   showError(listError, "");
   try {
-    const data = { provider: "local", protocol: server.protocol, name: model.replace(/:latest$/, ""), baseUrl: server.url, model };
-    if (server.protocol === "ollama") data.contextSize = DEFAULT_CONTEXT;
-    apply(await api.save(data));
+    const hw = await hardwareHints();
+    const base = { provider: "local", protocol: server.protocol, baseUrl: server.url };
+    if (server.protocol === "ollama") Object.assign(base, { contextSize: hw.contextSize || DEFAULT_CONTEXT, keepAlive: hw.keepAlive || 0 });
+    if (models.length === 1) apply(await api.save({ ...base, name: models[0].replace(/:latest$/, ""), model: models[0] }));
+    else {
+      const result = await api.bulk({ ...base, models });
+      apply(result.state);
+      if (result.failed.length) showError(listError, t("{n} could not be added: {first}", { n: result.failed.length, first: `${result.failed[0].model}: ${t(result.failed[0].error)}` }));
+    }
   } catch (err) {
     showError(listError, err.message);
     button.disabled = false;
@@ -733,9 +327,22 @@ async function detectLocal() {
   renderLocal();
 }
 
-// ----- Local voice (listening and speaking on this computer) -----
-const voiceStatus = document.getElementById("local-voice-status");
-const voiceBtn = document.getElementById("local-voice-btn");
+// What this computer suggests for a new Ollama AI (hardware.js decides; the page asks once a minute at most)
+let hintsAt = 0;
+let hints = {};
+async function hardwareHints() {
+  if (Date.now() - hintsAt < 60000) return hints;
+  try {
+    const hw = await helper.hardware.get();
+    hints = { contextSize: hw.effective.contextSize, keepAlive: hw.effective.keepAliveMinutes, suggested: ["general", "coding", "embeddings"].map((r) => hw.suggestions[r]?.model).filter(Boolean) };
+    hintsAt = Date.now();
+  } catch {}
+  return hints;
+}
+
+// ---------- Local voice (listening and speaking on this computer) ----------
+const voiceStatus = $("local-voice-status");
+const voiceBtn = $("local-voice-btn");
 let voicePoll = null;
 
 function renderVoice(s) {
@@ -772,66 +379,476 @@ voiceBtn.addEventListener("click", async () => {
     renderVoice(await helper.local.installVoice());
     refreshVoice();
   } catch (err) {
-    voiceStatus.textContent = err.message;
+    voiceStatus.textContent = t(err.message);
     voiceBtn.disabled = false;
   }
 });
 
-document.getElementById("local-refresh").addEventListener("click", () => {
+$("local-refresh").addEventListener("click", () => {
   detectLocal();
   refreshVoice();
 });
-document.getElementById("local-add-manual").addEventListener("click", () => openBrainForm(null, { name: t("Local AI"), provider: "local", protocol: "ollama" }));
 window.addEventListener("focus", () => {
   if (!aiOverview.hidden && aiOverview.offsetParent) detectLocal();
 });
 
-// Private mode: cloud brains are shown as off, and a note says what to do
-function renderPrivate() {
-  const on = isPrivate();
-  brainList.querySelectorAll(".brain").forEach((li) => {
-    const brain = brains.find((b) => b.id === Number(li.dataset.id));
-    li.classList.toggle("is-blocked", on && brain?.provider !== "local");
+// ---------- Adding and editing ----------
+// The form works in two ways: adding (pick a service, connect, tick models) and editing (one AI, one model).
+let editing = null; // the brain being edited, or null while adding
+let chosen = null; // { id, kind: "cloud" | "local", entry }: the service being connected
+let modelNames = []; // what the service or server listed
+let ticked = new Set();
+let modelsRequest = 0;
+let heldKey = ""; // a key pasted in the box above, kept until its service is picked
+
+const pickView = $("ai-pick");
+const providerOf = (c) => (c.id === "gemini" ? "gemini" : c.kind === "local" ? "local" : "openai");
+const protocolOf = (c) => (c.kind === "local" ? c.entry.protocol || "openai" : undefined);
+
+function openAdd({ service = null, kind = null, key = "", baseUrl = "", candidates = null } = {}) {
+  editing = null;
+  heldKey = key;
+  aiOverview.hidden = true;
+  aiAdd.hidden = false;
+  $("ai-add-title").textContent = t("Add an AI");
+  $("ai-add-result").hidden = true;
+  showError(formError, "");
+  loadServices().then(() => {
+    const cloud = service ? cloudService(service) : null;
+    const local = service ? localService(service) : null;
+    const entry = kind === "local" ? local : kind === "cloud" ? cloud : cloud || local;
+    if (entry) chooseService(entry, entry === local ? "local" : "cloud", { key, baseUrl });
+    else showPicker(candidates);
   });
-  const noLocal = !brains.some((b) => b.provider === "local");
-  privateNote.hidden = !(on && noLocal);
-  privateNote.textContent = on && noLocal ? t("Private mode is on, but there's no local AI yet. Add one below, or chat won't work.") : "";
+  aiAdd.scrollIntoView({ block: "start" });
 }
 
-// ----- Which AI answers -----
-const MODE_TEXT = {
-  fixed: t("Every message goes to the one AI you pick in the model menu."),
-  auto: t("Short and ordinary messages go to a local AI; the cloud AI takes what a local one can't (below). If one fails, the other answers."),
-  dynamic: t("Like Auto, and it reacts to how things are going: a local AI that is slow or fails is replaced by the cloud for a while, a cloud AI that is down by the local one."),
-  fastest: t("Asks the local and the cloud AI at once, and the first one to start answering wins; the other is cancelled."),
-  local: t("Only an AI on this computer answers."),
-  cloud: t("Only a cloud AI (Gemini) answers."),
+function showPicker(candidates = null) {
+  chosen = null;
+  form.hidden = true;
+  pickView.hidden = false;
+  const note = $("service-none");
+  note.hidden = true;
+  renderTiles(candidates);
+  $("ai-search").value = "";
+  $("ai-search").focus();
+}
+
+function tile(entry, kind, { running = false, hint = false } = {}) {
+  const b = h("button", { type: "button", class: `service-tile${hint ? " hint" : ""}`, "data-id": entry.id, "data-kind": kind, "aria-label": `${entry.label}: ${t(entry.about || "")}` }, logo(entry.label, entry.color || "#3fa56b", "service-logo"), h("span", { class: "service-text" }, h("span", { class: "service-name", text: entry.label }), h("span", { class: "service-sub", text: kind === "local" ? (entry.custom ? t("Give its address") : running ? t("Running now") : entry.about ? t(entry.about) : "") : t(entry.company || "") })));
+  b.addEventListener("click", () => chooseService(entry, kind, { key: heldKey }));
+  return b;
+}
+
+function renderTiles(candidates = null) {
+  const cat = services();
+  if (!cat) return;
+  const q = $("ai-search").value.trim().toLowerCase();
+  const matches = (e) => !q || `${e.label} ${e.company || ""} ${e.about || ""}`.toLowerCase().includes(q);
+  const running = new Set(detected.filter((s) => s.running).map((s) => s.id));
+  const local = cat.local.filter(matches);
+  const cloud = cat.cloud.filter(matches);
+  // A key that could be several services' puts those first
+  const first = new Set(candidates || []);
+  const sortedCloud = [...cloud].sort((a, b) => Number(first.has(b.id)) - Number(first.has(a.id)));
+  $("service-grid-local").replaceChildren(...local.sort((a, b) => Number(running.has(b.id)) - Number(running.has(a.id))).map((e) => tile(e, "local", { running: running.has(e.id) })));
+  $("service-grid-cloud").replaceChildren(...sortedCloud.map((e) => tile(e, "cloud", { hint: first.has(e.id) })));
+  $("service-none").hidden = local.length + cloud.length > 0;
+  if (candidates?.length) $("ai-add-result").hidden = true;
+}
+$("ai-search").addEventListener("input", () => renderTiles());
+document.addEventListener("friends:services-ready", () => !pickView.hidden && renderTiles());
+
+async function chooseService(entry, kind, { key = "", baseUrl = "" } = {}) {
+  chosen = { id: entry.id, kind, entry };
+  const f = form.elements;
+  form.reset();
+  pickView.hidden = true;
+  form.hidden = false;
+  showError(formError, "");
+  $("ai-add-result").hidden = true;
+  const d = { label: entry.label, color: entry.color || "#3fa56b" };
+  $("ai-form-head").replaceChildren(logo(d.label, d.color, "service-logo big"), h("div", { class: "ai-form-title" }, h("strong", { text: t("Connect {name}", { name: entry.label }) }), h("span", { class: "row-desc", text: kind === "local" ? t("Runs on this computer or your network") : t(entry.company || "") })));
+  $("ai-form-about").textContent = t(entry.about || "");
+  modelsRequest++; // an answer still on its way for the one before is ignored
+  $("ai-connect-status").textContent = "";
+  $("ai-connect-status").className = "test-feedback";
+  f.name.value = "";
+  f.name.placeholder = entry.label;
+  f.key.value = key;
+  f.key.type = "password";
+
+  const local = kind === "local";
+  const custom = Boolean(entry.custom);
+  // Address: a local server's, or your own service's; a known cloud service has its own
+  $("field-baseurl").hidden = !(local || custom);
+  f.baseUrl.value = baseUrl || (local ? entry.url || "" : "");
+  f.baseUrl.required = local || custom;
+  $("baseurl-label").textContent = local ? t("Server address") : t("Service address");
+  $("baseurl-desc").textContent = local ? t("Where the server listens. A server on another computer works too.") : t("The address of the service's OpenAI-style API, for example {example}", { example: "https://api.example.com/v1" });
+  // Key
+  const keyless = local || entry.id === "custom";
+  $("field-key").hidden = false;
+  $("key-label").textContent = keyless ? t("API key (optional)") : t("API key");
+  f.key.required = !keyless;
+  f.key.placeholder = keyless ? t("Usually none") : entry.keyHint || t("Paste your API key");
+  const desc = $("key-desc");
+  desc.replaceChildren();
+  if (keyless) desc.append(local ? t("Most local servers need none. Leave empty unless yours asks for one.") : t("Leave empty if the service needs none."));
+  else if (entry.keyUrl) desc.append(t("Get one at"), " ", h("a", { href: entry.keyUrl, target: "_blank", rel: "noopener noreferrer", text: entry.keyUrl.replace(/^https?:\/\//, "") }));
+  // Own settings that only some have
+  $("ollama-field").hidden = !(local && entry.protocol === "ollama");
+  $("speech-field").hidden = !local;
+  $("field-models").hidden = true;
+  $("models-label").textContent = t("Models");
+  $("ai-add-title").textContent = t("Add an AI");
+  saveBtn.textContent = t("Add");
+  saveBtn.disabled = true;
+  modelNames = [];
+  ticked = new Set();
+  renderModels();
+  // Fit a new Ollama AI to this computer
+  if (local && entry.protocol === "ollama") {
+    const hw = await hardwareHints();
+    if (hw.contextSize) f.contextSize.value = String(hw.contextSize);
+    if (hw.keepAlive) f.keepAlive.value = String([5, 15, 30, 60, 240, 1440].includes(hw.keepAlive) ? hw.keepAlive : 15);
+    $("context-hint").textContent = t("How much of the chat the model sees at once. Friends suggests {n} tokens for this computer.", { n: nf(hw.contextSize || DEFAULT_CONTEXT) });
+  }
+  // A server with nothing to ask for, or a key that came with the box above: connect at once
+  if (local || key || entry.id === "openrouter") connect();
+  else f.key.focus();
+}
+
+// What the form says about the service, for the helper
+const query = () => {
+  const f = form.elements;
+  const c = chosen;
+  const q = { provider: providerOf(c), key: f.key.value.trim() };
+  if (c.kind === "local") Object.assign(q, { protocol: protocolOf(c), baseUrl: f.baseUrl.value.trim() });
+  else if (q.provider === "openai") Object.assign(q, { service: c.id, baseUrl: f.baseUrl.value.trim() });
+  return q;
 };
-const routingOptions = document.getElementById("routing-options");
 
-function renderRouting() {
-  const mode = isPrivate() ? "local" : getSettings()?.routing?.mode || "fixed";
-  document.getElementById("routing-mode-desc").textContent = isPrivate() ? t("Private mode is on, so only a local AI answers.") : MODE_TEXT[mode];
-  routingOptions.querySelectorAll("[data-for]").forEach((el) => el.classList.toggle("is-inactive", !el.dataset.for.split(" ").includes(mode)));
-  // The fine rules are only worth showing for the modes that use them
-  document.getElementById("routing-advanced").hidden = !routingOptions.querySelector("#routing-advanced [data-for]:not(.is-inactive)");
+async function connect() {
+  const status = $("ai-connect-status");
+  const mine = ++modelsRequest;
+  const q = query();
+  showError(formError, "");
+  status.className = "test-feedback";
+  status.textContent = t("Connecting…");
+  $("ai-connect-go").disabled = true;
+  try {
+    const models = await api.models(q);
+    if (mine !== modelsRequest) return;
+    modelNames = models;
+    status.className = "test-feedback ok";
+    status.textContent = models.length ? `✓ ${tp("{n} model available", "{n} models available", models.length)}` : q.provider === "local" ? t("Connected, but it has no models yet.") : t("Enter your key, then connect.");
+    $("field-models").hidden = false;
+    ticked = new Set();
+    const hw = await hardwareHints();
+    const preferred = editing ? [editing.model] : models.length ? [models.find((m) => (hw.suggested || []).some((s) => m === s || m === `${s}:latest`)) || models[0]] : [];
+    for (const m of preferred) if (m) ticked.add(m);
+    renderModels();
+    updateSave();
+    if (models.length) announce(status.textContent);
+  } catch (err) {
+    if (mine !== modelsRequest) return;
+    status.className = "test-feedback error";
+    status.textContent = "";
+    showError(formError, err.message);
+    // A server that has no list can still be used by naming the model
+    $("field-models").hidden = q.provider !== "local" && q.provider !== "openai";
+    renderModels();
+    updateSave();
+  } finally {
+    if (mine === modelsRequest) $("ai-connect-go").disabled = false;
+  }
 }
 
-onSettings(renderPrivate);
-onSettings(renderRouting);
-document.addEventListener("friends:brains-changed", () => {
-  renderPrivate();
-  renderLocal();
+$("ai-connect-go").addEventListener("click", connect);
+form.elements.key.addEventListener("change", () => {
+  if (chosen && form.elements.key.value.trim() && !editing) connect();
 });
+form.elements.baseUrl.addEventListener("change", () => {
+  if (chosen && !$("field-baseurl").hidden && (chosen.kind === "local" || form.elements.key.value.trim() || chosen.entry.custom)) connect();
+});
+
+// The list of models: tick several to add (a radio when editing)
+const suggestedSet = () => new Set(hints.suggested || []);
+function renderModels() {
+  const list = $("ai-model-list");
+  const q = $("ai-model-filter").value.trim().toLowerCase();
+  const single = Boolean(editing);
+  const names = modelNames.filter((m) => !q || m.toLowerCase().includes(q));
+  const shown = names.slice(0, 200);
+  list.replaceChildren(
+    ...shown.map((m, i) => {
+      const id = `model-${i}`;
+      const present = !single && chosen && brains.some((b) => b.model === m && b.provider === providerOf(chosen) && (chosen.kind === "local" ? sameServer(b.baseUrl, form.elements.baseUrl.value) : (b.service || "") === (chosen.id === "gemini" ? "" : chosen.id)));
+      const suggested = [...suggestedSet()].some((s) => m === s || m === `${s}:latest`);
+      const input = h("input", { type: single ? "radio" : "checkbox", name: "pick", id, value: m, checked: ticked.has(m), disabled: present });
+      input.addEventListener("change", () => {
+        if (single) ticked = new Set([m]);
+        else if (input.checked) ticked.add(m);
+        else ticked.delete(m);
+        updateSave();
+      });
+      return h("li", { class: "model-item" }, input, h("label", { for: id }, h("span", { class: "model-name", text: m }), present ? h("span", { class: "tag", text: t("Already added") }) : null, suggested ? h("span", { class: "tag good", text: t("Suggested for this computer") }) : null));
+    })
+  );
+  $("ai-model-count").textContent = names.length > shown.length ? t("Showing {n} of {total}. Filter to find the rest.", { n: shown.length, total: names.length }) : "";
+  $("ai-model-none").hidden = single;
+}
+$("ai-model-filter").addEventListener("input", renderModels);
+$("ai-model-none").addEventListener("click", () => {
+  ticked = new Set();
+  renderModels();
+  updateSave();
+});
+form.elements.model.addEventListener("input", updateSave);
+
+function pickedModels() {
+  const typed = form.elements.model.value.trim();
+  const all = [...ticked];
+  if (typed && !all.includes(typed)) all.push(typed);
+  return all;
+}
+
+function updateSave() {
+  const n = pickedModels().length;
+  saveBtn.disabled = n === 0;
+  if (editing) saveBtn.textContent = t("Save");
+  else saveBtn.textContent = n > 1 ? tp("Add {n} models", "Add {n} models", n) : t("Add");
+  $("field-name").hidden = !editing && n > 1;
+}
+
+// The AI's own settings, as the helper wants them
+function ownParams() {
+  const f = form.elements;
+  const params = {};
+  for (const key of ["temperature", "maxTokens", "topP", "timeoutSeconds", "dailyLimit"]) if (f[key].value !== "") params[key] = Number(f[key].value);
+  if (f.systemPrefix.value.trim()) params.systemPrefix = f.systemPrefix.value.trim();
+  if (f.tools.value === "off") params.tools = "off";
+  if (f.vision.value !== "auto") params.vision = f.vision.value;
+  return params;
+}
+
+function fillOwn(brain) {
+  const f = form.elements;
+  const p = brain.params || {};
+  for (const key of ["temperature", "maxTokens", "topP", "timeoutSeconds", "dailyLimit"]) f[key].value = p[key] ?? "";
+  f.systemPrefix.value = p.systemPrefix || "";
+  f.tools.value = p.tools || "auto";
+  f.vision.value = p.vision || "auto";
+  f.note.value = brain.note || "";
+  $("ai-own-settings").open = Boolean(Object.keys(p).length || brain.note);
+}
+
+function openEdit(id) {
+  const brain = brains.find((b) => b.id === id);
+  if (!brain) return;
+  editing = brain;
+  confirmDeleteId = null;
+  aiOverview.hidden = true;
+  aiAdd.hidden = false;
+  pickView.hidden = true;
+  form.hidden = false;
+  showError(formError, "");
+  $("ai-add-result").hidden = true;
+  loadServices().then(() => {
+    const d = describe(brain);
+    const entry = brain.provider === "gemini" ? cloudService("gemini") : brain.provider === "openai" ? cloudService(brain.service) : localByAddress(brain.baseUrl) || { id: "local", label: d.label, protocol: brain.protocol, url: brain.baseUrl, color: d.color, about: "" };
+    chosen = { id: brain.provider === "local" ? entry.id || "local" : brain.provider === "gemini" ? "gemini" : brain.service, kind: brain.kind, entry: { ...entry, protocol: brain.protocol } };
+    const f = form.elements;
+    form.reset();
+    $("ai-add-title").textContent = t("Edit this AI");
+    $("ai-form-head").replaceChildren(logo(d.label, d.color, "service-logo big"), h("div", { class: "ai-form-title" }, h("strong", { text: brain.name }), h("span", { class: "row-desc", text: `${d.label} · ${maskKey(brain)}` })));
+    $("ai-form-about").textContent = "";
+    f.name.value = brain.name;
+    f.key.value = "";
+    f.key.type = "password";
+    const local = brain.kind === "local";
+    $("field-baseurl").hidden = !(local || brain.service === "custom");
+    f.baseUrl.value = brain.baseUrl || "";
+    f.baseUrl.required = false;
+    $("baseurl-label").textContent = local ? t("Server address") : t("Service address");
+    $("baseurl-desc").textContent = "";
+    const keyless = local || brain.service === "custom";
+    $("key-label").textContent = keyless ? t("API key (optional)") : t("API key");
+    f.key.required = false;
+    f.key.placeholder = brain.keyHint ? `${maskKey(brain)} — ${t("leave empty to keep")}` : keyless ? t("Usually none") : t("Paste your API key");
+    $("key-desc").textContent = t("Leave empty to keep the saved key.");
+    $("ollama-field").hidden = !(local && brain.protocol === "ollama");
+    $("speech-field").hidden = !local;
+    f.contextSize.value = String(brain.contextSize ?? 0);
+    f.keepAlive.value = String(brain.keepAlive ?? 0);
+    f.speechUrl.value = brain.speechUrl || "";
+    f.speechModel.value = brain.speechModel || "";
+    fillOwn(brain);
+    $("field-models").hidden = false;
+    $("models-label").textContent = t("Model");
+    $("field-model-typed").hidden = false;
+    f.model.value = "";
+    modelNames = [brain.model];
+    ticked = new Set([brain.model]);
+    renderModels();
+    updateSave();
+    $("ai-connect-status").textContent = "";
+    // The models this key or server can use (the saved key is used when none is typed)
+    api.models({ id: brain.id, key: "" }).then((models) => {
+      modelNames = [...new Set([brain.model, ...models])];
+      renderModels();
+    }, () => {});
+    f.name.focus();
+  });
+}
+
+function closeAdd() {
+  aiAdd.hidden = true;
+  aiOverview.hidden = false;
+  editing = null;
+  chosen = null;
+  heldKey = "";
+  renderBrains();
+  detectLocal();
+  refreshUsage();
+  $("brain-add").focus();
+}
+
+$("brain-add").addEventListener("click", () => openAdd());
+$("ai-add-back").addEventListener("click", closeAdd);
+$("ai-form-cancel").addEventListener("click", () => (editing ? closeAdd() : showPicker()));
+
+// What the form's models and fields become when saved
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!chosen) return;
+  const f = form.elements;
+  const models = pickedModels();
+  if (!models.length) return;
+  const base = { ...query(), params: ownParams(), note: f.note.value.trim() };
+  if (!base.key) delete base.key;
+  if (chosen.kind === "local") {
+    base.speechUrl = f.speechUrl.value.trim();
+    base.speechModel = f.speechModel.value.trim();
+    if (chosen.entry.protocol === "ollama") {
+      base.contextSize = Number(f.contextSize.value) || 0;
+      base.keepAlive = Number(f.keepAlive.value) || 0;
+    }
+  }
+  showError(formError, "");
+  saveBtn.disabled = true;
+  const label = saveBtn.textContent;
+  saveBtn.textContent = chosen.kind === "local" ? t("Checking the server…") : t("Checking the key…");
+  try {
+    if (editing) {
+      apply(await api.save({ ...base, id: editing.id, name: f.name.value.trim() || editing.name, model: models[0] }));
+      closeAdd();
+    } else if (models.length === 1) {
+      apply(await api.save({ ...base, name: f.name.value.trim() || undefined, model: models[0] }));
+      closeAdd();
+    } else {
+      const result = await api.bulk({ ...base, models });
+      apply(result.state);
+      showResult(result);
+    }
+  } catch (err) {
+    showError(formError, err.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = label;
+    updateSave();
+  }
+});
+
+function showResult(result) {
+  const box = $("ai-add-result");
+  box.replaceChildren(
+    result.added.length ? h("p", { class: "ok", text: `✓ ${tp("{n} AI added", "{n} AIs added", result.added.length)}` }) : null,
+    result.skipped.length ? h("p", { class: "row-desc", text: t("{n} were already there: {names}", { n: result.skipped.length, names: result.skipped.join(", ") }) }) : null,
+    ...result.failed.map((f) => h("p", { class: "form-error", text: `${f.model}: ${t(f.error)}` })),
+    h("button", { type: "button", class: "btn btn-primary", id: "ai-add-done", text: t("Done"), onclick: closeAdd })
+  );
+  box.hidden = false;
+  announce(box.textContent);
+  $("ai-add-done").focus();
+  ticked = new Set();
+  renderModels();
+  updateSave();
+}
+
+$("key-toggle").addEventListener("click", () => {
+  const input = form.elements.key;
+  const show = input.type === "password";
+  input.type = show ? "text" : "password";
+  const label = show ? t("Hide the key") : t("Show the key");
+  $("key-toggle").title = label;
+  $("key-toggle").setAttribute("aria-label", label);
+});
+
+// ---------- Paste a key or an address ----------
+const smart = $("smart-add");
+const smartInput = $("smart-input");
+const smartHint = $("smart-hint");
+
+smart.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = smartInput.value.trim();
+  if (!text) return openAdd();
+  smartHint.textContent = t("Looking…");
+  await loadServices();
+  let found;
+  try {
+    found = await helper.services.recognise(text);
+  } catch (err) {
+    smartHint.textContent = err.message;
+    return;
+  }
+  smartInput.value = "";
+  smartHint.textContent = t("Friends works out which service it belongs to.");
+  const id = found.matches[0];
+  if (found.kind === "key" && found.certain) openAdd({ service: id, kind: id === "gemini" || services()?.cloud.some((s) => s.id === id) ? "cloud" : "local", key: text });
+  else if (found.kind === "key") {
+    openAdd({ key: text, candidates: found.matches });
+    if (found.matches.length) announce(t("That key could belong to more than one service. Pick yours."));
+  } else if (found.kind === "address") {
+    if (found.certain && found.cloud) openAdd({ service: id, kind: "cloud", baseUrl: text.startsWith("http") ? text : `https://${text}` });
+    else if (found.certain) openAdd({ service: id, kind: "local", baseUrl: text });
+    else openAdd({ service: "other", kind: "local", baseUrl: found.url || text });
+  } else openAdd({ key: "" });
+});
+
+// The first-run guide had a key that could belong to several services
+document.addEventListener("friends:add-ai", (e) => openAdd({ key: e.detail.key, candidates: e.detail.candidates }));
+
+// ---------- Start ----------
+const reveal = () => {
+  renderBrains();
+  renderLocal();
+};
+document.addEventListener("friends:services-ready", reveal);
+document.addEventListener("friends:settings", (e) => {
+  if (e.detail.open && e.detail.tab === "ai-control") {
+    refreshUsage();
+    detectLocal();
+  }
+});
+document.addEventListener("friends:brains-changed", () => renderLocal());
+// Private mode greys the cloud AIs in the list
+onSettings(() => loadedBrains && renderBrains());
 
 renderBrains();
-api.list().then((state) => {
-  apply(state);
-  renderPrivate();
-}, (err) => {
-  loadedBrains = true;
-  renderBrains();
-  showError(listError, err.message);
-});
+loadServices();
+helper.brains.list().then(
+  (state) => {
+    apply(state);
+    refreshUsage();
+  },
+  (err) => {
+    loadedBrains = true;
+    renderBrains();
+    showError(listError, err.message);
+  }
+);
 detectLocal();
 refreshVoice();

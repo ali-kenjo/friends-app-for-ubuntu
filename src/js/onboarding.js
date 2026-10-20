@@ -128,7 +128,7 @@ async function useLocal(server, model, el) {
   }
 }
 
-// ----- Gemini -----
+// ----- A cloud AI: the key says which service it is -----
 cloudForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const key = keyInput.value.trim();
@@ -137,14 +137,25 @@ cloudForm.addEventListener("submit", async (e) => {
   cloudSave.disabled = true;
   cloudSave.textContent = t("Checking the key…");
   try {
-    done(await api.brains.save({ provider: "gemini", name: "Gemini", model: "", key }), "Gemini");
+    const found = await api.services.recognise(key);
+    const id = found.certain ? found.matches[0] : "gemini"; // a key that looks like nothing is tried as Gemini's, as before
+    if (found.kind === "key" && !found.certain && found.matches.length) {
+      // Could be several services: Settings asks which
+      document.dispatchEvent(new CustomEvent("friends:open-settings", { detail: { tab: "ai-control" } }));
+      document.dispatchEvent(new CustomEvent("friends:add-ai", { detail: { key, candidates: found.matches } }));
+      keyInput.value = "";
+      return;
+    }
+    const entry = (await api.services.list()).cloud.find((s) => s.id === id);
+    const brain = id === "gemini" ? { provider: "gemini", name: "Gemini", model: "", key } : { provider: "openai", service: id, name: entry?.label, model: "", key };
+    done(await api.brains.save(brain), entry?.label || "Gemini");
     keyInput.value = "";
   } catch (err) {
-    cloudError.textContent = err.message;
+    cloudError.textContent = t(err.message);
     cloudError.hidden = false;
   } finally {
     cloudSave.disabled = false;
-    cloudSave.textContent = t("Connect Gemini");
+    cloudSave.textContent = t("Connect");
   }
 });
 

@@ -313,7 +313,7 @@ const running = () => [...live.values()].filter((e) => e.running).length;
 // How many missions run at once: the rest wait their turn
 const waitingQueue = [];
 function run(m) {
-  const max = settingsModule.get().missions.maxConcurrent || 2;
+  const max = settingsModule.get().missions.maxConcurrent || require("../hardware").last()?.fit.missionsAtOnce || 2;
   if (running() >= max) {
     m.status = "running";
     m.pause = { kind: "queued", message: "Another mission is running; this one starts when it's done." };

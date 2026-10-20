@@ -1,6 +1,6 @@
 // ---------- Settings → AI → Specialists ----------
 // The roles (general, coding, writing…), the model each uses, whether it fits the graphics card, a test button,
-// pulling and removing models, and suggestions for a card with about 6 GB. The helper does the work
+// pulling and removing models, and suggestions for the memory this computer can give (server/hardware.js). The helper does the work
 // (server/specialists-api.js, server/vram.js); this draws it and sends what you pick.
 import { api } from "./api.js";
 import { h } from "./h.js";
@@ -8,7 +8,7 @@ import { t, nf } from "./i18n.js";
 import { iconEl } from "./icons.js";
 import { announce } from "./a11y.js";
 import { confirmDialog } from "./dialogs.js";
-import { updateSettings, flushSettings } from "./store.js";
+import { updateSettings, flushSettings, reloadSettings } from "./store.js";
 import { onServerEvent } from "./events.js";
 
 const $ = (id) => document.getElementById(id);
@@ -26,11 +26,12 @@ const say = (text, kind = "") => {
   feedback.className = `test-feedback ${kind}`;
 };
 const clean = (name) => String(name || "").replace(/:latest$/, "");
-const gb = (mb) => `${nf(Math.round((mb / 1024) * 10) / 10)} GB`;
+const gb = (mb) => `\u2066${nf(Math.round((mb / 1024) * 10) / 10)} GB\u2069`; // (kept together in right-to-left text)
 
 async function load() {
   try {
     data = await api.specialists.overview();
+    reloadSettings(); // the helper may have changed the settings itself (the roles): the page's copy follows
     for (const r of data.roles) {
       r.label = t(r.label); // the built-in roles have texts from the helper
       r.when = t(r.when);
@@ -62,7 +63,7 @@ function drawStatus() {
   const bits = [];
   bits.push(h("span", { class: `strip-item ${data.running ? "" : "muted"}` }, iconEl("chip", { size: 15 }), data.running ? t("Ollama is running") : t("Ollama isn't running. Start it with: ollama serve")));
   if (v.gpu) bits.push(h("span", { class: "strip-item" }, iconEl("gauge", { size: 15 }), t("{card}: {used} of {total} used", { card: v.gpu.name, used: gb(v.gpu.usedMb), total: gb(v.gpu.totalMb) })));
-  else bits.push(h("span", { class: "strip-item muted" }, iconEl("gauge", { size: 15 }), t("No NVIDIA graphics card found: Ollama decides where models run")));
+  else bits.push(h("span", { class: "strip-item muted" }, iconEl("gauge", { size: 15 }), t("No graphics card Friends can use was found: Ollama decides where models run")));
   const loaded = data.loaded?.loaded;
   bits.push(h("span", { class: "strip-item" }, iconEl("play", { size: 15 }), loaded ? `${t("Loaded now")}: ${loaded.model}${loaded.role ? ` (${loaded.role})` : ""}` : v.loaded.length ? `${t("Loaded now")}: ${v.loaded.map((m) => clean(m.name)).join(", ")}` : t("Nothing is loaded now")));
   statusEl.replaceChildren(...bits);
@@ -239,7 +240,8 @@ function drawSuggestions() {
   const seen = data.suggestionsSeen;
   card.hidden = seen && !needPull.length;
   if (card.hidden) return;
-  const card2 = data.vram.gpu ? t("Your {card} has {memory}.", { card: data.vram.gpu.name, memory: gb(data.vram.gpu.totalMb) }) : t("No NVIDIA card was found.");
+  const hw = data.hardware;
+  const card2 = hw ? t("This computer can give a local model about {memory} ({tier}).", { memory: gb(hw.budgetMb), tier: hw.canRunLocal ? t("models up to about {n} billion parameters", { n: hw.maxParamsB }) : t("very small models only") }) : t("Looking at this computer…");
   $("spec-setup-text").textContent = `${card2} ${t("Suggested (checked {date}): {general} for everyday work, {coding} for code, {embeddings} for finding notes.", { date: data.suggestionsChecked, general: clean(s.general.model), coding: clean(s.coding.model), embeddings: clean(s.embeddings.model) })}`;
 }
 

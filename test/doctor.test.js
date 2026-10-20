@@ -50,7 +50,7 @@ describe("npm run doctor, for the assistant", () => {
     await brains.saveBrain({ provider: "gemini", name: "Gemini", model: "gemini-3.8-flash", key: "test-key" });
     const { out } = await doctor({ FRIENDS_FAKE_GPU: "none" });
     assert.match(out, /A Gemini key is set/);
-    assert.match(out, /No NVIDIA graphics card found/);
+    assert.match(out, /No graphics card that local models can use/);
   });
 
   test("with Ollama not answering it says how to start it", async () => {

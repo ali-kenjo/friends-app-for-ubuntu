@@ -13,6 +13,7 @@
 const gemini = require("./gemini");
 const openai = require("./openai");
 const ollama = require("./ollama");
+const services = require("./services");
 
 const REQUIRED = ["listModels", "checkModel", "generateText", "streamChat"];
 const registry = new Map(); // name → { kind, label, company, create(options) → api }
@@ -34,6 +35,19 @@ register("local", {
   company: "On this computer",
   create: ({ protocol, baseUrl, contextSize, keepAlive, numGpu, speechUrl, speechModel } = {}) =>
     protocol === "ollama" ? ollama.create({ baseUrl, contextSize, keepAlive, numGpu, speechUrl, speechModel }) : openai.create({ baseUrl, speechUrl, speechModel }),
+});
+
+// "openai" is any cloud service that speaks the OpenAI API (OpenAI, Claude, Groq, OpenRouter, Mistral…: services.js); the
+// service says its address and what it needs, or the brain gives an address of its own ("Any other service")
+register("openai", {
+  kind: "cloud",
+  label: "Cloud AI",
+  company: "A cloud service",
+  create: ({ service, baseUrl } = {}) => {
+    const entry = services.cloud(service);
+    const quirks = { ...(entry?.quirks || {}), ...(entry?.models === "static" ? { staticModels: entry.staticModels } : {}) };
+    return openai.create({ baseUrl: openai.cloudUrl(baseUrl || entry?.baseUrl), cloud: true, label: entry?.label || "", quirks });
+  },
 });
 
 function create(options = {}) {

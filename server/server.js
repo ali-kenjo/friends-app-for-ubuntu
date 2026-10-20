@@ -22,6 +22,11 @@ const voiceLocal = require("./voice");
 const firebase = require("./firebase");
 const backup = require("./backup");
 const updates = require("./updates");
+const hardware = require("./hardware");
+const deviceApi = require("./device-api");
+const services = require("./services");
+const usage = require("./usage");
+const privacy = require("./privacy");
 const characters = require("./characters");
 const episodes = require("./episodes");
 const { ACTIVITIES } = require("./activities");
@@ -321,7 +326,7 @@ async function chat(req, res) {
       voice: voice === true,
       force: force === "local" || force === "cloud" ? force : null,
       preferId: Number(brainId) || null,
-      deps: { has: brains.has, byKind: brains.getByKind, chosen: (id) => brains.getForChat(id), privateMode: current.privacy.localOnly === true },
+      deps: { has: brains.has, byKind: brains.getByKind, chosen: (id) => brains.getForChat(id), others: brains.othersOfKind, privateMode: current.privacy.localOnly === true },
     });
     if (!routePlan.steps.length) throw new Error("NO_BRAIN");
   } catch (err) {
@@ -339,8 +344,10 @@ async function chat(req, res) {
   const run = async (step, { signal, started }) => {
     const brain = step.brain;
     // Google tools are left out for a local AI until you're signed in with Google
-    const all = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.provider !== "local" || Boolean(activeToken), onAir });
-    const offered = brain.provider === "local" ? tools.forLocal(all, current) : all;
+    // A cloud AI doesn't get the memories and notes when Settings → Privacy says so
+    const withhold = brain.kind === "cloud" && current.privacy.shareMemoryWithCloud === false;
+    const all = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.kind !== "local" || Boolean(activeToken), onAir, withhold });
+    const offered = brain.kind === "local" ? tools.forLocal(all, current) : all;
     const contents = toContents(conversation.messages, summary.windowStart(conversation, window), characters.others(current));
     // The greeting's note from the app goes last, as if said, but it's never saved
     if (greeting) contents.push({ role: "user", parts: [{ text: appNote ? prompt.appNote(current, appNote) : prompt.greeting(current, { chatId: conversation.messages.length ? conversation.id : null, onAir }) }] });
@@ -348,7 +355,7 @@ async function chat(req, res) {
       key: brain.key,
       model: brain.model,
       contents,
-      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc }),
+      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc, withhold }),
       temperature: prompt.temperature(current),
       // Thinking at length makes a reply start 10+ seconds later; only "Deep" does
       fast: voice || current.aiControl?.reasoningEffort !== "deep",
@@ -388,7 +395,7 @@ async function chat(req, res) {
   try {
     const { step } = await router.execute(routePlan, {
       run,
-      emit: (event) => routePlan.mode !== "fixed" && send(event), // one fixed brain needs no explaining
+      emit: (event) => (routePlan.mode !== "fixed" || routePlan.steps.length > 1) && send(event), // one fixed brain needs no explaining
       signal: controller.signal,
       slowMs: Number(process.env.FRIENDS_ROUTER_SLOW_MS) || current.routing.dynamic.slowSeconds * 1000,
       cloudAllowed: () => conversation.cloudOk === true,
@@ -412,7 +419,7 @@ async function chat(req, res) {
       const message = { id: replyId, role: "model", text: reply, at: Date.now(), by: current.characters.active };
       if (activity.length) message.activity = activity;
       if (drafts.length) message.drafts = drafts;
-      if (answeredBy && routePlan.mode !== "fixed") message.via = { kind: answeredBy.kind, name: answeredBy.brain.name, model: answeredBy.brain.model, reason: answeredBy.reason, mode: routePlan.mode };
+      if (answeredBy && (routePlan.mode !== "fixed" || routePlan.steps.length > 1)) message.via = { kind: answeredBy.kind, name: answeredBy.brain.name, model: answeredBy.brain.model, reason: answeredBy.reason, mode: routePlan.mode };
       conversation.messages.push(message);
     }
     if (announced && (reply || activity.length || drafts.length || conversation.cloudOk)) chats.save(conversation);
@@ -694,6 +701,18 @@ const routes = [
   ["POST", /^\/api\/brains\/(\d+)\/test$/, (req, id) => brains.testBrain(Number(id))],
   ["POST", /^\/api\/brains\/test$/, async (req) => brains.testConfig(await readJson(req))],
   ["POST", /^\/api\/models$/, async (req) => brains.listModels(await readJson(req))],
+  // Adding AIs the easy way: the services Friends knows, what a pasted key or address is, several models at once,
+  // each AI's own settings and order, and how much each was used today
+  ["GET", /^\/api\/services$/, () => services.publicCatalog()],
+  ["POST", /^\/api\/services\/recognise$/, async (req) => services.recognise((await readJson(req)).input)],
+  ["POST", /^\/api\/brains\/bulk$/, async (req) => brains.saveMany(await readJson(req))],
+  ["PATCH", /^\/api\/brains\/(\d+)$/, async (req, id) => brains.updateBrain(Number(id), await readJson(req))],
+  ["POST", /^\/api\/brains\/(\d+)\/move$/, async (req, id) => brains.moveBrain(Number(id), (await readJson(req)).direction)],
+  ["GET", /^\/api\/privacy$/, () => privacy.summary()],
+  ["POST", /^\/api\/privacy\/clear$/, async (req) => privacy.clear((await readJson(req)).what)],
+  ["GET", /^\/api\/usage$/, () => usage.summary(brains.publicState().brains.map((b) => b.id))],
+  // What this computer is, and what a local AI may ask of it
+  ["GET", /^\/api\/hardware$/, async () => deviceApi.report()],
 
   ["GET", /^\/api\/chats$/, () => chats.list()],
   ["GET", /^\/api\/chats\/search$/, (req, id, url) => chats.search(url.searchParams.get("q"))],
@@ -705,6 +724,8 @@ const routes = [
 
   ["GET", /^\/api\/settings$/, () => settings.get()],
   ["PUT", /^\/api\/settings$/, async (req) => settings.set(await readJson(req))],
+  // Only what differs (the page sends this: a stale copy of the rest can't overwrite what the helper changed)
+  ["PATCH", /^\/api\/settings$/, async (req) => settings.patch(await readJson(req))],
 
   // Characters (Settings → Characters): the choices; the characters themselves are in the settings
   ["GET", /^\/api\/characters\/meta$/, () => ({ voices: characters.GEMINI_VOICES, fields: characters.FIELDS, builtin: characters.BUILTIN, templates: characters.TEMPLATES, formats: Object.keys(prompt.FORMATS), max: characters.MAX_CHARACTERS })],
@@ -961,6 +982,8 @@ function start(port = PORT, host = HOST) {
   allowedHosts = computeAllowedHosts(port, host);
   backup.schedule(settings.get);
   updates.schedule(settings.get);
+  privacy.schedule(settings.get);
+  hardware.get().catch(() => {}); // what this computer is, looked up once now so Settings and the missions know
   // Quiet conversations become memories, in the background (a local AI does it when there is one)
   episodes.schedule({ getBrain: () => brains.forTask(), getSettings: settings.get });
   // Reminders go off, and the morning briefing is made

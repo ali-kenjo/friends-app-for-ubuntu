@@ -208,7 +208,8 @@ describe("Voice conversation", { skip: !CHROME && "no Chrome found" }, () => {
     fakes.behave.local.text = "[silent]";
     try {
       await typeTurn("I'm just thinking out loud here");
-      await page.waitForFunction(() => document.getElementById("voice-mode").dataset.state === "thinking", { timeout: 5000 });
+      // (it is "thinking" only for a moment with a fake AI that answers at once, so that isn't waited for: the transcript below shows the turn was heard)
+      await page.waitForFunction(() => /thinking out loud/.test(document.getElementById("voice-mode").innerText) || fetch("/api/chats").then((r) => r.json()).then((l) => l.length > 0), { timeout: 10000 });
       await waitStatus("Listening", 10000);
       assert.strictEqual(await captionText().then((t) => /silent/i.test(t)), false, "the word never shows");
       await click("#voice-drafts-btn");

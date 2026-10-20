@@ -140,6 +140,7 @@ describe("Choosing the AI in the page", { skip: !CHROME && "no Chrome found" }, 
     await page.evaluate(() => {
       document.getElementById("settings-btn")?.click();
       document.querySelector('.modal-nav .tab[data-tab="ai-control"]')?.click();
+      document.querySelector('.subtab[data-subtab="answers"]')?.click();
     });
     await page.waitForSelector("#routing-mode", { visible: true });
     assert.strictEqual(await page.$eval("#routing-mode", (el) => el.value), "auto");

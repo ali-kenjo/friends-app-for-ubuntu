@@ -84,6 +84,21 @@ export const api = {
     models: (query) => call("POST", "/api/models", query),
     test: (id) => call("POST", `/api/brains/${id}/test`),
     testConfig: (data) => call("POST", "/api/brains/test", data),
+    // Several models of one service or server at once → { state, added, skipped, failed }
+    bulk: (data) => call("POST", "/api/brains/bulk", data),
+    update: (id, changes) => call("PATCH", `/api/brains/${id}`, changes),
+    move: (id, direction) => call("POST", `/api/brains/${id}/move`, { direction }),
+  },
+  // The services Friends knows (cloud and local), and what a pasted key or address is
+  services: {
+    list: () => call("GET", "/api/services"),
+    recognise: (input) => call("POST", "/api/services/recognise", { input }),
+  },
+  hardware: { get: () => call("GET", "/api/hardware") },
+  usage: { get: () => call("GET", "/api/usage") },
+  privacy: {
+    get: () => call("GET", "/api/privacy"),
+    clear: (what) => call("POST", "/api/privacy/clear", { what }),
   },
   chats: {
     list: () => call("GET", "/api/chats"),
@@ -111,6 +126,7 @@ export const api = {
   settings: {
     get: () => call("GET", "/api/settings"),
     save: (settings) => call("PUT", "/api/settings", settings),
+    patch: (changes) => call("PATCH", "/api/settings", changes),
   },
   notes: {
     list: () => call("GET", "/api/notes"),

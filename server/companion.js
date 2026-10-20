@@ -59,13 +59,14 @@ async function reply(text, { platform = TITLE, googleToken = async () => null, o
     run: async (rs, { signal, started }) => {
       out = "";
       const brain = rs.brain;
-      const all = tools.declarations(settings, { voice: false, robot: false, workspace: brain.provider !== "local" || Boolean(token), onAir: false });
-      const offered = brain.provider === "local" ? tools.forLocal(all, settings) : all;
+      const withhold = brain.kind === "cloud" && settings.privacy?.shareMemoryWithCloud === false;
+      const all = tools.declarations(settings, { voice: false, robot: false, workspace: brain.kind !== "local" || Boolean(token), onAir: false, withhold });
+      const offered = brain.kind === "local" ? tools.forLocal(all, settings) : all;
       await brain.api.streamChat({
         key: brain.key,
         model: brain.model,
         contents: toContents(chat.messages),
-        system: prompt.build(settings, { voice: false, toolsOffered: offered, summary: chat.summary?.text, chatId: chat.id }) + "\n\n# Where you are\nThe user is writing to you on Telegram, on their phone: keep replies short and plain (no tables, no big code blocks). Things that need their OK (sending email, changing files) can't be confirmed here: tell them to do it in the app, or to start it as a mission.",
+        system: prompt.build(settings, { voice: false, toolsOffered: offered, summary: chat.summary?.text, chatId: chat.id, withhold }) + "\n\n# Where you are\nThe user is writing to you on Telegram, on their phone: keep replies short and plain (no tables, no big code blocks). Things that need their OK (sending email, changing files) can't be confirmed here: tell them to do it in the app, or to start it as a mission.",
         temperature: prompt.temperature(settings),
         fast: true,
         tools: offered,

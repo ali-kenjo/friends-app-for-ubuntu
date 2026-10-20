@@ -59,7 +59,7 @@ describe("Specialists in Settings", { skip: !CHROME && "no Chrome found" }, () =
     await page.click("#settings-btn");
     await page.click("#tab-specialists");
     await page.waitForSelector(".spec-role", { visible: true });
-    const status = await text("#spec-status");
+    const status = (await text("#spec-status")).replace(/[\u2066\u2069]/g, ""); // (numbers are kept together for right-to-left text)
     assert.match(status, /Ollama is running/);
     assert.match(status, /of 6(\.0)? GB used/);
     const roles = await page.$$eval(".spec-role .spec-name", (els) => els.map((e) => e.textContent));

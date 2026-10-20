@@ -220,9 +220,11 @@ async function checkModel({ key, model }) {
 // (voice, "Fast") they think as little as they allow: 2.5 Flash not at all,
 // Gemini 3.x at "low" (the lowest level every 3.x model accepts). Other
 // models keep their defaults, since not all of them accept these settings.
-function generationConfig(model, { temperature, fast } = {}) {
+function generationConfig(model, { temperature, fast, maxTokens, topP } = {}) {
   const config = {};
   if (temperature !== undefined) config.temperature = temperature;
+  if (maxTokens) config.maxOutputTokens = maxTokens;
+  if (topP !== undefined) config.topP = topP;
   if (fast && /^gemini-2\.5-flash/.test(model)) config.thinkingConfig = { thinkingBudget: 0 };
   else if (fast && /^gemini-3/.test(model)) config.thinkingConfig = { thinkingLevel: "low" };
   return Object.keys(config).length ? config : undefined;
@@ -322,7 +324,7 @@ async function readStream(res, onText) {
 // sent back, until the model answers with text (at most 8 rounds). Rounds in
 // which it only called isFreeTool() tools (the robot's) don't count; up to 4
 // of those are allowed on top, so it can't go round in circles.
-async function streamChat({ key, model, contents, system, temperature, fast = false, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
+async function streamChat({ key, model, contents, system, temperature, maxTokens, topP, fast = false, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
   return withFallback(key, model, async (currentModel) => {
     const url = `${API}/models/${encodeURIComponent(currentModel)}:streamGenerateContent?alt=sse`;
     const history = [...contents];
@@ -337,7 +339,7 @@ async function streamChat({ key, model, contents, system, temperature, fast = fa
         if (free ? ++freeRounds > 4 : ++rounds > 8) return;
         const body = { contents: history };
         if (system) body.systemInstruction = { parts: [{ text: system }] };
-        const config = generationConfig(currentModel, { temperature, fast });
+        const config = generationConfig(currentModel, { temperature, fast, maxTokens, topP });
         if (config) body.generationConfig = config;
         if (tools.length) body.tools = [{ functionDeclarations: tools }];
 

@@ -63,9 +63,11 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, numGpu = undefined, s
     request(path, { method: "POST", signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, model);
 
   // The options every request carries
-  function settingsFor(body, temperature) {
+  function settingsFor(body, temperature, { maxTokens, topP } = {}) {
     const options = {};
     if (temperature !== undefined) options.temperature = temperature;
+    if (maxTokens) options.num_predict = maxTokens;
+    if (topP !== undefined) options.top_p = topP;
     if (contextSize > 0) options.num_ctx = contextSize;
     // The model manager runs a model on the processor only (0) when it doesn't fit in the graphics card's memory
     if (Number.isFinite(numGpu)) options.num_gpu = numGpu;
@@ -150,14 +152,14 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, numGpu = undefined, s
 
   // Streams a reply and runs tool calls: at most 8 rounds, plus up to 4 in
   // which only free tools (the robot's) were called, like the other providers
-  async function streamChat({ model, contents, system, temperature, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
+  async function streamChat({ model, contents, system, temperature, maxTokens, topP, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
     const messages = toOllamaMessages(contents, system);
     let rounds = 0;
     let freeRounds = 0;
     let free = false;
     for (;;) {
       if (free ? ++freeRounds > 4 : ++rounds > 8) return;
-      const body = settingsFor({ model, messages, stream: true }, temperature);
+      const body = settingsFor({ model, messages, stream: true }, temperature, { maxTokens, topP });
       if (tools.length && !noTools.has(model)) body.tools = toTools(tools);
 
       const { calls, text } = await readStream(await postChat(body, signal), onText);

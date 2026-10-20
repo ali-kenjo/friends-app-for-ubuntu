@@ -6,6 +6,7 @@ const suggestions = require("./specialist-suggestions");
 const vram = require("./vram");
 const models = require("./models");
 const brains = require("./brains");
+const hardware = require("./hardware");
 
 const BASE_ROLES = ["general", "coding", "embeddings"]; // the ones that get a model of their own in the suggestions; the rest share the everyday model
 
@@ -18,6 +19,7 @@ async function overview(settings = settingsModule.get()) {
     running = true;
   } catch {}
   const snapshot = await vram.snapshot(base).catch(() => ({ gpu: null, ram: vram.ram(), loaded: [] }));
+  const hw = await hardware.live().catch(() => null);
   const names = installed.map((m) => m.name);
   const fitCache = new Map();
   const fitsFor = async (model, ctx) => {
@@ -56,7 +58,8 @@ async function overview(settings = settingsModule.get()) {
     vram: snapshot,
     loaded: models.status(),
     roles,
-    suggestions: suggestions.suggest({ installed: names, totalMb: snapshot.gpu?.totalMb || 0 }),
+    suggestions: suggestions.suggest({ installed: names, budgetMb: hw?.fit.budgetMb ?? null, totalMb: snapshot.gpu?.totalMb || 0 }),
+    hardware: hw ? { tier: hw.fit.tier, budgetMb: hw.fit.budgetMb, engine: hw.fit.engine, maxParamsB: hw.fit.maxParamsB, canRunLocal: hw.fit.canRunLocal } : null,
     suggestionsChecked: suggestions.CHECKED,
     suggestionsSeen: settings.specialists?.suggestedSeen === true,
     private: settings.privacy?.localOnly === true,
@@ -107,7 +110,8 @@ async function reset() {
     names = (await vram.installed(base)).map((m) => m.name);
   } catch {}
   const card = await vram.gpu();
-  const picks = suggestions.suggest({ installed: names, totalMb: card?.totalMb || 0 });
+  const hw = await hardware.live().catch(() => null);
+  const picks = suggestions.suggest({ installed: names, budgetMb: hw?.fit.budgetMb ?? null, totalMb: card?.totalMb || 0 });
   writeRoles(() =>
     Object.entries(picks)
       .filter(([role, p]) => BASE_ROLES.includes(role) || p.model !== picks.general.model)

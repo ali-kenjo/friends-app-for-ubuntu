@@ -227,7 +227,7 @@ function examples() {
     { icon: "globe", text: t("Research the three best budget laptops for video editing and write me a short report") },
     { icon: "folder", text: t("Sort my Downloads folder into folders by type") },
     { icon: "code", text: t("Build a small command-line to-do app in Node.js, with tests, and commit it") },
-    { icon: "gauge", text: t("Watch my laptop and tell me when the disk, memory or graphics card gets too full or hot") },
+    { icon: "gauge", text: t("Watch my computer and tell me when the disk, memory or graphics card gets too full or hot") },
   ];
   return h("div", { class: "empty-examples" }, examples.map((x) => h("button", { type: "button", class: "prompt-chip", onclick: () => openComposer(x.text) }, iconEl(x.icon, { size: 15 }), x.text)));
 }

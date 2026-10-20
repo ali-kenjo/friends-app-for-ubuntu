@@ -273,7 +273,8 @@ function historySection(user, summary, history, others = {}) {
 // summary (of the older part of a long chat), history (messages to include as
 // text, for Live, which doesn't get the chat as messages), onAir (co-host mode),
 // chatId (this chat, so its own memory isn't repeated), doc ({ name, content } grounding document)
-function build(settings, { voice = false, live = false, toolsOffered = [], summary = "", history = [], onAir = false, chatId = null, doc = null, style = settings.voice?.style } = {}) {
+// withhold: this goes to a cloud AI and the person chose not to share their memories with those (Settings → Privacy)
+function build(settings, { voice = false, live = false, toolsOffered = [], summary = "", history = [], onAir = false, chatId = null, doc = null, withhold = false, style = settings.voice?.style } = {}) {
   const p = settings.personality;
   const lines = [];
   const character = characters.active(settings);
@@ -301,6 +302,12 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
   }
 
   const aiControl = settings.aiControl || {};
+  // "Always answer in …" (Settings → AI & privacy → Answers); "auto" leaves it to the language they write in
+  const replyIn = require("./settings").REPLY_LANGUAGES[aiControl.replyLanguage];
+  if (replyIn) {
+    lines.push("", "# Language");
+    lines.push(`Always answer in ${replyIn}, even when ${user} writes in another language, unless they clearly ask you to switch.`);
+  }
   if (aiControl.reasoningEffort === "fast") {
     lines.push("", "# Reasoning style");
     lines.push("Be fast, concise, and direct. Deliver immediate high-efficiency answers without unnecessary preamble or filler.");
@@ -325,12 +332,12 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
   if (onAir) lines.push(...onAirSection(settings, user, character));
   if (offered.includes("robot_mood") || offered.includes("robot_gesture")) lines.push(...bodySection(user, { voice }));
 
-  if (!hidden && settings.memory.enabled && settings.memory.items.length) {
+  if (!hidden && !withhold && settings.memory.enabled && settings.memory.items.length) {
     lines.push("", "# Things the user asked you to remember");
     for (const item of settings.memory.items) lines.push(`- ${item.text}`);
   }
 
-  if (settings.aiNotes.enabled) {
+  if (settings.aiNotes.enabled && !withhold) {
     lines.push("", "# Your memory notes");
     if (hidden) {
       lines.push("Your notes about them are hidden while you're on camera. You can still save new ones with save_note.");
@@ -342,7 +349,7 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
     }
   }
 
-  if (!hidden) lines.push(...rememberSection(settings, user, { chatId, offered }));
+  if (!hidden && !withhold) lines.push(...rememberSection(settings, user, { chatId, offered }));
   if (!hidden) lines.push(...lifeSection(user, offered));
   if (!hidden) lines.push(...missionSection());
   if (doc) lines.push(...docSection(doc));

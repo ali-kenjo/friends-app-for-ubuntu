@@ -3,6 +3,7 @@
 // preview draws only then).
 import { t } from "./i18n.js";
 import { retrySave } from "./store.js";
+import { revealSubpane } from "./subtabs.js";
 
 const settingsModal = document.getElementById("settings-modal");
 const settingsBtn = document.getElementById("settings-btn");
@@ -157,6 +158,7 @@ function clearSearch() {
 
 function jumpTo(el) {
   if (!el) return;
+  revealSubpane(el); // a part of a section that isn't showing (AI & privacy has four)
   for (let d = el.closest("details"); d; d = d.parentElement?.closest("details")) d.open = true;
   el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   const box = el.closest(".row, .form-field, .subhead, details") || el;

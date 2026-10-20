@@ -360,7 +360,8 @@ function robotEvent(name, args = {}) {
 // options.onAir: co-host mode; with "nothing private on camera" the tools that
 // read your files, mail, calendar and memories are left out.
 // options.live: Gemini Live (it searches the web by itself, so no web_search).
-function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false, live = false } = {}) {
+// withhold: it goes to a cloud AI and the person keeps their memories and notes from those (Settings → Privacy)
+function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false, live = false, withhold = false } = {}) {
   const p = settings.permissions;
   const list = [];
   const online = settings.privacy?.localOnly !== true; // Private mode keeps everything on this computer
@@ -403,12 +404,12 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
   // Any other app, through MCP (mcp.js)
   list.push(...mcp.declarations(settings, { hidden }));
 
-  if (settings.aiNotes?.enabled) {
+  if (settings.aiNotes?.enabled && !withhold) {
     list.push(NOTE_TOOLS.save_note, NOTE_TOOLS.delete_note);
   }
   if (settings.life?.enabled !== false && !hidden) list.push(...Object.values(LIFE_TOOLS));
-  if (settings.localNotes?.enabled !== false && !hidden) list.push(...Object.values(VAULT_TOOLS));
-  if (settings.companion?.recall !== false && !hidden) {
+  if (settings.localNotes?.enabled !== false && !hidden && !withhold) list.push(...Object.values(VAULT_TOOLS));
+  if (settings.companion?.recall !== false && !hidden && !withhold) {
     list.push(RECALL_TOOLS.recall_conversations);
     if (settings.companion?.followUps !== false) list.push(RECALL_TOOLS.resolve_follow_up);
   }

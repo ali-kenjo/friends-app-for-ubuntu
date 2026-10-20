@@ -10,7 +10,7 @@ A personal AI companion for Linux that also gets things done. You talk to a robo
 </p>
 
 - **Missions**: goals carried out in the background with a plan you approve once, a list of exactly what it may do, a big Stop button, and a report in your notes. They can repeat (every morning, every Friday, when a file appears, when the disk fills up) and run while the window is closed. See [Missions](#missions).
-- **Specialists**: roles (everyday, coding, writing, research, vision, embeddings) each with its own model on your computer, loaded one at a time so a 6 GB graphics card is enough, with Gemini as the manager. See [Specialists](#specialists-small-models-on-a-small-graphics-card).
+- **Specialists**: roles (everyday, coding, writing, research, vision, embeddings) each with its own model on your computer, loaded one at a time so even a small graphics card is enough (Friends works out what your computer can take), with Gemini as the manager. See [Specialists](#specialists-small-models-on-a-small-graphics-card).
 - **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
 - **Flagship Voice Mode & On-Camera Co-Host**: Real-time voice conversations with a 3D robot body, filming mode, customizable **acting dynamics** (*Best Friends Banter*, *Podcast Co-Host*, *Comedy Partner*, *Sarcastic Critic*, *Curious Interviewer*, *Custom*), scene briefs, and **live document grounding** (talk through scripts, articles, or vault notes during conversations).
 - **Everyday Life & Offline Calendar**: Tasks, reminders (as desktop and Telegram notifications), habits, a journal, offline calendar (with `.ics` export/import), and focus/Pomodoro sessions.
@@ -90,7 +90,7 @@ To also set up local voice during the install: `./scripts/install.sh --voice` (o
 | `Port 3000 is already in use` | `PORT=3001 npm start` |
 | "Can't reach the AI server" | Start it (`ollama serve`), then **Look again** in Settings → AI & privacy |
 | The first local reply takes a minute | The model is being loaded into memory; later replies are fast. *Keep the model loaded* (under Advanced in the AI's settings) keeps it ready |
-| Long chats forget the beginning | Raise the **Context size** of an Ollama AI (Settings → AI & privacy → edit the AI → Advanced) |
+| Long chats forget the beginning | Raise the **Context size** of an Ollama AI (Settings → AI & privacy → Your AIs → edit the AI → This AI's own settings) |
 | A local AI can't listen | Set up **Local voice** (Settings → AI & privacy, or `npm run voice:setup`) |
 | Google asks you to sign in every time | Update to 0.3.2 or newer (it renews the sign-in by itself); if it still asks, set up **Stay signed in for good** (Settings → Connected apps) |
 | Gemini is slow or doesn't answer | The free tier allows only a few requests a day per model. Friends switches to other Gemini models by itself and says when they're all used up; turning on billing for your key in Google AI Studio raises the limits a lot |
@@ -170,9 +170,34 @@ Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): chec
 
 ---
 
+## AI & privacy
+
+Settings → **AI & privacy** has four sections:
+
+- **Your AIs**: add as many AIs as you like, local or cloud, in a few seconds. Paste an API key or a server address and Friends works out which service it is (`sk-ant-…` is Claude, `gsk_…` is Groq, `AIza…` is Gemini, `http://localhost:1234` is LM Studio), or pick one from the list: on this computer **Ollama, LM Studio, llama.cpp, Jan, vLLM, KoboldCpp, text-generation-webui, GPT4All, Docker Model Runner, SGLang** or any server by address; in the cloud **Gemini, ChatGPT, Claude, OpenRouter, Groq, Mistral, DeepSeek, Grok, Together, Fireworks, Perplexity, Cerebras, SambaNova, NVIDIA, Hugging Face, Kimi, Qwen, GLM, Cohere, DeepInfra, Nebius, Scaleway, Hyperbolic** or *any other service* with the OpenAI-style API (a company gateway, Azure's v1 endpoint, a proxy). Friends connects, lists the models (without the ones that can't chat), and you tick one or many; servers running on this computer are found by themselves. Each AI can have its own temperature, longest reply, top-p, daily limit, extra instructions, tools on or off and "can see pictures"; the arrows set the order they are tried in, the star the default, and each row says how much it was used today.
+- **Answers**: which AI answers (one, Auto, Dynamic, Fastest, local only, cloud only) and its rules, whether to try the next AI of the same kind when one fails, the AI for small jobs (follow-ups, summaries), the **language of the answers** (the one you write in, or always one of 17), how it thinks, how much of the chat it sees, and limits for every AI: the longest reply, how long to wait, how often to try again.
+- **Privacy**: Private mode; a live list of **what could leave this computer** right now; what is **hidden from cloud AIs** (keys and passwords, card numbers, email addresses, phone numbers: swapped for a placeholder before a message goes, also in what a tool reads out); whether your memories, notes and what it remembers of past chats are shared with cloud AIs; deleting old chats after a number of days; clearing chats, memories, notes and what it remembers; and the folders and file permissions.
+- **This computer**: what Friends found out by itself (see below), models that suit it, and how hard it may work: a profile (automatic, light, balanced, performance), whether to use the graphics card, and whether to save battery.
+
+Every setting saves as you change it, and only what changed is sent, so a copy of the page that has gone stale never overwrites something the helper changed meanwhile (the specialists, for instance).
+
+### It fits the computer it runs on
+
+Friends looks at the computer by itself (`server/hardware.js`): the processor, memory, graphics cards (NVIDIA through `nvidia-smi`, AMD through ROCm or the kernel, Intel and Apple silicon, Windows through PowerShell), the operating system, whether it is a laptop, desktop, server, single-board computer (Raspberry Pi), WSL or a container with a memory limit, the battery, and the free disk. From that it works out how much memory a local model may use and still run well (a graphics card's memory; about two thirds of a Mac's shared memory; on the processor alone it caps at small models, since a big one would take minutes), and sets sensible defaults:
+
+| It finds | Local AI runs on | Suggested sizes |
+|---|---|---|
+| A graphics card with 6 to 8 GB | The card, one model at a time | about 4B to 9B parameters |
+| A card with 12 to 24 GB | The card | 9B up to a 30B coder or an everyday 27B |
+| A Mac with Apple silicon | Its shared memory | by the memory: 16 GB takes about 9B, 32 GB a 27B |
+| No usable card | The processor (slow) | 4B and smaller; a cloud AI for the heavy parts |
+| A small board or a limited container | The processor | the smallest models |
+
+New local AIs start with a context size and a keep-loaded time that fit; missions run as many at a time as it can take; on battery, repeating missions wait for the charger and a model isn't kept loaded for long. The page also looks at the screen it is shown on (a phone, touch, whether it can draw the 3D robot). The model suggestions were checked on ollama.com on 2026-10-20; `npm run doctor` reads the same things.
+
 ## Private: AI models on your own computer
 
-Open **Settings → AI & privacy**. Under **Privacy & local AI**, Friends lists the model servers it finds running on this computer and adds a model with one click. (Or **Add an AI → Local AI** to give an address yourself.) Nothing is sent to Google or anyone else; chats, notes and files stay here.
+Open **Settings → AI & privacy → Your AIs**. Under **AI on this computer**, Friends lists the model servers it finds running (Ollama, LM Studio, llama.cpp, Jan, vLLM and more) and adds a model, or all of them, with one click. (Or **Add an AI** and pick a server, or paste its address.) Nothing is sent to Google or anyone else; chats, notes and files stay here.
 
 - **Private mode** (the switch there) makes it strict: only a local AI answers, and Gemini, Gemini Live, Google sign-in, Google tools, GitHub search and news are all off. Nothing is sent to the internet, and the page loads nothing from other websites.
 - **Ollama** is used through its own API, so each AI has a **context size** (default 8192 tokens; Ollama's own default of 4096 cuts long chats off) and **keep the model loaded** (how long it stays in memory). Other servers use their own settings.
@@ -181,7 +206,7 @@ It works with every server that offers the OpenAI-compatible API, open source or
 
 ```bash
 ollama pull llama3.1      # example; any model works
-npm start                 # then: Settings → AI & privacy → Add an AI → Local AI
+npm start                 # then: Settings → AI & privacy → Your AIs: it's found by itself
 ```
 
 What works with a local AI: chat with streaming replies, memory and notes, file tools, drafts, chat summaries, follow-up suggestions, edit/regenerate, images (with a vision model), and tool use (models that can't use tools still chat). Reasoning models' `<think>` text is hidden. What's different:
@@ -194,7 +219,7 @@ What works with a local AI: chat with streaming replies, memory and notes, file 
 
 ## Choosing the AI: local, cloud, or both
 
-The model menu next to the message box (and **Settings → AI & privacy → Which AI answers**) has these modes:
+The model menu next to the message box (and **Settings → AI & privacy → Answers**) has these modes:
 
 | Mode | What it does |
 |---|---|
@@ -218,7 +243,7 @@ Gemini's free tier allows only a small number of requests per model per day (for
 - A model whose quota is used up (or that's busy) is skipped until Google says it's back, and the next one answers: newer and older Flash models, then the light ones. When every model is out, it says so and when they're back.
 - Background jobs (follow-up suggestions, memories of conversations, summaries, the briefing) use a light model with its own quota, so they don't eat into your replies.
 - Gemini Live tries its other voice models when one runs out, before falling back to Studio voice.
-- Replies think only briefly, so the first words come in about 2 seconds; **Deep** (Settings → AI & privacy → How it thinks) thinks at length when you need it.
+- Replies think only briefly, so the first words come in about 2 seconds; **Deep** (Settings → AI & privacy → Answers → How it thinks) thinks at length when you need it.
 
 For a lot of daily use, turn on billing for your key in Google AI Studio, or add a local AI for the small jobs.
 
@@ -279,9 +304,9 @@ A mission is a goal the assistant carries out for you in the background, with yo
 
 **Settings → AI → Missions** has the on/off switch, the workspace folder, the limits, and which Gemini models plan and do the routine steps. When Gemini's free limit is reached, a mission waits and carries on by itself (or you press *Try again now*) instead of failing.
 
-## Specialists: small models on a small graphics card
+## Specialists: small models that fit your computer
 
-Settings → AI → **Specialists**. A mission's steps go to the role that fits: *General*, *Coding*, *Writing and social media*, *Research summaries*, *Vision* and *Embeddings* (searching your notes by meaning), or roles you add. Each role has a model from the ones **Ollama** has installed (or one you **pull** there, with a progress bar), its own instructions, a context size, and a smaller fallback. There are no model names built in; **Use the suggestions** picks ones that fit your card (checked on ollama.com on 2026-10-19: a 4B everyday model, a 7B coder, a small embeddings model for 6 GB; `npm run doctor` says what's missing).
+Settings → AI → **Specialists**. A mission's steps go to the role that fits: *General*, *Coding*, *Writing and social media*, *Research summaries*, *Vision* and *Embeddings* (searching your notes by meaning), or roles you add. Each role has a model from the ones **Ollama** has installed (or one you **pull** there, with a progress bar), its own instructions, a context size, and a smaller fallback. There are no model names built in; **Use the suggestions** picks ones that fit what your computer can take (checked on ollama.com on 2026-10-20; for a 6 GB card that is a 4B everyday model, a 7B coder and a small embeddings model, for 12 GB a 9B and a 14B coder, for 24 GB a 27B and a 30B coder; `npm run doctor` says what's missing).
 
 Friends manages the card for you: only **one heavy model is loaded at a time**. Before a step the loaded model is unloaded and the next one is loaded in the best place: on the card if it fits (its weights plus the memory for its context plus a margin, against what's free), split with the processor if only part fits, on the processor alone if it doesn't, or on the role's smaller fallback. Steps for the same specialist run together, and the next one is preloaded while Gemini thinks. The page shows the card, what is loaded now and why, and a badge per role (*fits the card*, *part runs on the processor*, *too big*). A specialist step that fails, is too slow or doesn't pass the manager's check goes to **Gemini** (the manager), unless the mission is Private. **Test** loads a role's model and asks it for a sentence.
 
