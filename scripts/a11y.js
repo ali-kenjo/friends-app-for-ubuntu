@@ -68,14 +68,25 @@ async function main() {
       await scan("search", lang, theme);
       await page.keyboard.press("Escape");
 
+      // The "+" menu, Today (and everything else under it), Missions
+      await click("#plus-btn");
+      await sleep(200);
+      await scan("plus-menu", lang, theme);
+      await click("#plus-btn");
       await click("#today-open");
-      await sleep(400);
-      for (const tab of ["today", "tasks", "reminders", "habits", "journal"]) {
+      await sleep(500);
+      await scan("today", lang, theme);
+      await page.evaluate(() => (document.getElementById("today-more").open = true));
+      for (const tab of ["tasks", "reminders", "calendar", "habits", "journal"]) {
         await click(`[data-life-tab="${tab}"]`);
         await sleep(250);
         await scan(`today-${tab}`, lang, theme);
       }
-      await click("#life-close");
+      await click("#nav-missions");
+      await sleep(500);
+      await scan("missions", lang, theme);
+      await click("#nav-home");
+      await sleep(300);
 
       await click("#settings-btn");
       await sleep(300);
@@ -84,6 +95,23 @@ async function main() {
         await page.evaluate((t) => document.querySelector(`.modal-nav .tab[data-tab="${t}"]`)?.click(), tab);
         await sleep(300);
         await scan(`settings-${tab}`, lang, theme);
+        // AI & privacy has four sections of its own, and an add form
+        if (tab === "ai-control") {
+          for (const section of ["answers", "privacy", "device"]) {
+            await page.evaluate((n) => document.querySelector(`.subtab[data-subtab="${n}"]`)?.click(), section);
+            await sleep(500);
+            await scan(`settings-ai-${section}`, lang, theme);
+          }
+          await page.evaluate(() => document.querySelector('.subtab[data-subtab="ais"]')?.click());
+          await page.evaluate(() => document.getElementById("brain-add")?.click());
+          await sleep(500);
+          await scan("settings-ai-add-pick", lang, theme);
+          await page.evaluate(() => document.querySelector('#service-grid-cloud .service-tile[data-id="groq"]')?.click());
+          await sleep(400);
+          await scan("settings-ai-add-form", lang, theme);
+          await page.evaluate(() => document.getElementById("ai-add-back")?.click());
+          await sleep(300);
+        }
       }
       // The Robot Studio: every tab, and the outfit and room with something chosen (so their colors and options are showing)
       await page.evaluate(() => document.querySelector('.modal-nav .tab[data-tab="robot"]')?.click());

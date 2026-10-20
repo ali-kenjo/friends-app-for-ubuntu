@@ -26,6 +26,7 @@ export class Director {
     this.greeted = false;
     this.last = { gesture: -10, wave: -20, nod: -10 };
     this.chat = { state: "idle", until: 0, pending: 0, phase: 0, text: "", reading: null };
+    this.mission = false; // a mission is running (working())
     this.levels = [0, 0, 0, 0];
     this.floor = [0, 0, 0, 0];
   }
@@ -182,6 +183,12 @@ export class Director {
     this.setChat("error", 3);
   }
 
+  // A mission is running in the background: the robot looks busy and focused while nothing else is going on
+  working(on) {
+    this.mission = Boolean(on);
+    if (!this.mission && this.chat.state === "busy") this.setChat("idle");
+  }
+
   // Your likes and pins are direct, so they're never held back like word cues
   liked() {
     this.a.setMood("happy", { source: "smart", strength: 0.9 });
@@ -205,6 +212,7 @@ export class Director {
     const c = this.chat;
     if (c.until && this.t > c.until) this.setChat("idle");
     if (this.context !== "chat") return;
+    if (this.mission && c.state === "idle") this.setChat("busy");
     if (c.reading) {
       const data = c.reading();
       if (data) this.a.setAudio(updateVoiceLevels(data.bins, data.hzPerBin, this.floor, this.levels));

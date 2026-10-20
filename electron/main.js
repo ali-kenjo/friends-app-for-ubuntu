@@ -174,6 +174,7 @@ function trayMenu() {
   return Menu.buildFromTemplate([
     { label: "Open Friends", click: () => showWindow() },
     { label: "Voice conversation", click: () => showWindow({ type: "voice" }) },
+    { label: "Missions", click: () => showWindow({ type: "missions" }) },
     { label: "Today", click: () => showWindow({ type: "today" }) },
     { type: "separator" },
     { label: "Keep running in the tray", type: "checkbox", checked: s.desktop?.tray !== false, click: (item) => setDesktop({ tray: item.checked }) },

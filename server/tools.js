@@ -323,6 +323,14 @@ const ROBOT_TOOLS = {
   ),
 };
 
+// Goals that take many steps and time: handed to the mission engine (server/missions/)
+const MISSION_TOOL = fn(
+  "start_mission",
+  "Turn a goal or a plan the user gave you into a mission: you make a plan, they approve it once, and it is carried out in the background (research and reports, emails and messages, organising files and the computer, building software). Use it when the work needs many steps or a lot of time, instead of doing it in the chat. It may ask them a few questions first; the plan appears under Missions (and on Telegram) for them to approve.",
+  { goal: str("The goal in the user's own words, with every detail they gave (a pasted plan included)"), private: bool("true to use only models on this computer") },
+  ["goal"]
+);
+
 const ONLINE_TOOLS = new Set(Object.keys(WORKSPACE_TOOLS));
 const LIFE_NAMES = new Set(Object.keys(LIFE_TOOLS));
 const VAULT_NAMES = new Set(Object.keys(VAULT_TOOLS));
@@ -352,7 +360,8 @@ function robotEvent(name, args = {}) {
 // options.onAir: co-host mode; with "nothing private on camera" the tools that
 // read your files, mail, calendar and memories are left out.
 // options.live: Gemini Live (it searches the web by itself, so no web_search).
-function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false, live = false } = {}) {
+// withhold: it goes to a cloud AI and the person keeps their memories and notes from those (Settings → Privacy)
+function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false, live = false, withhold = false } = {}) {
   const p = settings.permissions;
   const list = [];
   const online = settings.privacy?.localOnly !== true; // Private mode keeps everything on this computer
@@ -395,15 +404,16 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
   // Any other app, through MCP (mcp.js)
   list.push(...mcp.declarations(settings, { hidden }));
 
-  if (settings.aiNotes?.enabled) {
+  if (settings.aiNotes?.enabled && !withhold) {
     list.push(NOTE_TOOLS.save_note, NOTE_TOOLS.delete_note);
   }
   if (settings.life?.enabled !== false && !hidden) list.push(...Object.values(LIFE_TOOLS));
-  if (settings.localNotes?.enabled !== false && !hidden) list.push(...Object.values(VAULT_TOOLS));
-  if (settings.companion?.recall !== false && !hidden) {
+  if (settings.localNotes?.enabled !== false && !hidden && !withhold) list.push(...Object.values(VAULT_TOOLS));
+  if (settings.companion?.recall !== false && !hidden && !withhold) {
     list.push(RECALL_TOOLS.recall_conversations);
     if (settings.companion?.followUps !== false) list.push(RECALL_TOOLS.resolve_follow_up);
   }
+  if (settings.missions?.enabled !== false && !hidden) list.push(MISSION_TOOL);
   if (voice) list.push(DRAFT_TOOL);
   if (robotToolsOn(settings, { voice, robot: onScreen })) {
     for (const tool of Object.values(ROBOT_TOOLS)) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
@@ -422,7 +432,7 @@ const ESSENTIAL = new Set([
   "add_calendar_event", "list_calendar_events", "start_focus", "check_focus",
   "get_weather", "web_search", "read_webpage",
   "search_gmail", "get_calendar_events",
-  "home_devices", "home_control",
+  "home_devices", "home_control", "start_mission",
 ]);
 
 function forLocal(list, settings) {
@@ -527,26 +537,26 @@ async function planFileAction(name, args, settings) {
 
 // ---------- Local Markdown Notes Vault (local-notes.js) ----------
 async function runVault(name, args, ctx) {
-  const say = (line) => ctx.onActivity?.(line);
+  const report = (line) => ctx.onActivity?.(line);
   switch (name) {
     case "search_notes": {
       const results = await localNotes.searchNotes(args.query);
-      say(`Searched vault for "${args.query}": ${results.length} note${results.length === 1 ? "" : "s"} found`);
+      report(`Searched vault for "${args.query}": ${results.length} note${results.length === 1 ? "" : "s"} found`);
       return { ok: true, notes: results };
     }
     case "read_note": {
       const note = await localNotes.readNote(args.title);
-      say(`Read vault note: ${note.title}`);
+      report(`Read vault note: ${note.title}`);
       return { ok: true, note };
     }
     case "save_note_file": {
       const note = await localNotes.writeNote(args.title, args.content, { tags: args.tags });
-      say(`Saved note in vault: ${note.title}`);
+      report(`Saved note in vault: ${note.title}`);
       return { ok: true, note };
     }
     case "append_note_file": {
       const note = await localNotes.appendToNote(args.title, args.text);
-      say(`Appended to note: ${note.title}`);
+      report(`Appended to note: ${note.title}`);
       return { ok: true, note };
     }
     case "list_notes": {
@@ -594,11 +604,11 @@ async function briefing(ctx) {
 }
 
 async function runLife(name, args, ctx) {
-  const say = (line) => ctx.onActivity?.(line);
+  const report = (line) => ctx.onActivity?.(line);
   switch (name) {
     case "add_task": {
       const task = life.addTask(args);
-      say(`Added a task: ${task.title}${dueText(task.due)}`);
+      report(`Added a task: ${task.title}${dueText(task.due)}`);
       return { ok: true, task };
     }
     case "list_tasks":
@@ -606,51 +616,51 @@ async function runLife(name, args, ctx) {
     case "update_task": {
       const { task: ref, ...changes } = args;
       const task = life.updateTask(ref, changes);
-      say(changes.done === true ? `Done: ${task.title}` : `Updated the task: ${task.title}`);
+      report(changes.done === true ? `Done: ${task.title}` : `Updated the task: ${task.title}`);
       return { ok: true, task };
     }
     case "delete_task": {
       const task = life.removeTask(args.task);
-      say(`Deleted the task: ${task.title}`);
+      report(`Deleted the task: ${task.title}`);
       return { ok: true };
     }
     case "set_reminder": {
       const r = life.addReminder({ text: args.text, at: args.at, inMinutes: args.in_minutes, repeat: args.repeat });
-      say(`Reminder set for ${timeOf(r.at)}${r.repeat !== "none" ? ` (${r.repeat})` : ""}: ${r.text}`);
+      report(`Reminder set for ${timeOf(r.at)}${r.repeat !== "none" ? ` (${r.repeat})` : ""}: ${r.text}`);
       return { ok: true, reminder: { ...r, when: timeOf(r.at) } };
     }
     case "list_reminders":
       return { ok: true, reminders: life.listReminders().slice(0, 30).map((r) => ({ ...r, when: timeOf(r.at) })) };
     case "cancel_reminder": {
       const r = life.removeReminder(args.reminder);
-      say(`Cancelled the reminder: ${r.text}`);
+      report(`Cancelled the reminder: ${r.text}`);
       return { ok: true };
     }
     case "add_habit": {
       const h = life.addHabit(args);
-      say(`Tracking a new habit: ${h.emoji} ${h.name}`);
+      report(`Tracking a new habit: ${h.emoji} ${h.name}`);
       return { ok: true, habit: h };
     }
     case "log_habit": {
       const h = life.logHabit(args.habit, { date: args.date, done: args.done !== false });
-      say(`${args.done === false ? "Undid" : "Logged"} ${h.emoji} ${h.name}${h.streak > 1 ? ` · ${h.streak}-day streak` : ""}`);
+      report(`${args.done === false ? "Undid" : "Logged"} ${h.emoji} ${h.name}${h.streak > 1 ? ` · ${h.streak}-day streak` : ""}`);
       return { ok: true, habit: { name: h.name, streak: h.streak } };
     }
     case "list_habits":
       return { ok: true, habits: life.listHabits().map((h) => ({ id: h.id, name: h.name, emoji: h.emoji, doneToday: h.today, streak: h.streak })) };
     case "write_journal": {
       const e = life.addEntry(args);
-      say("Saved a journal entry");
+      report("Saved a journal entry");
       return { ok: true, id: e.id };
     }
     case "read_journal":
       return { ok: true, entries: life.listEntries({ days: args.days }).map((e) => ({ when: timeOf(e.at), mood: e.mood || undefined, text: e.text })) };
     case "daily_briefing":
-      say("Put together your briefing");
+      report("Put together your briefing");
       return { ok: true, briefing: await briefing(ctx) };
     case "add_calendar_event": {
       const ev = life.addCalendarEvent(args);
-      say(`Scheduled calendar event: ${ev.title} on ${ev.start}`);
+      report(`Scheduled calendar event: ${ev.title} on ${ev.start}`);
       return { ok: true, event: ev };
     }
     case "list_calendar_events": {
@@ -659,12 +669,12 @@ async function runLife(name, args, ctx) {
     }
     case "delete_calendar_event": {
       const res = life.deleteCalendarEvent(args.eventId);
-      say("Deleted calendar event");
+      report("Deleted calendar event");
       return { ok: true, ...res };
     }
     case "start_focus": {
       const f = life.startFocus({ minutes: args.minutes, task: args.task });
-      say(`Started ${f.minutes}-minute focus session on: ${f.task}`);
+      report(`Started ${f.minutes}-minute focus session on: ${f.task}`);
       return { ok: true, focus: f };
     }
     case "check_focus": {
@@ -673,7 +683,7 @@ async function runLife(name, args, ctx) {
     }
     case "stop_focus": {
       const f = life.stopFocus();
-      say("Stopped focus session");
+      report("Stopped focus session");
       return { ok: true, focus: f };
     }
   }
@@ -727,6 +737,14 @@ async function run(name, args, ctx) {
       const result = await mcp.run(name, args, ctx);
       if (result) return result;
       throw new Error("That app isn't connected anymore.");
+    }
+
+    // Missions
+    if (name === "start_mission") {
+      if (ctx.settings.missions?.enabled === false) throw new Error("Missions are switched off in Settings → AI → Missions.");
+      const made = require("./missions/runner").create(args.goal, { source: ctx.source || "chat", private: args.private === true });
+      ctx.onActivity?.(`Started a mission: ${made.title}`);
+      return { ok: true, id: made.id, note: "The mission is under Missions. It may ask a few questions first; then the plan is there to approve (also on Telegram, if connected). Tell the user that, in a sentence." };
     }
 
     // Earlier conversations

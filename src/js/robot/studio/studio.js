@@ -11,7 +11,7 @@ import * as D from "../design.mjs";
 import * as R from "../room.mjs";
 import { lookFile, readLookFile } from "../looks.mjs";
 import { colorsPanel, shapePanel, facePanel, outfitPanel, roomPanel, looksPanel } from "./panels.js";
-import { h, button, slider, arrowKeys } from "./ui.js";
+import { h, button, slider, arrowKeys, glyph } from "./ui.js";
 
 const modal = document.getElementById("robot-studio");
 const stage = document.getElementById("rs-stage");
@@ -158,7 +158,7 @@ function pickOther(list, currentId) {
 function photoControls() {
   const status = h("div", { class: "rs-note", "aria-live": "polite", text: t("No picture yet") });
   const file = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true });
-  const upload = button(t("Choose a picture…"), () => file.click(), { icon: "🖼️" });
+  const upload = button(t("Choose a picture…"), () => file.click(), { icon: "image" });
   const remove = button(t("Remove it"), async () => {
     try {
       await fetch("/api/robot/background", { method: "DELETE" });
@@ -201,12 +201,12 @@ function photoControls() {
 
 // ---------- The tabs ----------
 const TABS = [
-  { id: "colors", label: "Colors", icon: "🎨", build: colorsPanel },
-  { id: "shape", label: "Shape", icon: "🧩", build: shapePanel },
-  { id: "face", label: "Face", icon: "😊", build: facePanel },
-  { id: "outfit", label: "Outfit", icon: "🎩", build: outfitPanel },
-  { id: "room", label: "Room", icon: "🏠", build: roomPanel },
-  { id: "looks", label: "Looks", icon: "✨", build: looksPanel },
+  { id: "colors", label: "Colors", icon: "palette", build: colorsPanel },
+  { id: "shape", label: "Shape", icon: "puzzle", build: shapePanel },
+  { id: "face", label: "Face", icon: "smile", build: facePanel },
+  { id: "outfit", label: "Outfit", icon: "hat", build: outfitPanel },
+  { id: "room", label: "Room", icon: "home", build: roomPanel },
+  { id: "looks", label: "Looks", icon: "sparkles", build: looksPanel },
 ];
 const panels = new Map();
 const tabButtons = new Map();
@@ -217,7 +217,7 @@ for (const tab of TABS) {
   const wrap = h("div", { class: "rs-panel", role: "tabpanel", id: `rs-panel-${tab.id}`, "aria-labelledby": `rs-tab-${tab.id}`, hidden: true }, panel.el);
   panelsEl.append(wrap);
   panels.set(tab.id, { ...panel, wrap });
-  const b = h("button", { type: "button", class: "rs-tab", role: "tab", id: `rs-tab-${tab.id}`, "aria-controls": `rs-panel-${tab.id}`, "aria-selected": "false", tabindex: "-1" }, h("span", { class: "rs-tab-icon", "aria-hidden": "true", text: tab.icon }), h("span", { text: t(tab.label) }));
+  const b = h("button", { type: "button", class: "rs-tab", role: "tab", id: `rs-tab-${tab.id}`, "aria-controls": `rs-panel-${tab.id}`, "aria-selected": "false", tabindex: "-1" }, h("span", { class: "rs-tab-icon", "aria-hidden": "true" }, glyph(tab.icon)), h("span", { text: t(tab.label) }));
   b.addEventListener("click", () => showTab(tab.id));
   tabButtons.set(tab.id, b);
   tabsEl.append(b);

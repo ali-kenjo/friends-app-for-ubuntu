@@ -23,7 +23,7 @@ async function lookup(query, lang = "en") {
 module.exports = {
   id: "wikipedia",
   name: "Wikipedia",
-  icon: "📚",
+  icon: "book",
   description: "Look up people, places and topics on Wikipedia, in any language. No account.",
   link: "https://www.wikipedia.org",
   online: true,

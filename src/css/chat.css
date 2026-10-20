@@ -163,7 +163,7 @@
   gap: var(--space-6);
   overflow-y: auto;
   /* Full-width scroll area, content centered in a reading column (about 70 characters a line) */
-  padding: 4.25rem max(var(--space-6), calc((100% - var(--reading-w)) / 2)) var(--space-6); /* the top clears the character switch */
+  padding: var(--space-4) max(var(--space-6), calc((100% - var(--reading-w)) / 2)) var(--space-6); /* the top bar sits above it, with its own background */
 }
 
 .has-chat .center {
@@ -174,8 +174,7 @@
   transform: none;
 }
 
-.has-chat .greeting,
-.has-chat .voice-hero-card {
+.has-chat .greeting {
   display: none;
 }
 

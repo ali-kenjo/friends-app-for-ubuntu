@@ -4,6 +4,9 @@ const path = require("path");
 const { dataDir, writeJson } = require("./config");
 const characters = require("./characters");
 const look = require("./robot-look");
+const specialistRoles = require("./specialist-roles");
+const keys = require("./keys");
+const TELEGRAM_TOKEN_KEY = "telegram-bot-token";
 
 const file = path.join(dataDir, "settings.json");
 
@@ -11,14 +14,17 @@ const LANGUAGES = ["auto", "en", "de", "ar"];
 
 const DEFAULTS = {
   // The interface language: "auto" follows the browser (see src/js/i18n.js)
-  ui: { language: "auto" },
-  // The first-run guide (src/js/onboarding.js): set once the person has finished or skipped it
-  onboarding: { done: false },
+  ui: { language: "auto", design: 2 }, // design: 1 before the redesign (only used to carry the old default accent over)
+  // The first-run guide (src/js/onboarding.js): done once the person has finished or skipped it;
+  // missions once they have seen the card that says Missions exist
+  onboarding: { done: false, missions: false },
   font: { family: "default", size: 16 },
   // How conversations look: "minimal" (only your messages in bubbles) or "bubbles",
   // "comfortable" or "compact" spacing, and follow-up chips under the last reply
   chat: { style: "minimal", density: "comfortable", suggestions: true },
-  theme: { appearance: "dark", accent: "#6f9cf5" },
+  // The accent is the one colour of the interface (the lamp: a warm amber, see src/css/tokens.css); the
+  // robot's light and the glow behind it follow it. THEME_ACCENTS are the swatches in Settings → Appearance.
+  theme: { appearance: "dark", accent: "#f5a94a" },
   // What the AI may do with files on this computer (see files.js)
   permissions: {
     folders: [],
@@ -29,13 +35,23 @@ const DEFAULTS = {
   },
   // Copies of your data folder in <data folder>/backups (see backup.js)
   backup: { auto: true, keep: 10 },
+  // Asking GitHub Releases once a day whether a newer Friends exists (see updates.js); it never installs anything
+  updates: { check: true },
   // Private mode: only a local AI answers, and nothing is sent to Google, GitHub
   // or news sites (no Gemini, Live, Google sign-in, GitHub search or news)
-  privacy: { localOnly: false },
+  privacy: {
+    localOnly: false,
+    // Words that are swapped for a placeholder in what goes to a cloud AI (see redact.js); a local AI sees everything
+    redact: { keys: true, cards: true, emails: false, phones: false },
+    shareMemoryWithCloud: true, // your memories, notes and what it remembers of past chats go to a cloud AI too
+    keepChatsDays: 0, // chats not touched for this many days are deleted (0 = keep them)
+  },
   // Which AI answers (see router.js): "fixed" is the one brain you pick in the model menu
   routing: {
     mode: "fixed", // fixed | auto | dynamic | fastest | local | cloud
     askBeforeCloud: "chat", // in auto, dynamic and fastest: "always" | "chat" (once per chat) | "never"
+    fallback: "off", // when the AI you chose fails: "off" (say so) | "same-kind" (try your next local one, or next cloud one)
+    taskBrain: 0, // the AI for small jobs (follow-ups, summaries, moods): 0 = chosen by the mode, or an AI's id
     // Auto and Dynamic: what sends a message to the cloud AI (everything else stays local)
     auto: { longChats: true, hardQuestions: true, attachments: true, voiceLocal: true },
     // Dynamic: also reacts to how the local AI is doing
@@ -78,10 +94,35 @@ const DEFAULTS = {
   // Telegram Bot companion (telegram.js)
   telegram: {
     enabled: false,
-    botToken: "",
+    botToken: "", // only ever typed in: it goes to the system keyring and is never kept here (see storeTelegramToken)
+    hasToken: false, // (made up when the settings are read: whether a token is in the keyring)
     allowedUserIds: [],
     notifyReminders: true,
     notifyFocus: true,
+  },
+  // Missions: goals carried out in the background (server/missions/)
+  missions: {
+    enabled: true,
+    workspace: "~/friends-workspace", // where each mission gets a folder of its own to work in
+    // The manager is Gemini: a stronger model plans and checks, a faster one does routine steps. "" = choose by itself.
+    manager: { planModel: "", fastModel: "" },
+    limits: { maxMinutes: 60, maxSteps: 25, maxCloudCalls: 60 }, // what a plan starts with; shown on the plan
+    caps: { maxMinutes: 480, maxSteps: 100, maxCloudCalls: 400 }, // what no plan may go beyond
+    notify: { desktop: true, telegram: true },
+    maxConcurrent: 0, // 0 = by what this computer can take (hardware.js)
+    commandTimeoutSeconds: 120,
+  },
+  // This computer (server/hardware.js works out what it is; these are for overriding what follows from it)
+  device: {
+    profile: "auto", // "auto" | "light" | "balanced" | "performance": how much a local AI may ask of this computer
+    gpu: "auto", // "auto" | "off": "off" keeps local models off the graphics card (they run on the processor)
+    saveBattery: true, // on battery, repeating missions wait and models are kept loaded briefly
+  },
+  // The specialist models (server/specialists.js): what you changed from the built-in roles
+  specialists: {
+    baseUrl: "", // the Ollama server ("" = the one of your local AI)
+    roles: [],
+    suggestedSeen: false, // the "pick models for your graphics card" card was dealt with
   },
   // The desktop app (Electron)
   desktop: {
@@ -120,6 +161,10 @@ const DEFAULTS = {
     confirmTools: true,
     contextWindow: 20,
     localTools: "essential", // "essential" | "all": how many tools a local AI gets (see tools.forLocal)
+    replyLanguage: "auto", // "auto" (the language you write in) or a language code (REPLY_LANGUAGES): the AI answers in it
+    maxTokens: 0, // the longest a reply may be, for every AI that has no limit of its own (0 = the AI's own)
+    timeoutSeconds: 0, // how long to wait for an AI to start answering, or to go quiet while answering (0 = as long as it takes)
+    retries: 1, // how often a request that failed for a passing reason (busy, no connection) is tried again
   },
   // The AI's 3D robot body (Settings → Robot): the "Robot" style in voice mode
   // and the little one next to text chats. See src/js/robot/.
@@ -146,6 +191,13 @@ const DEFAULTS = {
     },
   },
 };
+
+// The languages the AI can be told to answer in (Settings → AI & privacy → Answers)
+const REPLY_LANGUAGES = { en: "English", de: "German", ar: "Arabic", fr: "French", es: "Spanish", it: "Italian", pt: "Portuguese", nl: "Dutch", pl: "Polish", tr: "Turkish", ru: "Russian", uk: "Ukrainian", fa: "Persian", hi: "Hindi", zh: "Chinese", ja: "Japanese", ko: "Korean" };
+
+const THEME_ACCENTS = ["#f5a94a", "#f472b6", "#a78bfa", "#6fb4f5", "#4fd1a5"];
+// The interface was blue before the redesign (0.6.0): those who never changed the accent get the new one
+const OLD_ACCENT = "#6f9cf5";
 
 const VOICE = {
   styles: ["listener", "balanced", "chatty"],
@@ -212,16 +264,42 @@ function sanitize(input) {
   s.aiControl.contextWindow = clamp(s.aiControl.contextWindow || 20, 5, 50);
   if (!["essential", "all"].includes(s.aiControl.localTools)) s.aiControl.localTools = "essential";
   s.backup.keep = clamp(s.backup.keep, 3, 60);
+  const whole = (n, lo, hi) => Math.min(hi, Math.max(lo, Math.round(Number(n)) || 0)); // like clamp, but 0 stays 0
+  s.aiControl.maxTokens = whole(s.aiControl.maxTokens, 0, 200000); // 0 = the AI's own limit
+  s.aiControl.replyLanguage = s.aiControl.replyLanguage === "auto" || Object.hasOwn(REPLY_LANGUAGES, s.aiControl.replyLanguage) ? s.aiControl.replyLanguage : "auto";
+  s.aiControl.timeoutSeconds = whole(s.aiControl.timeoutSeconds, 0, 3600); // 0 = wait as long as it takes
+  s.aiControl.retries = whole(s.aiControl.retries, 0, 5);
+  s.privacy.keepChatsDays = whole(s.privacy.keepChatsDays, 0, 3650);
+  for (const key of Object.keys(DEFAULTS.privacy.redact)) s.privacy.redact[key] = s.privacy.redact[key] === true;
+  s.routing.fallback = ["off", "same-kind"].includes(s.routing.fallback) ? s.routing.fallback : "off";
+  s.routing.taskBrain = whole(s.routing.taskBrain, 0, 1e9);
+  s.device.profile = ["auto", "light", "balanced", "performance"].includes(s.device.profile) ? s.device.profile : "auto";
+  s.device.gpu = ["auto", "off"].includes(s.device.gpu) ? s.device.gpu : "auto";
   s.characters = characters.sanitize(s.characters);
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.life.briefing.time)) s.life.briefing.time = "08:00";
   s.localNotes.enabled = Boolean(s.localNotes.enabled);
   s.localNotes.folder = typeof s.localNotes.folder === "string" ? s.localNotes.folder.trim().slice(0, 300) : "";
   s.telegram.enabled = Boolean(s.telegram.enabled);
   s.telegram.botToken = typeof s.telegram.botToken === "string" ? s.telegram.botToken.trim().slice(0, 200) : "";
+  s.telegram.hasToken = false;
   s.telegram.allowedUserIds = Array.isArray(s.telegram.allowedUserIds) ? s.telegram.allowedUserIds.map(String).filter(Boolean).slice(0, 100) : [];
   s.telegram.notifyReminders = s.telegram.notifyReminders !== false;
   s.telegram.notifyFocus = s.telegram.notifyFocus !== false;
   s.companion.interests = s.companion.interests.trim().slice(0, 1000);
+  const m = s.missions;
+  m.workspace = m.workspace.trim().slice(0, 300) || DEFAULTS.missions.workspace;
+  m.manager.planModel = m.manager.planModel.trim().slice(0, 120);
+  m.manager.fastModel = m.manager.fastModel.trim().slice(0, 120);
+  m.caps.maxMinutes = clamp(m.caps.maxMinutes, 1, 24 * 60);
+  m.caps.maxSteps = clamp(m.caps.maxSteps, 1, 200);
+  m.caps.maxCloudCalls = clamp(m.caps.maxCloudCalls, 0, 2000);
+  m.limits.maxMinutes = Math.min(m.caps.maxMinutes, clamp(m.limits.maxMinutes, 1, 24 * 60));
+  m.limits.maxSteps = Math.min(m.caps.maxSteps, clamp(m.limits.maxSteps, 1, 200));
+  m.limits.maxCloudCalls = Math.min(m.caps.maxCloudCalls, clamp(m.limits.maxCloudCalls, 0, 2000));
+  m.maxConcurrent = Math.min(4, Math.max(0, Math.round(Number(m.maxConcurrent)) || 0));
+  m.commandTimeoutSeconds = clamp(m.commandTimeoutSeconds, 5, 3600);
+  s.specialists.baseUrl = s.specialists.baseUrl.trim().replace(/\/+$/, "").slice(0, 200);
+  s.specialists.roles = specialistRoles.sanitize(s.specialists.roles);
   s.voice.style = VOICE.styles.includes(s.voice.style) ? s.voice.style : DEFAULTS.voice.style;
   s.voice.interruptSensitivity = VOICE.sensitivities.includes(s.voice.interruptSensitivity) ? s.voice.interruptSensitivity : DEFAULTS.voice.interruptSensitivity;
   // A key code like "Space" or "KeyX"; anything else (or a key voice mode uses already) is the default
@@ -255,6 +333,19 @@ function sanitize(input) {
 
 let cache = null;
 
+// A bot token that was typed into the settings goes to the system keyring, and out of the settings file
+function storeTelegramToken(s) {
+  const token = s.telegram.botToken;
+  if (token) {
+    try {
+      keys.setSecret(TELEGRAM_TOKEN_KEY, token);
+    } catch {}
+    s.telegram.botToken = "";
+  }
+  s.telegram.hasToken = Boolean(keys.getSecret(TELEGRAM_TOKEN_KEY)) || Boolean(process.env.FRIENDS_TELEGRAM_BOT_TOKEN);
+  return Boolean(token);
+}
+
 function get() {
   if (cache) return cache;
   let stored = null;
@@ -264,6 +355,14 @@ function get() {
   // Settings from before there were characters: a name you'd given the AI becomes your own character
   const upgraded = stored && characters.migrate(stored, stored.personality);
   cache = sanitize(upgraded ? { ...stored, characters: upgraded } : stored || {});
+  // Before the redesign the accent was blue: someone who never changed it (and their built-in Atlas) gets the new one
+  if (stored && (stored.ui?.design ?? 1) < 2) {
+    if (cache.theme.accent === OLD_ACCENT) cache.theme.accent = DEFAULTS.theme.accent;
+    for (const c of cache.characters.list) if (c.look?.accent === OLD_ACCENT) c.look.accent = DEFAULTS.theme.accent;
+  }
+  cache.ui.design = 2;
+  // A token an older version kept in this file moves to the keyring
+  if (storeTelegramToken(cache)) writeJson(file, withoutDerived(cache));
   return cache;
 }
 
@@ -271,9 +370,18 @@ function get() {
 const listeners = new Set();
 const onChange = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 
+// What's written to settings.json: without the made-up parts
+function withoutDerived(s) {
+  const copy = clone(s);
+  delete copy.telegram.hasToken;
+  copy.telegram.botToken = "";
+  return copy;
+}
+
 function set(input) {
   cache = sanitize(input);
-  writeJson(file, cache);
+  storeTelegramToken(cache);
+  writeJson(file, withoutDerived(cache));
   for (const fn of listeners) {
     try {
       fn(cache);
@@ -282,10 +390,26 @@ function set(input) {
   return cache;
 }
 
+// Changes some settings and leaves the rest as they are: patch is the parts that differ, { privacy: { localOnly: true } }.
+// Objects are merged, anything else (a number, a list) is replaced. This is what the page sends, so it can't overwrite
+// what the helper changed meanwhile (the specialists, the missions).
+function patch(changes) {
+  const merge = (base, extra) => {
+    if (!extra || typeof extra !== "object" || Array.isArray(extra)) return extra;
+    const out = { ...(base && typeof base === "object" && !Array.isArray(base) ? base : {}) };
+    for (const [key, value] of Object.entries(extra)) {
+      if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+      out[key] = merge(out[key], value);
+    }
+    return out;
+  };
+  return set(merge(clone(get()), changes));
+}
+
 // Read settings.json again (after a backup was restored)
 function reload() {
   cache = null;
   return get();
 }
 
-module.exports = { get, set, reload, onChange, sanitize, DEFAULTS, ROBOT, ROUTING, ON_AIR, VOICE };
+module.exports = { get, set, patch, reload, onChange, sanitize, DEFAULTS, REPLY_LANGUAGES, ROBOT, ROUTING, ON_AIR, VOICE, THEME_ACCENTS };

@@ -33,6 +33,8 @@ async function toError(res) {
     const err = new GeminiError(`Gemini free tier quota reached for this model${waitMsg}.`);
     err.status = 429;
     err.retryDelay = retryDelay;
+    err.quota = true;
+    err.retryAfterMs = retryMs(retryDelay);
     return err;
   }
   if (res.status >= 500) {
@@ -150,6 +152,12 @@ function markExhausted(key, model, retryDelay, ms = retryMs(retryDelay)) {
 const isExhausted = (key, model) => (exhausted.get(key)?.get(model) || 0) > Date.now();
 
 // "in about 6 hours" for the soonest model to come back
+// How long until the soonest of these models can be asked again, in ms (a minute when nothing says)
+function backInMs(key, models) {
+  const soonest = Math.min(...models.map((m) => exhausted.get(key)?.get(m) || Infinity));
+  return Number.isFinite(soonest) ? Math.max(1000, soonest - Date.now()) : 60 * 1000;
+}
+
 function backIn(key, models) {
   const soonest = Math.min(...models.map((m) => exhausted.get(key)?.get(m) || Infinity));
   if (!Number.isFinite(soonest)) return "";
@@ -193,7 +201,8 @@ async function withFallback(key, model, attempt) {
     }
   }
   if (!tried || lastError?.status === 429 || lastError?.overloaded) {
-    throw new GeminiError(`Every Gemini model your key can use is busy or out of free quota right now${backIn(key, candidates)}. Try again in a little while, add a local AI in Settings → AI & privacy, or turn on billing for your key in Google AI Studio for higher limits.`);
+    // quota / retryAfterMs: a mission waits for the models to come back instead of failing (missions/cloud.js)
+    throw Object.assign(new GeminiError(`Every Gemini model your key can use is busy or out of free quota right now${backIn(key, candidates)}. Try again in a little while, add a local AI in Settings → AI & privacy, or turn on billing for your key in Google AI Studio for higher limits.`), { quota: true, retryAfterMs: backInMs(key, candidates) });
   }
   throw lastError || new GeminiError("Gemini's rate limit or quota was reached. Wait a moment and try again.");
 }
@@ -211,21 +220,25 @@ async function checkModel({ key, model }) {
 // (voice, "Fast") they think as little as they allow: 2.5 Flash not at all,
 // Gemini 3.x at "low" (the lowest level every 3.x model accepts). Other
 // models keep their defaults, since not all of them accept these settings.
-function generationConfig(model, { temperature, fast } = {}) {
+function generationConfig(model, { temperature, fast, maxTokens, topP } = {}) {
   const config = {};
   if (temperature !== undefined) config.temperature = temperature;
+  if (maxTokens) config.maxOutputTokens = maxTokens;
+  if (topP !== undefined) config.topP = topP;
   if (fast && /^gemini-2\.5-flash/.test(model)) config.thinkingConfig = { thinkingBudget: 0 };
   else if (fast && /^gemini-3/.test(model)) config.thinkingConfig = { thinkingLevel: "low" };
   return Object.keys(config).length ? config : undefined;
 }
 
-// One reply as plain text, without streaming or tools (e.g. for summaries)
-async function generateText({ key, model, system, prompt, temperature = 0.3, signal }) {
+// One reply as plain text, without streaming or tools (e.g. for summaries).
+// json: true asks for a JSON reply (Gemini's JSON mode), which the planning uses.
+async function generateText({ key, model, system, prompt, temperature = 0.3, signal, json = false, thinking = false }) {
   const body = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
   if (system) body.systemInstruction = { parts: [{ text: system }] };
   return withFallback(key, model, async (current) => {
-    const config = generationConfig(current, { temperature, fast: true });
-    const res = await post(`${API}/models/${encodeURIComponent(current)}:generateContent`, key, config ? { ...body, generationConfig: config } : body, signal);
+    // (thinking: planning and checking may think at length; the small jobs don't)
+    const config = { ...(generationConfig(current, { temperature, fast: !thinking }) || {}), ...(json ? { responseMimeType: "application/json" } : {}) };
+    const res = await post(`${API}/models/${encodeURIComponent(current)}:generateContent`, key, Object.keys(config).length ? { ...body, generationConfig: config } : body, signal);
     const data = await res.json();
     return (data.candidates?.[0]?.content?.parts || []).map((p) => (p.thought ? "" : p.text || "")).join("").trim();
   });
@@ -311,7 +324,7 @@ async function readStream(res, onText) {
 // sent back, until the model answers with text (at most 8 rounds). Rounds in
 // which it only called isFreeTool() tools (the robot's) don't count; up to 4
 // of those are allowed on top, so it can't go round in circles.
-async function streamChat({ key, model, contents, system, temperature, fast = false, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
+async function streamChat({ key, model, contents, system, temperature, maxTokens, topP, fast = false, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
   return withFallback(key, model, async (currentModel) => {
     const url = `${API}/models/${encodeURIComponent(currentModel)}:streamGenerateContent?alt=sse`;
     const history = [...contents];
@@ -326,7 +339,7 @@ async function streamChat({ key, model, contents, system, temperature, fast = fa
         if (free ? ++freeRounds > 4 : ++rounds > 8) return;
         const body = { contents: history };
         if (system) body.systemInstruction = { parts: [{ text: system }] };
-        const config = generationConfig(currentModel, { temperature, fast });
+        const config = generationConfig(currentModel, { temperature, fast, maxTokens, topP });
         if (config) body.generationConfig = config;
         if (tools.length) body.tools = [{ functionDeclarations: tools }];
 
@@ -484,4 +497,4 @@ async function searchWeb({ key, model, query, signal }) {
   });
 }
 
-module.exports = { GeminiError, TASK_MODEL, markExhausted, isExhausted, searchWeb, listModels, checkModel, streamChat, transcribe, speak, generateText, liveModels, preferLiveModel, liveAsyncTools, LIVE_MODELS };
+module.exports = { GeminiError, TASK_MODEL, FALLBACK_MODELS, cachedModels, markExhausted, isExhausted, searchWeb, listModels, checkModel, streamChat, transcribe, speak, generateText, liveModels, preferLiveModel, liveAsyncTools, LIVE_MODELS };

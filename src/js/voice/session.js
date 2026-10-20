@@ -15,6 +15,7 @@
 //   voice reads it, a piece at a time
 // - Instant: the same, but read by the browser's own (robotic) voice
 // Live falls back to Studio by itself when it can't be used.
+import { icon } from "../icons.js";
 import { api } from "../api.js";
 import { getCurrentChatId, reloadChat, stopReply } from "../chat.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
@@ -48,9 +49,9 @@ let engine = null; // the running engine (see engines/classic-engine.js for its 
 
 // ---------- The engine pill ----------
 const ENGINES = {
-  live: { icon: "⚡", label: t("Live"), title: t("Live: it hears you directly and answers in real time, like a call (Gemini Live). You can cut in any time. Click for Studio voice.") },
-  studio: { icon: "🎙️", label: t("Studio"), title: t("Studio: Gemini writes each reply, then says it in a natural Gemini voice. A bit slower to start. Click for Instant voice.") },
-  instant: { icon: "💬", label: t("Instant"), title: t("Instant: your browser's own voice. Quickest to start, but robotic, and it can't be recorded. Click for Live.") },
+  live: { icon: "bolt", label: t("Live"), title: t("Live: it hears you directly and answers in real time, like a call (Gemini Live). You can cut in any time. Click for Studio voice.") },
+  studio: { icon: "mic", label: t("Studio"), title: t("Studio: Gemini writes each reply, then says it in a natural Gemini voice. A bit slower to start. Click for Instant voice.") },
+  instant: { icon: "chat", label: t("Instant"), title: t("Instant: your browser's own voice. Quickest to start, but robotic, and it can't be recorded. Click for Live.") },
 };
 const ORDER = ["live", "studio", "instant"];
 let engineChoice = ORDER.includes(store.get("friends.voiceEngine")) ? store.get("friends.voiceEngine") : "live";
@@ -65,7 +66,7 @@ const runningEngine = () => engine?.name || engineChoice;
 function updateEnginePill() {
   const running = runningEngine();
   const info = ENGINES[running];
-  engineIcon.textContent = info.icon;
+  engineIcon.innerHTML = icon(info.icon, { size: 15 });
   engineLabel.textContent = info.label;
   enginePill.classList.toggle("active", running === "live");
   enginePill.title = running === engineChoice ? info.title : `${info.title} (Live isn't available right now.)`;
@@ -81,9 +82,9 @@ updateEnginePill();
 
 // ---------- The conversation style pill (Settings → Voice has the same choice) ----------
 const STYLES = {
-  listener: { icon: "👂", label: t("Listener"), title: t("Listener: it only answers when you speak to it directly, and waits a long time. Click for Balanced.") },
-  balanced: { icon: "🙂", label: t("Balanced"), title: t("Balanced: it listens while you explain and answers when it makes sense. Click for Chatty.") },
-  chatty: { icon: "💬", label: t("Chatty"), title: t("Chatty: it answers quickly and joins in more. Click for Listener.") },
+  listener: { icon: "ear", label: t("Listener"), title: t("Listener: it only answers when you speak to it directly, and waits a long time. Click for Balanced.") },
+  balanced: { icon: "smile", label: t("Balanced"), title: t("Balanced: it listens while you explain and answers when it makes sense. Click for Chatty.") },
+  chatty: { icon: "chat", label: t("Chatty"), title: t("Chatty: it answers quickly and joins in more. Click for Listener.") },
 };
 const STYLE_ORDER = ["listener", "balanced", "chatty"];
 const stylePill = document.getElementById("voice-style");
@@ -91,7 +92,7 @@ let appliedStyle = null;
 
 function showStyle() {
   const style = STYLES[getSettings()?.voice?.style] ? getSettings().voice.style : "balanced";
-  stylePill.querySelector("#voice-style-icon").textContent = STYLES[style].icon;
+  stylePill.querySelector("#voice-style-icon").innerHTML = icon(STYLES[style].icon, { size: 15 });
   stylePill.querySelector("#voice-style-label").textContent = STYLES[style].label;
   stylePill.title = STYLES[style].title;
   // Changed here or in Settings while talking: the running conversation follows

@@ -310,8 +310,8 @@ document.getElementById("test-news-btn")?.addEventListener("click", () => {
   quickSearchNews();
 });
 
-// Workspace quick pill bar
-document.getElementById("workspace-bar")?.addEventListener("click", (e) => {
+// The "+" menu's lookups (Calendar, Gmail, Drive, News, GitHub)
+document.getElementById("plus-menu")?.addEventListener("click", (e) => {
   const pill = e.target.closest(".ws-pill");
   if (!pill) return;
   const app = pill.dataset.app;
@@ -369,7 +369,7 @@ document.getElementById("gsi-kept-save").addEventListener("click", async () => {
     renderKept(data);
     if (!data.connected) await signIn();
   } catch (err) {
-    keptStatus.textContent = `⚠️ ${err.message}`;
+    keptStatus.textContent = err.message;
     keptStatus.className = "test-feedback error";
   }
 });
@@ -414,7 +414,7 @@ setupSave?.addEventListener("click", async () => {
     setupStatus.classList.add("ok");
     document.getElementById("gsi-error").hidden = true;
   } catch (err) {
-    setupStatus.textContent = `⚠️ ${err.message}`;
+    setupStatus.textContent = err.message;
     setupStatus.classList.add("error");
   } finally {
     setupSave.disabled = false;

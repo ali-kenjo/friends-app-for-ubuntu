@@ -49,6 +49,8 @@ function hashFor(action) {
   if (!action) return "";
   if (action.type === "open-chat" && /^[\w-]+$/.test(action.id || "")) return `#chat/${action.id}`;
   if (action.type === "reminder" || action.type === "today") return "#today";
+  if (action.type === "missions") return "#missions";
+  if (action.type === "mission" && /^[\w-]+$/.test(action.id || "")) return `#missions/${action.id}`;
   if (action.type === "voice") return "#voice";
   return "";
 }

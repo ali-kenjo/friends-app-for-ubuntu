@@ -3,6 +3,7 @@
 // settings and no errors, then closes it. Needs `npm run desktop` to work
 // (Electron downloaded: node node_modules/electron/install.js).
 //   node scripts/e2e-desktop.js
+//   node scripts/e2e-desktop.js --appimage dist/Friends-<version>-x86_64.AppImage    (the same check on the AppImage)
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -10,17 +11,32 @@ const { spawn } = require("child_process");
 
 const root = path.resolve(__dirname, "..");
 const electron = path.join(root, "node_modules", "electron", "dist", "electron");
-if (!fs.existsSync(electron)) {
-  console.error("✗ Electron isn't downloaded: node node_modules/electron/install.js");
+const appImage = process.argv.includes("--appimage") ? path.resolve(process.argv[process.argv.indexOf("--appimage") + 1] || "") : "";
+if (appImage ? !fs.existsSync(appImage) : !fs.existsSync(electron)) {
+  console.error(appImage ? `✗ ${appImage} isn't there: npm run dist:appimage` : "✗ Electron isn't downloaded: node node_modules/electron/install.js");
   process.exit(1);
+}
+// A terminal inside an editor built on Electron (VS Code, and its snap in particular) passes on variables that make another
+// Electron app behave as plain Node (ELECTRON_RUN_AS_NODE) or crash in GTK (the snap's GTK, GIO and schema folders).
+// They're taken out, and the snap's saved originals put back.
+const cleanEnv = { ...process.env };
+for (const key of Object.keys(cleanEnv)) {
+  const original = /^(.+)_VSCODE_SNAP_ORIG$/.exec(key);
+  if (original) {
+    if (cleanEnv[key]) cleanEnv[original[1]] = cleanEnv[key];
+    else delete cleanEnv[original[1]];
+  }
+  if (/^(SNAP|VSCODE|GTK_|GDK_PIXBUF|GIO_|GSETTINGS_SCHEMA_DIR|ELECTRON_RUN_AS_NODE|GIT_ASKPASS)/.test(key) || key.endsWith("_VSCODE_SNAP_ORIG")) delete cleanEnv[key];
 }
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "friends-desktop-e2e-"));
 const debugPort = 9333 + Math.floor(Math.random() * 500);
 
 async function main() {
-  const proc = spawn(electron, [root, "--no-sandbox", `--remote-debugging-port=${debugPort}`], {
-    env: { ...process.env, FRIENDS_DATA_DIR: work, FRIENDS_VOICE_DIR: path.join(work, "voice"), KEYRING_BACKEND: "file", LOG_LEVEL: "error" },
+  // An AppImage starts Electron itself (with --no-sandbox, see scripts/build-appimage.js); it's run without needing FUSE
+  const proc = spawn(appImage || electron, appImage ? [`--remote-debugging-port=${debugPort}`] : [root, "--no-sandbox", `--remote-debugging-port=${debugPort}`], {
+    env: { ...cleanEnv, FRIENDS_DATA_DIR: work, FRIENDS_VOICE_DIR: path.join(work, "voice"), KEYRING_BACKEND: "file", LOG_LEVEL: "error", ...(appImage ? { APPIMAGE_EXTRACT_AND_RUN: "1" } : {}) },
     stdio: ["ignore", "pipe", "pipe"],
+    detached: true, // its own process group, so everything it started can be stopped
   });
   let log = "";
   proc.stdout.on("data", (d) => (log += d));
@@ -60,12 +76,16 @@ async function main() {
     if (info.title !== "Friends" || !info.privateMode || info.health !== "ok") throw new Error(`The page isn't what it should be: ${JSON.stringify(info)}`);
     if (problems.length) throw new Error(`Page errors: ${problems.join("; ")}`);
     await browser.disconnect();
-    console.log("✓ The desktop app starts and shows the local-AI settings.");
+    console.log(`✓ The desktop app${appImage ? " (the AppImage)" : ""} starts and shows the local-AI settings.`);
   } catch (err) {
     console.error(`✗ ${err.message}`);
     exit = 1;
   } finally {
-    proc.kill();
+    try {
+      process.kill(-proc.pid);
+    } catch {
+      proc.kill();
+    }
     fs.rmSync(work, { recursive: true, force: true });
     process.exit(exit || 0);
   }

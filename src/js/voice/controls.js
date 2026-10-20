@@ -99,7 +99,7 @@ export function initControls(actions) {
     banner.hidden = false;
     $("voice-perm-title").textContent = t("Microphone access needed");
     $("voice-perm-text").textContent =
-      text || t("Click the lock 🔒 or site settings icon in your browser address bar, set Microphone to “Allow”, then press Try again.");
+      text || t("Click the lock or site settings icon in your browser address bar, set Microphone to “Allow”, then press Try again.");
     $("voice-perm-retry-btn").hidden = !canRetry;
   }
 

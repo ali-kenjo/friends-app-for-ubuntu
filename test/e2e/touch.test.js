@@ -64,6 +64,21 @@ describe("Touch screens and zoom", { skip: !hasChrome && "no Chrome found" }, ()
       await sleep(150);
       assert.deepStrictEqual(await tooSmall(), [], tab);
     }
+    // AI & privacy has sections of its own, and an add form
+    await page.evaluate(() => document.querySelector('.tab[data-tab="ai-control"]').click());
+    for (const section of ["answers", "privacy", "device", "ais"]) {
+      await page.evaluate((n) => document.querySelector(`.subtab[data-subtab="${n}"]`).click(), section);
+      await sleep(150);
+      assert.deepStrictEqual(await tooSmall(), [], `AI & privacy, ${section}`);
+    }
+    await page.evaluate(() => document.getElementById("brain-add").click());
+    await sleep(150);
+    assert.deepStrictEqual(await tooSmall(), [], "the add picker");
+    await page.evaluate(() => document.querySelector('#service-grid-cloud .service-tile[data-id="groq"]').click());
+    await page.evaluate(() => (document.getElementById("ai-own-settings").open = true));
+    await sleep(150);
+    assert.deepStrictEqual(await tooSmall(), [], "the add form");
+    await page.evaluate(() => document.getElementById("ai-add-back").click());
   });
 
   test("what shows only on hover on a mouse is there without hover (the actions under a message, on the chats)", async () => {

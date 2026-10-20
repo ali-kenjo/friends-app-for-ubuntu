@@ -94,7 +94,7 @@ document.addEventListener("keydown", (e) => {
 // ---------- The place, and a summary of the look ----------
 const placeSelects = [document.getElementById("robot-place"), document.getElementById("voice-scene-place-select")];
 for (const select of placeSelects) {
-  select.replaceChildren(...R.PLACES.map((p) => Object.assign(document.createElement("option"), { value: p.id, textContent: `${p.icon} ${t(p.label)}` })));
+  select.replaceChildren(...R.PLACES.map((p) => Object.assign(document.createElement("option"), { value: p.id, textContent: t(p.label) })));
   select.addEventListener("change", () => updateSettings((s) => (s.robot.room = R.changePlace(s.robot.room, select.value))));
 }
 const lookSummary = document.getElementById("robot-look-summary");
@@ -102,12 +102,12 @@ const lookSummary = document.getElementById("robot-look-summary");
 function showLook(s) {
   for (const select of placeSelects) select.value = s.robot.room.place;
   const d = s.robot.design;
-  const worn = D.SLOTS.filter((slot) => d.outfit[slot.id].item !== "none").map((slot) => D.ITEMS[slot.id][d.outfit[slot.id].item].icon);
+  const worn = D.SLOTS.filter((slot) => d.outfit[slot.id].item !== "none").map((slot) => t(D.ITEMS[slot.id][d.outfit[slot.id].item].label));
   const place = R.PLACE_BY_ID[s.robot.room.place];
   const dots = [d.colors.head, d.colors.body, d.colors.light || s.theme.accent].map((c) => `<i style="background:${c}"></i>`).join("");
   lookSummary.innerHTML = `<span class="robot-look-dots" aria-hidden="true">${dots}</span>`;
   const text = document.createElement("span");
-  text.textContent = [t(place.label), worn.length ? worn.join(" ") : t("no clothes yet")].join(" · ");
+  text.textContent = [t(place.label), worn.length ? worn.slice(0, 3).join(", ") : t("no clothes yet")].join(" · ");
   lookSummary.append(text);
 }
 

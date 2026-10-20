@@ -3,45 +3,52 @@
    The user's own choices (Settings → Appearance) set --accent, --chat-font and --chat-size on top. */
 
 :root {
-  /* ----- Colour roles (dark) ----- */
-  --accent: #6f9cf5;
-  --on-accent: #0e1a2f;
-  --bg-sidebar: #1b1c1d;
-  --bg-main: #131314;
-  --bg-hover: #282a2c;
-  --bg-input: #1e1f20;
-  --bg-subtle: #18191a;
-  --bg-active: color-mix(in srgb, var(--accent) 28%, var(--bg-main));
-  --text: #e3e3e3;
-  --text-muted: #a3a9b0;
-  --border: #3c4043;
-  --link: #8ab4f8;
-  --focus: #8ab4f8;
+  /* ----- Colour roles (dark: "the night room", lit by the robot's screen) ----- */
+  /* One accent, the lamp: a warm honey amber. It is the robot's light, so it is the interface's light
+     (focus, the primary button, what is selected, the glow behind the robot). Everything else is a
+     violet-tinted ink in layers: the page, a raised surface (cards, fields, the message box), the sidebar. */
+  --accent: #f5a94a;
+  --on-accent: #2a1a05; /* appearance.js sets it from the accent's own brightness */
+  --bg-main: #15121c;
+  --bg-sidebar: #100e16;
+  --bg-input: #211c2b; /* raised: cards, fields, the message box */
+  --bg-subtle: #1a1623;
+  --bg-hover: #2b2536;
+  --bg-active: color-mix(in srgb, var(--accent) 20%, var(--bg-main));
+  --text: #efeaf5;
+  --text-muted: #a8a1b7;
+  --border: #373041;
+  --hairline: rgba(255, 255, 255, 0.07); /* the quiet line between neighbours */
+  --link: #ffc477;
+  --focus: #ffc477;
   --accent-text: var(--accent); /* the accent where it is text or a thin icon: darker on the light theme */
-  --danger: #f28b82;
-  --danger-border: #5c2b29;
-  --danger-bg: #2a1c1c;
-  --success: #5fd49a;
-  --warning: #f5b84a;
-  --glow: color-mix(in srgb, var(--accent) 24%, transparent);
-  --scrim: rgba(0, 0, 0, 0.55);
+  --danger: #ff8f8f;
+  --danger-border: #6a2f36;
+  --danger-bg: #2d1a20;
+  --success: #62d6a3;
+  --warning: #ffd166;
+  --glow: color-mix(in srgb, var(--accent) 22%, transparent);
+  --scrim: rgba(8, 5, 14, 0.62);
 
   /* ----- Type ----- */
-  --font-ui: "Google Sans", "Segoe UI", Roboto, system-ui, sans-serif;
+  /* Figtree for everything you read and click; Bricolage Grotesque for the few big things (the greeting,
+     titles, the wordmark). Both ship with the app (fonts.css). Arabic uses the system's own fonts. */
+  --font-ui: "Figtree", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Bricolage Grotesque", "Figtree", system-ui, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --chat-font: inherit;
   --chat-size: 16px; /* Settings → Appearance → Font size */
   /* The scale, in rem so it follows the browser's text size. Nothing is smaller than --fs-xs. */
   --fs-xs: 0.75rem; /* 12: captions, badges, timestamps */
   --fs-sm: 0.8125rem; /* 13: secondary text, descriptions, buttons */
-  --fs-base: 0.875rem; /* 14: interface text */
-  --fs-md: 0.9375rem; /* 15: emphasised interface text */
-  --fs-lg: 1rem; /* 16: reading text, field values */
-  --fs-xl: 1.125rem; /* 18: titles */
-  --fs-2xl: 1.25rem; /* 20: panel headings */
-  --fs-3xl: 1.5rem; /* 24: page headings */
-  --fs-4xl: 2.25rem; /* 36: the greeting */
-  --lh-tight: 1.3;
+  --fs-base: 0.9375rem; /* 15: interface text */
+  --fs-md: 1rem; /* 16: emphasised interface text */
+  --fs-lg: 1.0625rem; /* 17: reading text, field values */
+  --fs-xl: 1.25rem; /* 20: titles */
+  --fs-2xl: 1.5rem; /* 24: panel headings */
+  --fs-3xl: 2rem; /* 32: page headings */
+  --fs-4xl: 3rem; /* 48: the greeting */
+  --lh-tight: 1.25;
   --lh-normal: 1.5;
   --lh-reading: 1.7;
 
@@ -60,19 +67,21 @@
   --space-10: 2.5rem; /* 40 */
   --space-12: 3rem; /* 48 */
 
-  /* ----- Shape ----- */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* ----- Shape: softer the bigger it is ----- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
   --radius-pill: 999px;
-  --target: 36px; /* the smallest icon button; 44px on touch screens (see a11y.css) */
+  --target: 40px; /* the smallest icon button; 44px on touch screens (see a11y.css) */
 
-  /* ----- Elevation ----- */
-  --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.35); /* menus, popovers, toasts */
-  --shadow-sheet: 0 16px 40px rgba(0, 0, 0, 0.45); /* drawers */
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5); /* dialogs */
+  /* ----- Elevation: depth, not borders. Each is a close shadow and a far, soft one. ----- */
+  --shadow-rest: 0 1px 2px rgba(6, 3, 12, 0.3), 0 4px 14px rgba(6, 3, 12, 0.22); /* cards, the message box */
+  --shadow-pop: 0 2px 6px rgba(6, 3, 12, 0.3), 0 14px 36px rgba(6, 3, 12, 0.4); /* menus, popovers, toasts */
+  --shadow-sheet: 0 20px 48px rgba(6, 3, 12, 0.5); /* drawers */
+  --shadow-modal: 0 24px 70px rgba(6, 3, 12, 0.55); /* dialogs */
 
   /* ----- Motion (transform and opacity only; reduced motion turns it off, see a11y.css) ----- */
   --dur-fast: 150ms;
@@ -109,30 +118,33 @@
   color-scheme: dark;
 }
 
-/* Light theme (Settings → Appearance) */
+/* Light theme (Settings → Appearance): "the day room", designed on its own, not an inversion */
 :root[data-theme="light"] {
-  --bg-sidebar: #f0f4f9;
-  --bg-main: #ffffff;
-  --bg-hover: #e4e9f0;
-  --bg-input: #f0f4f9;
-  --bg-subtle: #f6f8fb;
-  --bg-active: color-mix(in srgb, var(--accent) 20%, #ffffff);
-  --text: #1f1f1f;
-  --text-muted: #565b61;
-  --border: #d3d7dc;
-  --link: #0b57d0;
-  --focus: #0b57d0;
-  --accent-text: color-mix(in srgb, var(--accent) 50%, #000);
-  --danger: #c5221f;
-  --danger-border: #f2b8b5;
-  --danger-bg: #fce8e6;
-  --success: #1a7f4b;
-  --warning: #9a5b00;
-  --glow: color-mix(in srgb, var(--accent) 16%, transparent);
-  --scrim: rgba(20, 24, 31, 0.4);
-  --shadow-pop: 0 8px 30px rgba(20, 24, 31, 0.16);
-  --shadow-sheet: 0 16px 40px rgba(20, 24, 31, 0.18);
-  --shadow-modal: 0 20px 60px rgba(20, 24, 31, 0.22);
+  --on-accent: #2a1a05;
+  --bg-main: #fbf9f8;
+  --bg-sidebar: #f2eeed;
+  --bg-input: #ffffff;
+  --bg-subtle: #f6f2f1;
+  --bg-hover: #e9e3e3;
+  --bg-active: color-mix(in srgb, var(--accent) 22%, #ffffff);
+  --text: #231d2a;
+  --text-muted: #5b5466;
+  --border: #d9d0d3;
+  --hairline: rgba(35, 29, 42, 0.09);
+  --link: #7a4300;
+  --focus: #7a4300;
+  --accent-text: color-mix(in srgb, var(--accent) 50%, #1c1000);
+  --danger: #b3201f;
+  --danger-border: #efb7b5;
+  --danger-bg: #fdecea;
+  --success: #17724a;
+  --warning: #8a5a00;
+  --glow: color-mix(in srgb, var(--accent) 20%, transparent);
+  --scrim: rgba(35, 29, 42, 0.38);
+  --shadow-rest: 0 1px 2px rgba(60, 40, 70, 0.08), 0 4px 14px rgba(60, 40, 70, 0.07);
+  --shadow-pop: 0 2px 6px rgba(60, 40, 70, 0.1), 0 14px 36px rgba(60, 40, 70, 0.14);
+  --shadow-sheet: 0 20px 48px rgba(60, 40, 70, 0.16);
+  --shadow-modal: 0 24px 70px rgba(60, 40, 70, 0.22);
   color-scheme: light;
 }
 
@@ -141,7 +153,8 @@
   --dir: -1;
 }
 
-/* Arabic reads best in a font made for it; these ship with the system */
+/* Arabic reads best in a font made for it; these ship with the system (Latin letters fall back to Figtree) */
 :root:lang(ar) {
-  --font-ui: "Noto Sans Arabic", "Segoe UI", Tahoma, "Google Sans", system-ui, sans-serif;
+  --font-ui: "Noto Sans Arabic", "Segoe UI", Tahoma, "Figtree", system-ui, sans-serif;
+  --font-display: "Noto Sans Arabic", "Segoe UI", Tahoma, "Bricolage Grotesque", system-ui, sans-serif;
 }

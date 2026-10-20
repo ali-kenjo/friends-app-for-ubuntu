@@ -1,13 +1,19 @@
 // Finds AI model servers running on this computer, so Settings can offer them
 // with one click. Only 127.0.0.1 is asked, with a short timeout.
-const KNOWN = [
-  { label: "Ollama", url: "http://127.0.0.1:11434", protocol: "ollama" },
-  { label: "LM Studio", url: "http://127.0.0.1:1234/v1", protocol: "openai" },
-  { label: "llama.cpp or LocalAI", url: "http://127.0.0.1:8080/v1", protocol: "openai" },
-  { label: "Jan", url: "http://127.0.0.1:1337/v1", protocol: "openai" },
-  { label: "vLLM", url: "http://127.0.0.1:8000/v1", protocol: "openai" },
-  { label: "KoboldCpp", url: "http://127.0.0.1:5001/v1", protocol: "openai" },
-];
+const services = require("./services");
+
+// The servers in the catalogue (services.js), at their usual ports; and the address in OLLAMA_HOST when Ollama runs elsewhere
+const KNOWN = services.LOCAL.filter((s) => s.url).map((s) => ({ id: s.id, label: s.label, url: s.url, protocol: s.protocol }));
+if (process.env.OLLAMA_HOST) {
+  try {
+    const host = process.env.OLLAMA_HOST.trim();
+    const url = new URL(/^[a-z]+:\/\//i.test(host) ? host : `http://${host}`);
+    if (url.hostname === "0.0.0.0" || url.hostname === "::") url.hostname = "127.0.0.1";
+    const origin = url.port ? url.origin : `${url.origin}:11434`;
+    const ollama = KNOWN.find((s) => s.id === "ollama");
+    if (ollama) ollama.url = origin;
+  } catch {}
+}
 
 // Tests (and unusual setups) can name other servers: FRIENDS_LOCAL_SERVERS='[{"label":"X","url":"http://127.0.0.1:9/v1","protocol":"openai"}]'
 let SERVERS = KNOWN;

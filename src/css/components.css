@@ -288,81 +288,32 @@
 }
 
 /* ---------- The start screen ---------- */
-.voice-hero-card {
-  margin: var(--space-4) 0 var(--space-6);
-  padding: var(--space-6);
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  box-shadow: none;
-  gap: var(--space-3);
-}
 
-.voice-hero-title {
-  font-size: var(--fs-2xl);
-  font-weight: 600;
-  background: none;
-  -webkit-text-fill-color: currentColor;
-  color: var(--text);
-}
 
-.voice-hero-sub {
-  max-width: 34rem;
-  font-size: var(--fs-md);
-}
 
-.voice-hero-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
 
-.btn-hero-voice {
-  padding: var(--space-3) var(--space-6);
-  background: linear-gradient(135deg, #d9570f, #c0392b);
-  color: #fff;
-  border: 0;
-  box-shadow: 0 4px 18px rgba(192, 57, 43, 0.35);
-}
 
-.btn-hero-voice:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e5600f, #cc3a2b);
-  box-shadow: 0 6px 22px rgba(192, 57, 43, 0.5);
-}
 
-.nav-voice-hero {
-  background: transparent;
-  color: var(--text);
-}
 
-.nav-voice-hero svg {
-  color: var(--accent-text);
-}
+
+
+
+
+
+
+
+
 
 /* Which AI answers: a quiet line that is also the way back to the guide */
-.ws-status-indicator {
-  border: 1px solid transparent;
-  cursor: pointer;
-  min-height: 28px;
-}
 
-.ws-status-indicator:hover {
-  border-color: var(--border);
-  color: var(--text);
-}
 
-.ws-status-indicator[data-state="ready"] .status-circle {
-  background: var(--success);
-}
 
-.ws-status-indicator[data-state="none"] .status-circle {
-  background: var(--warning);
-}
 
-.ws-status-indicator[data-state="none"] {
-  color: var(--text);
-}
+
+
+
+
+
 
 /* ---------- First-run guide ---------- */
 .onboarding {

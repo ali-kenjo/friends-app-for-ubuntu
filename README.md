@@ -1,7 +1,16 @@
+<p align="center"><img src="build/icon.svg" width="88" alt="Friends: the robot's face"></p>
+
 # Friends
 
-A personal AI companion for Linux, in its own window or your browser. The AI behind it can be Google Gemini (cloud) or any AI model running on your own computer, so chats can stay completely private.
+A personal AI companion for Linux that also gets things done. You talk to a robot with a face (**Atlas** or **Mira**), and behind it is an assistant: give it a goal, it makes a plan, you approve it once, and it works in the background (researching, writing, organising files, watching your laptop, building small programs) and puts a report in your notes. Gemini plans and checks; small AI models on your own graphics card do the routine work. Everything is local-first, and **Private mode** keeps it all on your computer.
 
+<p align="center">
+  <img src="docs/design/screenshots/0.6.0/hero-home-dark-1440.png" width="49%" alt="Talk: the robot greets you, and a line under the greeting says a mission is on step 3 of 4">
+  <img src="docs/design/screenshots/0.6.0/hero-mission-dark-1440.png" width="49%" alt="A mission running: progress, the plan with its steps, and a Stop button">
+</p>
+
+- **Missions**: goals carried out in the background with a plan you approve once, a list of exactly what it may do, a big Stop button, and a report in your notes. They can repeat (every morning, every Friday, when a file appears, when the disk fills up) and run while the window is closed. See [Missions](#missions).
+- **Specialists**: roles (everyday, coding, writing, research, vision, embeddings) each with its own model on your computer, loaded one at a time so even a small graphics card is enough (Friends works out what your computer can take), with Gemini as the manager. See [Specialists](#specialists-small-models-on-a-small-graphics-card).
 - **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
 - **Flagship Voice Mode & On-Camera Co-Host**: Real-time voice conversations with a 3D robot body, filming mode, customizable **acting dynamics** (*Best Friends Banter*, *Podcast Co-Host*, *Comedy Partner*, *Sarcastic Critic*, *Curious Interviewer*, *Custom*), scene briefs, and **live document grounding** (talk through scripts, articles, or vault notes during conversations).
 - **Everyday Life & Offline Calendar**: Tasks, reminders (as desktop and Telegram notifications), habits, a journal, offline calendar (with `.ics` export/import), and focus/Pomodoro sessions.
@@ -32,7 +41,7 @@ npm start       # then open http://localhost:3000
 ```
 
 - Stop it with `Ctrl+C`. Another port: `PORT=3001 npm start`. Development with reload: `npm run dev`.
-- `npm run doctor` checks Node.js, the dependencies, your data folder, the port, API-key storage and any local AI server.
+- `npm run doctor` checks Node.js, the dependencies, your data folder, the port, API-key storage, any local AI server, and what Missions need: your graphics card (name, memory, what is free), whether each specialist's model is installed and fits it (and the `ollama pull` command for one that isn't), the Gemini key, and the missions folder.
 - The first time, the start screen guides you: it finds a local AI (Ollama, LM Studio…) by itself and offers it with one click, or takes a Gemini key (free from [aistudio.google.com/apikey](https://aistudio.google.com/apikey)). You can do the same, and add more, any time in **Settings → AI & privacy**.
 
 ### 3. Linux desktop app (Electron)
@@ -46,10 +55,11 @@ npm run dist                            # builds dist/friends_<version>_amd64.de
 sudo apt install ./dist/friends_0.5.1_amd64.deb
 ```
 
-Or download the `.deb` from the [Releases](../../releases) page. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
+Or download the `.deb` or the **AppImage** from the [Releases](../../releases) page. The AppImage is a single file that runs without installing anything (`chmod +x Friends-*.AppImage && ./Friends-*.AppImage`; build it yourself with `npm run dist:appimage`). On a recent Ubuntu it needs FUSE 2 (`sudo apt install libfuse2t64`), or start it with `--appimage-extract-and-run`. It starts without Chromium's sandbox (an AppImage can't hold the setuid helper), so prefer the `.deb` for everyday use; both keep their data in `~/.config/friends`. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
 
 - The `.deb` sets up Chromium's sandbox properly (a setuid helper), which is why it needs `sudo`; `npm run desktop` has no root, so it runs without the sandbox. Use the installed app for everyday use.
 - **Updating the installed app means building and installing a new `.deb`**: `npm run update` does all of it. An installed app doesn't change when you change the source.
+- **Friends tells you when a newer release exists, and never installs one.** Once a day it asks GitHub's public releases page (nothing about you is sent; not in Private mode; switch it off in Settings → Data & backups → Updates). You get one small notice per version, and the Updates card shows what's new and how to update for the way you installed it (the `.deb`, the AppImage, Docker or from source).
 - **It keeps running in the tray** when you close the window, so reminders still come (Settings → Daily life; quit from the tray icon or with Ctrl+Q). It can start when you log in, quietly in the tray.
 - On a Wayland session it runs natively (X11 otherwise). The window remembers its size and position; a second launch focuses the first window.
 - The window only shows the app itself. The microphone and camera are granted to that page only, links open in your browser, and Google sign-in gets its own popup.
@@ -80,7 +90,7 @@ To also set up local voice during the install: `./scripts/install.sh --voice` (o
 | `Port 3000 is already in use` | `PORT=3001 npm start` |
 | "Can't reach the AI server" | Start it (`ollama serve`), then **Look again** in Settings → AI & privacy |
 | The first local reply takes a minute | The model is being loaded into memory; later replies are fast. *Keep the model loaded* (under Advanced in the AI's settings) keeps it ready |
-| Long chats forget the beginning | Raise the **Context size** of an Ollama AI (Settings → AI & privacy → edit the AI → Advanced) |
+| Long chats forget the beginning | Raise the **Context size** of an Ollama AI (Settings → AI & privacy → Your AIs → edit the AI → This AI's own settings) |
 | A local AI can't listen | Set up **Local voice** (Settings → AI & privacy, or `npm run voice:setup`) |
 | Google asks you to sign in every time | Update to 0.3.2 or newer (it renews the sign-in by itself); if it still asks, set up **Stay signed in for good** (Settings → Connected apps) |
 | Gemini is slow or doesn't answer | The free tier allows only a few requests a day per model. Friends switches to other Gemini models by itself and says when they're all used up; turning on billing for your key in Google AI Studio raises the limits a lot |
@@ -134,10 +144,10 @@ The server also emits structured request logs with status codes and duration met
 Friends' tests use Node.js's built-in `node:test` and `node:assert`:
 
 ```bash
-npm test               # unit and HTTP integration tests (over 340, about 20 seconds, no network)
+npm test               # unit and HTTP integration tests (nearly 500, under a minute, no network; a fake Gemini and a fake Ollama play the models)
 npm run check          # every script parses, JSON is valid, the page needs no internet to start
 npm run test:e2e       # the real page in Chrome against the real helper and a fake Ollama: first run, the keyboard,
-                       #   languages and right-to-left, touch targets, zoom (needs Chrome; set CHROME_PATH if it isn't in the usual place)
+                       #   languages and right-to-left, touch targets, zoom, Missions and Specialists (needs Chrome; set CHROME_PATH if it isn't in the usual place)
 npm run test:a11y      # axe-core over the main surfaces, dark and light, English and Arabic
 npm run i18n           # how complete the German and Arabic translations are
 npm audit              # dependencies with known vulnerabilities
@@ -160,9 +170,34 @@ Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): chec
 
 ---
 
+## AI & privacy
+
+Settings → **AI & privacy** has four sections:
+
+- **Your AIs**: add as many AIs as you like, local or cloud, in a few seconds. Paste an API key or a server address and Friends works out which service it is (`sk-ant-…` is Claude, `gsk_…` is Groq, `AIza…` is Gemini, `http://localhost:1234` is LM Studio), or pick one from the list: on this computer **Ollama, LM Studio, llama.cpp, Jan, vLLM, KoboldCpp, text-generation-webui, GPT4All, Docker Model Runner, SGLang** or any server by address; in the cloud **Gemini, ChatGPT, Claude, OpenRouter, Groq, Mistral, DeepSeek, Grok, Together, Fireworks, Perplexity, Cerebras, SambaNova, NVIDIA, Hugging Face, Kimi, Qwen, GLM, Cohere, DeepInfra, Nebius, Scaleway, Hyperbolic** or *any other service* with the OpenAI-style API (a company gateway, Azure's v1 endpoint, a proxy). Friends connects, lists the models (without the ones that can't chat), and you tick one or many; servers running on this computer are found by themselves. Each AI can have its own temperature, longest reply, top-p, daily limit, extra instructions, tools on or off and "can see pictures"; the arrows set the order they are tried in, the star the default, and each row says how much it was used today.
+- **Answers**: which AI answers (one, Auto, Dynamic, Fastest, local only, cloud only) and its rules, whether to try the next AI of the same kind when one fails, the AI for small jobs (follow-ups, summaries), the **language of the answers** (the one you write in, or always one of 17), how it thinks, how much of the chat it sees, and limits for every AI: the longest reply, how long to wait, how often to try again.
+- **Privacy**: Private mode; a live list of **what could leave this computer** right now; what is **hidden from cloud AIs** (keys and passwords, card numbers, email addresses, phone numbers: swapped for a placeholder before a message goes, also in what a tool reads out); whether your memories, notes and what it remembers of past chats are shared with cloud AIs; deleting old chats after a number of days; clearing chats, memories, notes and what it remembers; and the folders and file permissions.
+- **This computer**: what Friends found out by itself (see below), models that suit it, and how hard it may work: a profile (automatic, light, balanced, performance), whether to use the graphics card, and whether to save battery.
+
+Every setting saves as you change it, and only what changed is sent, so a copy of the page that has gone stale never overwrites something the helper changed meanwhile (the specialists, for instance).
+
+### It fits the computer it runs on
+
+Friends looks at the computer by itself (`server/hardware.js`): the processor, memory, graphics cards (NVIDIA through `nvidia-smi`, AMD through ROCm or the kernel, Intel and Apple silicon, Windows through PowerShell), the operating system, whether it is a laptop, desktop, server, single-board computer (Raspberry Pi), WSL or a container with a memory limit, the battery, and the free disk. From that it works out how much memory a local model may use and still run well (a graphics card's memory; about two thirds of a Mac's shared memory; on the processor alone it caps at small models, since a big one would take minutes), and sets sensible defaults:
+
+| It finds | Local AI runs on | Suggested sizes |
+|---|---|---|
+| A graphics card with 6 to 8 GB | The card, one model at a time | about 4B to 9B parameters |
+| A card with 12 to 24 GB | The card | 9B up to a 30B coder or an everyday 27B |
+| A Mac with Apple silicon | Its shared memory | by the memory: 16 GB takes about 9B, 32 GB a 27B |
+| No usable card | The processor (slow) | 4B and smaller; a cloud AI for the heavy parts |
+| A small board or a limited container | The processor | the smallest models |
+
+New local AIs start with a context size and a keep-loaded time that fit; missions run as many at a time as it can take; on battery, repeating missions wait for the charger and a model isn't kept loaded for long. The page also looks at the screen it is shown on (a phone, touch, whether it can draw the 3D robot). The model suggestions were checked on ollama.com on 2026-10-20; `npm run doctor` reads the same things.
+
 ## Private: AI models on your own computer
 
-Open **Settings → AI & privacy**. Under **Privacy & local AI**, Friends lists the model servers it finds running on this computer and adds a model with one click. (Or **Add an AI → Local AI** to give an address yourself.) Nothing is sent to Google or anyone else; chats, notes and files stay here.
+Open **Settings → AI & privacy → Your AIs**. Under **AI on this computer**, Friends lists the model servers it finds running (Ollama, LM Studio, llama.cpp, Jan, vLLM and more) and adds a model, or all of them, with one click. (Or **Add an AI** and pick a server, or paste its address.) Nothing is sent to Google or anyone else; chats, notes and files stay here.
 
 - **Private mode** (the switch there) makes it strict: only a local AI answers, and Gemini, Gemini Live, Google sign-in, Google tools, GitHub search and news are all off. Nothing is sent to the internet, and the page loads nothing from other websites.
 - **Ollama** is used through its own API, so each AI has a **context size** (default 8192 tokens; Ollama's own default of 4096 cuts long chats off) and **keep the model loaded** (how long it stays in memory). Other servers use their own settings.
@@ -171,7 +206,7 @@ It works with every server that offers the OpenAI-compatible API, open source or
 
 ```bash
 ollama pull llama3.1      # example; any model works
-npm start                 # then: Settings → AI & privacy → Add an AI → Local AI
+npm start                 # then: Settings → AI & privacy → Your AIs: it's found by itself
 ```
 
 What works with a local AI: chat with streaming replies, memory and notes, file tools, drafts, chat summaries, follow-up suggestions, edit/regenerate, images (with a vision model), and tool use (models that can't use tools still chat). Reasoning models' `<think>` text is hidden. What's different:
@@ -184,7 +219,7 @@ What works with a local AI: chat with streaming replies, memory and notes, file 
 
 ## Choosing the AI: local, cloud, or both
 
-The model menu next to the message box (and **Settings → AI & privacy → Which AI answers**) has these modes:
+The model menu next to the message box (and **Settings → AI & privacy → Answers**) has these modes:
 
 | Mode | What it does |
 |---|---|
@@ -208,7 +243,7 @@ Gemini's free tier allows only a small number of requests per model per day (for
 - A model whose quota is used up (or that's busy) is skipped until Google says it's back, and the next one answers: newer and older Flash models, then the light ones. When every model is out, it says so and when they're back.
 - Background jobs (follow-up suggestions, memories of conversations, summaries, the briefing) use a light model with its own quota, so they don't eat into your replies.
 - Gemini Live tries its other voice models when one runs out, before falling back to Studio voice.
-- Replies think only briefly, so the first words come in about 2 seconds; **Deep** (Settings → AI & privacy → How it thinks) thinks at length when you need it.
+- Replies think only briefly, so the first words come in about 2 seconds; **Deep** (Settings → AI & privacy → Answers → How it thinks) thinks at length when you need it.
 
 For a lot of daily use, turn on billing for your key in Google AI Studio, or add a local AI for the small jobs.
 
@@ -226,27 +261,70 @@ Switch with the names at the top of the chat or in voice mode's top bar; in voic
 
 - **They remember your conversations.** When a chat or voice conversation has been quiet for 15 minutes, a short memory of it is written (what you talked about, how you seemed, what's still open). New conversations start with the latest few; `recall_conversations` looks further back. See and delete them in Settings → Memory.
 - **They follow up**: things worth asking about later ("how did the interview go?") are kept for two weeks and brought up when it fits.
-- **Never boring**: 17 things to do together (debate, would you rather, build a story, quiz, hot takes, two truths and a lie, 20 questions, deep questions, role-play, German or English practice, content ideas, riddles, recommendation duel, plan my day, talk about my day, surprise me) on the start screen and in voice mode's 🎲 menu. They bring their own opinions and stories, vary how they talk, and pick up topics from "What you love talking about".
+- **Never boring**: 17 things to do together (debate, would you rather, build a story, quiz, hot takes, two truths and a lie, 20 questions, deep questions, role-play, German or English practice, content ideas, riddles, recommendation duel, plan my day, talk about my day, surprise me) on the start screen (three at a time) and in voice mode's activities menu. They bring their own opinions and stories, vary how they talk, and pick up topics from "What you love talking about".
 - **They speak first** when voice mode opens, picking up from last time.
 - **They take turns like a person.** The *Conversation style* (Settings → Characters → Voice conversation, or the pill at the top of voice mode) sets how much they talk: **Listener** only answers when you speak to it directly and waits a long time (for talking on camera), **Balanced** listens while you explain and answers when it makes sense, **Chatty** answers fast and joins in. Cut them off with the **Space bar** (or any key you set) or by talking over them (*Interrupting by voice*: Easy, Normal, Hard; choose Hard on speakers). Muting (**M**) also stops what they're saying.
 
 **ON AIR — co-host mode.** Press **ON AIR** in voice mode (it also turns on by itself in filming mode and while recording). The character knows it's on camera and co-hosts in the format you pick (podcast, reaction, Q&A, debate, explainer, storytime): it talks to the audience too, keeps turns tight, sets you up, and helps with the hook and the sign-off. With "Nothing private on camera" (the default), your memories, notes, earlier conversations, tasks, journal, emails, calendar, files and connected accounts are left out of what it knows and can use. Gemini Live switches in place, without dropping the conversation.
 
+## Home, Missions and Today
+
+The sidebar has three places, and nothing else competes with them:
+
+- **Talk** (Home): the companion. The robot greets you, and below it are one message box and a mic button for voice. **+** in the message box attaches a file or looks something up (Calendar, Gmail, Drive, News, GitHub). Atlas and Mira switch at the top. Once you talk, the robot sits in a corner of the chat.
+- **Missions**: goals the assistant carries out in the background (see [Missions](#missions)).
+- **Today**: your day in one calm place (below).
+
+Everything else lives in **Settings** (a full view): *You and your companion* (Appearance, Characters, Memory, Robot), *AI* (AI & privacy), *Extras* (Connected apps, Telegram, Notes vault, Daily life) and *Your data* (Data & backups). The addresses `#today`, `#missions`, `#missions/<id>`, `#voice`, `#chat/<id>` and `#settings` still open what they say (the tray and notifications use them), and **Alt+1**, **Alt+2** and **Alt+3** switch places.
+
+## Missions
+
+A mission is a goal the assistant carries out for you in the background, with your approval at the one place it matters: before it starts.
+
+**Try your first one.** Open **Missions** (Alt+2), press **New mission**, and write something like *Research the three best budget laptops for video editing and write me a short report*. Or just say it to your companion in the message box: a message that sounds like a goal gets a small **Make it a mission** offer. Then:
+
+1. **A few questions**, only what it can't decide itself (leave one empty to let it choose).
+2. **The plan**: steps, each with the specialist and tools it uses, what goes in and what comes out, and what it may do: **reads**, **changes**, **sends**, **deletes**, **runs commands**. Every side effect is spelled out (who gets the email and its subject, which files and folders, which commands, what gets installed). You can edit or remove steps. The limits (minutes, steps, cloud calls) are on the plan too.
+3. **Approve and run.** It works in the background: the robot shows *working*, Missions shows progress, and you get a notification (and a Telegram message) at the milestones: a plan to approve, a question, halfway, done, trouble.
+4. **The report**: a note in your notes vault (or the local notes folder) and on the mission's page, with what was done, what was found or made, and what didn't work.
+
+**Safety, in plain terms**
+
+- Approving covers exactly the actions the plan lists. Anything else that sends, deletes or runs a command **stops the mission and asks you** (in the app and on Telegram). Re-planning inside what you approved doesn't need a second approval.
+- Files only in the folders you allow (Settings → AI & privacy) and the mission's own folder (default `~/friends-workspace/<mission>`). Deleting goes to the trash. Commands run in the mission's folder with a time limit and without your keys; `sudo`, installs and system settings **always** ask.
+- **Stop** (the big button, or `/stop` on Telegram) works at once. Every tool call and every model used is in the mission's **audit log**.
+- **Private mode** keeps a mission local; a step that needs the cloud pauses instead of using it.
+- A mission is saved as it goes (`<data folder>/missions/<id>/`). If the computer restarts or the app crashes, it carries on; a step that had already sent or deleted something asks before it would do it again.
+
+**What it's good at:** research and reports; emails and messages (Gmail, Telegram, Calendar: each send is in the plan); laptop and file work (organise Downloads, batch rename, small scripts, watching the system with alerts); building software (a project folder with code, tests and a commit).
+
+**Repeating and triggered.** In the new-mission form choose *Repeat*: every morning, every Friday, every few hours, when a file appears in a folder, when the disk fills up. They run the plan you approved, also with the window closed (they live in the tray), and are managed under Missions → Repeating. **Watch my computer** alerts you when the processor, memory, a disk, the graphics card's temperature or a service goes over a limit you set (it uses no model).
+
+**Telegram.** Settings → Extras → Telegram: paste your bot's token (kept in the system keyring, never in a file) and the user ids that may talk to it. Then `/mission <goal>` starts one, the plan arrives with **Approve** and **Stop** buttons, `/missions` shows what's going on, and `/stop` stops everything.
+
+**Settings → AI → Missions** has the on/off switch, the workspace folder, the limits, and which Gemini models plan and do the routine steps. When Gemini's free limit is reached, a mission waits and carries on by itself (or you press *Try again now*) instead of failing.
+
+## Specialists: small models that fit your computer
+
+Settings → AI → **Specialists**. A mission's steps go to the role that fits: *General*, *Coding*, *Writing and social media*, *Research summaries*, *Vision* and *Embeddings* (searching your notes by meaning), or roles you add. Each role has a model from the ones **Ollama** has installed (or one you **pull** there, with a progress bar), its own instructions, a context size, and a smaller fallback. There are no model names built in; **Use the suggestions** picks ones that fit what your computer can take (checked on ollama.com on 2026-10-20; for a 6 GB card that is a 4B everyday model, a 7B coder and a small embeddings model, for 12 GB a 9B and a 14B coder, for 24 GB a 27B and a 30B coder; `npm run doctor` says what's missing).
+
+Friends manages the card for you: only **one heavy model is loaded at a time**. Before a step the loaded model is unloaded and the next one is loaded in the best place: on the card if it fits (its weights plus the memory for its context plus a margin, against what's free), split with the processor if only part fits, on the processor alone if it doesn't, or on the role's smaller fallback. Steps for the same specialist run together, and the next one is preloaded while Gemini thinks. The page shows the card, what is loaded now and why, and a badge per role (*fits the card*, *part runs on the processor*, *too big*). A specialist step that fails, is too slow or doesn't pass the manager's check goes to **Gemini** (the manager), unless the mission is Private. **Test** loads a role's model and asks it for a sentence.
+
 ## Daily life
 
-**Today** in the sidebar (and Settings → Daily life). Just talk to it ("remind me in 20 minutes to stretch", "add call the bank to my list for Friday", "I went to the gym", "what's on today?") or use the panel:
+**Today** in the sidebar. Just talk to it ("remind me in 20 minutes to stretch", "add call the bank to my list for Friday", "I went to the gym", "what's on today?") or use the page: one box adds a task, a reminder or an event, and under it are what's coming up, your tasks, habits, a focus timer, and a line about how you are. "All tasks, reminders, calendar, habits and journal" opens the rest.
 
 - **Tasks** with lists, due dates and times, priorities. Overdue and today's tasks show as a badge.
 - **Reminders**, once or repeating (daily, weekdays, weekly, monthly, yearly), with snooze. They pop up in the page, as desktop notifications (also with the window closed, from the tray), and in voice mode your character says them.
 - **Habits** with streaks and the last 7 days, checked off in one tap.
 - **Journal** entries with a mood, and a quick "How are you today?" line.
-- **Daily briefing**: your character writes your day in one message (calendar, reminders, tasks, habits, weather, headlines, follow-ups). Press ☀️ in Today, ask for it, or have it waiting as a new chat every morning.
+- **Daily briefing**: your character writes your day in one message (calendar, reminders, tasks, habits, weather, headlines, follow-ups). Press **Daily briefing** in Today, ask for it, or have it waiting as a new chat every morning.
 
 Everything stays in `~/.config/friends/life/`.
 
 ## Connected apps
 
-Settings → **Connected Apps**. Each app has its own card: switch it on, set it up, test it.
+Settings → Extras → **Connected apps**. Each app has its own card: switch it on, set it up, test it.
 
 | App | Needs | What the AI can do |
 |---|---|---|
@@ -268,15 +346,6 @@ Tokens are kept in your system keyring (never in backups or sent to the page). G
 **MCP** (Model Context Protocol) connects thousands of apps: add a server that runs on this computer (a command such as `npx -y @playwright/mcp@latest`) or at an address (Streamable HTTP, with an optional token). There are ready-made starts for a browser (Playwright), code docs (Context7), Git, files, a knowledge graph, fetch, and GitHub's own MCP server. Choose per app: always ask, ask except for what only reads, or never ask. In Private mode only apps you mark as working on this computer are used.
 
 A local AI gets the essential tools (Settings → AI & privacy → Tools for a local AI), so small models stay focused; Gemini gets all of them.
-
-## Builder mode
-
-Settings → **Builder**. Build websites, apps and SaaS products with your character as a senior developer, inside the folders you allow in AI & privacy → Permissions and file access.
-
-- **Starters**: a website, a SaaS landing page, a Node.js API with tests, a React app (Vite), and Next.js (through `create-next-app`).
-- **Code tools**: change part of a file, search code, read lines, see the project tree; plus the file tools (create, read, edit, move, delete).
-- **Running commands** in five modes: **Off**, **Suggest only** (it gives you the command), **Ask every time**, **Smart** (safe everyday commands such as tests, builds and `git status` run by themselves when they only touch the allowed folders; everything else asks), and **Auto** (everything runs except risky commands, which always ask: `sudo`, deleting outside the project, `git push`, `ssh`, piping a download into a shell, reading key files, and more). Add your own "may also run" and "never without asking" lists and a time limit. API keys are never passed to commands, and in Private mode every command asks.
-- **Background processes and live preview**: dev servers keep running and their address comes back as a link; `preview_site` serves a website folder on this computer. Settings → Builder lists what's running, with Stop.
 
 ## Features & Capabilities
 
@@ -407,7 +476,7 @@ Root                  the whole robot, standing on the ground (optional)
 
 ## Design, accessibility and languages
 
-- **Languages.** The interface is in English, German and Arabic (Settings → Appearance → Language; "Automatic" follows the browser; the choice reloads the page in the new language). English is the source text: `t("Open settings")` returns it, or its translation from `src/js/i18n/de.js` / `ar.js`. The static page is translated once on load; plurals use `Intl.PluralRules` (Arabic has six forms); numbers and dates follow the language (Arabic uses 0-9). Right-to-left is a layout, not a patch: the stylesheet uses logical properties, each paragraph of a reply takes its own direction, and code and formulas stay left to right. Anything you add, run `npm run i18n` (`-- --missing` lists what needs translating); `test/i18n.test.js` fails until every text has a translation in every language. To add a language, add its file (and an entry in `src/js/i18n-core.mjs`).
+- **Languages.** The interface is in English, German and Arabic (Settings → Appearance → Language; "Automatic" follows the browser; the choice reloads the page in the new language). English is the source text: `t("Open settings")` returns it, or its translation from `src/js/i18n/de.js` / `ar.js`. The static page is translated once on load; plurals use `Intl.PluralRules` (Arabic has six forms); numbers and dates follow the language (Arabic uses 0-9). Right-to-left is a layout, not a patch: the stylesheet uses logical properties, each paragraph of a reply takes its own direction, and code and formulas stay left to right. Anything you add, run `npm run i18n` (`-- --missing` lists what needs translating); `test/i18n.test.js` fails until every text has a translation in every language. To add a language, add its file (and an entry in `src/js/i18n-core.mjs`). What the helper itself says (the Telegram bot, notifications, why an AI didn't answer) is written the same way on the server, as `say("English text {name}", { name })` and `sayN(one, other, n)` from `server/say.js`; it uses the same catalogs, and the language is the one picked in Settings, or on Automatic the browser's (the page sends it with every request, and it is remembered for the next start).
 - **Design system.** Tokens for colour, type, space, radius, elevation, motion and layers in `src/css/tokens.css`; the stylesheet is 19 small files. See [`docs/design/design-system.md`](docs/design/design-system.md). The audit that led to it, with screenshots before and after in the three languages: [`docs/design/audit.md`](docs/design/audit.md).
 - **Accessibility check.** `npm run test:a11y` runs [axe-core](https://github.com/dequelabs/axe-core) (a development dependency) over the main surfaces (first run, start, chat, model menu, search, every Today tab, every Settings section, voice, filming), in dark and light, English and Arabic, with a fake local AI, and fails on serious or critical violations. `--langs en,de,ar`, `--themes dark`, `--accent "#f59e0b"` and `--all-impacts` narrow or widen it. Needs Chrome (`CHROME_PATH`).
 - **Screenshots.** `npm run design:shots <name>` captures every surface at 1440, 1024, 768 and 390 px, dark and light, in the languages you name (`--langs en,de,ar`), into `docs/design/screenshots/<name>/`.
@@ -421,7 +490,10 @@ Root                  the whole robot, standing on the ground (optional)
   - `src/js/filming.js` — filming mode. `src/models/face/` — the face detector model for Follow my face.
   - three.js and MediaPipe are served from `node_modules` under `/vendor/`; an import map (allowed by its hash in the page's security policy) names `three` and `three/addons/`.
 - `server/` — Local Node.js service providing Gemini API integration (`gemini.js`) and local/OpenAI-compatible AI servers (`openai.js`), file sandboxing, and data persistence. `characters.js` (the characters), `episodes.js` (memory of conversations), `activities.js`, `life.js` and `briefing.js` (daily life), `local-notes.js` (Markdown notes vault engine), `telegram.js` (Telegram companion bot engine), `connectors/` (one module per app), `mcp.js` (the MCP client), `net.js` (safe web fetching), `files.js` (sandboxed file tools), `backup.js`. `live.js` bridges voice mode to Gemini Live over a WebSocket (`/api/live`), so the API key stays on your computer. `robot.js` checks and keeps your own robot model and asks Gemini for Smarter moods; the robot tools live in `tools.js`.
+  - `server/missions/` — the mission engine: `risk.js` (risk classes, what an approval covers), `plan.js` (turning the manager's plan into steps with explicit side effects), `manager.js` (the prompts: clarify, plan, check, report), `runner.js` (the state machine, recovery after a restart, approvals, limits, stop), `toolbelt.js` (the tools a step may use, behind the gate: audit, trash, working folder, scrubbed environment), `cloud.js` (the serial Gemini queue, backoff, the daily count), `automations.js` (repeating and triggered missions, system watches), `store.js` (missions on disk).
+  - `server/providers.js` is the one interface to an AI (Gemini, Ollama, OpenAI-compatible servers). `server/specialists.js`, `specialist-roles.js`, `specialist-suggestions.js` and `specialists-api.js` are the roles and what Settings shows; `server/models.js` is the queue that loads one model at a time and `server/vram.js` decides where it runs (`nvidia-smi`, Ollama's `/api/ps`); `server/embeddings.js` is the notes search by meaning; `server/router.js` picks the model for a step.
 - Data lives in `~/.config/friends/` (or `FRIENDS_DATA_DIR`):
+  - `missions/` — one folder per mission (`mission.json`, `audit.jsonl`, `report.md`) and `automations.json`; `embeddings/` — the notes' numbers for search by meaning.
   - `chats/` — JSON storage for conversations (including voice turns, drafts, and a summary of the older part of long chats).
   - `memory/` — AI long-term memory notes.
   - `episodes/` — what it remembers of each conversation, and the follow-ups.

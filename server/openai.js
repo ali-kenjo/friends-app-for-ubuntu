@@ -4,17 +4,23 @@
 // network, or anywhere you point it at). It offers the same functions as
 // gemini.js, so the rest of the helper doesn't care which one answers.
 //
-// create({ baseUrl, speechUrl, speechModel }) → { listModels, checkModel,
+// create({ baseUrl, speechUrl, speechModel, cloud, label, quirks }) → { listModels, checkModel,
 //   streamChat, generateText, transcribe, speak }
 // The API key is optional (most local servers have none) and is only ever
-// sent to this brain's own address.
+// sent to this brain's own address. With cloud set it's a service on the internet (OpenAI, Claude, Groq,
+// OpenRouter…, see services.js) and the quirks say what that service needs (no temperature, a different name
+// for the token limit, no tools, a fixed list of models). Whatever else a service refuses (a temperature, a
+// token limit's name, a JSON mode) is learned from its answer once and left out afterwards.
 const logger = require("./logger");
 const voice = require("./voice");
+const { say } = require("./say");
 
 class LocalAiError extends Error {}
 
 // Models in the list that can't chat
 const NOT_CHAT = /embed|rerank|whisper|tts|stt|bge-|nomic-bert/i;
+// A cloud service lists everything it has: pictures, speech, moderation too
+const NOT_CHAT_CLOUD = /dall-e|moderation|davinci|babbage|-image|image-|realtime|transcribe|audio|search-preview|computer-use|sora|imagen|veo|guard/i;
 
 // ---------- Messages ----------
 // Gemini-shaped contents ({ role, parts }) → OpenAI messages. Same-role
@@ -125,13 +131,59 @@ const stripThinking = (text) => {
 };
 
 // ---------- The connection ----------
-function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
+function create({ baseUrl, speechUrl = "", speechModel = "", cloud = false, label = "", quirks = {} } = {}) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
   const speechBase = String(speechUrl || "").replace(/\/+$/, "");
   const where = base.replace(/^https?:\/\//, "").replace(/\/v1$/, "");
+  const who = label || where;
   const noTools = new Set(); // models that said they can't take tools: not asked again
+  const learned = new Map(); // model → { drop: Set of body fields it refused, tokens: the name it wants for the token limit }
 
-  const headers = (key, extra = {}) => ({ ...(key ? { Authorization: `Bearer ${key}` } : {}), ...extra });
+  const headers = (key, extra = {}) => ({ ...(key ? { Authorization: `Bearer ${key}` } : {}), ...(quirks.headers || {}), ...extra });
+
+  // What this service takes: the quirks, and what it has refused before
+  function shape(body) {
+    const out = { ...body };
+    const l = learned.get(body.model);
+    if (quirks.noTemperature) delete out.temperature;
+    if (quirks.noTools) delete out.tools;
+    const tokens = l?.tokens || quirks.tokensParam || "max_tokens";
+    const given = out.max_tokens ?? out.max_completion_tokens;
+    delete out.max_tokens;
+    delete out.max_completion_tokens;
+    if (given !== undefined) out[tokens] = given;
+    for (const field of l?.drop || []) delete out[field];
+    return out;
+  }
+
+  // The change that answers a 400 ("temperature isn't supported", "use max_completion_tokens"…), or null when there is none
+  function adapt(body, detail) {
+    const l = learned.get(body.model) || { drop: new Set(), tokens: "" };
+    const text = String(detail || "");
+    let changed = false;
+    const drop = (field) => {
+      if (body[field] !== undefined && !l.drop.has(field)) {
+        l.drop.add(field);
+        changed = true;
+      }
+    };
+    if (/max_tokens/i.test(text) && /max_completion_tokens/i.test(text)) {
+      const want = body.max_completion_tokens !== undefined ? "max_tokens" : "max_completion_tokens";
+      if (l.tokens !== want && (body.max_tokens !== undefined || body.max_completion_tokens !== undefined)) {
+        l.tokens = want;
+        changed = true;
+      }
+    } else if (/max_tokens|max_completion_tokens/i.test(text)) drop(body.max_completion_tokens !== undefined ? "max_completion_tokens" : "max_tokens");
+    if (/temperature/i.test(text)) drop("temperature");
+    if (/top_p/i.test(text)) drop("top_p");
+    if (/response_format|json_object|json mode/i.test(text)) drop("response_format");
+    if (/\btools?\b|function/i.test(text) && body.tools) {
+      noTools.add(body.model);
+      drop("tools");
+    }
+    if (changed) learned.set(body.model, l);
+    return changed;
+  }
 
   async function toError(res, model) {
     let detail = "";
@@ -145,16 +197,19 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
         detail = text.slice(0, 300);
       }
     } catch {}
-    logger.warn(`Local AI ${where} answered ${res.status}: ${detail || res.statusText}`);
+    logger.warn(`AI ${where} answered ${res.status}: ${detail || res.statusText}`);
     let err;
-    if (res.status === 401 || res.status === 403) err = new LocalAiError("This AI server wants an API key, or didn't accept yours. Check it in Settings → AI & privacy.");
+    if (res.status === 401 || res.status === 403) err = new LocalAiError(cloud ? say("{who} didn't accept the API key. Check it in Settings → AI & privacy.", { who }) : say("This AI server wants an API key, or didn't accept yours. Check it in Settings → AI & privacy."));
+    else if (res.status === 402 || (cloud && /insufficient|quota|billing|credit|balance/i.test(detail))) err = new LocalAiError(`${say("{who} says there's no credit or quota left on this key.", { who })} ${detail ? detail.slice(0, 160) : ""}`.trim());
+    else if (res.status === 429) err = new LocalAiError(say("{who} is limiting requests right now (too many, or a daily limit). Wait a moment, or use another AI.", { who }));
     else if (res.status === 404 || /model .*(not found|does not exist)|not found, try pulling/i.test(detail)) {
-      err = new LocalAiError(`The model "${model || ""}" isn't available on this AI server. ${/ollama|11434/i.test(where + detail) ? `Get it with: ollama pull ${model || "<model>"}` : "Load it in the server, or pick another model in Settings → AI & privacy."}`);
-    } else if (/context|too long|too many tokens|exceeds/i.test(detail)) err = new LocalAiError("The conversation doesn't fit into the model's context window. Start a new chat, lower the context window in Settings → AI & privacy, or raise the context size in your AI server.");
-    else if (res.status >= 500) err = new LocalAiError(`The AI server had a problem: ${detail || res.status}`);
-    else err = new LocalAiError(detail || `The AI server returned an error (${res.status}).`);
+      err = new LocalAiError(`${say("The model \"{model}\" isn't available on this AI server.", { model: model || "" })} ${/ollama|11434/i.test(where + detail) ? say("Get it with: ollama pull {model}", { model: model || "<model>" }) : say("Load it in the server, or pick another model in Settings → AI & privacy.")}`);
+    } else if (/context|too long|too many tokens|exceeds/i.test(detail)) err = new LocalAiError(say("The conversation doesn't fit into the model's context window. Start a new chat, lower the context window in Settings → AI & privacy, or raise the context size in your AI server."));
+    else if (res.status >= 500) err = new LocalAiError(say("The AI server had a problem: {detail}", { detail: detail || res.status }));
+    else err = new LocalAiError(detail || say("The AI server returned an error ({status}).", { status: res.status }));
     err.status = res.status;
     err.detail = detail;
+    err.retryable = res.status === 429 || res.status >= 500;
     return err;
   }
 
@@ -164,8 +219,8 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
       res = await fetch(url, options);
     } catch (err) {
       if (err.name === "AbortError") throw err;
-      if (err.name === "TimeoutError") throw new LocalAiError(`The AI server at ${where} didn't answer in time.`);
-      throw new LocalAiError(`Couldn't reach the AI server at ${where}. Is it running?`);
+      if (err.name === "TimeoutError") throw Object.assign(new LocalAiError(cloud ? say("{who} didn't answer in time.", { who }) : say("The AI server at {where} didn't answer in time.", { where })), { retryable: true });
+      throw Object.assign(new LocalAiError(cloud ? say("Couldn't reach {who}. Check your internet connection.", { who }) : say("Couldn't reach the AI server at {where}. Is it running?", { where })), { retryable: true });
     }
     if (!res.ok) throw await toError(res, model);
     return res;
@@ -174,26 +229,30 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
   const post = (path, key, body, signal, model) =>
     request(`${base}${path}`, { method: "POST", signal, headers: headers(key, { "Content-Type": "application/json" }), body: JSON.stringify(body) }, model);
 
-  // A server that can't take tools (the model says so) gets the request again without them
+  // A request that is shaped for this service; when it answers 400 about a field, that field is changed or left out
+  // (and remembered for this model), and the request goes again: at most 4 times, each with something different
   async function postChat(key, body, signal) {
-    try {
-      return await post("/chat/completions", key, body, signal, body.model);
-    } catch (err) {
-      if (body.tools && err.status === 400 && /tool|function/i.test(err.detail || "")) {
-        logger.warn(`${body.model} can't use tools; chatting without them`);
-        noTools.add(body.model);
-        const { tools, ...rest } = body;
-        return post("/chat/completions", key, rest, signal, body.model);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await post("/chat/completions", key, shape(body), signal, body.model);
+      } catch (err) {
+        if (err.status === 400 && attempt < 4 && adapt(body, err.detail)) {
+          logger.info(`${who} refused part of the request (${String(err.detail).slice(0, 100)}); trying again without it`);
+          continue;
+        }
+        throw err;
       }
-      throw err;
     }
   }
 
   async function listModels(key) {
+    // A service with no list of its own: the models it is known to have (any other name can still be typed)
+    if (quirks.staticModels) return [...quirks.staticModels];
     const res = await request(`${base}/models`, { headers: headers(key), signal: AbortSignal.timeout(15000) });
     const data = await res.json();
     const items = Array.isArray(data) ? data : data.data || data.models || [];
-    return items.map((m) => (typeof m === "string" ? m : m.id || m.name)).filter((id) => typeof id === "string" && id && !NOT_CHAT.test(id));
+    const ids = items.map((m) => (typeof m === "string" ? m : m.id || m.name)).filter((id) => typeof id === "string" && id && !NOT_CHAT.test(id) && !(cloud && NOT_CHAT_CLOUD.test(id)));
+    return cloud ? [...new Set(ids)].sort((a, b) => a.localeCompare(b)) : ids;
   }
 
   // A tiny real request, so a model that's listed but can't load is noticed
@@ -201,9 +260,9 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
     await postChat(key, { model, messages: [{ role: "user", content: "Hi" }], max_tokens: 8, stream: false });
   }
 
-  async function generateText({ key, model, system, prompt, temperature = 0.3, signal }) {
+  async function generateText({ key, model, system, prompt, temperature = 0.3, maxTokens, topP, signal, json = false }) {
     const messages = toMessages([{ role: "user", parts: [{ text: prompt }] }], system);
-    const res = await postChat(key, { model, messages, temperature, stream: false }, signal);
+    const res = await postChat(key, { model, messages, temperature, stream: false, ...(maxTokens ? { max_tokens: maxTokens } : {}), ...(topP !== undefined ? { top_p: topP } : {}), ...(json ? { response_format: { type: "json_object" } } : {}) }, signal);
     const data = await res.json();
     return stripThinking(String(data.choices?.[0]?.message?.content || ""));
   }
@@ -257,7 +316,7 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
 
   // Streams a reply and runs tool calls, like gemini.streamChat: at most 8
   // rounds, plus up to 4 in which only free tools (the robot's) were called.
-  async function streamChat({ key, model, contents, system, temperature, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
+  async function streamChat({ key, model, contents, system, temperature, maxTokens, topP, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
     const messages = toMessages(contents, system);
     let rounds = 0;
     let freeRounds = 0;
@@ -266,7 +325,9 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
       if (free ? ++freeRounds > 4 : ++rounds > 8) return;
       const body = { model, messages, stream: true };
       if (temperature !== undefined) body.temperature = temperature;
-      if (tools.length && !noTools.has(model)) body.tools = toTools(tools);
+      if (maxTokens) body.max_tokens = maxTokens;
+      if (topP !== undefined) body.top_p = topP;
+      if (tools.length && !noTools.has(model) && !quirks.noTools) body.tools = toTools(tools);
 
       const calls = await readStream(await postChat(key, body, signal), onText);
       if (!calls.length) return;
@@ -299,12 +360,12 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
     return own ? { base: own, own: true } : null;
   }
 
-  const NO_VOICE = "Listening needs local voice. Set it up in Settings → AI & privacy (Local voice), or fill in a speech server under Voice in this brain's settings. You can also use a Gemini brain for voice.";
+  const noVoice = () => say("Listening needs local voice. Set it up in Settings → AI & privacy (Local voice), or fill in a speech server under Voice in this brain's settings. You can also use a Gemini brain for voice.");
 
   // Speech to text: POST /audio/transcriptions, as OpenAI, LocalAI, speaches and Whisper servers offer it
   async function transcribe({ key, audio }) {
     const target = await speechTarget();
-    if (!target) throw new LocalAiError(NO_VOICE);
+    if (!target) throw new LocalAiError(noVoice());
     const form = new FormData();
     form.append("file", new Blob([Buffer.from(audio, "base64")], { type: "audio/wav" }), "speech.wav");
     form.append("model", speechModel || (target.own ? "whisper" : "whisper-1"));
@@ -328,7 +389,7 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
     return Buffer.from(await res.arrayBuffer());
   }
 
-  return { name: "local", listModels, checkModel, generateText, streamChat, transcribe, speak };
+  return { name: cloud ? "cloud" : "local", listModels, checkModel, generateText, streamChat, transcribe, speak };
 }
 
 // "http://localhost:11434" → "http://localhost:11434/v1" (what most servers expect)
@@ -336,21 +397,36 @@ function create({ baseUrl, speechUrl = "", speechModel = "" } = {}) {
 function normalizeUrl(value, { required = true, protocol = "openai" } = {}) {
   const text = String(value || "").trim();
   if (!text) {
-    if (required) throw new Error("Enter the address of your AI server, e.g. http://127.0.0.1:11434/v1");
+    if (required) throw new Error(say("Enter the address of your AI server, e.g. http://127.0.0.1:11434/v1"));
     return "";
   }
   let url;
   try {
     url = new URL(/^[a-z]+:\/\//i.test(text) ? text : `http://${text}`);
   } catch {
-    throw new Error(`"${text}" isn't a valid address.`);
+    throw new Error(say("\"{text}\" isn't a valid address.", { text }));
   }
-  if (!["http:", "https:"].includes(url.protocol)) throw new Error("The address must start with http:// or https://");
-  if (url.username || url.password) throw new Error("Put the API key in the key field, not in the address.");
+  if (!["http:", "https:"].includes(url.protocol)) throw new Error(say("The address must start with http:// or https://"));
+  if (url.username || url.password) throw new Error(say("Put the API key in the key field, not in the address."));
   let pathname = url.pathname.replace(/\/+$/, "");
   if (protocol === "ollama") return `${url.origin}${pathname.replace(/\/(v1|api)$/, "")}`;
   if (!pathname) pathname = "/v1";
   return `${url.origin}${pathname}`;
 }
 
-module.exports = { create, normalizeUrl, toMessages, toTools, ThinkFilter, stripThinking, LocalAiError };
+// The address of a cloud service as it is: https, no key in it, no /v1 added (each service has its own path)
+function cloudUrl(value) {
+  const text = String(value || "").trim();
+  if (!text) throw new Error(say("Enter the address of the service, e.g. https://api.example.com/v1"));
+  let url;
+  try {
+    url = new URL(/^[a-z]+:\/\//i.test(text) ? text : `https://${text}`);
+  } catch {
+    throw new Error(say("\"{text}\" isn't a valid address.", { text }));
+  }
+  if (!["http:", "https:"].includes(url.protocol)) throw new Error(say("The address must start with https://"));
+  if (url.username || url.password) throw new Error(say("Put the API key in the key field, not in the address."));
+  return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+}
+
+module.exports = { create, normalizeUrl, cloudUrl, toMessages, toTools, ThinkFilter, stripThinking, LocalAiError };

@@ -1,5 +1,5 @@
 // Which AI answers a message: a local one (on this computer), a cloud one
-// (Gemini), or both, by the mode in Settings → AI & privacy.
+// (Gemini, ChatGPT, Claude…), or both, by the mode in Settings → AI & privacy.
 //
 //   fixed    the one brain chosen in the model menu (no routing)
 //   local    only a local AI
@@ -51,7 +51,9 @@ function cloudReason({ text = "", attachments = [], messages = [], settings, loc
     const pdf = attachments.find((a) => a.mime === "application/pdf");
     if (pdf) return `${pdf.name} is a PDF, which local models can't read`;
     const image = attachments.find((a) => String(a.mime).startsWith("image/"));
-    if (image && !(local && VISION.test(local.model))) return "This has a picture, and the local model can't see pictures";
+    // An AI can be told it sees pictures (or doesn't) in its own settings; otherwise its name is all there is to go by
+    const sees = local?.params?.vision === "yes" || (local?.params?.vision !== "no" && local && VISION.test(local.model));
+    if (image && !sees) return "This has a picture, and the local model can't see pictures";
   }
   if (rules.longChats) {
     const window = settings.aiControl?.contextWindow || 20;
@@ -89,7 +91,7 @@ function plan(input) {
           ? deps.privateMode
             ? "Private mode is on, so only a local AI can answer. Add one in Settings → AI & privacy."
             : `${how} needs a local AI. Add one in Settings → AI & privacy.`
-          : `${how} needs a cloud AI (Gemini). Add one in Settings → AI & privacy.`
+          : `${how} needs a cloud AI. Add one in Settings → AI & privacy.`
       );
     }
     return step(kind, "", brain);
@@ -103,7 +105,12 @@ function plan(input) {
   if (mode === "fixed") {
     const chosen = deps.chosen(preferId);
     if (!chosen) return { ...base, steps: [] };
-    return { ...base, steps: [{ kind: chosen.kind, brain: chosen, reason: "The AI you chose" }] };
+    const steps = [{ kind: chosen.kind, brain: chosen, reason: "The AI you chose" }];
+    // "If it fails, try the next one" (Settings → Answers): only of the same kind, so nothing local goes to the cloud
+    if (settings.routing.fallback === "same-kind" && deps.others) {
+      for (const other of deps.others(chosen.kind, chosen.id)) steps.push({ kind: other.kind, brain: other, reason: "The AI you chose didn't answer, so the next one was tried" });
+    }
+    return { ...base, steps };
   }
 
   if (mode === "local") {
@@ -145,6 +152,40 @@ function plan(input) {
   }
   const why = voice && settings.routing.auto.voiceLocal ? "Voice answers stay local, for speed" : "Short enough for the local AI";
   return { ...flags, steps: [localStep(why), cloudStep(dynamic ? "The local AI didn't manage" : "The local AI failed")] };
+}
+
+// ---------- A step of a mission ----------
+// Which AI runs a step: the specialist of its role (a local model), and the manager's fast model to take over
+// when the specialist fails, is too slow or its answer doesn't pass the check (escalation). A step whose role is
+// "manager" (hard reasoning, architecture) goes to the manager's strong model, with the general local model as
+// the way out. In Private mode there is no cloud: a step that can't be done locally is a RouteError, and the
+// mission pauses instead of using the cloud.
+//   deps: { local(role) → brain|null, cloud(tier: "plan" | "fast") → brain|null }
+// Returns the same shape as plan(), so execute() runs it (with { track: false }: a mission's trouble doesn't
+// count as the chat's).
+function planStep({ role = "general", privateMode = false, deps, label = role }) {
+  const base = { mode: "mission", race: false, escalate: false, askCloud: false };
+  const step = (kind, brain, reason) => ({ kind, brain, reason });
+  const steps = [];
+  if (role === "manager") {
+    const cloud = privateMode ? null : deps.cloud("plan");
+    const local = deps.local("general");
+    if (cloud) steps.push(step("cloud", cloud, "The manager takes the hard reasoning"));
+    if (local) steps.push(step("local", local, cloud ? "The manager wasn't available" : "Private mode: the general local model"));
+  } else {
+    const local = deps.local(role);
+    const cloud = privateMode ? null : deps.cloud("fast");
+    if (local) steps.push(step("local", local, `The ${label} specialist`));
+    if (cloud) steps.push(step("cloud", cloud, local ? "The specialist couldn't, so the manager took over" : "No local model for this role, so the manager does it"));
+  }
+  if (!steps.length) {
+    throw new RouteError(
+      privateMode
+        ? "Private mode is on, so this step can only use a model on this computer, and there isn't one set up for it. Add a local model in Settings → AI → Specialists, or turn Private mode off."
+        : "No AI is available for this step. Add Gemini or a local model in Settings → AI & privacy."
+    );
+  }
+  return { ...base, steps };
 }
 
 // ---------- Running a plan ----------
@@ -213,11 +254,13 @@ async function execute(plan, io) {
 
   const note = (step, result) => {
     if (result.ok && result.visible) {
-      forgive(step.kind);
+      if (io.track !== false) forgive(step.kind);
       return;
     }
-    if (result.slow) penalize(step.kind, SLOW_COOLDOWN_MS);
-    else penalize(step.kind, FAILURE_COOLDOWN_MS);
+    if (io.track !== false) {
+      if (result.slow) penalize(step.kind, SLOW_COOLDOWN_MS);
+      else penalize(step.kind, FAILURE_COOLDOWN_MS);
+    }
     errors.push(
       result.slow
         ? `The ${KIND_NAME[step.kind]} didn't answer in time.`
@@ -275,7 +318,7 @@ async function execute(plan, io) {
     io.emit(describe(step));
     const r = await attempt(step, { hasNext: i < plan.steps.length - 1 });
     if (r.ok && r.visible) {
-      forgive(step.kind);
+      if (io.track !== false) forgive(step.kind);
       return { step, ttftMs: r.ttftMs };
     }
     if (io.signal?.aborted) throw r.err || new Error("Stopped.");
@@ -285,4 +328,4 @@ async function execute(plan, io) {
   fail();
 }
 
-module.exports = { plan, execute, cloudReason, RouteError, penalized, penalize, forgive, resetHealth, estimateTokens, VISION };
+module.exports = { plan, planStep, execute, cloudReason, RouteError, penalized, penalize, forgive, resetHealth, estimateTokens, VISION };

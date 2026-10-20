@@ -30,7 +30,7 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
       await h.removeBrains();
       await h.setLook({ onboarding: false });
       await page.waitForFunction(() => !document.getElementById("onboarding").hidden);
-      assert.strictEqual(await page.$eval("#voice-hero-card", (el) => el.hidden), true, "the voice card waits");
+      assert.strictEqual(await page.$eval("#home-hero", (el) => el.hidden), false, "the companion is there before anything is set up");
       await page.waitForFunction(() => /Found Fake Ollama/.test(document.getElementById("onb-local-status").textContent));
       assert.match(await text("#onb-local-actions"), /Use llama3\.2/);
       assert.match(await text("#status-text"), /No AI set up yet/);
@@ -151,21 +151,27 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
       await page.evaluate(() => document.getElementById("settings-close").click());
     });
 
-    test("an advanced setting is folded until you look for it", async () => {
+    test("a folded setting in a section that isn't showing: the search opens the section and the fold", async () => {
+      // (the fine routing rules only show for the modes that use them)
+      await page.evaluate(() => fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ routing: { mode: "auto" } }) }));
+      await page.reload({ waitUntil: "networkidle2" });
       await page.evaluate(() => document.getElementById("settings-btn").click());
       await page.focus("#settings-search");
-      await page.keyboard.type("how much");
+      await page.keyboard.type("patience");
       await page.waitForSelector(".settings-result");
       await press("Enter");
-      await page.waitForFunction(() => document.querySelector("#pane-ai-control details.advanced[open]"));
+      await page.waitForFunction(() => document.querySelector("#routing-advanced[open]"));
+      assert.strictEqual(await page.$eval("#subtab-answers", (el) => el.getAttribute("aria-selected")), "true", "Answers is the section showing now");
+      assert.ok(await page.$eval("#subpane-answers", (el) => el.offsetParent !== null));
       await page.evaluate(() => document.getElementById("settings-close").click());
+      await page.evaluate(() => fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ routing: { mode: "fixed" } }) }));
     });
   });
 
   describe("languages", () => {
     const CASES = [
-      { lang: "de", dir: "ltr", sidebar: /Neuer Chat/, composer: /Frag mich/ },
-      { lang: "ar", dir: "rtl", sidebar: /محادثة جديدة/, composer: /اسأل/ },
+      { lang: "de", dir: "ltr", sidebar: /Letzte Chats/, composer: /Frag mich/ },
+      { lang: "ar", dir: "rtl", sidebar: /المحادثات الأخيرة/, composer: /اسأل/ },
     ];
     for (const { lang, dir, sidebar, composer } of CASES) {
       test(`${lang}: the page starts in it, ${dir === "rtl" ? "mirrored" : "left to right"}, and nothing static is left in English`, async () => {
@@ -228,6 +234,27 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
           });
           assert.ok(over.page <= 0 && over.pane <= 1, `${tab} at ${width}px: ${JSON.stringify(over)}`);
         }
+        // AI & privacy: each of its sections, and the add form (the longest words are in German)
+        await page.evaluate(() => document.querySelector('.tab[data-tab="ai-control"]').click());
+        const fits = async (what) => {
+          await sleep(150);
+          const over = await page.evaluate(() => {
+            const body = document.querySelector(".modal-body");
+            return { page: document.documentElement.scrollWidth - innerWidth, pane: body.scrollWidth - body.clientWidth };
+          });
+          assert.ok(over.page <= 0 && over.pane <= 1, `${what} at ${width}px: ${JSON.stringify(over)}`);
+        };
+        for (const section of ["ais", "answers", "privacy", "device"]) {
+          await page.evaluate((n) => document.querySelector(`.subtab[data-subtab="${n}"]`).click(), section);
+          await fits(`AI & privacy, ${section}`);
+        }
+        await page.evaluate(() => document.querySelector('.subtab[data-subtab="ais"]').click());
+        await page.evaluate(() => document.getElementById("brain-add").click());
+        await fits("the add picker");
+        await page.evaluate(() => document.querySelector('#service-grid-cloud .service-tile[data-id="groq"]').click());
+        await page.evaluate(() => (document.getElementById("ai-own-settings").open = true));
+        await fits("the add form");
+        await page.evaluate(() => document.getElementById("ai-add-back").click());
         await page.evaluate(() => document.getElementById("settings-close").click());
       }
     });
@@ -238,7 +265,7 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
       await page.evaluate(() => document.getElementById("settings-btn").click());
       await page.select("#language-select", "de");
       await page.waitForFunction(() => document.documentElement.lang === "de", { timeout: 15000 });
-      assert.match(await text(".sidebar"), /Neuer Chat/);
+      assert.match(await text(".sidebar"), /Letzte Chats/);
       assert.strictEqual((await h.api("GET", "/api/settings")).ui.language, "de");
       await h.setLook({ lang: "en", width: 1280 });
     });

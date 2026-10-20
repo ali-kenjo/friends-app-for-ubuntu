@@ -84,6 +84,21 @@ export const api = {
     models: (query) => call("POST", "/api/models", query),
     test: (id) => call("POST", `/api/brains/${id}/test`),
     testConfig: (data) => call("POST", "/api/brains/test", data),
+    // Several models of one service or server at once → { state, added, skipped, failed }
+    bulk: (data) => call("POST", "/api/brains/bulk", data),
+    update: (id, changes) => call("PATCH", `/api/brains/${id}`, changes),
+    move: (id, direction) => call("POST", `/api/brains/${id}/move`, { direction }),
+  },
+  // The services Friends knows (cloud and local), and what a pasted key or address is
+  services: {
+    list: () => call("GET", "/api/services"),
+    recognise: (input) => call("POST", "/api/services/recognise", { input }),
+  },
+  hardware: { get: () => call("GET", "/api/hardware") },
+  usage: { get: () => call("GET", "/api/usage") },
+  privacy: {
+    get: () => call("GET", "/api/privacy"),
+    clear: (what) => call("POST", "/api/privacy/clear", { what }),
   },
   chats: {
     list: () => call("GET", "/api/chats"),
@@ -111,6 +126,7 @@ export const api = {
   settings: {
     get: () => call("GET", "/api/settings"),
     save: (settings) => call("PUT", "/api/settings", settings),
+    patch: (changes) => call("PATCH", "/api/settings", changes),
   },
   notes: {
     list: () => call("GET", "/api/notes"),
@@ -142,6 +158,38 @@ export const api = {
   telegram: {
     status: () => call("GET", "/api/telegram/status"),
     test: () => call("POST", "/api/telegram/test"),
+    saveToken: (token) => call("PUT", "/api/telegram/token", { token }),
+  },
+  missions: {
+    overview: () => call("GET", "/api/missions"),
+    get: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}`),
+    create: (goal, options = {}) => call("POST", "/api/missions", { goal, ...options }),
+    answer: (id, answers) => call("POST", `/api/missions/${encodeURIComponent(id)}/answers`, { answers }),
+    editPlan: (id, ops) => call("PUT", `/api/missions/${encodeURIComponent(id)}/plan`, ops),
+    approve: (id) => call("POST", `/api/missions/${encodeURIComponent(id)}/approve`),
+    stop: (id) => call("POST", `/api/missions/${encodeURIComponent(id)}/stop`),
+    resume: (id, extend = false) => call("POST", `/api/missions/${encodeURIComponent(id)}/resume`, { extend }),
+    decide: (id, requestId, allow) => call("POST", `/api/missions/${encodeURIComponent(id)}/decision`, { requestId, allow }),
+    automate: (id, body) => call("POST", `/api/missions/${encodeURIComponent(id)}/automate`, body),
+    audit: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}/audit`),
+    report: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}/report`),
+    remove: (id) => call("DELETE", `/api/missions/${encodeURIComponent(id)}`),
+  },
+  specialists: {
+    overview: () => call("GET", "/api/specialists"),
+    save: (id, body) => call("PUT", `/api/specialists/${encodeURIComponent(id)}`, body),
+    add: (body) => call("POST", "/api/specialists", body),
+    remove: (id) => call("DELETE", `/api/specialists/${encodeURIComponent(id)}`),
+    reset: () => call("POST", "/api/specialists/reset"),
+    test: (id) => call("POST", `/api/specialists/${encodeURIComponent(id)}/test`),
+    removeModel: (name) => call("DELETE", `/api/specialist-models/${encodeURIComponent(name)}`),
+  },
+  automations: {
+    list: () => call("GET", "/api/automations"),
+    create: (body) => call("POST", "/api/automations", body),
+    update: (id, body) => call("PATCH", `/api/automations/${encodeURIComponent(id)}`, body),
+    run: (id) => call("POST", `/api/automations/${encodeURIComponent(id)}/run`),
+    remove: (id) => call("DELETE", `/api/automations/${encodeURIComponent(id)}`),
   },
   notesVault: {
     list: (limit = 50) => call("GET", `/api/notes-vault?limit=${limit}`),
@@ -183,6 +231,10 @@ export const api = {
     startFocus: (minutes, task) => call("POST", "/api/life/focus/start", { minutes, task }),
     checkFocus: () => call("GET", "/api/life/focus"),
     stopFocus: () => call("POST", "/api/life/focus/stop"),
+  },
+  updates: {
+    get: () => call("GET", "/api/updates"),
+    check: () => call("POST", "/api/updates/check"),
   },
   backups: {
     list: () => call("GET", "/api/backups"),

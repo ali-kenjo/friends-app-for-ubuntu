@@ -656,7 +656,7 @@ export class RobotEngine {
       u.uBg.value.copy(this.look.themeColor);
       u.uBgEdge.value.copy(this.look.themeColor);
       u.uGlow.value.copy(this.look.accent);
-      u.uGlowAmount.value = this.look.theme.glow;
+      u.uGlowAmount.value = this.look.theme.glow * (this.active?.options.glowBoost ?? 1);
       return;
     }
     const mode = { flat: 0, vignette: b.glow > 0 ? 2 : 1, gradient: 3, image: 4 }[b.mode] ?? 1;

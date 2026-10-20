@@ -1,10 +1,11 @@
 // ---------- Things to do together ----------
 // Games, debates, stories and practice (server/activities.js), as chips on
-// the start screen (a few at a time) and in voice mode's 🎲 menu. Picking one says its prompt,
+// the start screen (a few at a time) and in voice mode's activities menu. Picking one says its prompt,
 // as if you'd said it.
 import { api } from "./api.js";
 import { getSettings, onSettings } from "./store.js";
 import { t } from "./i18n.js";
+import { icon } from "./icons.js";
 
 const chips = document.getElementById("hero-prompts");
 const voiceChips = document.getElementById("voice-activity-chips");
@@ -17,7 +18,8 @@ function chip(a, { prompt = false } = {}) {
   b.className = "prompt-chip activity-chip";
   b.dataset.id = a.id;
   if (prompt) b.dataset.prompt = a.prompt; // sent like a typed message (workspace.js)
-  b.textContent = `${a.emoji} ${t(a.title)}`;
+  b.innerHTML = a.icon ? icon(a.icon, { size: 15 }) : "";
+  b.append(document.createTextNode(` ${t(a.title)}`.trim()));
   b.title = a.prompt;
   return b;
 }
@@ -27,8 +29,9 @@ let picked = null;
 function render() {
   const on = getSettings()?.companion?.activities !== false;
   if (!picked && list.length) {
-    const rest = list.filter((a) => a.id !== "surprise").sort(() => Math.random() - 0.5);
-    picked = [...rest.slice(0, 6), ...list.filter((a) => a.id === "surprise")];
+    // Three ideas (the page is calm), one of them always a way to talk about the day
+    const rest = list.filter((a) => a.id !== "surprise" && a.id !== "my-day").sort(() => Math.random() - 0.5);
+    picked = [list.find((a) => a.id === "my-day"), ...rest.slice(0, 2)].filter(Boolean);
   }
   chips.hidden = !on || !list.length;
   chips.replaceChildren(...(picked || []).map((a) => chip(a, { prompt: true })));

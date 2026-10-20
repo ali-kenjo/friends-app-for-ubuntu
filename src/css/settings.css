@@ -592,8 +592,9 @@ label.row {
   gap: var(--space-1);
 }
 
+/* A rule for a mode that isn't the one chosen: quieter, but still readable (4.5:1) */
 .routing-options .is-inactive {
-  opacity: 0.4;
+  opacity: 0.85;
 }
 
 .routing-options .routing-sub {
@@ -1357,4 +1358,29 @@ details.form-field[open] {
   width: 16px;
   height: 16px;
   margin-top: 1px;
+}
+/* ----- Updates (Settings → Data & backups) ----- */
+.update-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2h);
+  margin-top: var(--space-2h);
+}
+
+.update-line.has-update {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.update-notes > summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.update-notes-body {
+  max-height: 16rem;
+  overflow: auto;
+  padding-top: var(--space-2);
+  font-size: var(--fs-sm);
 }

@@ -10,8 +10,9 @@
   <meta name="description" content="A personal AI chat app">
   <meta property="og:title" content="Friends">
   <meta property="og:description" content="A personal AI chat app">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z' fill='%236f9cf5'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/sidebar.css">
@@ -30,6 +31,9 @@
   <link rel="stylesheet" href="css/life.css">
   <link rel="stylesheet" href="css/apps.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/shell.css">
+  <link rel="stylesheet" href="css/missions.css">
+  <link rel="stylesheet" href="css/ai.css">
   <link rel="stylesheet" href="css/rtl.css">
   <link rel="stylesheet" href="css/a11y.css">
   <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/addons/"}}</script>
@@ -44,39 +48,48 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar" aria-label="Sidebar">
       <div class="sidebar-header">
-        <div class="brand">
-          <span>Friends</span>
+        <a class="brand" href="#home" id="brand" aria-label="Friends: home">
+          <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true"><rect class="logo-shell" x="2" y="4" width="28" height="24" rx="9"/><rect class="logo-screen" x="5.4" y="7.4" width="21.2" height="17.2" rx="6.4"/><rect class="logo-eye" x="10.2" y="12" width="3.4" height="6.6" rx="1.7"/><rect class="logo-eye" x="18.4" y="12" width="3.4" height="6.6" rx="1.7"/><path class="logo-mouth" d="M13.4 21.2q2.6 1.8 5.2 0"/></svg>
+          <span class="brand-word">friends</span>
+        </a>
+        <div class="sidebar-header-actions">
+          <button type="button" class="icon-btn" id="search-open" title="Search your chats (Ctrl+K)" aria-label="Search your chats">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+          </button>
+          <button class="icon-btn" id="sidebar-toggle" title="Hide the sidebar" aria-controls="sidebar">
+            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+          </button>
         </div>
-        <button class="icon-btn" id="sidebar-toggle" title="Hide the sidebar" aria-controls="sidebar">
-          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
-        </button>
       </div>
 
+      <!-- The three places (src/js/views.js) -->
       <nav class="nav" aria-label="Main">
-        <button type="button" class="nav-item" id="new-chat">
-          <svg viewBox="0 0 24 24"><path d="M12 20h8"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-          <span>New chat</span>
+        <button type="button" class="nav-item active" id="nav-home" data-view="home" aria-current="page">
+          <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="12" rx="4"/><path d="M9 21h6"/><path d="M12 17v4"/><line x1="9.5" y1="10" x2="9.5" y2="12"/><line x1="14.5" y1="10" x2="14.5" y2="12"/></svg>
+          <span>Talk</span>
         </button>
-        <button type="button" class="nav-item active" id="chats-nav" aria-expanded="true" aria-controls="chat-history" title="Show or hide your chats">
-          <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
-          <span>Chats</span>
+        <button type="button" class="nav-item" id="nav-missions" data-view="missions" title="Give it a goal and it gets done in the background">
+          <svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 5h11l-2 3.5L16 12H5"/></svg>
+          <span>Missions</span>
+          <span class="nav-badge" id="missions-badge" hidden></span>
         </button>
-        <button type="button" class="nav-item" id="search-open" title="Search your chats (Ctrl+K)">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
-          <span>Search</span>
-        </button>
-        <button type="button" class="nav-item" id="today-open" title="Tasks, reminders, habits and journal">
+        <button type="button" class="nav-item" id="today-open" data-view="today" title="Tasks, reminders, habits, journal and calendar">
           <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
           <span>Today</span>
           <span class="nav-badge" id="today-badge" hidden></span>
         </button>
-        <button type="button" class="nav-item nav-voice-hero" id="voice-open">
-          <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
-          <span>Voice conversation</span>
-        </button>
       </nav>
 
       <!-- Saved chats, grouped by date (filled by chats.js) -->
+      <div class="chat-list-head">
+        <button type="button" class="chat-list-toggle" id="chats-nav" aria-expanded="true" aria-controls="chat-history" title="Show or hide your chats">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          <span>Recent chats</span>
+        </button>
+        <button type="button" class="icon-btn small" id="new-chat" title="New chat" aria-label="New chat">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
       <div class="section chat-history" id="chat-history" role="region" aria-label="Your chats" data-no-i18n></div>
 
       <div class="sidebar-footer">
@@ -101,17 +114,20 @@
 
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
-    <!-- Main -->
-    <main class="main" id="main">
-      <button class="icon-btn sidebar-show" id="sidebar-open" title="Show the sidebar" aria-controls="sidebar">
-        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
-      </button>
-      <!-- Find in this chat (Ctrl+F) -->
-      <button class="icon-btn find-open" id="find-open" title="Find in this chat (Ctrl+F)">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
-      </button>
-      <!-- Who you're talking to (src/js/characters.js) -->
-      <div class="character-switch" id="character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
+    <!-- Home: the companion (the conversation, the robot, the message box) -->
+    <main class="main view" id="main" data-view="home" aria-label="Talk">
+      <!-- The top bar has its own background, so messages never run under the character switch -->
+      <header class="topbar" id="home-topbar">
+        <button class="icon-btn sidebar-show" id="sidebar-open" title="Show the sidebar" aria-controls="sidebar">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+        </button>
+        <!-- Who you're talking to (src/js/characters.js) -->
+        <div class="character-switch" id="character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
+        <!-- Find in this chat (Ctrl+F) -->
+        <button class="icon-btn find-open" id="find-open" title="Find in this chat (Ctrl+F)">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+        </button>
+      </header>
       <div class="find-bar" id="find-bar" role="search" hidden>
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
         <input type="text" id="find-input" dir="auto" placeholder="Find in this chat" autocomplete="off" spellcheck="false" aria-label="Find in this chat">
@@ -142,13 +158,23 @@
         <svg class="face-mini" viewBox="0 0 24 24" aria-hidden="true"><rect class="face-shell" x="1" y="3" width="22" height="18" rx="7"/><rect class="face-screen" x="3.6" y="5.6" width="16.8" height="12.8" rx="5"/><rect class="face-eye" x="7.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><rect class="face-eye" x="13.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><path class="face-mouth" d="M10.2 15.4q1.8 1.2 3.6 0"/></svg>
       </button>
 
-
       <div class="center">
         <button type="button" class="jump-latest" id="jump-latest" title="Jump to the latest message" hidden>
           <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/></svg>
         </button>
         <h1 class="sr-only">Friends</h1>
-        <p class="greeting" id="greeting">Hello</p>
+
+        <!-- The companion, before you've said anything: the robot, a greeting, one line (src/js/robot/dock.js) -->
+        <div class="home-hero" id="home-hero">
+          <div class="home-robot" id="home-robot" role="button" tabindex="0" aria-label="The AI's robot: click to say hi" title="Say hi">
+            <div class="home-robot-stage" id="home-robot-stage"></div>
+            <svg class="home-robot-face face-mini" id="home-robot-face" viewBox="0 0 24 24" aria-hidden="true"><rect class="face-shell" x="1" y="3" width="22" height="18" rx="7"/><rect class="face-screen" x="3.6" y="5.6" width="16.8" height="12.8" rx="5"/><rect class="face-eye" x="7.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><rect class="face-eye" x="13.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><path class="face-mouth" d="M10.2 15.4q1.8 1.2 3.6 0"/></svg>
+          </div>
+          <p class="greeting" id="greeting">Hello</p>
+          <p class="home-sub" id="home-sub">What are we doing today?</p>
+          <!-- A mission is running or waiting for you (src/js/missions/) -->
+          <a class="home-mission-note" id="home-mission-note" href="#missions" hidden></a>
+        </div>
 
         <!-- First run: nothing answers yet (src/js/onboarding.js) -->
         <section class="onboarding" id="onboarding" aria-labelledby="onboarding-title" hidden>
@@ -158,7 +184,7 @@
           <div class="onboarding-options">
             <div class="onboarding-option" id="onb-local">
               <div class="onboarding-option-head">
-                <span class="onboarding-icon" aria-hidden="true">🔒</span>
+                <span class="onboarding-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
                 <div>
                   <h3>An AI on this computer</h3>
                   <p>Private: your messages never leave this computer. Works offline.</p>
@@ -171,19 +197,19 @@
 
             <form class="onboarding-option onb-cloud" id="onb-cloud">
               <div class="onboarding-option-head">
-                <span class="onboarding-icon" aria-hidden="true">☁️</span>
+                <span class="onboarding-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 0 9.5z"/></svg></span>
                 <div>
-                  <h3>Gemini, Google's cloud AI</h3>
-                  <p>Faster and smarter. Your messages are sent to Google to be answered.</p>
+                  <h3>A cloud AI: Gemini, ChatGPT, Claude…</h3>
+                  <p>Faster and smarter. Your messages are sent to the company to be answered. Paste a key and Friends recognises the service.</p>
                 </div>
               </div>
               <label class="onboarding-key">
-                <span class="row-label">Your free key</span>
+                <span class="row-label">Your key</span>
                 <input class="field" type="password" name="key" id="onb-key" autocomplete="off" spellcheck="false" placeholder="Paste it here" required>
               </label>
               <div class="onboarding-actions">
-                <a class="btn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Get a free key</a>
-                <button type="submit" class="btn btn-primary" id="onb-cloud-save">Connect Gemini</button>
+                <a class="btn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Get a free Gemini key</a>
+                <button type="submit" class="btn btn-primary" id="onb-cloud-save">Connect</button>
               </div>
               <p class="form-error" id="onb-cloud-error" role="alert" hidden></p>
             </form>
@@ -198,58 +224,57 @@
           </div>
         </section>
 
-        <!-- Talk instead of typing -->
-        <div class="voice-hero-card" id="voice-hero-card">
-          <h2 class="voice-hero-title">Talk instead of typing</h2>
-          <p class="voice-hero-sub">Speak naturally. It answers out loud, and you can interrupt it any time.</p>
-
-          <div class="voice-hero-actions">
-            <button type="button" class="btn btn-primary btn-hero-voice" id="hero-voice-btn">
-              <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
-              <span>Start a voice conversation</span>
-            </button>
-            <a href="/?voice=true" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" id="hero-voice-tab-btn" title="Opens voice mode in its own browser tab, which asks for the microphone right away">
-              <span>Open in its own tab</span>
-            </a>
+        <!-- After the AI is set up: Missions exist (shown once, src/js/onboarding.js) -->
+        <section class="intro-card" id="missions-intro" aria-labelledby="missions-intro-title" hidden>
+          <span class="intro-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 5h11l-2 3.5L16 12H5"/></svg></span>
+          <div class="intro-text">
+            <h2 id="missions-intro-title">One more thing: Missions</h2>
+            <p>Give it a goal (research something, tidy your files, write and test a small program) and it makes a plan. You approve it once, and it gets done in the background.</p>
           </div>
+          <div class="intro-actions">
+            <button type="button" class="btn btn-primary" id="missions-intro-go">See Missions</button>
+            <button type="button" class="link-btn" id="missions-intro-dismiss">Maybe later</button>
+          </div>
+        </section>
 
-          <!-- Things to do together, a different few each time (src/js/activities.js) -->
-          <div class="voice-hero-prompts" id="hero-prompts" role="group" aria-label="Let's do something"></div>
-        </div>
-
-        <!-- Connected Apps Quick Bar -->
-        <div class="workspace-bar" id="workspace-bar">
-          <button type="button" class="ws-pill" data-app="calendar" title="Google Calendar">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span>Calendar</span>
-          </button>
-          <button type="button" class="ws-pill" data-app="gmail" title="Gmail">
-            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-            <span>Gmail</span>
-          </button>
-          <button type="button" class="ws-pill" data-app="drive" title="Google Drive">
-            <svg viewBox="0 0 24 24"><path d="M12 2L2 19h20L12 2z"/></svg>
-            <span>Drive</span>
-          </button>
-          <button type="button" class="ws-pill" data-app="news" title="Live News">
-            <svg viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2m-4-3H9M7 16h6M7 8h6m-6 4h10"/></svg>
-            <span>News</span>
-          </button>
-          <button type="button" class="ws-pill" data-app="github" title="GitHub">
-            <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-            <span>GitHub</span>
-          </button>
-          <button type="button" class="ws-status-indicator" id="ws-status-indicator" data-state="none" title="Which AI answers">
-            <span class="status-circle" aria-hidden="true"></span>
-            <span class="status-text" id="status-text">No AI set up yet</span>
-          </button>
-        </div>
+        <!-- A few ideas, a different few each time (src/js/activities.js) -->
+        <div class="home-ideas" id="hero-prompts" role="group" aria-label="Let's do something"></div>
 
         <div class="attachments" id="attachments" hidden></div>
         <form class="composer" id="composer">
-          <button type="button" class="icon-btn" id="attach-btn" title="Attach files (images, PDFs, text)">
-            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
+          <!-- "+" : attach a file, or have it look something up (src/js/composer.js) -->
+          <div class="plus-wrap">
+            <button type="button" class="icon-btn" id="plus-btn" title="Attach a file or look something up" aria-label="Attach a file or look something up" aria-haspopup="menu" aria-expanded="false" aria-controls="plus-menu">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <div class="plus-menu" id="plus-menu" role="menu" aria-label="Attach or look up" hidden>
+              <button type="button" class="plus-item" role="menuitem" id="attach-btn" title="Attach files (images, PDFs, text)">
+                <svg viewBox="0 0 24 24"><path d="M20 11.5 11.7 19.8a5 5 0 0 1-7-7L13 4.5a3.3 3.3 0 0 1 4.7 4.7l-8.3 8.3a1.7 1.7 0 0 1-2.4-2.4l7.6-7.6"/></svg>
+                <span>Attach a file</span>
+              </button>
+              <div class="plus-heading" role="presentation">Look something up</div>
+              <button type="button" class="plus-item ws-pill" role="menuitem" data-app="calendar" title="Google Calendar">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Calendar</span>
+              </button>
+              <button type="button" class="plus-item ws-pill" role="menuitem" data-app="gmail" title="Gmail">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>Gmail</span>
+              </button>
+              <button type="button" class="plus-item ws-pill" role="menuitem" data-app="drive" title="Google Drive">
+                <svg viewBox="0 0 24 24"><path d="M12 3 3 19h18z"/></svg>
+                <span>Drive</span>
+              </button>
+              <button type="button" class="plus-item ws-pill" role="menuitem" data-app="news" title="Live News">
+                <svg viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"/><path d="M7 16h6M7 8h6m-6 4h6"/></svg>
+                <span>News</span>
+              </button>
+              <button type="button" class="plus-item ws-pill" role="menuitem" data-app="github" title="GitHub">
+                <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+                <span>GitHub</span>
+              </button>
+            </div>
+          </div>
           <input type="file" id="attach-input" multiple hidden
             accept="image/png,image/jpeg,image/webp,application/pdf,text/*,.md,.csv,.json,.xml,.yml,.yaml,.js,.ts,.py,.sh,.sql,.log">
           <textarea id="composer-input" rows="1" dir="auto" placeholder="Ask anything…" aria-label="Message" autocomplete="off" enterkeyhint="send"></textarea>
@@ -260,13 +285,207 @@
             </button>
             <div class="model-menu" id="model-menu" role="menu" hidden></div>
           </div>
+          <button type="button" class="icon-btn voice-btn" id="voice-open" title="Talk instead of typing" aria-label="Start a voice conversation">
+            <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+          </button>
           <button type="submit" class="send-btn" id="send-btn" title="Send (Enter)" aria-label="Send" disabled>
             <svg class="i-send" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
             <svg class="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>
           </button>
         </form>
+        <!-- Which AI answers: small and quiet -->
+        <button type="button" class="status-quiet" id="ws-status-indicator" data-state="none" title="Which AI answers">
+          <span class="status-circle" aria-hidden="true"></span>
+          <span class="status-text" id="status-text">No AI set up yet</span>
+        </button>
       </div>
     </main>
+
+    <!-- Missions: everything the assistant does for you in the background (src/js/missions/) -->
+    <section class="view" id="view-missions" data-view="missions" role="main" aria-labelledby="missions-title" hidden>
+      <header class="topbar view-bar">
+        <button class="icon-btn sidebar-show" data-sidebar-open title="Show the sidebar" aria-controls="sidebar">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+        </button>
+        <h1 class="view-title" id="missions-title" tabindex="-1">Missions</h1>
+        <div class="view-actions" id="missions-actions"></div>
+      </header>
+      <div class="view-scroll">
+        <div class="view-body" id="missions-root"></div>
+      </div>
+    </section>
+
+    <!-- Today: your day in one calm place -->
+    <section class="view" id="view-today" data-view="today" role="main" aria-labelledby="life-title" hidden>
+      <header class="topbar view-bar">
+        <button class="icon-btn sidebar-show" data-sidebar-open title="Show the sidebar" aria-controls="sidebar">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+        </button>
+        <div class="view-titles">
+          <h1 class="view-title" id="life-title" tabindex="-1">Today</h1>
+          <p class="view-sub" id="life-date"></p>
+        </div>
+        <div class="view-actions">
+          <button type="button" class="btn small" id="life-briefing">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.1" y2="4.9"/></svg>
+            <span>Daily briefing</span>
+          </button>
+          <button type="button" class="btn small" id="life-notify-allow" hidden>Allow notifications</button>
+        </div>
+      </header>
+      <div class="view-scroll">
+        <div class="view-body today-body">
+          <p class="test-feedback" id="life-status" role="status"></p>
+
+          <!-- One box for everything you want to remember or do -->
+          <form class="quick-add" id="quick-add" aria-label="Add something">
+            <div class="segmented" role="radiogroup" aria-label="What to add">
+              <button type="button" role="radio" class="segmented-btn active" data-kind="task" aria-checked="true">Task</button>
+              <button type="button" role="radio" class="segmented-btn" data-kind="reminder" aria-checked="false" tabindex="-1">Reminder</button>
+              <button type="button" role="radio" class="segmented-btn" data-kind="event" aria-checked="false" tabindex="-1">Event</button>
+            </div>
+            <input class="field quick-text" name="text" id="quick-text" placeholder="Add a task…" autocomplete="off" maxlength="300" aria-label="What?">
+            <input class="field quick-when" name="when" id="quick-when" type="date" aria-label="When">
+            <button type="submit" class="btn btn-primary">Add</button>
+          </form>
+
+          <div class="today-grid">
+            <section class="card" aria-labelledby="today-h-up">
+              <h2 class="card-title" id="today-h-up">Coming up</h2>
+              <ul class="life-list" id="life-today-calendar"></ul>
+              <ul class="life-list" id="life-today-reminders"></ul>
+            </section>
+            <section class="card" aria-labelledby="today-h-tasks">
+              <h2 class="card-title" id="today-h-tasks">Tasks</h2>
+              <ul class="life-list" id="life-today-tasks"></ul>
+            </section>
+            <section class="card" aria-labelledby="today-h-habits">
+              <h2 class="card-title" id="today-h-habits">Habits</h2>
+              <div class="habit-checks" id="life-today-habits"></div>
+            </section>
+            <section class="card focus-bar" id="focus-bar" aria-labelledby="today-h-focus">
+              <h2 class="card-title" id="today-h-focus">Focus</h2>
+              <div class="focus-controls" id="focus-controls">
+                <input class="field" id="focus-task-input" placeholder="What are you focusing on?" aria-label="What are you focusing on?" autocomplete="off">
+                <select class="field" id="focus-duration-select" aria-label="How long to focus">
+                  <option value="15">15 min</option>
+                  <option value="25" selected>25 min (Pomodoro)</option>
+                  <option value="45">45 min</option>
+                  <option value="60">60 min</option>
+                </select>
+                <button type="button" class="btn small btn-primary" id="focus-start-btn">Start focus</button>
+              </div>
+              <div class="focus-active" id="focus-active" hidden>
+                <span class="focus-tag" id="focus-tag">Focusing</span>
+                <span class="focus-timer" id="focus-timer">25:00</span>
+                <button type="button" class="btn small btn-danger" id="focus-stop-btn">Stop</button>
+              </div>
+            </section>
+            <section class="card wide" aria-labelledby="today-h-mood">
+              <h2 class="card-title" id="today-h-mood">How are you today?</h2>
+              <form class="life-journal-quick" id="life-journal-quick">
+                <div class="mood-pick" role="group" aria-label="Mood">
+                  <button type="button" data-mood="awful" title="Awful" aria-label="Awful" aria-pressed="false">😣</button>
+                  <button type="button" data-mood="bad" title="Bad" aria-label="Bad" aria-pressed="false">🙁</button>
+                  <button type="button" data-mood="okay" title="Okay" aria-label="Okay" aria-pressed="false">😐</button>
+                  <button type="button" data-mood="good" title="Good" aria-label="Good" aria-pressed="false">🙂</button>
+                  <button type="button" data-mood="great" title="Great" aria-label="Great" aria-pressed="false">😄</button>
+                </div>
+                <input class="field" name="text" placeholder="A line about your day (goes into your journal)" autocomplete="off" maxlength="2000" aria-label="A line about your day">
+                <button type="submit" class="btn small">Save</button>
+              </form>
+            </section>
+          </div>
+
+          <!-- Everything else, when you want it -->
+          <details class="today-more" id="today-more">
+            <summary>All tasks, reminders, calendar, habits and journal</summary>
+            <div class="life-tabs" role="tablist" aria-label="More of Today">
+              <button type="button" class="life-tab active" data-life-tab="tasks" role="tab" id="life-tab-tasks" aria-controls="life-pane-tasks" aria-selected="true" tabindex="0">Tasks</button>
+              <button type="button" class="life-tab" data-life-tab="reminders" role="tab" id="life-tab-reminders" aria-controls="life-pane-reminders" aria-selected="false" tabindex="-1">Reminders</button>
+              <button type="button" class="life-tab" data-life-tab="calendar" role="tab" id="life-tab-calendar" aria-controls="life-pane-calendar" aria-selected="false" tabindex="-1">Calendar</button>
+              <button type="button" class="life-tab" data-life-tab="habits" role="tab" id="life-tab-habits" aria-controls="life-pane-habits" aria-selected="false" tabindex="-1">Habits</button>
+              <button type="button" class="life-tab" data-life-tab="journal" role="tab" id="life-tab-journal" aria-controls="life-pane-journal" aria-selected="false" tabindex="-1">Journal</button>
+            </div>
+            <div class="life-body">
+              <section class="life-pane active" data-life-pane="tasks" id="life-pane-tasks" role="tabpanel" aria-labelledby="life-tab-tasks">
+                <form class="life-add" id="task-add">
+                  <input class="field" name="title" placeholder="Add a task…" autocomplete="off" maxlength="200" required aria-label="Task">
+                  <input class="field" type="date" name="due" aria-label="Due date">
+                  <input class="field life-list-name" name="list" placeholder="List" list="task-lists" autocomplete="off" maxlength="40" aria-label="List">
+                  <datalist id="task-lists"></datalist>
+                  <button type="submit" class="btn small btn-primary">Add</button>
+                </form>
+                <label class="life-toggle"><input type="checkbox" id="tasks-show-done"> Show done</label>
+                <div id="task-groups"></div>
+              </section>
+
+              <section class="life-pane" data-life-pane="reminders" id="life-pane-reminders" role="tabpanel" aria-labelledby="life-tab-reminders">
+                <form class="life-add" id="reminder-add">
+                  <input class="field" name="text" placeholder="Remind me to…" autocomplete="off" maxlength="300" required aria-label="Reminder">
+                  <input class="field" type="datetime-local" name="at" aria-label="When" required>
+                  <select class="field" name="repeat" aria-label="Repeat">
+                    <option value="none">Once</option>
+                    <option value="daily">Every day</option>
+                    <option value="weekdays">Weekdays</option>
+                    <option value="weekly">Every week</option>
+                    <option value="monthly">Every month</option>
+                    <option value="yearly">Every year</option>
+                  </select>
+                  <button type="submit" class="btn small btn-primary">Add</button>
+                </form>
+                <ul class="life-list" id="reminder-list"></ul>
+              </section>
+
+              <section class="life-pane" data-life-pane="calendar" id="life-pane-calendar" role="tabpanel" aria-labelledby="life-tab-calendar">
+                <form class="life-add" id="calendar-add">
+                  <input class="field" name="title" placeholder="Event title…" autocomplete="off" maxlength="200" required aria-label="Event title">
+                  <input class="field" type="datetime-local" name="start" aria-label="Start time" required>
+                  <input class="field" type="datetime-local" name="end" aria-label="End time">
+                  <input class="field" name="location" placeholder="Location (optional)" autocomplete="off" maxlength="200" aria-label="Location">
+                  <button type="submit" class="btn small btn-primary">Add event</button>
+                </form>
+                <div class="calendar-actions">
+                  <button type="button" class="btn small" id="calendar-export-ics">Export .ics</button>
+                  <label class="btn small file-btn">
+                    Import .ics <input type="file" id="calendar-import-ics" accept=".ics,text/calendar" hidden>
+                  </label>
+                  <span class="test-feedback" id="calendar-feedback"></span>
+                </div>
+                <ul class="life-list" id="calendar-event-list"></ul>
+              </section>
+
+              <section class="life-pane" data-life-pane="habits" id="life-pane-habits" role="tabpanel" aria-labelledby="life-tab-habits">
+                <form class="life-add" id="habit-add">
+                  <input class="field life-emoji" name="emoji" placeholder="✅" maxlength="4" aria-label="Emoji">
+                  <input class="field" name="name" placeholder="A habit to build, e.g. Gym, Read 20 minutes" autocomplete="off" maxlength="60" required aria-label="Habit">
+                  <button type="submit" class="btn small btn-primary">Add</button>
+                </form>
+                <ul class="life-list" id="habit-list"></ul>
+              </section>
+
+              <section class="life-pane" data-life-pane="journal" id="life-pane-journal" role="tabpanel" aria-labelledby="life-tab-journal">
+                <form class="life-journal" id="journal-add">
+                  <textarea class="field textarea" name="text" rows="4" maxlength="10000" placeholder="What's on your mind?" aria-label="Journal entry"></textarea>
+                  <div class="form-test-bar">
+                    <select class="field" name="mood" aria-label="Mood">
+                      <option value="">Mood (optional)</option>
+                      <option value="great">😄 Great</option>
+                      <option value="good">🙂 Good</option>
+                      <option value="okay">😐 Okay</option>
+                      <option value="bad">🙁 Bad</option>
+                      <option value="awful">😣 Awful</option>
+                    </select>
+                    <button type="submit" class="btn small btn-primary">Save entry</button>
+                  </div>
+                </form>
+                <ul class="life-list" id="journal-list"></ul>
+              </section>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
 
   </div>
 
@@ -282,12 +501,11 @@
         </div>
         <ul class="settings-results" id="settings-results" aria-label="Matching settings" hidden></ul>
         <div class="settings-tabs" id="settings-tabs" role="tablist" aria-orientation="vertical" aria-label="Settings sections">
-          <div class="nav-group" role="presentation">Look &amp; language</div>
+          <div class="nav-group" role="presentation">You and your companion</div>
           <button class="tab active" data-tab="appearance" role="tab" id="tab-appearance" aria-controls="pane-appearance" aria-selected="true" tabindex="0">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
             <span>Appearance</span>
           </button>
-          <div class="nav-group" role="presentation">Your companion</div>
           <button class="tab" data-tab="personality" role="tab" id="tab-personality" aria-controls="pane-personality" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14a4 4 0 0 0 8 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg>
             <span>Characters</span>
@@ -296,22 +514,39 @@
             <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg>
             <span>Memory</span>
           </button>
-          <button class="tab" data-tab="life" role="tab" id="tab-life" aria-controls="pane-life" aria-selected="false" tabindex="-1">
-            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
-            <span>Daily life</span>
-          </button>
           <button class="tab" data-tab="robot" role="tab" id="tab-robot" aria-controls="pane-robot" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg>
             <span>Robot</span>
           </button>
-          <div class="nav-group" role="presentation">AI &amp; apps</div>
+          <div class="nav-group" role="presentation">AI</div>
           <button class="tab" data-tab="ai-control" role="tab" id="tab-ai-control" aria-controls="pane-ai-control" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><polyline points="9 12 11 14 15 10"/></svg>
             <span>AI &amp; privacy</span>
           </button>
+          <button class="tab" data-tab="specialists" role="tab" id="tab-specialists" aria-controls="pane-specialists" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><line x1="9" y1="2" x2="9" y2="6"/><line x1="15" y1="2" x2="15" y2="6"/><line x1="9" y1="18" x2="9" y2="22"/><line x1="15" y1="18" x2="15" y2="22"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="15" x2="6" y2="15"/><line x1="18" y1="9" x2="22" y2="9"/><line x1="18" y1="15" x2="22" y2="15"/></svg>
+            <span>Specialists</span>
+          </button>
+          <button class="tab" data-tab="missions" role="tab" id="tab-missions" aria-controls="pane-missions" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 5h11l-2 3.5L16 12H5"/></svg>
+            <span>Missions</span>
+          </button>
+          <div class="nav-group" role="presentation">Extras</div>
           <button class="tab" data-tab="integrations" role="tab" id="tab-integrations" aria-controls="pane-integrations" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             <span>Connected apps</span>
+          </button>
+          <button class="tab" data-tab="telegram" role="tab" id="tab-telegram" aria-controls="pane-telegram" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><path d="M21 4 3 11l6 2 2 6 3-4 5 3z"/><path d="M9 13l8-6"/></svg>
+            <span>Telegram</span>
+          </button>
+          <button class="tab" data-tab="notes" role="tab" id="tab-notes" aria-controls="pane-notes" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><line x1="9" y1="8" x2="15" y2="8"/></svg>
+            <span>Notes vault</span>
+          </button>
+          <button class="tab" data-tab="life" role="tab" id="tab-life" aria-controls="pane-life" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
+            <span>Daily life</span>
           </button>
           <div class="nav-group" role="presentation">Your data</div>
           <button class="tab" data-tab="data" role="tab" id="tab-data" aria-controls="pane-data" aria-selected="false" tabindex="-1">
@@ -356,11 +591,11 @@
           </div>
           <div class="row-label" id="accent-label">Accent color</div>
           <div class="colors" id="accent-colors" role="radiogroup" aria-labelledby="accent-label">
-            <button class="color selected" role="radio" aria-checked="true" data-color="#6f9cf5" style="background:#6f9cf5" aria-label="Blue"></button>
-            <button class="color" role="radio" aria-checked="false" data-color="#a78bfa" style="background:#a78bfa" aria-label="Violet"></button>
-            <button class="color" role="radio" aria-checked="false" data-color="#34d399" style="background:#34d399" aria-label="Green"></button>
-            <button class="color" role="radio" aria-checked="false" data-color="#f59e0b" style="background:#f59e0b" aria-label="Amber"></button>
+            <button class="color selected" role="radio" aria-checked="true" data-color="#f5a94a" style="background:#f5a94a" aria-label="Amber"></button>
             <button class="color" role="radio" aria-checked="false" data-color="#f472b6" style="background:#f472b6" aria-label="Pink"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#a78bfa" style="background:#a78bfa" aria-label="Violet"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#6fb4f5" style="background:#6fb4f5" aria-label="Blue"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#4fd1a5" style="background:#4fd1a5" aria-label="Green"></button>
           </div>
 
           <div class="subhead"><div>
@@ -418,7 +653,7 @@
           <h3>AI &amp; privacy</h3>
 
           <div class="ai-overview" id="ai-overview">
-            <!-- Diagnostics & Live Status Banner -->
+            <!-- The AI in use, and whether it answers -->
             <div class="ai-status-card" id="ai-status-card">
               <div class="ai-status-left">
                 <div class="ai-status-indicator">
@@ -434,395 +669,627 @@
             </div>
             <div class="ai-ping-status" id="ai-ping-status" hidden></div>
 
-            <!-- Privacy & local AI -->
-            <div class="subhead">
-              <div>
-                <div class="subhead-title">Privacy and local AI</div>
-                <p class="hint">Run models on this computer, so your chats never leave it.</p>
-              </div>
+            <div class="subtabs" id="ai-subtabs" role="tablist" aria-label="AI &amp; privacy sections">
+              <button type="button" class="subtab active" role="tab" id="subtab-ais" data-subtab="ais" aria-controls="subpane-ais" aria-selected="true">Your AIs</button>
+              <button type="button" class="subtab" role="tab" id="subtab-answers" data-subtab="answers" aria-controls="subpane-answers" aria-selected="false" tabindex="-1">Answers</button>
+              <button type="button" class="subtab" role="tab" id="subtab-privacy" data-subtab="privacy" aria-controls="subpane-privacy" aria-selected="false" tabindex="-1">Privacy</button>
+              <button type="button" class="subtab" role="tab" id="subtab-device" data-subtab="device" aria-controls="subpane-device" aria-selected="false" tabindex="-1">This computer</button>
             </div>
 
-            <div class="explain" id="local-vs-cloud">
-              <div class="explain-item">
-                <span class="explain-icon" aria-hidden="true">🔒</span>
-                <p data-i18n-html="explain.local"><strong>Local AI</strong> runs on this computer. Your messages never leave it, and it works offline. It can be slower on an older computer.</p>
-              </div>
-              <div class="explain-item">
-                <span class="explain-icon" aria-hidden="true">☁️</span>
-                <p data-i18n-html="explain.cloud"><strong>Cloud AI</strong> (Gemini) runs on Google's servers. It is faster and smarter, but your messages are sent to Google to be answered.</p>
-              </div>
-            </div>
-
-            <label class="row">
-              <div>
-                <div class="row-label">Private mode</div>
-                <div class="row-desc">Only a local AI answers. Gemini, Google sign-in, GitHub search and news are switched off; nothing is sent to the internet.</div>
-              </div>
-              <input type="checkbox" class="toggle" data-setting="privacy.localOnly" id="private-mode-toggle">
-            </label>
-            <p class="form-error" id="private-mode-note" hidden></p>
-
-            <div class="local-card" id="local-card" aria-live="polite">
-              <div class="local-card-head">
+            <!-- ===== Your AIs ===== -->
+            <div class="subpane active" id="subpane-ais" data-subpane="ais" role="tabpanel" aria-labelledby="subtab-ais">
+              <div class="subhead">
                 <div>
-                  <div class="row-label">Local AI on this computer</div>
-                  <div class="row-desc" id="local-card-status">Looking for AI model servers…</div>
+                  <div class="subhead-title">Add an AI</div>
+                  <p class="hint">Run models on this computer, or use a cloud service. Add as many as you like.</p>
                 </div>
-                <button type="button" class="btn small" id="local-refresh">Look again</button>
+                <button type="button" class="btn btn-primary" id="brain-add">
+                  <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Add an AI</span>
+                </button>
               </div>
-              <div class="local-servers" id="local-servers"></div>
-              <div class="local-help" id="local-help" hidden>
-                <p>No local AI found yet. To get one:</p>
-                <ol>
-                  <li data-i18n-html="local.help1">Install <strong>Ollama</strong> from <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">ollama.com/download</a> (or LM Studio, Jan, llama.cpp…).</li>
-                  <li data-i18n-html="local.help2">Get a model, e.g. run <code>ollama pull llama3.2</code> in a terminal.</li>
-                  <li data-i18n-html="local.help3">Click <em>Look again</em>. It appears here, one click adds it.</li>
-                </ol>
-              </div>
-              <button type="button" class="btn" id="local-add-manual">Add a local AI by address…</button>
 
-              <div class="local-voice" id="local-voice">
-                <div>
-                  <div class="row-label">Local voice</div>
-                  <div class="row-desc" id="local-voice-status">Talk to a local AI and hear it answer, all on this computer.</div>
+              <form class="smart-add" id="smart-add" autocomplete="off">
+                <label class="smart-label" for="smart-input">Paste an API key or a server address</label>
+                <div class="smart-row">
+                  <input class="field" id="smart-input" type="text" placeholder="sk-…, AIza…, gsk_…, or http://localhost:1234" spellcheck="false" autocomplete="off">
+                  <button type="submit" class="btn" id="smart-go">Continue</button>
                 </div>
-                <button type="button" class="btn small" id="local-voice-btn">Set up</button>
+                <p class="row-desc" id="smart-hint">Friends works out which service it belongs to.</p>
+              </form>
+
+              <div class="local-card" id="local-card" aria-live="polite">
+                <div class="local-card-head">
+                  <div>
+                    <div class="row-label">AI on this computer</div>
+                    <div class="row-desc" id="local-card-status">Looking for AI model servers…</div>
+                  </div>
+                  <button type="button" class="btn small" id="local-refresh">Look again</button>
+                </div>
+                <div class="local-servers" id="local-servers"></div>
+                <div class="local-help" id="local-help" hidden>
+                  <p>No AI server is running on this computer yet. To get one:</p>
+                  <ol>
+                    <li data-i18n-html="local.help1">Install <strong>Ollama</strong> from <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">ollama.com/download</a> (or LM Studio, Jan, llama.cpp…).</li>
+                    <li data-i18n-html="local.help2">Get a model, e.g. run <code>ollama pull llama3.2</code> in a terminal. <em>This computer</em> suggests ones that fit.</li>
+                    <li data-i18n-html="local.help3">Click <em>Look again</em>. It appears here, one click adds it.</li>
+                  </ol>
+                </div>
+                <div class="local-voice" id="local-voice">
+                  <div>
+                    <div class="row-label">Local voice</div>
+                    <div class="row-desc" id="local-voice-status">Talk to a local AI and hear it answer, all on this computer.</div>
+                  </div>
+                  <button type="button" class="btn small" id="local-voice-btn">Set up</button>
+                </div>
               </div>
+
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">Your AIs</div>
+                  <p class="hint" id="brain-list-hint">The AIs Friends can use. The star marks the default; the arrows set the order they are tried in.</p>
+                </div>
+              </div>
+              <ul class="brain-list" id="brain-list"></ul>
+              <p class="form-error" id="brain-list-error" hidden></p>
             </div>
 
-            <!-- Which AI answers -->
-            <div class="subhead">
-              <div>
-                <div class="subhead-title">Which AI answers</div>
-                <p class="hint">Use a local AI, a cloud AI, or both, and let Friends choose per message.</p>
-              </div>
-            </div>
-
-            <label class="row">
-              <div>
-                <div class="row-label">Mode</div>
-                <div class="row-desc" id="routing-mode-desc">The same choice is in the model menu next to the message box.</div>
-              </div>
-              <select class="field" data-setting="routing.mode" id="routing-mode">
-                <option value="fixed">One AI (the one you pick)</option>
-                <option value="auto">✨ Auto</option>
-                <option value="dynamic">🔄 Dynamic</option>
-                <option value="fastest">⚡ Fastest</option>
-                <option value="local">🔒 Local only</option>
-                <option value="cloud">☁️ Cloud only</option>
-              </select>
-            </label>
-
-            <div class="routing-options" id="routing-options">
-              <label class="row" data-for="auto dynamic fastest">
+            <!-- ===== Answers ===== -->
+            <div class="subpane" id="subpane-answers" data-subpane="answers" role="tabpanel" aria-labelledby="subtab-answers">
+              <div class="subhead">
                 <div>
-                  <div class="row-label">Ask before using the cloud</div>
-                  <div class="row-desc">In Auto, Dynamic and Fastest, your message only goes to Gemini after you agree</div>
+                  <div class="subhead-title">Which AI answers</div>
+                  <p class="hint">Use a local AI, a cloud AI, or both, and let Friends choose per message.</p>
                 </div>
-                <select class="field" data-setting="routing.askBeforeCloud">
-                  <option value="chat">Once per chat</option>
-                  <option value="always">Every time</option>
-                  <option value="never">Never ask</option>
+              </div>
+
+              <label class="row">
+                <div>
+                  <div class="row-label">Mode</div>
+                  <div class="row-desc" id="routing-mode-desc">The same choice is in the model menu next to the message box.</div>
+                </div>
+                <select class="field" data-setting="routing.mode" id="routing-mode">
+                  <option value="fixed">One AI (the one you pick)</option>
+                  <option value="auto">Auto</option>
+                  <option value="dynamic">Dynamic</option>
+                  <option value="fastest">Fastest</option>
+                  <option value="local">Local only</option>
+                  <option value="cloud">Cloud only</option>
                 </select>
               </label>
 
-              <details class="advanced" id="routing-advanced">
-                <summary>More routing rules</summary>
-              <div class="row-label routing-sub" data-for="auto dynamic">Auto and Dynamic send a message to the cloud when…</div>
-              <label class="row" data-for="auto dynamic">
-                <div><div class="row-label">It has a PDF or picture</div><div class="row-desc">Local models can't read PDFs, and most can't see pictures</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.auto.attachments">
+              <div class="routing-options" id="routing-options">
+                <label class="row" data-for="auto dynamic fastest">
+                  <div>
+                    <div class="row-label">Ask before using the cloud</div>
+                    <div class="row-desc">In Auto, Dynamic and Fastest, your message only goes to a cloud AI after you agree</div>
+                  </div>
+                  <select class="field" data-setting="routing.askBeforeCloud">
+                    <option value="chat">Once per chat</option>
+                    <option value="always">Every time</option>
+                    <option value="never">Never ask</option>
+                  </select>
+                </label>
+
+                <details class="advanced" id="routing-advanced">
+                  <summary>More routing rules</summary>
+                  <div class="row-label routing-sub" data-for="auto dynamic">Auto and Dynamic send a message to the cloud when…</div>
+                  <label class="row" data-for="auto dynamic">
+                    <div><div class="row-label">It has a PDF or picture</div><div class="row-desc">Local models can't read PDFs, and most can't see pictures</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.auto.attachments">
+                  </label>
+                  <label class="row" data-for="auto dynamic">
+                    <div><div class="row-label">The chat is very long</div><div class="row-desc">When it no longer fits the local model's memory</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.auto.longChats">
+                  </label>
+                  <label class="row" data-for="auto dynamic">
+                    <div><div class="row-label">It's a hard question</div><div class="row-desc">Long, detailed, code or multi-step requests</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.auto.hardQuestions">
+                  </label>
+                  <label class="row" data-for="auto dynamic">
+                    <div><div class="row-label">Keep voice answers local</div><div class="row-desc">Spoken answers use the local AI when there is one, for speed</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.auto.voiceLocal">
+                  </label>
+
+                  <div class="row-label routing-sub" data-for="dynamic">Dynamic mode</div>
+                  <label class="row" data-for="dynamic">
+                    <div><div class="row-label">Switch when the local AI is slow or fails</div><div class="row-desc">If it stays silent, errors or sends nothing, the cloud answers instead, and the local AI is left alone for 10 minutes</div></div>
+                    <input type="checkbox" class="toggle" data-setting="routing.dynamic.escalate">
+                  </label>
+                  <label class="row" data-for="dynamic">
+                    <div><div class="row-label">Patience with the local AI</div><div class="row-desc">How long it may stay silent before the cloud takes over. Loading a model counts; slow thinkers need more</div></div>
+                    <select class="field" data-setting="routing.dynamic.slowSeconds" data-type="number">
+                      <option value="15">15 seconds</option>
+                      <option value="30">30 seconds</option>
+                      <option value="45">45 seconds</option>
+                      <option value="90">90 seconds</option>
+                      <option value="180">3 minutes</option>
+                    </select>
+                  </label>
+                </details>
+              </div>
+
+              <label class="row">
+                <div>
+                  <div class="row-label">Language of the answers</div>
+                  <div class="row-desc">The AI answers in the language you write in. Choose one to make it always answer in that language.</div>
+                </div>
+                <select class="field" data-setting="aiControl.replyLanguage">
+                  <option value="auto">The language I write in</option>
+                  <option value="en">English</option>
+                  <option value="de">Deutsch</option>
+                  <option value="ar">العربية</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                  <option value="it">Italiano</option>
+                  <option value="pt">Português</option>
+                  <option value="nl">Nederlands</option>
+                  <option value="pl">Polski</option>
+                  <option value="tr">Türkçe</option>
+                  <option value="ru">Русский</option>
+                  <option value="uk">Українська</option>
+                  <option value="fa">فارسی</option>
+                  <option value="hi">हिन्दी</option>
+                  <option value="zh">中文</option>
+                  <option value="ja">日本語</option>
+                  <option value="ko">한국어</option>
+                </select>
               </label>
-              <label class="row" data-for="auto dynamic">
-                <div><div class="row-label">The chat is very long</div><div class="row-desc">When it no longer fits the local model's memory</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.auto.longChats">
+              <label class="row">
+                <div>
+                  <div class="row-label">If the AI fails</div>
+                  <div class="row-desc">When the AI you chose can't answer, try the next one in your list. A local AI never falls back to the cloud, or the other way round.</div>
+                </div>
+                <select class="field" data-setting="routing.fallback">
+                  <option value="off">Say so</option>
+                  <option value="same-kind">Try the next one of the same kind</option>
+                </select>
               </label>
-              <label class="row" data-for="auto dynamic">
-                <div><div class="row-label">It's a hard question</div><div class="row-desc">Long, detailed, code or multi-step requests</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.auto.hardQuestions">
-              </label>
-              <label class="row" data-for="auto dynamic">
-                <div><div class="row-label">Keep voice answers local</div><div class="row-desc">Spoken answers use the local AI when there is one, for speed</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.auto.voiceLocal">
+              <label class="row">
+                <div>
+                  <div class="row-label">AI for small jobs</div>
+                  <div class="row-desc">Follow-up suggestions, summaries of long chats and moods. A small, quick one is enough.</div>
+                </div>
+                <select class="field" data-setting="routing.taskBrain" data-type="number" id="task-brain">
+                  <option value="0">Chosen by the mode</option>
+                </select>
               </label>
 
-              <div class="row-label routing-sub" data-for="dynamic">Dynamic mode</div>
-              <label class="row" data-for="dynamic">
-                <div><div class="row-label">Switch when the local AI is slow or fails</div><div class="row-desc">If it stays silent, errors or sends nothing, the cloud answers instead, and the local AI is left alone for 10 minutes</div></div>
-                <input type="checkbox" class="toggle" data-setting="routing.dynamic.escalate">
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">How it thinks</div>
+                  <p class="hint">Faster answers, or slower and more thorough ones.</p>
+                </div>
+              </div>
+
+              <div class="row-label" id="effort-label">Thinking effort</div>
+              <div class="choice-grid" id="reasoning-effort-grid" role="radiogroup" aria-labelledby="effort-label">
+                <button type="button" class="choice" data-effort="fast" role="radio" aria-checked="false">
+                  <span class="choice-title">Fast</span>
+                  <span class="choice-desc">Concise, low-latency</span>
+                </button>
+                <button type="button" class="choice selected" data-effort="balanced" role="radio" aria-checked="true">
+                  <span class="choice-title">Balanced</span>
+                  <span class="choice-desc">Recommended</span>
+                </button>
+                <button type="button" class="choice" data-effort="deep" role="radio" aria-checked="false">
+                  <span class="choice-title">Deep</span>
+                  <span class="choice-desc">Step-by-step analysis</span>
+                </button>
+              </div>
+
+              <div class="row">
+                <div>
+                  <div class="row-label">How much of the chat it sees</div>
+                  <div class="row-desc">The number of recent messages that are sent along with your new one</div>
+                </div>
+                <div class="slider">
+                  <span id="context-val-label" class="slider-badge">20</span>
+                  <input type="range" class="range" min="5" max="50" step="5" value="20" data-setting="aiControl.contextWindow" id="context-window-slider">
+                </div>
+              </div>
+              <label class="row">
+                <div>
+                  <div class="row-label">Tools for a local AI</div>
+                  <div class="row-desc">Small models work better with fewer tools (and each takes room in their memory)</div>
+                </div>
+                <select class="field" data-setting="aiControl.localTools">
+                  <option value="essential">Essential</option>
+                  <option value="all">All</option>
+                </select>
               </label>
-              <label class="row" data-for="dynamic">
-                <div><div class="row-label">Patience with the local AI</div><div class="row-desc">How long it may stay silent before the cloud takes over. Loading a model counts; slow thinkers need more</div></div>
-                <select class="field" data-setting="routing.dynamic.slowSeconds" data-type="number">
+              <label class="row">
+                <div>
+                  <div class="row-label">Confirm Google actions</div>
+                  <div class="row-desc">Ask before sending an email or changing your calendar</div>
+                </div>
+                <input type="checkbox" class="toggle" checked data-setting="aiControl.confirmTools">
+              </label>
+
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">Limits</div>
+                  <p class="hint">For every AI. Each AI can have its own in its settings, and those win.</p>
+                </div>
+              </div>
+              <label class="row">
+                <div>
+                  <div class="row-label">Longest reply</div>
+                  <div class="row-desc">Stops a reply after this many tokens (about three quarters of a word each). It keeps a cloud bill small.</div>
+                </div>
+                <select class="field" data-setting="aiControl.maxTokens" data-type="number">
+                  <option value="0">The AI's own limit</option>
+                  <option value="256">Short (256)</option>
+                  <option value="512">Medium (512)</option>
+                  <option value="1024">Long (1,024)</option>
+                  <option value="2048">Very long (2,048)</option>
+                  <option value="4096">4,096</option>
+                  <option value="8192">8,192</option>
+                </select>
+              </label>
+              <label class="row">
+                <div>
+                  <div class="row-label">How long to wait for an AI</div>
+                  <div class="row-desc">If it stays silent this long, Friends gives up on it (and tries the next one if you chose that above)</div>
+                </div>
+                <select class="field" data-setting="aiControl.timeoutSeconds" data-type="number">
+                  <option value="0">As long as it takes</option>
                   <option value="15">15 seconds</option>
                   <option value="30">30 seconds</option>
-                  <option value="45">45 seconds</option>
-                  <option value="90">90 seconds</option>
-                  <option value="180">3 minutes</option>
+                  <option value="60">1 minute</option>
+                  <option value="120">2 minutes</option>
+                  <option value="300">5 minutes</option>
                 </select>
               </label>
-              </details>
+              <label class="row">
+                <div>
+                  <div class="row-label">Try again when it's busy</div>
+                  <div class="row-desc">A request that fails for a passing reason (busy, no connection) is tried again before anything is shown</div>
+                </div>
+                <select class="field" data-setting="aiControl.retries" data-type="number">
+                  <option value="0">Don't</option>
+                  <option value="1">Once</option>
+                  <option value="2">Twice</option>
+                  <option value="3">Three times</option>
+                </select>
+              </label>
             </div>
 
-            <!-- AI Reasoning & Execution Policy -->
-            <div class="subhead">
-              <div>
-                <div class="subhead-title">How it thinks</div>
-                <p class="hint">Faster answers, or slower and more thorough ones.</p>
+            <!-- ===== Privacy ===== -->
+            <div class="subpane" id="subpane-privacy" data-subpane="privacy" role="tabpanel" aria-labelledby="subtab-privacy">
+              <div class="explain" id="local-vs-cloud">
+                <div class="explain-item">
+                  <span class="explain-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+                  <p data-i18n-html="explain.local"><strong>Local AI</strong> runs on this computer. Your messages never leave it, and it works offline. It can be slower on an older computer.</p>
+                </div>
+                <div class="explain-item">
+                  <span class="explain-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 0 9.5z"/></svg></span>
+                  <p data-i18n-html="explain.cloud"><strong>Cloud AI</strong> (Gemini, ChatGPT, Claude…) runs on a company's servers. It is faster and smarter, but your messages are sent there to be answered.</p>
+                </div>
               </div>
-            </div>
 
-            <div class="row-label" id="effort-label">Thinking effort</div>
-            <div class="choice-grid" id="reasoning-effort-grid" role="radiogroup" aria-labelledby="effort-label">
-              <button type="button" class="choice" data-effort="fast" role="radio" aria-checked="false">
-                <span class="choice-title">⚡ Fast</span>
-                <span class="choice-desc">Concise, low-latency</span>
-              </button>
-              <button type="button" class="choice selected" data-effort="balanced" role="radio" aria-checked="true">
-                <span class="choice-title">⚖️ Balanced</span>
-                <span class="choice-desc">Recommended</span>
-              </button>
-              <button type="button" class="choice" data-effort="deep" role="radio" aria-checked="false">
-                <span class="choice-title">🧠 Deep</span>
-                <span class="choice-desc">Step-by-step analysis</span>
-              </button>
-            </div>
+              <label class="row">
+                <div>
+                  <div class="row-label">Private mode</div>
+                  <div class="row-desc">Only a local AI answers. Cloud AIs, Google sign-in, GitHub search and news are switched off; nothing is sent to the internet.</div>
+                </div>
+                <input type="checkbox" class="toggle" data-setting="privacy.localOnly" id="private-mode-toggle">
+              </label>
+              <p class="form-error" id="private-mode-note" hidden></p>
 
-            <details class="advanced">
-              <summary>Advanced: how much it sees, and its tools</summary>
-            <div class="row">
-              <div>
-                <div class="row-label">How much of the chat it sees</div>
-                <div class="row-desc">The number of recent messages that are sent along with your new one</div>
+              <div class="leaving-card card" id="leaving-card">
+                <div class="row-label">What could leave this computer now</div>
+                <ul class="leaving-list" id="leaving-list"></ul>
+                <p class="row-desc" id="leaving-note"></p>
               </div>
-              <div class="slider">
-                <span id="context-val-label" class="slider-badge">20</span>
-                <input type="range" class="range" min="5" max="50" step="5" value="20" data-setting="aiControl.contextWindow" id="context-window-slider">
+
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">Hide from cloud AIs</div>
+                  <p class="hint">These are swapped for a placeholder like [email] before a message goes to a cloud AI. A local AI sees everything.</p>
+                </div>
               </div>
-            </div>
+              <label class="row">
+                <div><div class="row-label">Keys and passwords</div><div class="row-desc">API keys, tokens and private keys</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.redact.keys">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Card numbers</div><div class="row-desc">Numbers that pass a card check</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.redact.cards">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Email addresses</div><div class="row-desc">Yours and other people's, in what you write and what a tool reads out</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.redact.emails">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Phone numbers</div><div class="row-desc">With a plus sign or separators; plain numbers and dates stay</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.redact.phones">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Share my memories and notes with cloud AIs</div><div class="row-desc">Switch off to keep what you asked it to remember, its notes, your notes vault and what it remembers of past chats from cloud AIs</div></div>
+                <input type="checkbox" class="toggle" data-setting="privacy.shareMemoryWithCloud">
+              </label>
 
-            <div class="row">
-              <div>
-                <div class="row-label">Tools for a local AI</div>
-                <div class="row-desc">Small models work better with fewer tools (and each takes room in their memory)</div>
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">Your data on this computer</div>
+                  <p class="hint" id="privacy-counts">Looking…</p>
+                </div>
               </div>
-              <select class="field" data-setting="aiControl.localTools">
-                <option value="essential">Essential</option>
-                <option value="all">All</option>
-              </select>
-            </div>
-
-            </details>
-
-            <label class="row">
-              <div>
-                <div class="row-label">Confirm Google actions</div>
-                <div class="row-desc">Ask before sending an email or changing your calendar</div>
+              <label class="row">
+                <div><div class="row-label">Delete old chats</div><div class="row-desc">Chats you haven't opened or written in for this long are deleted</div></div>
+                <select class="field" data-setting="privacy.keepChatsDays" data-type="number">
+                  <option value="0">Never</option>
+                  <option value="7">After 7 days</option>
+                  <option value="30">After 30 days</option>
+                  <option value="90">After 90 days</option>
+                  <option value="180">After 6 months</option>
+                  <option value="365">After a year</option>
+                </select>
+              </label>
+              <label class="row">
+                <div><div class="row-label">Check for updates</div><div class="row-desc">Asks GitHub's public releases page once a day. Nothing about you is sent. Not in Private mode.</div></div>
+                <input type="checkbox" class="toggle" data-setting="updates.check">
+              </label>
+              <div class="clear-row">
+                <button type="button" class="btn small" data-clear="chats">Delete all chats</button>
+                <button type="button" class="btn small" data-clear="memories">Delete my memories</button>
+                <button type="button" class="btn small" data-clear="notes">Delete its notes</button>
+                <button type="button" class="btn small" data-clear="episodes">Forget past chats</button>
+                <button type="button" class="btn small" data-clear="usage">Reset usage counts</button>
+                <span class="test-feedback" id="clear-feedback" role="status"></span>
               </div>
-              <input type="checkbox" class="toggle" checked data-setting="aiControl.confirmTools">
-            </label>
 
-            <!-- Brains Management -->
-            <div class="subhead">
-              <div>
-                <div class="subhead-title">Your AIs</div>
-                <p class="hint">The AIs Friends can use. Add as many as you like, and pick which one is the default.</p>
+              <div class="subhead" id="permissions-section">
+                <div>
+                  <div class="subhead-title">Permissions and file access</div>
+                  <p class="hint">Choose what the AI is allowed to do on your computer.</p>
+                </div>
               </div>
-              <button class="btn btn-primary" id="brain-add">
-                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Add an AI</span>
-              </button>
-            </div>
 
-            <div class="preset-chips">
-              <span class="preset-label">Quick add:</span>
-              <button type="button" class="chip preset-btn" data-preset="flash">⚡ 2.5 Flash (fast)</button>
-              <button type="button" class="chip preset-btn" data-preset="pro">🧠 2.5 Pro (deep)</button>
-              <button type="button" class="chip preset-btn" data-preset="flash2">🎙️ 2.0 Flash (voice)</button>
-              <button type="button" class="chip preset-btn" data-preset="local">🔒 Local AI (private)</button>
-            </div>
-
-            <ul class="brain-list" id="brain-list"></ul>
-            <p class="form-error" id="brain-list-error" hidden></p>
-
-            <div class="subhead" id="permissions-section">
-              <div>
-                <div class="subhead-title">Permissions and file access</div>
-                <p class="hint">Choose what the AI is allowed to do on your computer.</p>
+              <div class="form-field">
+                <div>
+                  <div class="row-label">Allowed folders</div>
+                  <div class="row-desc">The AI can only work inside these folders.</div>
+                </div>
+                <ul class="folder-list" id="folder-list"></ul>
+                <form class="folder-add" id="folder-add" hidden>
+                  <input class="field" name="path" placeholder="e.g. ~/Documents/Projects" autocomplete="off" spellcheck="false" required>
+                  <button type="submit" class="btn btn-primary">Add</button>
+                  <button type="button" class="btn" id="folder-add-cancel">Cancel</button>
+                </form>
+                <button class="btn add-folder-btn" id="folder-add-open">
+                  <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Add folder</span>
+                </button>
               </div>
-            </div>
 
-            <div class="form-field">
-              <div>
-                <div class="row-label">Allowed folders</div>
-                <div class="row-desc">The AI can only work inside these folders.</div>
+              <div class="perm-grid" id="perm-grid">
+                <span></span>
+                <span class="perm-head">Create</span>
+                <span class="perm-head">Read</span>
+                <span class="perm-head">Edit</span>
+                <span class="perm-head">Delete</span>
+
+                <span class="perm-row-label">
+                  <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>
+                  Files
+                </span>
+                <input type="checkbox" class="perm-check" data-row="files" data-perm="create" aria-label="Create files">
+                <input type="checkbox" class="perm-check" data-row="files" data-perm="read" aria-label="Read files" checked>
+                <input type="checkbox" class="perm-check" data-row="files" data-perm="edit" aria-label="Edit files">
+                <input type="checkbox" class="perm-check" data-row="files" data-perm="delete" aria-label="Delete files">
+
+                <span class="perm-row-label">
+                  <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                  Folders
+                </span>
+                <input type="checkbox" class="perm-check" data-row="folders" data-perm="create" aria-label="Create folders">
+                <input type="checkbox" class="perm-check" data-row="folders" data-perm="read" aria-label="Read folders" checked>
+                <input type="checkbox" class="perm-check" data-row="folders" data-perm="edit" aria-label="Edit folders">
+                <input type="checkbox" class="perm-check" data-row="folders" data-perm="delete" aria-label="Delete folders">
               </div>
-              <ul class="folder-list" id="folder-list"></ul>
-              <form class="folder-add" id="folder-add" hidden>
-                <input class="field" name="path" placeholder="e.g. ~/Documents/Projects" autocomplete="off" spellcheck="false" required>
-                <button type="submit" class="btn btn-primary">Add</button>
-                <button type="button" class="btn" id="folder-add-cancel">Cancel</button>
-              </form>
-              <button class="btn add-folder-btn" id="folder-add-open">
-                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span>Add folder</span>
-              </button>
+              <p class="row-desc">Read = open files and see what's inside folders. Edit includes renaming and moving.</p>
+
+              <label class="row">
+                <div><div class="row-label">Ask before acting</div><div class="row-desc">Confirm each action before the AI does it</div></div>
+                <input type="checkbox" class="toggle" checked data-setting="permissions.askBeforeActing">
+              </label>
+              <label class="row">
+                <div><div class="row-label">Use the trash</div><div class="row-desc">Deleted items go to the trash so you can restore them</div></div>
+                <input type="checkbox" class="toggle" checked data-setting="permissions.useTrash">
+              </label>
             </div>
 
-            <div class="perm-grid" id="perm-grid">
-              <span></span>
-              <span class="perm-head">Create</span>
-              <span class="perm-head">Read</span>
-              <span class="perm-head">Edit</span>
-              <span class="perm-head">Delete</span>
+            <!-- ===== This computer ===== -->
+            <div class="subpane" id="subpane-device" data-subpane="device" role="tabpanel" aria-labelledby="subtab-device">
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">What Friends found</div>
+                  <p class="hint">Friends looks at this computer by itself and fits local AI to it. Nothing here leaves it.</p>
+                </div>
+                <button type="button" class="btn small" id="device-refresh">Look again</button>
+              </div>
+              <div class="device-card card" id="device-card" aria-live="polite">
+                <div class="device-head" id="device-head">Looking at this computer…</div>
+                <dl class="device-facts" id="device-facts"></dl>
+              </div>
 
-              <span class="perm-row-label">
-                <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/></svg>
-                Files
-              </span>
-              <input type="checkbox" class="perm-check" data-row="files" data-perm="create" aria-label="Create files">
-              <input type="checkbox" class="perm-check" data-row="files" data-perm="read" aria-label="Read files" checked>
-              <input type="checkbox" class="perm-check" data-row="files" data-perm="edit" aria-label="Edit files">
-              <input type="checkbox" class="perm-check" data-row="files" data-perm="delete" aria-label="Delete files">
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">What suits it</div>
+                  <p class="hint" id="device-fit">…</p>
+                </div>
+              </div>
+              <ul class="device-picks" id="device-picks"></ul>
+              <div class="actions-row">
+                <button type="button" class="btn small" id="device-open-specialists" data-open-tab="specialists">Set them up in Specialists</button>
+              </div>
 
-              <span class="perm-row-label">
-                <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-                Folders
-              </span>
-              <input type="checkbox" class="perm-check" data-row="folders" data-perm="create" aria-label="Create folders">
-              <input type="checkbox" class="perm-check" data-row="folders" data-perm="read" aria-label="Read folders" checked>
-              <input type="checkbox" class="perm-check" data-row="folders" data-perm="edit" aria-label="Edit folders">
-              <input type="checkbox" class="perm-check" data-row="folders" data-perm="delete" aria-label="Delete folders">
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">How hard it may work</div>
+                  <p class="hint">Automatic follows what this computer is. Change it if you want a quieter or a faster one.</p>
+                </div>
+              </div>
+              <label class="row">
+                <div><div class="row-label">Profile</div><div class="row-desc" id="device-profile-desc">Sets the context size and how long a model stays loaded for a new local AI, and how many missions run at once.</div></div>
+                <select class="field" data-setting="device.profile" id="device-profile">
+                  <option value="auto">Automatic</option>
+                  <option value="light">Light: quiet and cool</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="performance">Performance: as much as it can</option>
+                </select>
+              </label>
+              <label class="row">
+                <div><div class="row-label">Graphics card for local AI</div><div class="row-desc">Switch off to keep local models on the processor, for example when the card is busy or its driver misbehaves</div></div>
+                <select class="field" data-setting="device.gpu">
+                  <option value="auto">Use it when there is one</option>
+                  <option value="off">Don't use it</option>
+                </select>
+              </label>
+              <label class="row">
+                <div><div class="row-label">Save battery</div><div class="row-desc">On battery, repeating missions wait until the charger is back, and a model isn't kept loaded for long</div></div>
+                <input type="checkbox" class="toggle" data-setting="device.saveBattery">
+              </label>
+
+              <div class="subhead">
+                <div>
+                  <div class="subhead-title">This screen</div>
+                  <p class="hint">The window you are looking at now (it can be another device than the one Friends runs on).</p>
+                </div>
+              </div>
+              <div class="device-card card" id="browser-card"><dl class="device-facts" id="browser-facts"></dl></div>
             </div>
-            <p class="row-desc">Read = open files and see what's inside folders. Edit includes renaming and moving.</p>
-
-            <label class="row">
-              <div><div class="row-label">Ask before acting</div><div class="row-desc">Confirm each action before the AI does it</div></div>
-              <input type="checkbox" class="toggle" checked data-setting="permissions.askBeforeActing">
-            </label>
-            <label class="row">
-              <div><div class="row-label">Use the trash</div><div class="row-desc">Deleted items go to the trash so you can restore them</div></div>
-              <input type="checkbox" class="toggle" checked data-setting="permissions.useTrash">
-            </label>
           </div>
 
-          <!-- Add / edit an AI brain -->
-          <form class="brain-form" id="brain-form" hidden>
-            <button type="button" class="back-link" id="brain-back">
+          <!-- Add / edit an AI -->
+          <div class="ai-add" id="ai-add" hidden>
+            <button type="button" class="back-link" id="ai-add-back">
               <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
               <span>Back to AI &amp; privacy</span>
             </button>
-            <div class="subhead-title" id="brain-form-title">Add an AI</div>
+            <div class="subhead-title" id="ai-add-title">Add an AI</div>
 
-            <div class="form-field">
-              <span class="row-label">Provider</span>
-              <div class="provider-grid" id="provider-grid"></div>
+            <!-- Step 1: which service -->
+            <div id="ai-pick">
+              <label class="form-field">
+                <span class="row-label">Find a service</span>
+                <input class="field" id="ai-search" type="search" placeholder="Ollama, ChatGPT, Claude, Groq, OpenRouter…" autocomplete="off" spellcheck="false">
+              </label>
+              <div class="subhead-title small">On this computer</div>
+              <div class="service-grid" id="service-grid-local"></div>
+              <div class="subhead-title small">Cloud services</div>
+              <div class="service-grid" id="service-grid-cloud"></div>
+              <p class="row-desc" id="service-none" hidden>Nothing matches. Try "Any other service" and give its address.</p>
             </div>
 
-            <label class="form-field">
-              <span class="row-label">Name</span>
-              <input class="field" name="name" placeholder="e.g. Gemini Fast or Claude Work" autocomplete="off">
-            </label>
+            <!-- Step 2: connect, pick models -->
+            <form class="ai-form" id="ai-form" hidden autocomplete="off">
+              <div class="ai-form-head" id="ai-form-head"></div>
+              <p class="row-desc" id="ai-form-about"></p>
 
-            <div class="form-field" id="local-presets-field" hidden>
-              <span class="row-label">Your AI server</span>
-              <div class="preset-row" id="local-presets"></div>
-              <span class="row-desc">Runs on this computer, so your chats never leave it. Any server that speaks the OpenAI API works, open source or not.</span>
-            </div>
+              <label class="form-field" id="field-name">
+                <span class="row-label">Name</span>
+                <input class="field" name="name" autocomplete="off" placeholder="e.g. Fast cloud, or Writing helper">
+              </label>
 
-            <label class="form-field" id="baseurl-field" hidden>
-              <span class="row-label">Server address</span>
-              <input class="field" name="baseUrl" type="text" placeholder="http://127.0.0.1:11434/v1" autocomplete="off" spellcheck="false">
-            </label>
+              <label class="form-field" id="field-baseurl">
+                <span class="row-label" id="baseurl-label">Address</span>
+                <input class="field" name="baseUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://api.example.com/v1">
+                <span class="row-desc" id="baseurl-desc"></span>
+              </label>
 
-            <div class="form-field" id="model-select-field">
-              <span class="row-label">Model</span>
-              <div class="model-curated-grid" id="model-curated-grid">
-                <button type="button" class="model-card selected" data-model="gemini-2.5-flash">
-                  <div class="model-card-badge">Fast, and voice</div>
-                  <div class="model-card-name">Gemini 2.5 Flash</div>
-                  <div class="model-card-desc">Quickest answers: great for everyday chats and voice</div>
-                </button>
-                <button type="button" class="model-card" data-model="gemini-2.5-pro">
-                  <div class="model-card-badge">Deep thinking</div>
-                  <div class="model-card-name">Gemini 2.5 Pro</div>
-                  <div class="model-card-desc">Careful reasoning, research and coding</div>
-                </button>
-                <button type="button" class="model-card" data-model="gemini-2.0-flash">
-                  <div class="model-card-badge">Multimodal</div>
-                  <div class="model-card-name">Gemini 2.0 Flash</div>
-                  <div class="model-card-desc">Fast, and handles pictures and audio</div>
-                </button>
-                <button type="button" class="model-card" data-model="custom">
-                  <div class="model-card-badge">Custom</div>
-                  <div class="model-card-name">Other model…</div>
-                  <div class="model-card-desc">Pick from the list or type a name</div>
-                </button>
+              <label class="form-field" id="field-key">
+                <span class="row-label" id="key-label">API key</span>
+                <span class="key-input">
+                  <input class="field" name="key" type="password" autocomplete="off" spellcheck="false">
+                  <button type="button" class="icon-btn small" id="key-toggle" title="Show key" aria-label="Show key">
+                    <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </span>
+                <span class="row-desc" id="key-desc"></span>
+              </label>
+
+              <div class="form-test-bar">
+                <button type="button" class="btn" id="ai-connect-go">Connect and list models</button>
+                <span class="test-feedback" id="ai-connect-status" role="status"></span>
               </div>
-            </div>
 
-            <label class="form-field" id="model-custom-wrapper" hidden>
-              <span class="row-label" id="model-label">Custom model name</span>
-              <input class="field" name="model" list="model-options" autocomplete="off" spellcheck="false" placeholder="Leave empty to pick automatically">
-              <datalist id="model-options"></datalist>
-            </label>
+              <div class="form-field" id="field-models" hidden>
+                <span class="row-label" id="models-label">Models</span>
+                <div class="model-tools">
+                  <input class="field" id="ai-model-filter" type="search" placeholder="Filter the list" aria-label="Filter the models" autocomplete="off" spellcheck="false">
+                  <button type="button" class="btn small" id="ai-model-none">Select none</button>
+                </div>
+                <ul class="model-list" id="ai-model-list" role="group" aria-labelledby="models-label"></ul>
+                <p class="row-desc" id="ai-model-count"></p>
+                <label class="form-field" id="field-model-typed">
+                  <span class="row-label">Another model name</span>
+                  <input class="field" name="model" list="model-options" autocomplete="off" spellcheck="false" placeholder="Type a name that isn't in the list">
+                  <datalist id="model-options"></datalist>
+                </label>
+              </div>
 
-            <label class="form-field" id="key-field">
-              <span class="row-label" id="key-label">API key</span>
-              <span class="key-input">
-                <input class="field" name="key" type="password" autocomplete="off" spellcheck="false">
-                <button type="button" class="icon-btn small" id="key-toggle" title="Show key">
-                  <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-              </span>
-              <span class="row-desc" id="key-desc" data-i18n-html="key.desc">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a></span>
-            </label>
+              <details class="advanced" id="ai-own-settings">
+                <summary>This AI's own settings</summary>
+                <div class="own-grid">
+                  <label class="form-field"><span class="row-label">Temperature</span><input class="field" name="temperature" type="number" min="0" max="2" step="any" placeholder="The character's"><span class="row-desc">Lower is steadier, higher is more inventive. Empty keeps the character's own.</span></label>
+                  <label class="form-field"><span class="row-label">Longest reply (tokens)</span><input class="field" name="maxTokens" type="number" min="0" step="any" placeholder="Same as in Answers"><span class="row-desc">Empty uses the limit in Answers.</span></label>
+                  <label class="form-field"><span class="row-label">Top-p</span><input class="field" name="topP" type="number" min="0" max="1" step="any" placeholder="The AI's own"><span class="row-desc">An alternative to temperature. Most people leave it empty.</span></label>
+                  <label class="form-field"><span class="row-label">Wait for it (seconds)</span><input class="field" name="timeoutSeconds" type="number" min="0" step="any" placeholder="Same as in Answers"><span class="row-desc">How long it may stay silent before Friends gives up.</span></label>
+                  <label class="form-field"><span class="row-label">Daily limit (requests)</span><input class="field" name="dailyLimit" type="number" min="0" step="any" placeholder="No limit"><span class="row-desc">After this many today, Friends uses another AI. Keeps a cloud bill in check.</span></label>
+                  <label class="form-field"><span class="row-label">Tools</span>
+                    <select class="field" name="tools"><option value="auto">Use them</option><option value="off">Don't use tools with this AI</option></select>
+                    <span class="row-desc">Some small models answer worse when they are offered tools.</span></label>
+                  <label class="form-field"><span class="row-label">Pictures</span>
+                    <select class="field" name="vision"><option value="auto">Guess from its name</option><option value="yes">It can see pictures</option><option value="no">It can't</option></select>
+                    <span class="row-desc">Decides whether a message with a picture needs another AI.</span></label>
+                </div>
+                <label class="form-field"><span class="row-label">Extra instructions</span><textarea class="field textarea wide" name="systemPrefix" rows="3" maxlength="2000" placeholder="e.g. Always answer in German."></textarea><span class="row-desc">Added in front of the character's instructions for this AI only.</span></label>
+                <label class="form-field"><span class="row-label">Note to yourself</span><input class="field" name="note" maxlength="300" placeholder="e.g. Best for code"></label>
 
-            <details class="form-field advanced" id="ollama-field" hidden>
-              <summary class="row-label">Advanced: memory use</summary>
-              <span class="row-label">Context size</span>
-              <select class="field" name="contextSize">
-                <option value="0">Ollama's default (4096)</option>
-                <option value="4096">4096 tokens</option>
-                <option value="8192" selected>8192 tokens (recommended)</option>
-                <option value="16384">16384 tokens</option>
-                <option value="32768">32768 tokens</option>
-                <option value="65536">65536 tokens</option>
-                <option value="131072">131072 tokens</option>
-              </select>
-              <span class="row-desc">How much of the chat the model sees at once. Too small and long chats get cut off; larger needs more memory.</span>
-              <span class="row-label">Keep the model loaded</span>
-              <select class="field" name="keepAlive">
-                <option value="0">Ollama's default (5 minutes)</option>
-                <option value="15">15 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="240">4 hours</option>
-                <option value="1440">All day</option>
-              </select>
-              <span class="row-desc">Loaded models answer at once; unloading frees memory.</span>
-            </details>
+                <div class="own-ollama" id="ollama-field" hidden>
+                  <span class="row-label">Memory use (Ollama)</span>
+                  <label class="form-field"><span class="row-label">Context size</span>
+                    <select class="field" name="contextSize">
+                      <option value="0">Ollama's default (4096)</option>
+                      <option value="2048">2048 tokens</option>
+                      <option value="4096">4096 tokens</option>
+                      <option value="8192" selected>8192 tokens (recommended)</option>
+                      <option value="16384">16384 tokens</option>
+                      <option value="32768">32768 tokens</option>
+                      <option value="65536">65536 tokens</option>
+                      <option value="131072">131072 tokens</option>
+                    </select>
+                    <span class="row-desc" id="context-hint">How much of the chat the model sees at once. Too small and long chats get cut off; larger needs more memory.</span></label>
+                  <label class="form-field"><span class="row-label">Keep the model loaded</span>
+                    <select class="field" name="keepAlive">
+                      <option value="0">Ollama's default (5 minutes)</option>
+                      <option value="5">5 minutes</option>
+                      <option value="15">15 minutes</option>
+                      <option value="60">1 hour</option>
+                      <option value="240">4 hours</option>
+                      <option value="1440">All day</option>
+                    </select>
+                    <span class="row-desc">Loaded models answer at once; unloading frees memory.</span></label>
+                </div>
+                <div class="own-speech" id="speech-field" hidden>
+                  <span class="row-label">Voice (optional)</span>
+                  <span class="row-desc" data-i18n-html="speech.desc">Only for your own speech-to-text server (OpenAI-style <code>/audio/transcriptions</code>). Not needed if you set up <strong>Local voice</strong> under Your AIs.</span>
+                  <input class="field" name="speechUrl" type="text" placeholder="Speech server address, e.g. http://127.0.0.1:8000/v1" autocomplete="off" spellcheck="false">
+                  <input class="field" name="speechModel" type="text" placeholder="Speech model, e.g. Systran/faster-whisper-small" autocomplete="off" spellcheck="false">
+                </div>
+              </details>
 
-            <details class="form-field" id="speech-field" hidden>
-              <summary class="row-label">Voice (optional)</summary>
-              <span class="row-desc" data-i18n-html="speech.desc">Only for your own speech-to-text server (OpenAI-style <code>/audio/transcriptions</code>). Not needed if you set up <strong>Local voice</strong> under Privacy & local AI, which listens and speaks on this computer.</span>
-              <input class="field" name="speechUrl" type="text" placeholder="Speech server address, e.g. http://127.0.0.1:8000/v1" autocomplete="off" spellcheck="false">
-              <input class="field" name="speechModel" type="text" placeholder="Speech model, e.g. Systran/faster-whisper-small" autocomplete="off" spellcheck="false">
-            </details>
-
-            <div class="form-test-bar">
-              <button type="button" class="btn small" id="brain-test-btn">
-                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                <span>Test the key and connection</span>
-              </button>
-              <span class="test-feedback" id="brain-test-feedback"></span>
-            </div>
-
-            <p class="form-error" id="brain-form-error" hidden></p>
-            <div class="form-actions">
-              <button type="button" class="btn" id="brain-cancel">Cancel</button>
-              <button type="submit" class="btn btn-primary" id="brain-save">Save</button>
-            </div>
-          </form>
+              <p class="form-error" id="ai-form-error" hidden></p>
+              <div class="ai-add-result" id="ai-add-result" role="status" hidden></div>
+              <div class="form-actions">
+                <button type="button" class="btn" id="ai-form-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="ai-form-save" disabled>Add</button>
+              </div>
+            </form>
+          </div>
         </section>
 
         <!-- Memory -->
@@ -1138,7 +1605,7 @@
           </div>
 
           <label class="row">
-            <div><div class="row-label">Robot in text chat</div><div class="row-desc">A small live robot next to your chats (on wide windows)</div></div>
+            <div><div class="row-label">Robot on Home and in text chat</div><div class="row-desc">The live robot greets you on Home, and sits in a corner while you chat (on wide windows)</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.chatDock">
           </label>
 
@@ -1228,7 +1695,7 @@
 
           <div class="subhead"><div>
             <div class="subhead-title">Filming mode</div>
-            <p class="hint">For filming the screen with a camera or phone: in voice mode, press F or the 🎬 button.</p>
+            <p class="hint">For filming the screen with a camera or phone: in voice mode, press F or the camera button.</p>
           </div></div>
           <div class="row">
             <div><div class="row-label">Start delay</div><div class="row-desc">Time to get to your camera before the conversation starts</div></div>
@@ -1267,6 +1734,93 @@
         </section>
 
         <!-- Connected Apps & Workspace -->
+        <!-- Specialists -->
+        <section class="pane" data-pane="specialists" id="pane-specialists" role="tabpanel" aria-labelledby="tab-specialists">
+          <h3>Specialists</h3>
+          <p class="hint">Small AI models on this computer, each with a job. The manager (Gemini) hands steps of a mission to the right one. When memory is limited only one big model fits at a time, so Friends loads and unloads them for you, and keeps steps that use the same model together.</p>
+          <div class="spec-status card" id="spec-status" role="status"></div>
+          <div class="spec-setup card" id="spec-setup" hidden>
+            <div>
+              <div class="row-label">Pick models for my computer</div>
+              <div class="row-desc" id="spec-setup-text"></div>
+            </div>
+            <div class="actions-row">
+              <button type="button" class="btn btn-primary" id="spec-use-suggestions">Use the suggestions</button>
+              <button type="button" class="link-btn" id="spec-dismiss-suggestions">Not now</button>
+            </div>
+          </div>
+          <ul class="spec-list" id="spec-roles" aria-label="The roles"></ul>
+          <div class="actions-row">
+            <button type="button" class="btn" id="spec-add">Add a role</button>
+            <button type="button" class="btn" id="spec-reset">Reset to the suggested defaults</button>
+            <span class="test-feedback" id="spec-feedback" role="status"></span>
+          </div>
+          <form class="card spec-new" id="spec-new" hidden>
+            <label class="form-field"><span class="row-label">Name</span><input class="field wide" name="label" maxlength="60" placeholder="Translator" autocomplete="off" required></label>
+            <label class="form-field"><span class="row-label">When should the manager choose it?</span><input class="field wide" name="when" maxlength="300" placeholder="Translating between English and German" autocomplete="off"></label>
+            <label class="form-field"><span class="row-label">Its instructions</span><textarea class="field textarea wide" name="system" rows="3" maxlength="4000" placeholder="You translate text exactly, keeping the tone."></textarea></label>
+            <div class="actions-row"><button type="submit" class="btn btn-primary">Add this role</button><button type="button" class="btn btn-ghost" id="spec-new-cancel">Cancel</button></div>
+          </form>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Models on this computer</div>
+            <p class="hint">What Ollama has. Pull a new one by name (for example one of the suggestions); it needs the internet once, and Private mode keeps it off.</p>
+          </div></div>
+          <form class="spec-pull" id="spec-pull">
+            <input class="field" id="spec-pull-name" list="spec-pull-list" placeholder="qwen3.5:4b" autocomplete="off" spellcheck="false" aria-label="Model to pull">
+            <datalist id="spec-pull-list"></datalist>
+            <button type="submit" class="btn btn-primary" id="spec-pull-go">Pull</button>
+          </form>
+          <div class="spec-progress" id="spec-progress" hidden>
+            <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Download progress"><i id="spec-progress-bar" style="width:0%"></i></div>
+            <p class="row-desc" id="spec-progress-text" role="status"></p>
+          </div>
+          <ul class="spec-models" id="spec-models" aria-label="Installed models"></ul>
+        </section>
+
+        <!-- Missions -->
+        <section class="pane" data-pane="missions" id="pane-missions" role="tabpanel" aria-labelledby="tab-missions">
+          <h3>Missions</h3>
+          <p class="hint">Goals that your companion carries out in the background: it makes a plan, you approve it once, and it gets done. Where they work, how long they may take, and who plans them.</p>
+          <label class="row">
+            <div><div class="row-label">Missions on</div><div class="row-desc">Switch off to hide Missions and stop the companion from starting them</div></div>
+            <input type="checkbox" class="toggle" data-setting="missions.enabled">
+          </label>
+          <label class="form-field">
+            <span class="row-label">Workspace folder</span>
+            <span class="row-desc">Every mission gets a folder of its own in here to work in (files it makes, projects it builds, commands it runs).</span>
+            <input class="field wide" type="text" data-setting="missions.workspace" placeholder="~/friends-workspace" autocomplete="off" spellcheck="false">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Limits</div>
+            <p class="hint">What each plan starts with, and what no plan may go beyond. The plan shows its limits before you approve it.</p>
+          </div></div>
+          <label class="row"><div><div class="row-label">Minutes at most</div><div class="row-desc">A mission pauses when it has been working this long</div></div><input class="field narrow" type="number" min="1" max="1440" data-type="number" data-setting="missions.limits.maxMinutes"></label>
+          <label class="row"><div><div class="row-label">Steps at most</div></div><input class="field narrow" type="number" min="1" max="200" data-type="number" data-setting="missions.limits.maxSteps"></label>
+          <label class="row"><div><div class="row-label">Cloud calls at most</div><div class="row-desc">How often it may ask Gemini (each call counts against your free limit)</div></div><input class="field narrow" type="number" min="0" max="2000" data-type="number" data-setting="missions.limits.maxCloudCalls"></label>
+          <label class="row"><div><div class="row-label">Command time limit (seconds)</div><div class="row-desc">One command is stopped after this long</div></div><input class="field narrow" type="number" min="5" max="3600" data-type="number" data-setting="missions.commandTimeoutSeconds"></label>
+          <label class="row"><div><div class="row-label">Missions at the same time</div></div><input class="field narrow" type="number" min="1" max="4" data-type="number" data-setting="missions.maxConcurrent"></label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">The manager</div>
+            <p class="hint">Gemini plans, delegates and checks. A stronger model plans and checks; a faster one does routine steps. Leave them empty to choose from what your key can use. In Private mode a model on this computer is the manager.</p>
+          </div></div>
+          <label class="form-field"><span class="row-label">Planning and checking model</span><input class="field wide" type="text" data-setting="missions.manager.planModel" placeholder="Automatic (the newest Pro)" autocomplete="off" spellcheck="false"></label>
+          <label class="form-field"><span class="row-label">Routine steps model</span><input class="field wide" type="text" data-setting="missions.manager.fastModel" placeholder="Automatic (your Gemini AI's model)" autocomplete="off" spellcheck="false"></label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Telling you</div>
+            <p class="hint">At the milestones: a plan to approve, a question, halfway, done, or trouble.</p>
+          </div></div>
+          <label class="row"><div><div class="row-label">On this computer</div><div class="row-desc">A notification, also with the window closed</div></div><input type="checkbox" class="toggle" data-setting="missions.notify.desktop"></label>
+          <label class="row"><div><div class="row-label">On Telegram</div><div class="row-desc">With buttons to approve a plan or answer a question (set up under Telegram)</div></div><input type="checkbox" class="toggle" data-setting="missions.notify.telegram"></label>
+          <div class="honesty-note">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Approving a plan covers exactly the actions it lists. Anything else that sends, deletes or runs a command pauses the mission and asks you. Files stay inside the folders you allow (AI &amp; privacy) and the mission's own folder, deleting goes to the trash, commands run in the mission's folder with a time limit and without your keys. Stop works at once.</span>
+          </div>
+        </section>
+
         <section class="pane" data-pane="integrations" id="pane-integrations" role="tabpanel" aria-labelledby="tab-integrations">
           <h3>Connected apps</h3>
 
@@ -1350,7 +1904,7 @@
 
           <div class="ws-features-list">
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">📅</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
               <div class="ws-feature-content">
                 <strong>Google Calendar</strong>
                 <span>See what's coming up, and add or change events (it asks first).</span>
@@ -1359,7 +1913,7 @@
             </div>
 
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">✉️</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
               <div class="ws-feature-content">
                 <strong>Gmail</strong>
                 <span>Search your inbox, read messages, and write drafts or replies (it asks before sending).</span>
@@ -1368,7 +1922,7 @@
             </div>
 
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">📁</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
               <div class="ws-feature-content">
                 <strong>Google Drive, Docs, Sheets & Slides</strong>
                 <span>Find and read your documents, spreadsheets and presentations.</span>
@@ -1384,14 +1938,14 @@
               </div>
             </div>
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">☑️</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg></div>
               <div class="ws-feature-content">
                 <strong>Google Tasks</strong>
                 <span>Your task lists that sync with your phone. (Turn on the Google Tasks API for your project.)</span>
               </div>
             </div>
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">🐙</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></div>
               <div class="ws-feature-content">
                 <strong>GitHub</strong>
                 <span>Search repositories and see what's trending.</span>
@@ -1400,7 +1954,7 @@
             </div>
 
             <div class="ws-feature-item">
-              <div class="ws-feature-icon">📰</div>
+              <div class="ws-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1m2 13a2 2 0 0 1-2-2V7m2 13a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"/><path d="M7 16h6M7 8h6m-6 4h6"/></svg></div>
               <div class="ws-feature-content">
                 <strong>News</strong>
                 <span>Search headlines and current events.</span>
@@ -1461,6 +2015,15 @@
             </form>
           </details>
 
+          <div class="honesty-note">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Your Google sign-in token is kept in this window's memory only, never saved to disk. Sending an email or adding an event asks you first (Settings → AI &amp; privacy → Confirm Google actions). None of this is available in Private mode.</span>
+          </div>
+        </section>
+
+        <!-- Telegram -->
+        <section class="pane" data-pane="telegram" id="pane-telegram" role="tabpanel" aria-labelledby="tab-telegram">
+          <h3>Telegram</h3>
           <div class="subhead"><div>
             <div class="subhead-title">Telegram companion bot</div>
             <p class="hint">Talk to Friends and receive alerts from anywhere via Telegram. Safe outbound connection with zero open ports or webhooks required.</p>
@@ -1468,22 +2031,22 @@
           <div class="app-card" id="telegram-card">
             <div class="app-head">
               <div class="app-title">
-                <strong>✈️ Telegram Bot</strong>
+                <strong>Telegram bot</strong>
                 <span class="app-status off" id="telegram-status-pill">Off</span>
               </div>
               <input type="checkbox" class="toggle" id="telegram-enabled-toggle" data-setting="telegram.enabled" aria-label="Telegram Bot on">
             </div>
-            <p class="row-desc">Run a private companion bot you can message on your phone. It runs tasks, takes notes, gives you your daily briefing, and pushes reminders.</p>
+            <p class="row-desc">A private bot you can message on your phone. Your companion answers, you can start missions with /mission, approve their plans with a button, and stop everything with /stop. Reminders and mission news come here too.</p>
             <details class="app-setup" id="telegram-setup" open>
               <summary>Bot setup</summary>
               <label class="form-field">
-                <span class="row-label">Bot Token</span>
-                <span class="row-desc">Create a bot with @BotFather on Telegram and paste the API token here.</span>
-                <input class="field" type="password" id="telegram-token-input" data-setting="telegram.botToken" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" autocomplete="off" spellcheck="false">
+                <span class="row-label">Bot token</span>
+                <span class="row-desc">Create a bot with @BotFather on Telegram and paste the token here. It is kept in your system keyring, never in a file.</span>
+                <input class="field" type="password" id="telegram-token-input" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ" autocomplete="off" spellcheck="false">
               </label>
               <label class="form-field">
                 <span class="row-label">Allowed Telegram User IDs</span>
-                <span class="row-desc">Comma-separated user IDs allowed to interact with the bot. Send a message to @userinfobot to find your ID. If blank, the first user to message becomes the allowed owner.</span>
+                <span class="row-desc">Comma-separated user IDs allowed to talk to the bot. Send a message to @userinfobot to find your ID. If blank, the first person to write to the bot becomes the only allowed one.</span>
                 <input class="field" type="text" id="telegram-allowed-users" placeholder="e.g. 12345678, 87654321" autocomplete="off" spellcheck="false">
               </label>
               <label class="life-toggle">
@@ -1500,6 +2063,11 @@
             </details>
           </div>
 
+        </section>
+
+        <!-- Notes vault -->
+        <section class="pane" data-pane="notes" id="pane-notes" role="tabpanel" aria-labelledby="tab-notes">
+          <h3>Notes vault</h3>
           <div class="subhead"><div>
             <div class="subhead-title">Local Markdown Notes Vault</div>
             <p class="hint">Keep your thoughts, meeting logs, and knowledge in standard Markdown (.md) files compatible with Obsidian, Logseq, and plain text editors.</p>
@@ -1507,7 +2075,7 @@
           <div class="app-card" id="vault-card">
             <div class="app-head">
               <div class="app-title">
-                <strong>📝 Markdown Notes Vault</strong>
+                <strong>Markdown notes vault</strong>
               </div>
               <input type="checkbox" class="toggle" data-setting="localNotes.enabled" aria-label="Notes Vault on">
             </div>
@@ -1519,10 +2087,6 @@
             </label>
           </div>
 
-          <div class="honesty-note">
-            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>Your Google sign-in token is kept in this window's memory only, never saved to disk. Sending an email or adding an event asks you first (Settings → AI &amp; privacy → Confirm Google actions). None of this is available in Private mode.</span>
-          </div>
         </section>
 
         <!-- Daily life -->
@@ -1600,6 +2164,28 @@
           <ul class="backup-list" id="backup-list"></ul>
 
           <div class="subhead"><div>
+            <div class="subhead-title">Updates</div>
+            <p class="hint">Friends looks for a newer version on GitHub once a day and tells you. It never installs anything by itself.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Check for updates</div><div class="row-desc">Asks GitHub's public releases page. Nothing about you is sent. Not in Private mode.</div></div>
+            <input type="checkbox" class="toggle" data-setting="updates.check">
+          </label>
+          <div class="card update-card" id="update-card">
+            <p class="update-line" id="update-line" role="status"></p>
+            <p class="row-desc" id="update-how" hidden></p>
+            <details class="update-notes" id="update-notes" hidden>
+              <summary>What's new</summary>
+              <div class="update-notes-body" id="update-notes-body"></div>
+            </details>
+            <div class="actions-row">
+              <button type="button" class="btn small" id="update-check">Check now</button>
+              <a class="btn small btn-primary" id="update-download" target="_blank" rel="noopener noreferrer" hidden>Download</a>
+              <a class="link-btn" id="update-page" target="_blank" rel="noopener noreferrer" hidden>Open the release page</a>
+            </div>
+          </div>
+
+          <div class="subhead"><div>
             <div class="subhead-title">Export and import</div>
             <p class="hint">Take your data to another computer, or keep a copy somewhere safe.</p>
           </div></div>
@@ -1623,147 +2209,6 @@
   </div>
 
   <!-- Today: tasks, reminders, habits, journal (src/js/life.js) -->
-  <div class="modal-backdrop life-backdrop" id="life-modal" data-modal data-modal-focus=".life-tab.active" hidden>
-    <div class="modal life-modal" role="dialog" aria-modal="true" aria-labelledby="life-title">
-      <div class="life-head">
-        <h2 id="life-title">Today</h2>
-        <div class="life-tabs" role="tablist" aria-label="Today">
-          <button class="life-tab active" data-life-tab="today" role="tab" id="life-tab-today" aria-controls="life-pane-today" aria-selected="true" tabindex="0">Today</button>
-          <button type="button" class="life-tab" data-life-tab="calendar" role="tab" id="life-tab-calendar" aria-controls="life-pane-calendar" aria-selected="false" tabindex="-1">Calendar</button>
-          <button type="button" class="life-tab" data-life-tab="tasks" role="tab" id="life-tab-tasks" aria-controls="life-pane-tasks" aria-selected="false" tabindex="-1">Tasks</button>
-          <button type="button" class="life-tab" data-life-tab="reminders" role="tab" id="life-tab-reminders" aria-controls="life-pane-reminders" aria-selected="false" tabindex="-1">Reminders</button>
-          <button type="button" class="life-tab" data-life-tab="habits" role="tab" id="life-tab-habits" aria-controls="life-pane-habits" aria-selected="false" tabindex="-1">Habits</button>
-          <button type="button" class="life-tab" data-life-tab="journal" role="tab" id="life-tab-journal" aria-controls="life-pane-journal" aria-selected="false" tabindex="-1">Journal</button>
-        </div>
-        <button class="icon-btn" id="life-close" title="Close" aria-label="Close">
-          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="life-body">
-        <section class="life-pane active" data-life-pane="today" id="life-pane-today" role="tabpanel" aria-labelledby="life-tab-today">
-          <div class="life-date" id="life-date"></div>
-          <div class="form-test-bar">
-            <button type="button" class="btn small btn-primary" id="life-briefing">☀️ Daily briefing</button>
-            <button type="button" class="btn small" id="life-notify-allow" hidden>Allow notifications</button>
-            <span class="test-feedback" id="life-status" role="status"></span>
-          </div>
-          <div class="focus-bar" id="focus-bar" style="margin: 12px 0; padding: 10px; background: var(--bg-hover, rgba(255,255,255,0.05)); border-radius: 8px;">
-            <div class="life-section-title" style="margin: 0 0 8px 0;">🎯 Focus Session</div>
-            <div class="focus-controls" id="focus-controls" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-              <input class="field" id="focus-task-input" placeholder="What are you focusing on?" aria-label="What are you focusing on?" autocomplete="off" style="flex: 1; min-width: 160px;">
-              <select class="field" id="focus-duration-select" aria-label="How long to focus" style="width: auto;">
-                <option value="15">15 min</option>
-                <option value="25" selected>25 min (Pomodoro)</option>
-                <option value="45">45 min</option>
-                <option value="60">60 min</option>
-              </select>
-              <button type="button" class="btn small btn-primary" id="focus-start-btn">Start Focus</button>
-            </div>
-            <div class="focus-active" id="focus-active" hidden style="display: flex; gap: 12px; align-items: center;">
-              <span class="focus-tag" id="focus-tag" style="font-weight: 500;">Focusing</span>
-              <span class="focus-timer" id="focus-timer" style="font-family: monospace; font-size: 1.1em; font-weight: bold;">25:00</span>
-              <button type="button" class="btn small btn-danger" id="focus-stop-btn">Stop</button>
-            </div>
-          </div>
-          <div class="life-section-title">Calendar today</div>
-          <ul class="life-list" id="life-today-calendar"></ul>
-          <div class="life-section-title">Tasks for today</div>
-          <ul class="life-list" id="life-today-tasks"></ul>
-          <div class="life-section-title">Reminders today</div>
-          <ul class="life-list" id="life-today-reminders"></ul>
-          <div class="life-section-title">Habits</div>
-          <div class="habit-checks" id="life-today-habits"></div>
-          <div class="life-section-title">How are you today?</div>
-          <form class="life-journal-quick" id="life-journal-quick">
-            <div class="mood-pick" role="group" aria-label="Mood">
-              <button type="button" data-mood="awful" title="Awful" aria-label="Awful" aria-pressed="false">😣</button>
-              <button type="button" data-mood="bad" title="Bad" aria-label="Bad" aria-pressed="false">🙁</button>
-              <button type="button" data-mood="okay" title="Okay" aria-label="Okay" aria-pressed="false">😐</button>
-              <button type="button" data-mood="good" title="Good" aria-label="Good" aria-pressed="false">🙂</button>
-              <button type="button" data-mood="great" title="Great" aria-label="Great" aria-pressed="false">😄</button>
-            </div>
-            <input class="field" name="text" placeholder="A line about your day (goes into your journal)" autocomplete="off" maxlength="2000">
-            <button type="submit" class="btn small">Save</button>
-          </form>
-        </section>
-
-        <section class="life-pane" data-life-pane="tasks" id="life-pane-tasks" role="tabpanel" aria-labelledby="life-tab-tasks">
-          <form class="life-add" id="task-add">
-            <input class="field" name="title" placeholder="Add a task…" autocomplete="off" maxlength="200" required>
-            <input class="field" type="date" name="due" aria-label="Due date">
-            <input class="field life-list-name" name="list" placeholder="List" list="task-lists" autocomplete="off" maxlength="40" aria-label="List">
-            <datalist id="task-lists"></datalist>
-            <button type="submit" class="btn small btn-primary">Add</button>
-          </form>
-          <label class="life-toggle"><input type="checkbox" id="tasks-show-done"> Show done</label>
-          <div id="task-groups"></div>
-        </section>
-
-        <section class="life-pane" data-life-pane="reminders" id="life-pane-reminders" role="tabpanel" aria-labelledby="life-tab-reminders">
-          <form class="life-add" id="reminder-add">
-            <input class="field" name="text" placeholder="Remind me to…" autocomplete="off" maxlength="300" required>
-            <input class="field" type="datetime-local" name="at" aria-label="When" required>
-            <select class="field" name="repeat" aria-label="Repeat">
-              <option value="none">Once</option>
-              <option value="daily">Every day</option>
-              <option value="weekdays">Weekdays</option>
-              <option value="weekly">Every week</option>
-              <option value="monthly">Every month</option>
-              <option value="yearly">Every year</option>
-            </select>
-            <button type="submit" class="btn small btn-primary">Add</button>
-          </form>
-          <ul class="life-list" id="reminder-list"></ul>
-        </section>
-
-        <section class="life-pane" data-life-pane="habits" id="life-pane-habits" role="tabpanel" aria-labelledby="life-tab-habits">
-          <form class="life-add" id="habit-add">
-            <input class="field life-emoji" name="emoji" placeholder="✅" maxlength="4" aria-label="Emoji">
-            <input class="field" name="name" placeholder="A habit to build, e.g. Gym, Read 20 minutes" autocomplete="off" maxlength="60" required>
-            <button type="submit" class="btn small btn-primary">Add</button>
-          </form>
-          <ul class="life-list" id="habit-list"></ul>
-        </section>
-
-        <section class="life-pane" data-life-pane="journal" id="life-pane-journal" role="tabpanel" aria-labelledby="life-tab-journal">
-          <form class="life-journal" id="journal-add">
-            <textarea class="field textarea" name="text" rows="4" maxlength="10000" placeholder="What's on your mind?"></textarea>
-            <div class="form-test-bar">
-              <select class="field" name="mood" aria-label="Mood">
-                <option value="">Mood (optional)</option>
-                <option value="great">😄 Great</option>
-                <option value="good">🙂 Good</option>
-                <option value="okay">😐 Okay</option>
-                <option value="bad">🙁 Bad</option>
-                <option value="awful">😣 Awful</option>
-              </select>
-              <button type="submit" class="btn small btn-primary">Save entry</button>
-            </div>
-          </form>
-          <ul class="life-list" id="journal-list"></ul>
-        </section>
-
-        <section class="life-pane" data-life-pane="calendar" id="life-pane-calendar" role="tabpanel" aria-labelledby="life-tab-calendar">
-          <form class="life-add" id="calendar-add">
-            <input class="field" name="title" placeholder="Event title…" autocomplete="off" maxlength="200" required>
-            <input class="field" type="datetime-local" name="start" aria-label="Start time" required>
-            <input class="field" type="datetime-local" name="end" aria-label="End time">
-            <input class="field" name="location" placeholder="Location (optional)" autocomplete="off" maxlength="200">
-            <button type="submit" class="btn small btn-primary">Add Event</button>
-          </form>
-          <div class="calendar-actions" style="display: flex; gap: 8px; margin: 10px 0; align-items: center; flex-wrap: wrap;">
-            <button type="button" class="btn small" id="calendar-export-ics">Export .ics</button>
-            <label class="btn small" style="cursor: pointer; margin: 0;">
-              Import .ics <input type="file" id="calendar-import-ics" accept=".ics,text/calendar" hidden>
-            </label>
-            <span class="test-feedback" id="calendar-feedback"></span>
-          </div>
-          <ul class="life-list" id="calendar-event-list"></ul>
-        </section>
-      </div>
-    </div>
-  </div>
-
   <!-- A reminder going off, or the briefing being ready (src/js/life.js) -->
   <div class="life-toasts" id="life-toasts" aria-live="assertive" data-keep-active></div>
 
@@ -1848,6 +2293,7 @@
               <div><dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Search your chats</dd></div>
               <div><dt><kbd>Ctrl</kbd> <kbd>F</kbd></dt><dd>Find in this chat</dd></div>
               <div><dt><kbd>Alt</kbd> <kbd>N</kbd></dt><dd>Start a new chat</dd></div>
+              <div><dt><kbd>Alt</kbd> <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Go to Talk, Missions or Today</dd></div>
               <div><dt><kbd>Ctrl</kbd> <kbd>,</kbd></dt><dd>Open Settings</dd></div>
               <div><dt><kbd>?</kbd></dt><dd>Show this list</dd></div>
               <div><dt><kbd>Esc</kbd></dt><dd>Close the window that is open</dd></div>
@@ -1902,22 +2348,22 @@
     <div class="voice-top">
       <div class="voice-status" role="status" aria-live="polite"><span class="voice-dot" aria-hidden="true"></span><span id="voice-status">Listening</span></div>
       <div class="voice-theme-bar" id="voice-theme-bar" role="group" aria-label="Look of the voice screen">
-        <button type="button" class="voice-theme-btn active" data-theme="sunset" aria-pressed="true" title="Warm Sunset Waves">🌅 Sunset Waves</button>
-        <button type="button" class="voice-theme-btn" data-theme="aurora" aria-pressed="false" title="Warm Aurora">✨ Aurora</button>
-        <button type="button" class="voice-theme-btn" data-theme="cosmic" aria-pressed="false" title="Cosmic Pulse">🌌 Cosmic</button>
-        <button type="button" class="voice-theme-btn" data-theme="zen" aria-pressed="false" title="Zen Ripples">💧 Zen</button>
-        <button type="button" class="voice-theme-btn" data-theme="hearth" aria-pressed="false" title="Firefly Hearth">🔥 Hearth</button>
-        <button type="button" class="voice-theme-btn" data-theme="robot" aria-pressed="false" title="Robot: a 3D robot that is the AI's body">🤖 Robot</button>
+        <button type="button" class="voice-theme-btn active" data-theme="sunset" aria-pressed="true" title="Warm Sunset Waves"><svg viewBox="0 0 24 24"><path d="M3 18h18"/><path d="M7 18a5 5 0 0 1 10 0"/><line x1="12" y1="6" x2="12" y2="9"/><line x1="4.6" y1="11.6" x2="6.4" y2="13"/><line x1="19.4" y1="11.6" x2="17.6" y2="13"/></svg><span>Sunset Waves</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="aurora" aria-pressed="false" title="Warm Aurora"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></svg><span>Aurora</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="cosmic" aria-pressed="false" title="Cosmic Pulse"><svg viewBox="0 0 24 24"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/><path d="M5 16l.6 1.4L7 18l-1.4.6L5 20l-.6-1.4L3 18l1.4-.6z"/></svg><span>Cosmic</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="zen" aria-pressed="false" title="Zen Ripples"><svg viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg><span>Zen</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="hearth" aria-pressed="false" title="Firefly Hearth"><svg viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 2.5 1.5 2.5C10 9 11 6 12 3z"/></svg><span>Hearth</span></button>
+        <button type="button" class="voice-theme-btn" data-theme="robot" aria-pressed="false" title="Robot: a 3D robot that is the AI's body"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg><span>Robot</span></button>
       </div>
       <div class="character-switch voice-character-switch" id="voice-character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
       <button type="button" class="voice-onair" id="voice-onair" aria-pressed="false" title="Co-host mode: it knows it's on camera and keeps private things out of it" aria-label="On air: co-host mode, private things stay out of it">ON AIR</button>
       <span class="voice-rec-badge" id="voice-rec-badge"><span class="voice-rec-dot"></span>REC <span id="voice-rec-time">0:00</span></span>
       <button type="button" class="voice-speed-pill" id="voice-engine" title="How the conversation runs: Live (Google), Studio or Instant">
-        <span class="speed-bolt" id="voice-engine-icon">⚡</span>
+        <span class="speed-bolt" id="voice-engine-icon"><svg viewBox="0 0 24 24"><polygon points="13 2 4 14 11 14 10 22 20 9 13 9 13 2"/></svg></span>
         <span id="voice-engine-label">Live</span>
       </button>
       <button type="button" class="voice-speed-pill" id="voice-style" title="How much it talks: Listener, Balanced or Chatty">
-        <span class="speed-bolt" id="voice-style-icon">🙂</span>
+        <span class="speed-bolt" id="voice-style-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14a4.5 4.5 0 0 0 8 0"/><line x1="9" y1="9.5" x2="9" y2="9.5"/><line x1="15" y1="9.5" x2="15" y2="9.5"/></svg></span>
         <span id="voice-style-label">Balanced</span>
       </button>
       <button type="button" class="voice-top-btn voice-robot-only" id="voice-scene" title="Robot scene: background and camera" aria-label="Robot scene: background and camera" aria-expanded="false" aria-controls="voice-scene-pop">

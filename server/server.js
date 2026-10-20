@@ -21,6 +21,12 @@ const router = require("./router");
 const voiceLocal = require("./voice");
 const firebase = require("./firebase");
 const backup = require("./backup");
+const updates = require("./updates");
+const hardware = require("./hardware");
+const deviceApi = require("./device-api");
+const services = require("./services");
+const usage = require("./usage");
+const privacy = require("./privacy");
 const characters = require("./characters");
 const episodes = require("./episodes");
 const { ACTIVITIES } = require("./activities");
@@ -30,6 +36,11 @@ const connectors = require("./connectors");
 const mcp = require("./mcp");
 const localNotes = require("./local-notes");
 const telegram = require("./telegram");
+const { say, noteBrowser } = require("./say");
+const companion = require("./companion");
+const missions = require("./missions");
+const specialists = require("./specialists");
+const specialistsApi = require("./specialists-api");
 const google = require("./google");
 const { execFile } = require("child_process");
 
@@ -45,6 +56,9 @@ const STATIC = {
   "/vendor/highlight/": path.join(ROOT, "node_modules/@highlightjs/cdn-assets/es"),
   "/vendor/katex/": path.join(ROOT, "node_modules/katex/dist"),
   "/vendor/mermaid/": path.join(ROOT, "node_modules/mermaid/dist"),
+  // The two typefaces (src/css/fonts.css)
+  "/vendor/fonts/bricolage/": path.join(ROOT, "node_modules/@fontsource-variable/bricolage-grotesque/files"),
+  "/vendor/fonts/figtree/": path.join(ROOT, "node_modules/@fontsource-variable/figtree/files"),
   // The 3D robot (see src/js/robot/); the page's import map names these
   "/vendor/three/build/": path.join(ROOT, "node_modules/three/build"),
   "/vendor/three/addons/": path.join(ROOT, "node_modules/three/examples/jsm"),
@@ -313,7 +327,7 @@ async function chat(req, res) {
       voice: voice === true,
       force: force === "local" || force === "cloud" ? force : null,
       preferId: Number(brainId) || null,
-      deps: { has: brains.has, byKind: brains.getByKind, chosen: (id) => brains.getForChat(id), privateMode: current.privacy.localOnly === true },
+      deps: { has: brains.has, byKind: brains.getByKind, chosen: (id) => brains.getForChat(id), others: brains.othersOfKind, privateMode: current.privacy.localOnly === true },
     });
     if (!routePlan.steps.length) throw new Error("NO_BRAIN");
   } catch (err) {
@@ -331,8 +345,10 @@ async function chat(req, res) {
   const run = async (step, { signal, started }) => {
     const brain = step.brain;
     // Google tools are left out for a local AI until you're signed in with Google
-    const all = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.provider !== "local" || Boolean(activeToken), onAir });
-    const offered = brain.provider === "local" ? tools.forLocal(all, current) : all;
+    // A cloud AI doesn't get the memories and notes when Settings → Privacy says so
+    const withhold = brain.kind === "cloud" && current.privacy.shareMemoryWithCloud === false;
+    const all = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.kind !== "local" || Boolean(activeToken), onAir, withhold });
+    const offered = brain.kind === "local" ? tools.forLocal(all, current) : all;
     const contents = toContents(conversation.messages, summary.windowStart(conversation, window), characters.others(current));
     // The greeting's note from the app goes last, as if said, but it's never saved
     if (greeting) contents.push({ role: "user", parts: [{ text: appNote ? prompt.appNote(current, appNote) : prompt.greeting(current, { chatId: conversation.messages.length ? conversation.id : null, onAir }) }] });
@@ -340,7 +356,7 @@ async function chat(req, res) {
       key: brain.key,
       model: brain.model,
       contents,
-      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc }),
+      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc, withhold }),
       temperature: prompt.temperature(current),
       // Thinking at length makes a reply start 10+ seconds later; only "Deep" does
       fast: voice || current.aiControl?.reasoningEffort !== "deep",
@@ -380,7 +396,7 @@ async function chat(req, res) {
   try {
     const { step } = await router.execute(routePlan, {
       run,
-      emit: (event) => routePlan.mode !== "fixed" && send(event), // one fixed brain needs no explaining
+      emit: (event) => (routePlan.mode !== "fixed" || routePlan.steps.length > 1) && send(event), // one fixed brain needs no explaining
       signal: controller.signal,
       slowMs: Number(process.env.FRIENDS_ROUTER_SLOW_MS) || current.routing.dynamic.slowSeconds * 1000,
       cloudAllowed: () => conversation.cloudOk === true,
@@ -404,7 +420,7 @@ async function chat(req, res) {
       const message = { id: replyId, role: "model", text: reply, at: Date.now(), by: current.characters.active };
       if (activity.length) message.activity = activity;
       if (drafts.length) message.drafts = drafts;
-      if (answeredBy && routePlan.mode !== "fixed") message.via = { kind: answeredBy.kind, name: answeredBy.brain.name, model: answeredBy.brain.model, reason: answeredBy.reason, mode: routePlan.mode };
+      if (answeredBy && (routePlan.mode !== "fixed" || routePlan.steps.length > 1)) message.via = { kind: answeredBy.kind, name: answeredBy.brain.name, model: answeredBy.brain.model, reason: answeredBy.reason, mode: routePlan.mode };
       conversation.messages.push(message);
     }
     if (announced && (reply || activity.length || drafts.length || conversation.cloudOk)) chats.save(conversation);
@@ -447,6 +463,22 @@ async function speak(req, res) {
   } catch (err) {
     sendJson(res, 400, { error: err.message });
   }
+}
+
+// ---------- Pulling a model (progress as it downloads) ----------
+async function pullModel(req, res) {
+  const { model } = await readJson(req);
+  res.writeHead(200, securityHeaders({ "Content-Type": "application/x-ndjson; charset=utf-8" }));
+  const controller = new AbortController();
+  res.on("close", () => controller.abort());
+  const write = (event) => !res.writableEnded && res.write(JSON.stringify(event) + "\n");
+  try {
+    await specialistsApi.pull(model, (p) => write({ type: "progress", ...p }), controller.signal);
+    write({ type: "done" });
+  } catch (err) {
+    if (err.name !== "AbortError") write({ type: "error", error: err.message });
+  }
+  res.end();
 }
 
 // ---------- Liked and pinned replies ----------
@@ -610,8 +642,13 @@ function events(req, res) {
   });
 }
 
-function broadcast(type, data, { title, body, action } = {}) {
+// To the page only, with no notification (a mission's progress)
+function push(type, data) {
   for (const res of eventClients) res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+function broadcast(type, data, { title, body, action } = {}) {
+  push(type, data);
   if (!settings.get().life.notify) return;
   if (nativeNotify) return nativeNotify({ title, body, action });
   if (!eventClients.size && process.platform === "linux") {
@@ -620,14 +657,14 @@ function broadcast(type, data, { title, body, action } = {}) {
 }
 
 life.onReminder((r) => {
-  broadcast("reminder", r, { title: `⏰ ${r.text}`, body: "Friends reminder", action: { type: "reminder", id: r.id } });
-  telegram.sendAlert(`⏰ *Reminder:* ${r.text}`, settings.get());
+  broadcast("reminder", r, { title: r.text, body: say("Friends reminder"), action: { type: "reminder", id: r.id } });
+  if (settings.get().telegram.notifyReminders) telegram.sendAlert(say("Reminder: {text}", { text: r.text }));
 });
 life.onFocusComplete((f) => {
-  broadcast("focus_complete", f, { title: "🎯 Focus Complete!", body: `Completed focus session on ${f.task}`, action: { type: "focus" } });
-  telegram.sendAlert(`🎯 *Focus Complete!* You finished your session on: ${f.task}`, settings.get());
+  broadcast("focus_complete", f, { title: say("Focus complete"), body: say("Completed focus session on {task}", { task: f.task }), action: { type: "focus" } });
+  if (settings.get().telegram.notifyFocus) telegram.sendAlert(say("Focus complete! You finished your session on: {task}", { task: f.task }));
 });
-const briefingReady = (made) => broadcast("briefing", made, { title: "☀️ Your briefing is ready", body: made.title, action: { type: "open-chat", id: made.chatId } });
+const briefingReady = (made) => broadcast("briefing", made, { title: say("Your briefing is ready"), body: made.title, action: { type: "open-chat", id: made.chatId } });
 
 // The desktop app (electron/main.js) shows notifications itself
 function setNativeNotify(fn) {
@@ -665,6 +702,18 @@ const routes = [
   ["POST", /^\/api\/brains\/(\d+)\/test$/, (req, id) => brains.testBrain(Number(id))],
   ["POST", /^\/api\/brains\/test$/, async (req) => brains.testConfig(await readJson(req))],
   ["POST", /^\/api\/models$/, async (req) => brains.listModels(await readJson(req))],
+  // Adding AIs the easy way: the services Friends knows, what a pasted key or address is, several models at once,
+  // each AI's own settings and order, and how much each was used today
+  ["GET", /^\/api\/services$/, () => services.publicCatalog()],
+  ["POST", /^\/api\/services\/recognise$/, async (req) => services.recognise((await readJson(req)).input)],
+  ["POST", /^\/api\/brains\/bulk$/, async (req) => brains.saveMany(await readJson(req))],
+  ["PATCH", /^\/api\/brains\/(\d+)$/, async (req, id) => brains.updateBrain(Number(id), await readJson(req))],
+  ["POST", /^\/api\/brains\/(\d+)\/move$/, async (req, id) => brains.moveBrain(Number(id), (await readJson(req)).direction)],
+  ["GET", /^\/api\/privacy$/, () => privacy.summary()],
+  ["POST", /^\/api\/privacy\/clear$/, async (req) => privacy.clear((await readJson(req)).what)],
+  ["GET", /^\/api\/usage$/, () => usage.summary(brains.publicState().brains.map((b) => b.id))],
+  // What this computer is, and what a local AI may ask of it
+  ["GET", /^\/api\/hardware$/, async () => deviceApi.report()],
 
   ["GET", /^\/api\/chats$/, () => chats.list()],
   ["GET", /^\/api\/chats\/search$/, (req, id, url) => chats.search(url.searchParams.get("q"))],
@@ -675,11 +724,9 @@ const routes = [
   ["POST", /^\/api\/chats\/([\w-]+)\/suggestions$/, (req, id) => suggestions(id)],
 
   ["GET", /^\/api\/settings$/, () => settings.get()],
-  ["PUT", /^\/api\/settings$/, async (req) => {
-    const res = settings.set(await readJson(req));
-    telegram.start(res);
-    return res;
-  }],
+  ["PUT", /^\/api\/settings$/, async (req) => settings.set(await readJson(req))],
+  // Only what differs (the page sends this: a stale copy of the rest can't overwrite what the helper changed)
+  ["PATCH", /^\/api\/settings$/, async (req) => settings.patch(await readJson(req))],
 
   // Characters (Settings → Characters): the choices; the characters themselves are in the settings
   ["GET", /^\/api\/characters\/meta$/, () => ({ voices: characters.GEMINI_VOICES, fields: characters.FIELDS, builtin: characters.BUILTIN, templates: characters.TEMPLATES, formats: Object.keys(prompt.FORMATS), max: characters.MAX_CHARACTERS })],
@@ -765,8 +812,46 @@ const routes = [
   ["POST", /^\/api\/life\/focus\/stop$/, () => life.stopFocus()],
 
   // Telegram bot companion
-  ["GET", /^\/api\/telegram\/status$/, () => telegram.status(settings.get())],
-  ["POST", /^\/api\/telegram\/test$/, () => telegram.testConnection(settings.get())],
+  ["GET", /^\/api\/telegram\/status$/, () => telegram.status()],
+  ["POST", /^\/api\/telegram\/test$/, () => telegram.testConnection()],
+  ["PUT", /^\/api\/telegram\/token$/, async (req) => telegram.saveToken((await readJson(req)).token)],
+
+  // Missions: goals carried out in the background (server/missions/)
+  ["GET", /^\/api\/missions$/, () => missions.overview()],
+  ["POST", /^\/api\/missions$/, async (req) => {
+    const b = await readJson(req);
+    return missions.create(b.goal, { source: b.source === "chat" ? "chat" : "app", private: b.private === true, automation: b.automation || null });
+  }],
+  ["GET", /^\/api\/missions\/([\w-]+)$/, (req, id) => missions.get(id)],
+  ["DELETE", /^\/api\/missions\/([\w-]+)$/, (req, id) => missions.remove(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/answers$/, async (req, id) => missions.answer(id, (await readJson(req)).answers)],
+  ["PUT", /^\/api\/missions\/([\w-]+)\/plan$/, async (req, id) => missions.editPlan(id, await readJson(req))],
+  ["POST", /^\/api\/missions\/([\w-]+)\/approve$/, (req, id) => missions.approve(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/stop$/, (req, id) => missions.stop(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/resume$/, async (req, id) => missions.resume(id, { extend: (await readJson(req)).extend === true })],
+  ["POST", /^\/api\/missions\/([\w-]+)\/decision$/, async (req, id) => {
+    const b = await readJson(req);
+    return missions.decide(id, String(b.requestId || ""), b.allow === true);
+  }],
+  ["POST", /^\/api\/missions\/([\w-]+)\/automate$/, async (req, id) => missions.automate(id, await readJson(req))],
+  ["GET", /^\/api\/missions\/([\w-]+)\/audit$/, (req, id) => ({ entries: missions.audit(id) })],
+  ["GET", /^\/api\/missions\/([\w-]+)\/report$/, (req, id) => ({ markdown: missions.report(id) })],
+  // The specialists: local models with a job each, and how they fit the graphics card (Settings → AI → Specialists)
+  ["GET", /^\/api\/specialists$/, () => specialistsApi.overview()],
+  ["POST", /^\/api\/specialists$/, async (req) => specialistsApi.addRole(await readJson(req))],
+  ["POST", /^\/api\/specialists\/reset$/, () => specialistsApi.reset()],
+  ["PUT", /^\/api\/specialists\/([\w-]+)$/, async (req, id) => specialistsApi.saveRole(id, await readJson(req))],
+  ["DELETE", /^\/api\/specialists\/([\w-]+)$/, (req, id) => specialistsApi.removeRole(id)],
+  ["POST", /^\/api\/specialists\/([\w-]+)\/test$/, (req, id) => specialistsApi.test(id)],
+  ["DELETE", /^\/api\/specialist-models\/(.+)$/, (req, name) => specialistsApi.deleteModel(decodeURIComponent(name))],
+  ["GET", /^\/api\/automations$/, () => ({ automations: missions.overview().automations })],
+  ["POST", /^\/api\/automations$/, async (req) => {
+    const b = await readJson(req);
+    return missions.automations.create({ name: b.name, goal: b.goal || "", schedule: b.schedule, trigger: b.trigger, watch: b.watch });
+  }],
+  ["PATCH", /^\/api\/automations\/([\w-]+)$/, async (req, id) => missions.automations.update(id, await readJson(req))],
+  ["POST", /^\/api\/automations\/([\w-]+)\/run$/, async (req, id) => ({ started: Boolean(await missions.automations.runNow(id)) })],
+  ["DELETE", /^\/api\/automations\/([\w-]+)$/, (req, id) => missions.automations.remove(id)],
 
   // Local Markdown Notes Vault (Obsidian/Logseq compatible)
   ["GET", /^\/api\/notes-vault$/, (req, id, url) => localNotes.listNotes({ limit: Number(url.searchParams.get("limit")) || 50 })],
@@ -792,6 +877,9 @@ const routes = [
   ["DELETE", /^\/api\/mcp\/([\w-]+)$/, (req, id) => mcp.remove(id)],
   ["POST", /^\/api\/mcp\/([\w-]+)\/restart$/, async (req, id) => (await mcp.restart(id), mcp.list().find((s) => s.id === id))],
 
+  // Is there a newer Friends? (GitHub Releases; it only tells you, and never in Private mode)
+  ["GET", /^\/api\/updates$/, () => updates.state()],
+  ["POST", /^\/api\/updates\/check$/, () => updates.check({ force: true })],
   ["GET", /^\/api\/backups$/, () => ({ dir: backup.dir, backups: backup.list() })],
   ["POST", /^\/api\/backups$/, () => backup.create("manual", { keep: settings.get().backup.keep })],
   ["POST", /^\/api\/backups\/import$/, async (req, id, url) => backup.restore(await readBody(req, 1024 * 1024 * 1024), { mode: restoreMode(url) })],
@@ -855,6 +943,7 @@ async function handle(req, res) {
     return res.end(google.callbackPage(ok, message));
   }
   if (pathname === "/api/voice/speak" && req.method === "POST") return speak(req, res);
+  if (pathname === "/api/specialists/pull" && req.method === "POST") return pullModel(req, res);
   const file = pathname.match(/^\/api\/attachments\/([\w-]+)$/);
   if (file && req.method === "GET") return download(req, res, file[1]);
   if (pathname === "/api/robot/model" && (req.method === "GET" || req.method === "HEAD")) return sendModel(req, res);
@@ -893,6 +982,9 @@ async function handle(req, res) {
 function start(port = PORT, host = HOST) {
   allowedHosts = computeAllowedHosts(port, host);
   backup.schedule(settings.get);
+  updates.schedule(settings.get);
+  privacy.schedule(settings.get);
+  hardware.get().catch(() => {}); // what this computer is, looked up once now so Settings and the missions know
   // Quiet conversations become memories, in the background (a local AI does it when there is one)
   episodes.schedule({ getBrain: () => brains.forTask(), getSettings: settings.get });
   // Reminders go off, and the morning briefing is made
@@ -900,35 +992,26 @@ function start(port = PORT, host = HOST) {
   briefing.schedule(briefingReady);
   // Apps connected through MCP start in the background; they stop with Friends
   mcp.startAll();
-  telegram.setChatHandler(async (text) => {
-    const current = settings.get();
-    const brain = brains.forTask();
-    if (!brain) return "No AI model is configured or available right now.";
-    const activeChar = characters.active(current);
-    const system = prompt.build(current, { character: activeChar });
-    let reply = "";
-    try {
-      await gemini.streamChat({
-        brain,
-        systemInstruction: system,
-        temperature: prompt.temperature(current),
-        history: [],
-        message: text,
-        onChunk: (c) => { reply += c; },
-        tools: [],
-      });
-      return reply.trim() || "Received.";
-    } catch (err) {
-      return `Error generating response: ${err.message}`;
-    }
+  // Telegram: the companion answers, and missions talk to you there
+  telegram.setHandlers({ chat: (text) => companion.reply(text, { googleToken }) });
+  telegram.start();
+  // The mission engine: it carries on after a restart, and runs its schedules and watches
+  missions.init({
+    push,
+    notify: ({ title, body, action }) => {
+      if (nativeNotify) nativeNotify({ title, body, action });
+      else if (!eventClients.size && process.platform === "linux") execFile("notify-send", ["--app-name=Friends", "-i", "friends", title, body], () => {});
+    },
+    telegram: { send: (text) => telegram.sendAlert(text), ready: () => telegram.ready(), event: (e) => telegram.onMissionEvent(e), alert: (text) => telegram.sendAlert(text) },
+    googleToken,
   });
-  telegram.start(settings.get());
   process.once("exit", () => (mcp.stopAll(), telegram.stop()));
   const connections = new Set();
   let isShuttingDown = false;
 
   const server = http.createServer((req, res) => {
     const startMs = performance.now();
+    if (req.url.startsWith("/api/")) noteBrowser(req.headers["accept-language"]); // what "auto" means for the texts made here (say.js)
     res.on("finish", () => {
       logger.request(req, res, performance.now() - startMs);
     });

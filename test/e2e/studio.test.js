@@ -51,7 +51,7 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     server = start(0, "127.0.0.1");
     await new Promise((resolve) => (server.listening ? resolve() : server.on("listening", resolve)));
     base = `http://127.0.0.1:${server.address().port}`;
-    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+    browser = await require("puppeteer-core").launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--accept-lang=en-US,en", "--disable-gpu", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
     page = await browser.newPage();
     await page.evaluateOnNewDocument(() => Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] }));
     await page.setViewport({ width: 1280, height: 900 });
@@ -72,7 +72,9 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     assert.match(await page.$eval("#robot-look-summary", (el) => el.textContent), /Studio/);
     await click("#robot-studio-open");
     await page.waitForFunction(() => !document.getElementById("robot-studio").hidden);
-    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab]", (tabs) => tabs.map((t) => t.textContent.trim())), ["🎨Colors", "🧩Shape", "😊Face", "🎩Outfit", "🏠Room", "✨Looks"]);
+    // (outline icons, not emoji)
+    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab] svg", (icons) => icons.length), 6);
+    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab]", (tabs) => tabs.map((t) => t.textContent.trim())), ["Colors", "Shape", "Face", "Outfit", "Room", "Looks"]);
     assert.strictEqual(await page.evaluate(() => document.getElementById("robot-studio").contains(document.activeElement)), true);
     assert.strictEqual(await page.evaluate(() => document.getElementById("settings-modal").inert), true);
     // The robot is drawn in the Studio's stage

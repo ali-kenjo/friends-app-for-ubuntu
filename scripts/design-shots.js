@@ -63,14 +63,14 @@ async function main() {
   const closeAll = () =>
     page.evaluate(() => {
       document.getElementById("settings-close")?.click();
-      document.getElementById("life-close")?.click();
+      document.getElementById("nav-home")?.click();
       document.getElementById("voice-end")?.click();
       document.getElementById("search-modal").hidden = true;
       document.getElementById("find-bar").hidden = true;
       document.getElementById("shortcuts-modal").hidden = true;
     });
   const sidebarOpen = async (width) => {
-    if (width <= 760) await click("#sidebar-open");
+    if (width <= 760) await click(".view:not([hidden]) .sidebar-show");
     await sleep(200);
   };
   const REPLY = h.REPLY;
@@ -152,15 +152,30 @@ async function main() {
         await shot("09-search", theme, width, lang);
         await closeAll();
 
-        // Today panel, every tab
+        // The "+" menu
+        await click("#plus-btn");
+        await sleep(250);
+        await shot("07b-plus-menu", theme, width, lang);
+        await click("#plus-btn");
+
+        // Today: the day, then "everything else" with each of its parts
         await sidebarOpen(width);
         await click("#today-open");
-        await sleep(400);
-        for (const tab of ["today", "tasks", "reminders", "habits", "journal"]) {
+        await sleep(500);
+        await shot("10-today", theme, width, lang);
+        await page.evaluate(() => (document.getElementById("today-more").open = true));
+        for (const tab of ["tasks", "reminders", "calendar", "habits", "journal"]) {
           await click(`[data-life-tab="${tab}"]`);
           await sleep(250);
           await shot(`10-today-${tab}`, theme, width, lang);
         }
+        await closeAll();
+
+        // Missions
+        await sidebarOpen(width);
+        await click("#nav-missions");
+        await sleep(500);
+        await shot("10b-missions", theme, width, lang);
         await closeAll();
 
         // Every Settings pane
@@ -171,6 +186,20 @@ async function main() {
           await page.evaluate((t) => document.querySelector(`.modal-nav .tab[data-tab="${t}"]`)?.click(), tab);
           await sleep(350);
           await shot(`11-settings-${tab}`, theme, width, lang);
+          // AI & privacy: each of its sections, and the add form
+          if (tab === "ai-control") {
+            for (const section of ["answers", "privacy", "device"]) {
+              await page.evaluate((n) => document.querySelector(`.subtab[data-subtab="${n}"]`)?.click(), section);
+              await sleep(500);
+              await shot(`11-settings-ai-${section}`, theme, width, lang);
+            }
+            await page.evaluate(() => document.querySelector('.subtab[data-subtab="ais"]')?.click());
+            await page.evaluate(() => document.getElementById("brain-add")?.click());
+            await sleep(500);
+            await shot("11-settings-ai-add", theme, width, lang);
+            await page.evaluate(() => document.getElementById("ai-add-back")?.click());
+            await sleep(300);
+          }
         }
         await closeAll();
 

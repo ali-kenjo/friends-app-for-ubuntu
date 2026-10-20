@@ -27,49 +27,49 @@ Dark is the default; `:root[data-theme="light"]` overrides the same names. Contr
 
 | Token | Dark | Light | Used for |
 |---|---|---|---|
-| `--bg-main` | `#131314` | `#ffffff` | The page, the conversation |
-| `--bg-sidebar` | `#1b1c1d` | `#f0f4f9` | Sidebar, settings navigation |
-| `--bg-input`, `--bg-subtle` | `#1e1f20`, `#18191a` | `#f0f4f9`, `#f6f8fb` | Fields, cards |
-| `--bg-hover` | `#282a2c` | `#e4e9f0` | Hover, bubbles, rows |
-| `--bg-active` | accent 28% in `--bg-main` | accent 20% in white | Selected |
-| `--text` | `#e3e3e3` (14.5:1) | `#1f1f1f` (16.5:1) | Text |
-| `--text-muted` | `#a3a9b0` (7.8:1) | `#565b61` (6.9:1; 5.6:1 on hover) | Secondary text |
-| `--border` | `#3c4043` | `#d3d7dc` | Dividers, field borders |
-| `--accent` | your choice | your choice | Fills, glows, the send button |
-| `--on-accent` | `#0e1a2f` (6.4:1 on the default accent) | same | Text on an accent fill |
-| `--accent-text` | `--accent` (≥ 6.8:1) | `--accent` mixed 50% with black (≥ 5.2:1, all five accents) | The accent as text, a thin icon or a selected border |
-| `--link`, `--focus` | `#8ab4f8` (8.8:1) | `#0b57d0` (6.4:1) | Links, the focus ring |
-| `--danger` | `#f28b82` (7.8:1) | `#c5221f` (5.8:1) | Errors, destructive actions |
-| `--success`, `--warning` | `#5fd49a`, `#f5b84a` | `#1a7f4b` (5.0:1), `#9a5b00` (5.4:1) | Status |
-| `--scrim` | `rgba(0,0,0,.55)` | `rgba(20,24,31,.4)` | Behind dialogs |
+| `--bg-main` | `#15121c` | `#fbf9f8` | The page, the conversation |
+| `--bg-sidebar` | `#100e16` | `#f2eeed` | Sidebar, settings navigation |
+| `--bg-input`, `--bg-subtle` | `#211c2b`, `#1a1623` | `#ffffff`, `#f6f2f1` | Raised surfaces (cards, fields, the message box), quiet fills |
+| `--bg-hover` | `#2b2536` | `#e9e3e3` | Hover, rows |
+| `--bg-active` | accent 20% in `--bg-main` | accent 22% in white | Selected |
+| `--text` | `#efeaf5` (15.6:1) | `#231d2a` (15.6:1) | Text |
+| `--text-muted` | `#a8a1b7` (7.4:1; 5.9:1 on hover) | `#5b5466` (6.9:1; 5.7:1 on hover) | Secondary text |
+| `--border`, `--hairline` | `#373041`, white 7% | `#d9d0d3`, ink 9% | Field borders; the quiet line between two layers |
+| `--accent` | `#f5a94a`, "the lamp" (your choice) | the same | Fills, glows, the send button, the robot's light |
+| `--on-accent` | `#2a1a05` (8.5:1 on the lamp); set from the accent's own brightness | same | Text on an accent fill |
+| `--accent-text` | `--accent` (≥ 6.8:1) | `--accent` mixed 50% with `#1c1000` (≥ 5.4:1 on the page, ≥ 4.5:1 on hover, all five accents) | The accent as text, a thin icon or a selected border |
+| `--link`, `--focus` | `#ffc477` (11.8:1) | `#7a4300` (7.6:1) | Links, the focus ring |
+| `--danger` | `#ff8f8f` (8.4:1) | `#b3201f` (6.4:1) | Errors, destructive actions |
+| `--success`, `--warning` | `#62d6a3`, `#ffd166` | `#17724a` (5.6:1), `#8a5a00` (5.6:1) | Status |
+| `--scrim` | `rgba(8,5,14,.62)` | `rgba(35,29,42,.38)` | Behind dialogs |
 
-The accent choices are blue `#6f9cf5`, violet `#a78bfa`, green `#34d399`, amber `#f59e0b`, pink `#f472b6`. On a dark surface each is ≥ 6.8:1; on white each is 1.9 to 2.7:1, which is why text and thin icons use `--accent-text` and never `--accent`. `npm run test:a11y -- --accent <colour>` runs the checks for one.
+The accent choices (Settings → Appearance) are amber `#f5a94a` (the default), pink `#f472b6`, violet `#a78bfa`, blue `#6fb4f5` and green `#4fd1a5`. On a dark surface each is ≥ 6.8:1; on white each is 1.9 to 2.7:1, which is why text and thin icons use `--accent-text` and never `--accent`. `npm run test:a11y -- --accent <colour>` runs the checks for one. Before 0.6.0 the default was blue (`#6f9cf5`); settings that never changed it move to the amber on their own. See [identity.md](identity.md) for why.
 
 `prefers-contrast: more` swaps in stronger borders and muted text; `forced-colors` uses system colours.
 
 ## Type
 
-Rem-based, so the browser's text size applies. Fonts are system fonts (Arabic: Noto Sans Arabic, Segoe UI, Tahoma, if present). Nothing loads from a website.
+Rem-based, so the browser's text size applies. Two typefaces ship with the app (Bricolage Grotesque for the greeting, titles and the wordmark; Figtree for everything else; see `src/css/fonts.css`). Arabic uses the system's Noto Sans Arabic, Segoe UI or Tahoma. Nothing loads from a website.
 
 | Token | Size | Use |
 |---|---|---|
-| `--fs-xs` | 0.75rem (12) | Captions, badges, timestamps, group labels |
-| `--fs-sm` | 0.8125rem (13) | Descriptions, buttons, secondary text |
-| `--fs-base` | 0.875rem (14) | Interface text |
-| `--fs-md` | 0.9375rem (15) | Emphasised interface text, lead paragraphs |
-| `--fs-lg` | 1rem (16) | Field values, reading text |
-| `--fs-xl` | 1.125rem (18) | Dialog titles |
-| `--fs-2xl` | 1.25rem (20) | Panel headings |
-| `--fs-3xl` | 1.5rem (24) | The hero title on a phone |
-| `--fs-4xl` | 2.25rem (36) | The greeting |
+| `--fs-xs` | 0.75rem (12) | Captions, badges, timestamps |
+| `--fs-sm` | 0.8125rem (13) | Descriptions, buttons, group labels, secondary text |
+| `--fs-base` | 0.9375rem (15) | Interface text |
+| `--fs-md` | 1rem (16) | Emphasised interface text, lead paragraphs |
+| `--fs-lg` | 1.0625rem (17) | Field values, reading text |
+| `--fs-xl` | 1.25rem (20) | Dialog titles, card titles |
+| `--fs-2xl` | 1.5rem (24) | Panel headings, place titles |
+| `--fs-3xl` | 2rem (32) | Settings headings, the greeting while setting up |
+| `--fs-4xl` | 3rem (48) | The greeting |
 
-Line heights: `--lh-tight` 1.3, `--lh-normal` 1.5, `--lh-reading` 1.7. The conversation uses `--chat-size` (12 to 22 px, default 16) and `--chat-font`.
+Labels are in sentence case (no all-caps). Line heights: `--lh-tight` 1.25, `--lh-normal` 1.5, `--lh-reading` 1.7. The conversation uses `--chat-size` (12 to 22 px, default 16) and `--chat-font`.
 
 ## Space, shape, elevation, motion, layers
 
 - **Space** (4 px grid, `h` = half step): `--space-h` 2, `-1` 4, `-1h` 6, `-2` 8, `-2h` 10, `-3` 12, `-3h` 14, `-4` 16, `-5` 20, `-6` 24, `-8` 32, `-10` 40, `-12` 48 px. Values off the grid were snapped to the nearest step (5 → 4, 7 and 9 → 8, 11 and 13 → 12, 18 → 20, 22 → 24); 1 px hairlines, 3 px and a handful of larger optical values stay literal.
-- **Radius**: `--radius-xs` 4, `-sm` 8, `-md` 12, `-lg` 16, `-xl` 20, `-pill` 999 px.
-- **Elevation**: `--shadow-pop` (menus, popovers), `--shadow-sheet` (drawers), `--shadow-modal` (dialogs); lighter in the light theme.
+- **Radius** (softer the bigger the thing): `--radius-xs` 6, `-sm` 10, `-md` 14, `-lg` 18, `-xl` 24, `-2xl` 32 (the message box), `-pill` 999 px.
+- **Elevation**: `--shadow-rest` (cards, the message box), `--shadow-pop` (menus, popovers), `--shadow-sheet` (drawers), `--shadow-modal` (dialogs); each a close and a far soft shadow, tinted violet; lighter in the light theme. A hairline (`--hairline`) only where two layers meet.
 - **Motion**: `--dur-fast` 150 ms, `--dur-base` 200 ms, `--dur-slow` 300 ms, `--ease`. Animate `transform` and `opacity` only. With `prefers-reduced-motion: reduce` every animation and transition is cut to nothing.
 - **Layers**: `--z-base` 1, `-raised` 2, `-panel` 3, `-popover` 4, `-float` 5, `-overlay` 6, `-bar` 7, `-toast-local` 8, `-menu` 20, `-sidebar-backdrop` 80, `-sidebar` 90, `-modal` 100, `-search` 150, `-voice` 200, `-top` 300 (confirmation dialogs sit at `-modal` + 10).
 - **Layout**: `--sidebar-w` 300 px, `--reading-w` 46 rem. Two breakpoints, written literally in `@media` because custom properties can't be used there: **760 px** (the sidebar slides in over the page; settings navigation becomes a strip) and **560 px** (the phone layout: the message box on two lines, the voice bar wraps, dialogs stack). The old 520, 580 and 640 px are folded into these.

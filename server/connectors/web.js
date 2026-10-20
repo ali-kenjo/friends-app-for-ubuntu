@@ -47,7 +47,7 @@ async function search(query, ctx) {
 module.exports = {
   id: "web",
   name: "Web search & pages",
-  icon: "🌐",
+  icon: "globe",
   description: "Search the web for anything current, and read web pages you share or it finds. Uses Google Search with a Gemini brain, DuckDuckGo otherwise.",
   online: true,
   defaultOn: true,

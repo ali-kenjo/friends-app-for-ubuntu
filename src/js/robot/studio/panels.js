@@ -6,7 +6,7 @@ import * as D from "../design.mjs";
 import * as R from "../room.mjs";
 import { BUILTIN_LOOKS } from "../looks.mjs";
 import { t } from "../../i18n.js";
-import { h, section, hint, swatches, tiles, slider, toggle, textField, button, arrowKeys, nextId } from "./ui.js";
+import { h, section, hint, swatches, tiles, slider, toggle, textField, button, arrowKeys, nextId, glyph } from "./ui.js";
 
 const OUTFIT_COLORS = ["#e05a47", "#f2c14e", "#4d8a62", "#3b6fd6", "#7a5cf0", "#f06bb0", "#f4efe6", "#2b2e35", "#8a5a33", "#5eead4", "#ff8a3d"];
 const ROOM_COLORS = ["#0b0b0d", "#26272c", "#3a4ea8", "#5aa6f2", "#7a5cf0", "#c0507f", "#f3a469", "#4a7a4a", "#6b4a3a", "#eaf4ff", "#ffd9b0", "#ff3ea5"];
@@ -235,7 +235,7 @@ export function roomPanel(ctx) {
   const floor = tiles({ label: null, name: t("Floor"), items: R.FLOORS, onChange: (v) => ctx.room((r) => (r.floor = v)), compact: true, columns: 5 });
   const air = tiles({ label: null, name: t("In the air"), items: R.AIRS, onChange: (v) => ctx.room((r) => (r.air = v)), compact: true, columns: 5 });
   const amount = slider({ label: t("How much"), min: R.RANGES.airAmount[0], max: R.RANGES.airAmount[1], step: 0.01, def: 1, value: 1, onChange: (v) => ctx.room((r) => (r.airAmount = v)), format: percent });
-  const surprise = button(t("Surprise me"), () => ctx.randomRoom(), { icon: "🎲" });
+  const surprise = button(t("Surprise me"), () => ctx.randomRoom(), { icon: "dice" });
   const lighting = section(t("Lighting"), light.el, brightness.el);
   const ground = section(t("Floor"), floor.el);
   const atmosphere = section(t("In the air"), air.el, amount.el);
@@ -267,7 +267,7 @@ export function roomPanel(ctx) {
         colors.push(c.el);
       }
     }
-    if (colors.length) dynamic.append(section(t("Colors"), ...colors, h("div", { class: "rs-actions" }, button(t("Back to the usual colors"), () => ctx.room((r) => (r.colors = { ...place.colors })), { icon: "↺" }))));
+    if (colors.length) dynamic.append(section(t("Colors"), ...colors, h("div", { class: "rs-actions" }, button(t("Back to the usual colors"), () => ctx.room((r) => (r.colors = { ...place.colors })), { icon: "undo" }))));
     if (place.props.length || place.sign) {
       const list = [];
       for (const prop of place.props) {
@@ -316,10 +316,10 @@ export function looksPanel(ctx) {
   const mine = h("div", { class: "rs-looks" });
   const empty = hint(t("Nothing saved yet. Make it yours in the other tabs, then save it here."));
   const name = textField({ label: t("Name this look"), max: 40, value: "", placeholder: t("My look"), onChange: () => {} });
-  const save = button(t("Save this look"), () => ctx.saveLook(name.input.value), { primary: true, icon: "💾" });
-  const surprise = button(t("Surprise me"), () => ctx.randomLook(), { icon: "🎲" });
-  const exportBtn = button(t("Export…"), () => ctx.exportLook(name.input.value), { icon: "⤓", title: t("Save this look as a file you can share") });
-  const importBtn = button(t("Import…"), () => ctx.importLook(), { icon: "⤒", title: t("Open a look someone shared") });
+  const save = button(t("Save this look"), () => ctx.saveLook(name.input.value), { primary: true, icon: "save" });
+  const surprise = button(t("Surprise me"), () => ctx.randomLook(), { icon: "dice" });
+  const exportBtn = button(t("Export…"), () => ctx.exportLook(name.input.value), { icon: "download", title: t("Save this look as a file you can share") });
+  const importBtn = button(t("Import…"), () => ctx.importLook(), { icon: "upload", title: t("Open a look someone shared") });
   const note = h("p", { class: "rs-hint", text: t("Each character keeps its own look while \"Each has its own look\" is on (Settings → Characters).") });
   el.append(
     section(t("Make it yours"), h("div", { class: "rs-save" }, name.el, save), h("div", { class: "rs-actions" }, surprise, exportBtn, importBtn), note),
@@ -329,18 +329,18 @@ export function looksPanel(ctx) {
 
   const card = (look, { saved = false } = {}) => {
     const d = look.design;
-    const worn = Object.values(d.outfit).filter((o) => o.item !== "none").map((o) => D.ITEMS[Object.keys(d.outfit).find((k) => d.outfit[k] === o)][o.item].icon);
+    const worn = Object.keys(d.outfit).filter((k) => d.outfit[k].item !== "none").map((k) => t(D.ITEMS[k][d.outfit[k].item].label));
     const place = R.PLACE_BY_ID[look.room.place];
     const b = h(
       "button", { type: "button", class: "rs-look", "data-id": look.id, title: look.about ? t(look.about) : "" },
       h("span", { class: "rs-look-swatch", "aria-hidden": "true", style: `--a:${d.colors.head};--b:${d.colors.body};--c:${d.colors.light || "var(--accent)"}` }, h("span", { class: "rs-look-eyes" }, h("i"), h("i"))),
       h("span", { class: "rs-look-name", text: look.builtin ? t(look.label) : look.name }),
-      h("span", { class: "rs-look-things", "aria-hidden": "true", text: `${worn.slice(0, 4).join(" ")} ${place?.icon || ""}`.trim() })
+      h("span", { class: "rs-look-things", "aria-hidden": "true", text: [place ? t(place.label) : "", worn.slice(0, 2).join(", ")].filter(Boolean).join(" · ") })
     );
     b.addEventListener("click", () => ctx.applyLook(look));
     if (!saved) return b;
     const wrap = h("div", { class: "rs-look-wrap" }, b);
-    const del = h("button", { type: "button", class: "rs-look-del", "aria-label": t("Delete {name}", { name: look.name }), title: t("Delete this look") }, "✕");
+    const del = h("button", { type: "button", class: "rs-look-del", "aria-label": t("Delete {name}", { name: look.name }), title: t("Delete this look") }, glyph("close", 14));
     del.addEventListener("click", () => ctx.deleteLook(look));
     wrap.append(del);
     return wrap;

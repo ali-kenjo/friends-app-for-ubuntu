@@ -4,6 +4,7 @@
 // which cuts long chats off.) Same functions as openai.js, so the rest of the
 // helper doesn't care which one answers.
 const logger = require("./logger");
+const { say } = require("./say");
 const { toMessages, toTools, ThinkFilter, stripThinking, LocalAiError, create: createOpenAi } = require("./openai");
 
 const NOT_CHAT = /embed|rerank|whisper|tts|bge-|nomic-bert/i;
@@ -19,7 +20,7 @@ function toOllamaMessages(contents, system) {
 }
 
 // options: contextSize (tokens, 0 = Ollama's own default), keepAlive (minutes, 0 = Ollama's default)
-function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speechModel = "" } = {}) {
+function create({ baseUrl, contextSize = 0, keepAlive = 0, numGpu = undefined, speechUrl = "", speechModel = "" } = {}) {
   const base = String(baseUrl || "").replace(/\/+$/, "");
   const where = base.replace(/^https?:\/\//, "");
   const noTools = new Set();
@@ -38,9 +39,9 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speec
     } catch {}
     logger.warn(`Ollama ${where} answered ${res.status}: ${detail || res.statusText}`);
     let err;
-    if (res.status === 404 || /not found/i.test(detail)) err = new LocalAiError(`The model "${model || ""}" isn't installed in Ollama. Get it with: ollama pull ${model || "<model>"}`);
-    else if (/out of memory|requires more (system )?memory|unable to allocate|cuda/i.test(detail)) err = new LocalAiError(`Ollama ran out of memory for this model${contextSize ? ` at a context of ${contextSize}` : ""}. Pick a smaller model or lower the context size in the brain's settings.`);
-    else err = new LocalAiError(detail || `Ollama returned an error (${res.status}).`);
+    if (res.status === 404 || /not found/i.test(detail)) err = new LocalAiError(say("The model \"{model}\" isn't installed in Ollama. Get it with: ollama pull {model}", { model: model || "<model>" }));
+    else if (/out of memory|requires more (system )?memory|unable to allocate|cuda/i.test(detail)) err = new LocalAiError(contextSize ? say("Ollama ran out of memory for this model at a context of {size}. Pick a smaller model or lower the context size in the brain's settings.", { size: contextSize }) : say("Ollama ran out of memory for this model. Pick a smaller model or lower the context size in the brain's settings."));
+    else err = new LocalAiError(detail || say("Ollama returned an error ({status}).", { status: res.status }));
     err.status = res.status;
     err.detail = detail;
     return err;
@@ -52,8 +53,8 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speec
       res = await fetch(`${base}${path}`, options);
     } catch (err) {
       if (err.name === "AbortError") throw err;
-      if (err.name === "TimeoutError") throw new LocalAiError(`Ollama at ${where} didn't answer in time.`);
-      throw new LocalAiError(`Couldn't reach Ollama at ${where}. Is it running? (Start it with: ollama serve)`);
+      if (err.name === "TimeoutError") throw new LocalAiError(say("Ollama at {where} didn't answer in time.", { where }));
+      throw new LocalAiError(say("Couldn't reach Ollama at {where}. Is it running? (Start it with: ollama serve)", { where }));
     }
     if (!res.ok) throw await toError(res, model);
     return res;
@@ -63,10 +64,14 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speec
     request(path, { method: "POST", signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, model);
 
   // The options every request carries
-  function settingsFor(body, temperature) {
+  function settingsFor(body, temperature, { maxTokens, topP } = {}) {
     const options = {};
     if (temperature !== undefined) options.temperature = temperature;
+    if (maxTokens) options.num_predict = maxTokens;
+    if (topP !== undefined) options.top_p = topP;
     if (contextSize > 0) options.num_ctx = contextSize;
+    // The model manager runs a model on the processor only (0) when it doesn't fit in the graphics card's memory
+    if (Number.isFinite(numGpu)) options.num_gpu = numGpu;
     if (Object.keys(options).length) body.options = options;
     if (keepAlive > 0) body.keep_alive = `${keepAlive}m`;
     return body;
@@ -97,9 +102,9 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speec
     await postChat(settingsFor({ model, messages: [{ role: "user", content: "Hi" }], stream: false }), undefined);
   }
 
-  async function generateText({ model, system, prompt, temperature = 0.3, signal }) {
+  async function generateText({ model, system, prompt, temperature = 0.3, signal, json = false }) {
     const messages = toOllamaMessages([{ role: "user", parts: [{ text: prompt }] }], system);
-    const res = await postChat(settingsFor({ model, messages, stream: false }, temperature), signal);
+    const res = await postChat(settingsFor({ model, messages, stream: false, ...(json ? { format: "json" } : {}) }, temperature), signal);
     const data = await res.json();
     return stripThinking(String(data.message?.content || ""));
   }
@@ -120,7 +125,7 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speec
       } catch {
         return;
       }
-      if (chunk.error) throw new LocalAiError(typeof chunk.error === "string" ? chunk.error : chunk.error.message || "Ollama stopped.");
+      if (chunk.error) throw new LocalAiError(typeof chunk.error === "string" ? chunk.error : chunk.error.message || say("Ollama stopped."));
       const message = chunk.message;
       if (!message) return;
       if (message.content) {
@@ -148,14 +153,14 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, speechUrl = "", speec
 
   // Streams a reply and runs tool calls: at most 8 rounds, plus up to 4 in
   // which only free tools (the robot's) were called, like the other providers
-  async function streamChat({ model, contents, system, temperature, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
+  async function streamChat({ model, contents, system, temperature, maxTokens, topP, tools = [], runTool, isFreeTool = () => false, signal, onText }) {
     const messages = toOllamaMessages(contents, system);
     let rounds = 0;
     let freeRounds = 0;
     let free = false;
     for (;;) {
       if (free ? ++freeRounds > 4 : ++rounds > 8) return;
-      const body = settingsFor({ model, messages, stream: true }, temperature);
+      const body = settingsFor({ model, messages, stream: true }, temperature, { maxTokens, topP });
       if (tools.length && !noTools.has(model)) body.tools = toTools(tools);
 
       const { calls, text } = await readStream(await postChat(body, signal), onText);

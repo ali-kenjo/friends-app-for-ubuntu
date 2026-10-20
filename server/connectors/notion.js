@@ -64,7 +64,7 @@ function toBlocks(text) {
 module.exports = {
   id: "notion",
   name: "Notion",
-  icon: "🗒️",
+  icon: "file",
   description: "Search and read your Notion pages, and write new ones or add to them (it asks first).",
   help: "Create an internal integration at notion.so/profile/integrations, copy its secret, then share the pages it may use with it (••• → Connections in Notion).",
   link: "https://www.notion.so/profile/integrations",

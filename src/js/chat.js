@@ -17,6 +17,9 @@ import { t, tp, formatDate, formatTime, formatDateTime } from "./i18n.js";
 import { announce, trapModal } from "./a11y.js";
 import { characterName } from "./characters.js";
 import { openOnboarding, onboardingShowing } from "./onboarding.js";
+import { showView } from "./views.js";
+import { icon as outline } from "./icons.js";
+import { looksLikeMission } from "./missions/detect.mjs";
 
 const main = document.getElementById("main");
 const messagesEl = document.getElementById("messages");
@@ -47,17 +50,17 @@ const ICONS = {
 
 // What each kind of tool step looks like in the activity list
 const ACTIVITY_ICONS = [
-  [/declin/i, "✋"],
-  [/couldn't/i, "⚠️"],
-  [/gmail|email/i, "✉️"],
-  [/calendar|event/i, "📅"],
-  [/drive/i, "📂"],
-  [/github/i, "🐙"],
-  [/news/i, "📰"],
-  [/memory note/i, "🧠"],
-  [/file|folder|trash/i, "📁"],
+  [/declin/i, "hand"],
+  [/couldn't/i, "warning"],
+  [/gmail|email/i, "mail"],
+  [/calendar|event/i, "calendar"],
+  [/drive/i, "drive"],
+  [/github/i, "github"],
+  [/news/i, "news"],
+  [/memory note/i, "brain"],
+  [/file|folder|trash/i, "folder"],
 ];
-const activityIcon = (text) => ACTIVITY_ICONS.find(([re]) => re.test(text))?.[1] || "⚙️";
+const activityIcon = (text) => ACTIVITY_ICONS.find(([re]) => re.test(text))?.[1] || "bolt";
 
 export function getCurrentChatId() {
   return currentChatId;
@@ -180,7 +183,8 @@ function setVia(msg, via) {
     actions.prepend(badge);
   }
   badge.dataset.kind = via.kind;
-  badge.textContent = `${via.kind === "local" ? t("🔒 Local") : t("☁️ Cloud")} · ${via.name}`;
+  badge.innerHTML = outline(via.kind === "local" ? "lock" : "cloud", { size: 13 });
+  badge.append(document.createTextNode(` ${via.kind === "local" ? t("Local") : t("Cloud")} · ${via.name}`));
   badge.title = via.reason || "";
   badge.dataset.reason = via.reason || "";
   badge.tabIndex = 0; // keyboard users can reach the reason too
@@ -229,7 +233,7 @@ function addActivity(msg, text) {
   const line = document.createElement("div");
   line.className = "activity-item";
   line.innerHTML = '<span class="activity-icon" aria-hidden="true"></span><span></span>';
-  line.firstChild.textContent = activityIcon(text);
+  line.firstChild.innerHTML = outline(activityIcon(text), { size: 16 });
   line.lastChild.textContent = text;
   msg.querySelector(".activity").append(line);
 }
@@ -559,6 +563,36 @@ function send() {
   input.value = "";
   fitInput();
   sendText(text, files);
+  if (text && getSettings()?.missions?.enabled !== false && looksLikeMission(text)) offerMission(text);
+}
+
+// Under a message that sounds like a goal or a plan: it's offered as a mission (it never starts by itself)
+function offerMission(text) {
+  const msg = [...messagesEl.querySelectorAll(".msg.user")].at(-1);
+  if (!msg) return;
+  const offer = document.createElement("div");
+  offer.className = "mission-offer";
+  offer.innerHTML = `${outline("missions", { size: 17 })}<span class="mission-offer-text"></span><button type="button" class="btn small btn-primary" data-offer="go"></button><button type="button" class="btn small btn-ghost" data-offer="no"></button>`;
+  offer.querySelector(".mission-offer-text").textContent = t("This sounds like a mission: I make a plan, you approve it once, and I do it in the background.");
+  offer.querySelector('[data-offer="go"]').textContent = t("Make it a mission");
+  offer.querySelector('[data-offer="no"]').textContent = t("Just chat");
+  offer.addEventListener("click", async (e) => {
+    const choice = e.target.closest("[data-offer]")?.dataset.offer;
+    if (!choice) return;
+    if (choice === "no") return offer.remove();
+    const button = e.target.closest("button");
+    button.disabled = true;
+    try {
+      stopActive();
+      const { startFromChat } = await import("./missions/index.js");
+      await startFromChat(text);
+      offer.remove();
+    } catch (err) {
+      button.disabled = false;
+      offer.querySelector(".mission-offer-text").textContent = err.message;
+    }
+  });
+  msg.after(offer);
 }
 
 // Removes a message and everything shown after it
@@ -923,6 +957,7 @@ function clearMessages() {
 }
 
 export function newChat() {
+  showView("home", { focus: false });
   stopActive();
   session = {};
   clearMessages();
@@ -939,6 +974,7 @@ export async function openChat(id, { force = false, find = "" } = {}) {
     if (find) openFind(find);
     return;
   }
+  showView("home", { focus: false });
   stopActive();
   const mine = (session = {});
 
@@ -1002,6 +1038,5 @@ document.getElementById("new-chat").addEventListener("click", (e) => {
   newChat();
 });
 
-// Reopen the chat from the address after a reload
-const fromAddress = location.hash.match(/^#chat\/([\w-]+)$/);
-if (fromAddress) openChat(fromAddress[1]);
+// The address #chat/<id> (a notification, or a reload) reopens a chat (views.js)
+document.addEventListener("friends:open-chat", (e) => openChat(e.detail.id));
