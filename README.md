@@ -4,6 +4,11 @@
 
 A personal AI companion for Linux that also gets things done. You talk to a robot with a face (**Atlas** or **Mira**), and behind it is an assistant: give it a goal, it makes a plan, you approve it once, and it works in the background (researching, writing, organising files, watching your laptop, building small programs) and puts a report in your notes. Gemini plans and checks; small AI models on your own graphics card do the routine work. Everything is local-first, and **Private mode** keeps it all on your computer.
 
+<p align="center">
+  <img src="docs/design/screenshots/0.6.0/hero-home-dark-1440.png" width="49%" alt="Talk: the robot greets you, and a line under the greeting says a mission is on step 3 of 4">
+  <img src="docs/design/screenshots/0.6.0/hero-mission-dark-1440.png" width="49%" alt="A mission running: progress, the plan with its steps, and a Stop button">
+</p>
+
 - **Missions**: goals carried out in the background with a plan you approve once, a list of exactly what it may do, a big Stop button, and a report in your notes. They can repeat (every morning, every Friday, when a file appears, when the disk fills up) and run while the window is closed. See [Missions](#missions).
 - **Specialists**: roles (everyday, coding, writing, research, vision, embeddings) each with its own model on your computer, loaded one at a time so a 6 GB graphics card is enough, with Gemini as the manager. See [Specialists](#specialists-small-models-on-a-small-graphics-card).
 - **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
@@ -36,7 +41,7 @@ npm start       # then open http://localhost:3000
 ```
 
 - Stop it with `Ctrl+C`. Another port: `PORT=3001 npm start`. Development with reload: `npm run dev`.
-- `npm run doctor` checks Node.js, the dependencies, your data folder, the port, API-key storage and any local AI server.
+- `npm run doctor` checks Node.js, the dependencies, your data folder, the port, API-key storage, any local AI server, and what Missions need: your graphics card (name, memory, what is free), whether each specialist's model is installed and fits it (and the `ollama pull` command for one that isn't), the Gemini key, and the missions folder.
 - The first time, the start screen guides you: it finds a local AI (Ollama, LM Studio…) by itself and offers it with one click, or takes a Gemini key (free from [aistudio.google.com/apikey](https://aistudio.google.com/apikey)). You can do the same, and add more, any time in **Settings → AI & privacy**.
 
 ### 3. Linux desktop app (Electron)
@@ -50,10 +55,11 @@ npm run dist                            # builds dist/friends_<version>_amd64.de
 sudo apt install ./dist/friends_0.5.1_amd64.deb
 ```
 
-Or download the `.deb` from the [Releases](../../releases) page. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
+Or download the `.deb` or the **AppImage** from the [Releases](../../releases) page. The AppImage is a single file that runs without installing anything (`chmod +x Friends-*.AppImage && ./Friends-*.AppImage`; build it yourself with `npm run dist:appimage`). On a recent Ubuntu it needs FUSE 2 (`sudo apt install libfuse2t64`), or start it with `--appimage-extract-and-run`. It starts without Chromium's sandbox (an AppImage can't hold the setuid helper), so prefer the `.deb` for everyday use; both keep their data in `~/.config/friends`. After changing the source, `npm run update` tests it, backs up your data, builds the `.deb` and installs it (it asks for your password).
 
 - The `.deb` sets up Chromium's sandbox properly (a setuid helper), which is why it needs `sudo`; `npm run desktop` has no root, so it runs without the sandbox. Use the installed app for everyday use.
 - **Updating the installed app means building and installing a new `.deb`**: `npm run update` does all of it. An installed app doesn't change when you change the source.
+- **Friends tells you when a newer release exists, and never installs one.** Once a day it asks GitHub's public releases page (nothing about you is sent; not in Private mode; switch it off in Settings → Data & backups → Updates). You get one small notice per version, and the Updates card shows what's new and how to update for the way you installed it (the `.deb`, the AppImage, Docker or from source).
 - **It keeps running in the tray** when you close the window, so reminders still come (Settings → Daily life; quit from the tray icon or with Ctrl+Q). It can start when you log in, quietly in the tray.
 - On a Wayland session it runs natively (X11 otherwise). The window remembers its size and position; a second launch focuses the first window.
 - The window only shows the app itself. The microphone and camera are granted to that page only, links open in your browser, and Google sign-in gets its own popup.

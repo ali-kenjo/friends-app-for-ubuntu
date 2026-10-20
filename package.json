@@ -15,6 +15,7 @@
     "check": "node scripts/check.js",
     "desktop": "electron . --no-sandbox",
     "dist": "node scripts/build-deb.js",
+  "dist:appimage": "node scripts/build-appimage.js",
     "update": "bash scripts/update.sh",
     "backup": "node scripts/backup.js",
     "doctor": "node scripts/doctor.js",

@@ -23,6 +23,77 @@ function portFree(port) {
   });
 }
 
+const gb = (mb) => `${(Math.round((mb / 1024) * 10) / 10).toFixed(1)} GB`;
+
+// What Missions need: models that fit the card, a Gemini key for the manager, a place to work
+async function assistant() {
+  const settings = require("../server/settings").get();
+  const specialistsApi = require("../server/specialists-api");
+  let view = null;
+  try {
+    view = await specialistsApi.overview(settings);
+  } catch (err) {
+    warn(`Couldn't look at the specialists: ${err.message}`);
+  }
+  if (view) {
+    // The graphics card
+    const card = view.vram.gpu;
+    if (card) ok(`${card.name}: ${gb(card.totalMb)}, ${gb(card.freeMb)} free now. Local models are loaded one at a time to fit it`);
+    else warn("No NVIDIA graphics card found: local models run on the processor, which is slow", "Fine for small models; for speed use a card with 6 GB or more and its driver (nvidia-smi must work)");
+    console.log(`${paint(2, "·")} Memory: ${gb(view.vram.ram.availableMb)} free of ${gb(view.vram.ram.totalMb)}`);
+
+    // Ollama and the specialists
+    if (!view.running) {
+      warn(`Ollama isn't answering at ${view.baseUrl}: Missions have no specialist models to use`, "Install it (https://ollama.com/download) and start it: ollama serve");
+    } else {
+      const used = view.roles.filter((r) => r.enabled && r.effectiveModel);
+      const byModel = new Map();
+      for (const r of used) byModel.set(r.effectiveModel, [...(byModel.get(r.effectiveModel) || []), r]);
+      for (const [model, roles] of byModel) {
+        const names = roles.map((r) => r.label).join(", ");
+        const worst = roles.find((r) => !r.installed) ? "missing" : roles[0].fits?.placement || "unknown";
+        const clean = model.replace(/:latest$/, "");
+        if (worst === "missing") {
+          const optional = roles.every((r) => r.id === "embeddings");
+          if (optional) console.log(`${paint(2, "·")} ${names}: ${clean} isn't installed (optional: it lets notes be searched by meaning). Run: ollama pull ${clean}`);
+          else warn(`${names}: ${clean} isn't installed`, `Run: ollama pull ${clean}`);
+        } else if (worst === "gpu") ok(`${names}: ${clean} fits the card`);
+        else if (worst === "split") warn(`${names}: ${clean} only partly fits the card, so part runs on the processor`, "Lower its context size, or pick a smaller model in Settings → AI → Specialists");
+        else if (worst === "cpu") warn(`${names}: ${clean} is too big for the card and runs on the processor`, "Pick a smaller model, or set a smaller fallback, in Settings → AI → Specialists");
+        else ok(`${names}: ${clean} is installed`);
+      }
+      const general = view.roles.find((r) => r.id === "general");
+      if (!general?.effectiveModel) {
+        const s = view.suggestions;
+        warn("No everyday model is chosen yet", `Settings → AI → Specialists → Use the suggestions (for your card: ${s.general.model} everyday, ${s.coding.model} for code, ${s.embeddings.model} for notes)`);
+      }
+    }
+  }
+
+  // Gemini plans and checks missions
+  const brains = require("../server/brains");
+  const keys = require("../server/keys");
+  const gemini = brains.publicState().brains.filter((b) => b.provider === "gemini");
+  if (gemini.some((b) => keys.getOptionalKey(b.id))) ok("A Gemini key is set: Gemini plans and checks missions");
+  else warn("No Gemini key: with no cloud manager, missions are planned by a model on this computer", "Add a free key in Settings → AI & privacy → Add an AI → Gemini (https://aistudio.google.com/apikey)");
+
+  // Where missions work
+  try {
+    const workspace = require("../server/missions/risk").expand(settings.missions.workspace || "~/friends-workspace");
+    let dir = workspace;
+    while (!fs.existsSync(dir) && path.dirname(dir) !== dir) dir = path.dirname(dir);
+    fs.accessSync(dir, fs.constants.W_OK);
+    ok(`Missions work in ${workspace}`);
+  } catch (err) {
+    fail(`Missions can't write to their workspace folder (${err.code || err.message})`, "Choose another in Settings → AI → Missions → Workspace folder");
+  }
+
+  // Updates: what the last check found (this script never goes to the internet)
+  const state = require("../server/updates").state(settings);
+  if (state.available) warn(`Friends ${state.latest.version} is available (you have ${state.current})`, `See what's new: ${state.latest.url || "Settings → Data & backups → Updates"}`);
+  else if (state.checkedAt) ok(`Friends ${state.current} is the newest version (checked ${new Date(state.checkedAt).toLocaleDateString("en-GB")})`);
+}
+
 async function main() {
   console.log(paint(1, `Friends ${pkg.version}: checking this computer\n`));
 
@@ -70,6 +141,9 @@ async function main() {
   } else {
     warn("No local AI server found (optional: it keeps your chats on this computer)", "Install Ollama (https://ollama.com/download), then: ollama pull llama3.2");
   }
+
+  // The assistant: the graphics card, the specialist models, Gemini (the manager) and the folder missions work in
+  await assistant();
 
   // Local voice
   const voice = require("../server/voice");

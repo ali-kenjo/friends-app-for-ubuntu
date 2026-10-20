@@ -2,6 +2,14 @@
 
 ## Unreleased (0.6.0): a companion with an assistant behind it
 
+### Phase 5: shipping it
+- **AppImage** next to the `.deb`: `npm run dist:appimage` builds `dist/Friends-<version>-x86_64.AppImage` (Electron and the app in an AppDir, packed by a pinned, checksum-verified appimagetool). The release workflow builds, checks and publishes both with one `SHA256SUMS`. `scripts/lib/stage-app.js` is the part both builds share; `node scripts/e2e-desktop.js --appimage <file>` starts the real window from an AppImage and checks the page.
+- **Update checks** (`server/updates.js`, Settings → Data & backups → Updates): once a day Friends asks GitHub Releases for the latest published release and tells you, with one notice per version, what's new, and how to update for the way you installed it. It never downloads or installs anything, sends nothing about you, is off in Private mode, and can be switched off. `package.json` now names the repository.
+- **`npm run doctor`** also reads your graphics card (name, memory, what is free), whether Ollama answers, which specialists' models are installed and whether each fits the card (with the `ollama pull` command for a missing one), the Gemini key, the missions folder, and the last update check. It still only talks to your own computer.
+- **The provider layer** is tested (`test/providers.test.js`: a provider is one registration; one missing a function, an unknown one, or a bad registration is refused plainly; cloud providers are off in Private mode, local ones stay).
+- `test/updates.test.js` (versions, a fake GitHub Releases, Private mode, off, once a day, one request at a time), `test/e2e/updates.test.js`, `test/doctor.test.js`.
+- The desktop check script scrubs the variables a terminal inside VS Code's snap passes on (`ELECTRON_RUN_AS_NODE`, GTK and schema folders), which made Electron start as plain Node or crash.
+
 ### Phase 4: the model manager (specialists on a small graphics card)
 - **Specialists** (Settings → AI → Specialists): roles with a model each, instructions, context size and a fallback: *General*, *Coding*, *Writing and social media*, *Research summaries*, *Vision* and *Embeddings*. No model names are built in: you pick from what Ollama has installed, or **pull** one (a progress bar; a name check; off in Private mode). Add your own roles (a translator, a poet); reset to the suggested defaults.
 - **Suggestions for 6 GB** (checked on ollama.com on 2026-10-19, and rechecked by `npm run doctor` against what you have installed): a 4B everyday model, a 7B coder, a small embeddings model. The pane shows your card, what is loaded now and why, and a badge per role: *fits the card*, *part runs on the processor*, *too big: runs on the processor*, *not installed*.
@@ -30,6 +38,7 @@
 - **Fewer pills**: one row of follow-ups under a reply, connector shortcuts behind the message box's **+**, and "answers come from…" is a small quiet line. The model picker shows one clean name ("llama3.2", not "llama3.2 llama3.2:latest").
 - **Settings and Today are full views**; sentence-case labels instead of mixed capitals; a bigger, softer shape scale; depth from layered shadows instead of borders.
 - A **logo**: the robot's face (sidebar, app icon, README).
+- The README opens with the logo and two screenshots, Talk (the robot, and a line saying a mission is on step 3 of 4) and that mission's page, in `docs/design/screenshots/0.6.0/`; `docs/design/screenshots/before` and `after` hold every surface at 1440, 1024, 768 and 390 px, dark and light, in English, German and Arabic.
 - Still true: right-to-left (Arabic), German, keyboard navigation, focus rings, screen-reader roles, 44 px touch targets; `npm run test:a11y` is clean (it now also scans Today, Missions, the **+** menu and Settings as full views).
 
 ### Phase 1: three places, not a dozen

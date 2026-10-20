@@ -2098,5 +2098,10 @@ export default {
   "GitHub is limiting requests right now. Try again later.": "GitHub begrenzt gerade die Anfragen. Versuche es später noch einmal.",
   "GitHub didn't give an answer Friends understands.": "GitHub hat eine Antwort gegeben, die Friends nicht versteht.",
   "GitHub didn't answer in time.": "GitHub hat nicht rechtzeitig geantwortet.",
-  "Couldn't check for updates.": "Die Suche nach Updates hat nicht geklappt."
+  "Couldn't check for updates.": "Die Suche nach Updates hat nicht geklappt.",
+  "The manager takes the hard reasoning": "Der Manager übernimmt das schwierige Denken",
+  "The manager wasn't available": "Der Manager war nicht verfügbar",
+  "Private mode: the general local model": "Privatmodus: das allgemeine lokale Modell",
+  "The specialist couldn't, so the manager took over": "Der Spezialist hat es nicht geschafft, deshalb hat der Manager übernommen",
+  "No local model for this role, so the manager does it": "Kein lokales Modell für diese Rolle, deshalb macht es der Manager"
 };

@@ -2150,5 +2150,10 @@ export default {
   "GitHub is limiting requests right now. Try again later.": "يحدّ GitHub من الطلبات حالياً. حاول مرة أخرى لاحقاً.",
   "GitHub didn't give an answer Friends understands.": "أعطى GitHub إجابة لا يفهمها Friends.",
   "GitHub didn't answer in time.": "لم يُجب GitHub في الوقت المناسب.",
-  "Couldn't check for updates.": "تعذّر التحقق من وجود تحديثات."
+  "Couldn't check for updates.": "تعذّر التحقق من وجود تحديثات.",
+  "The manager takes the hard reasoning": "يتولّى المدير التفكير الصعب",
+  "The manager wasn't available": "لم يكن المدير متاحاً",
+  "Private mode: the general local model": "الوضع الخاص: النموذج المحلي العام",
+  "The specialist couldn't, so the manager took over": "لم يستطع المتخصّص ذلك، فتولّى المدير الأمر",
+  "No local model for this role, so the manager does it": "لا يوجد نموذج محلي لهذا الدور، لذا ينفّذه المدير"
 };

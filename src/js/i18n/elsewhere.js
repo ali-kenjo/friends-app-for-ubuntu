@@ -51,6 +51,14 @@ export default [
   "GitHub didn't give an answer Friends understands.",
   "GitHub didn't answer in time.",
   "Couldn't check for updates.",
+  // Why a step runs where it does (shown on a running mission)
+  "The manager takes the hard reasoning",
+  "The manager wasn't available",
+  "Private mode: the general local model",
+  "The specialist couldn't, so the manager took over",
+  "No local model for this role, so the manager does it",
+  "Private mode",
+  "Local only",
   // The titles of mission notifications
   "A plan to approve",
   "Mission paused",

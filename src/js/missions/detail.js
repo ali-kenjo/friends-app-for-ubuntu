@@ -173,7 +173,7 @@ function progressCard(m) {
   const bits = [p.total ? tp("{n} of {total} step done", "{n} of {total} steps done", p.done, { total: p.total }) : "", m.usage?.runMs ? t("{time} so far", { time: duration(m.usage.runMs) }) : ""].filter(Boolean).join(" · ");
   const now = p.current ? h("p", { class: "now" }, ICON("play", 15), " ", t("Now: {title}", { title: p.current.title })) : null;
   const model = m.model
-    ? h("p", { class: "model-line" }, ICON(m.model.kind === "cloud" ? "cloud" : "chip", 15), " ", [m.model.kind === "cloud" ? t("The manager is doing this step") : t("{role} specialist", { role: roleLabel(m.model.role) }), m.model.model, m.model.placement === "cpu" ? t("on the processor") : m.model.placement === "split" ? t("part on the graphics card") : "", m.model.why].filter(Boolean).join(" · "))
+    ? h("p", { class: "model-line" }, ICON(m.model.kind === "cloud" ? "cloud" : "chip", 15), " ", [m.model.kind === "cloud" ? t("The manager is doing this step") : t("{role} specialist", { role: roleLabel(m.model.role) }), m.model.model, m.model.placement === "cpu" ? t("on the processor") : m.model.placement === "split" ? t("part on the graphics card") : "", /^The .+ specialist$/.test(m.model.why || "") ? "" : t(m.model.why || "")].filter(Boolean).join(" · "))
     : null;
   return h("section", { class: "card progress" }, bar, h("p", { class: "row-desc", text: bits }), now, model);
 }

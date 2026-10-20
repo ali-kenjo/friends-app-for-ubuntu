@@ -89,7 +89,7 @@ function updateOutside() {
     homeNote.href = `#missions/${first.id}`;
     homeNote.classList.toggle("waiting", Boolean(s.needsYou));
     const more = list.filter((m) => isActive(m)).length - 1;
-    homeNote.replaceChildren(h("span", { class: "pulse", "aria-hidden": "true" }), h("span", { text: s.needsYou ? `${first.title}: ${s.label.toLowerCase()}` : first.progress.total ? t("{title}: step {n} of {total}", { title: first.title, n: Math.min(first.progress.total, first.progress.done + 1), total: first.progress.total }) : t("{title}: working on it", { title: first.title }) }), more > 0 ? h("span", { class: "row-desc", text: tp("and {n} more", "and {n} more", more) }) : null);
+    homeNote.replaceChildren(...[h("span", { class: "pulse", "aria-hidden": "true" }), h("span", { text: s.needsYou ? `${first.title}: ${s.label.toLowerCase()}` : first.progress.total ? t("{title}: step {n} of {total}", { title: first.title, n: Math.min(first.progress.total, first.progress.done + 1), total: first.progress.total }) : t("{title}: working on it", { title: first.title }) }), more > 0 ? h("span", { class: "row-desc", text: tp("and {n} more", "and {n} more", more) }) : null].filter(Boolean));
   }
 }
 
