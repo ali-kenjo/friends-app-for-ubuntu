@@ -15,7 +15,7 @@ const file = () => path.join(dataDir, "updates.json");
 
 // Tests point this at a fake GitHub
 const api = () => process.env.FRIENDS_UPDATES_API || `https://api.github.com/repos/${repoOf(pkg)}`;
-const repoOf = (p) => String(p.repository?.url || p.repository || "").replace(/^git\+/, "").replace(/\.git$/, "").replace(/^(https?:\/\/github\.com\/|github:)/, "") || "ali-kenjo/chatting-app-with-ai-for-linux";
+const repoOf = (p) => String(p.repository?.url || p.repository || "").replace(/^git\+/, "").replace(/\.git$/, "").replace(/^(https?:\/\/github\.com\/|github:)/, "") || "ali-kenjo/friends-app-for-ubuntu";
 
 // "v0.6.0-rc.1" → { nums: [0,6,0], pre: "rc.1" }; anything that isn't a version → null
 function parse(version) {
