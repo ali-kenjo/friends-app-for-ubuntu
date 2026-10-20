@@ -55,7 +55,7 @@ describe("Updates in Settings", { skip: !CHROME && "no Chrome found" }, () => {
   });
 
   test("Check now finds a newer release, says how to update and shows what's new", async () => {
-    behave.release = { tag_name: "v99.0.0", html_url: "https://github.com/ali-kenjo/chatting-app-with-ai-for-linux/releases/tag/v99.0.0", body: "## What's new\n- Missions", assets: [] };
+    behave.release = { tag_name: "v99.0.0", html_url: "https://github.com/ali-kenjo/friends-app-for-ubuntu/releases/tag/v99.0.0", body: "## What's new\n- Missions", assets: [] };
     await page.click("#settings-btn");
     await page.click("#tab-data");
     await page.waitForFunction(() => /Not checked for a newer one yet/.test(document.getElementById("update-line")?.innerText || ""), { timeout: 8000 });

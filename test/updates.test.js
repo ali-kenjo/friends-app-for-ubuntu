@@ -24,7 +24,7 @@ describe("Versions", () => {
   });
 
   test("the repository comes from package.json", () => {
-    assert.strictEqual(updates.repoOf(pkg), "ali-kenjo/chatting-app-with-ai-for-linux");
+    assert.strictEqual(updates.repoOf(pkg), "ali-kenjo/friends-app-for-ubuntu");
     assert.strictEqual(updates.repoOf({ repository: "github:me/app" }), "me/app");
   });
 
@@ -42,7 +42,7 @@ describe("The check", () => {
   const release = (version, extra = {}) => ({
     tag_name: `v${version}`,
     name: `Friends ${version}`,
-    html_url: `https://github.com/ali-kenjo/chatting-app-with-ai-for-linux/releases/tag/v${version}`,
+    html_url: `https://github.com/ali-kenjo/friends-app-for-ubuntu/releases/tag/v${version}`,
     body: `## What's new\n- Missions\n- Specialists`,
     draft: false,
     prerelease: false,

@@ -29,8 +29,8 @@
     "design:shots": "node scripts/design-shots.js"
   },
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/ali-kenjo/chatting-app-with-ai-for-linux.git" },
-  "homepage": "https://github.com/ali-kenjo/chatting-app-with-ai-for-linux#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/ali-kenjo/friends-app-for-ubuntu.git" },
+  "homepage": "https://github.com/ali-kenjo/friends-app-for-ubuntu#readme",
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@fontsource-variable/figtree": "^5.3.0",
