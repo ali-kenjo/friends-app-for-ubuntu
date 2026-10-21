@@ -1,44 +1,55 @@
 /* Design tokens: every colour, size, space, radius, shadow, timing and layer the interface uses.
    Components read these and don't invent their own. See docs/design/design-system.md.
-   The user's own choices (Settings → Appearance) set --accent, --chat-font and --chat-size on top. */
+   Six switchable theme packs (Cozy default, Sunrise, Forest, Lavender night, Ocean, Classic)
+   and user settings (Settings → Appearance) set runtime tokens on :root (see src/js/appearance.js). */
 
 :root {
-  /* ----- Colour roles (dark: "the night room", lit by the robot's screen) ----- */
-  /* One accent, the lamp: a warm honey amber. It is the robot's light, so it is the interface's light
-     (focus, the primary button, what is selected, the glow behind the robot). Everything else is a
-     violet-tinted ink in layers: the page, a raised surface (cards, fields, the message box), the sidebar. */
+  /* ----- Colour roles (Cozy dark default: "a cozy room at golden hour", deep cocoa and warm oat) ----- */
   --accent: #f5a94a;
-  --on-accent: #2a1a05; /* appearance.js sets it from the accent's own brightness */
-  --bg-main: #15121c;
-  --bg-sidebar: #100e16;
-  --bg-input: #211c2b; /* raised: cards, fields, the message box */
-  --bg-subtle: #1a1623;
-  --bg-hover: #2b2536;
-  --bg-active: color-mix(in srgb, var(--accent) 20%, var(--bg-main));
-  --text: #efeaf5;
-  --text-muted: #a8a1b7;
-  --border: #373041;
-  --hairline: rgba(255, 255, 255, 0.07); /* the quiet line between neighbours */
+  --accent-hover: #f8ba68;
+  --on-accent: #241604;
+  --bg-main: #181310;
+  --bg-sidebar: #120e0b;
+  --bg-input: #221b16; /* raised: cards, fields, the message box */
+  --bg-subtle: #1d1713;
+  --bg-hover: #2b221c;
+  --bg-active: color-mix(in srgb, var(--accent) 18%, var(--bg-main));
+  --bg-elevated: var(--bg-input);
+  --bg-surface: var(--bg-subtle);
+  --text: #f7efe4;
+  --text-primary: var(--text);
+  --text-secondary: var(--text-muted);
+  --text-muted: #b8a796;
+  --border: #3d3129;
+  --border-default: var(--border);
+  --border-strong: var(--border);
+  --border-subtle: var(--hairline);
+  --hairline: rgba(255, 236, 214, 0.08);
   --link: #ffc477;
   --focus: #ffc477;
-  --accent-text: var(--accent); /* the accent where it is text or a thin icon: darker on the light theme */
-  --danger: #ff8f8f;
-  --danger-border: #6a2f36;
-  --danger-bg: #2d1a20;
-  --success: #62d6a3;
-  --warning: #ffd166;
+  --accent-text: #f7bc6c;
+  --accent-subtle: rgba(245, 169, 74, 0.14);
+  --danger: #fca5a5;
+  --danger-border: #6e2f34;
+  --danger-bg: #2e191c;
+  --success: #6ee7b7;
+  --success-subtle: rgba(52, 211, 153, 0.14);
+  --warning: #fcd34d;
   --glow: color-mix(in srgb, var(--accent) 22%, transparent);
-  --scrim: rgba(8, 5, 14, 0.62);
+  --hero-glow-a: rgba(245, 169, 74, 0.16);
+  --hero-glow-b: rgba(235, 122, 83, 0.11);
+  --scrim: rgba(12, 8, 5, 0.64);
 
   /* ----- Type ----- */
-  /* Figtree for everything you read and click; Bricolage Grotesque for the few big things (the greeting,
-     titles, the wordmark). Both ship with the app (fonts.css). Arabic uses the system's own fonts. */
-  --font-ui: "Figtree", system-ui, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Bricolage Grotesque", "Figtree", system-ui, "Segoe UI", sans-serif;
+  /* Figtree for everything you read and click; Bricolage Grotesque for headings and the greeting;
+     Noto Sans Arabic for Arabic script. All three ship locally in src/fonts/ (fonts.css). */
+  --font-ui: "Figtree", "Noto Sans Arabic", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: var(--font-ui);
+  --font-display: "Bricolage Grotesque", "Figtree", "Noto Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --chat-font: inherit;
-  --chat-size: 16px; /* Settings → Appearance → Font size */
-  /* The scale, in rem so it follows the browser's text size. Nothing is smaller than --fs-xs. */
+  --chat-size: 16px;
   --fs-xs: 0.75rem; /* 12: captions, badges, timestamps */
   --fs-sm: 0.8125rem; /* 13: secondary text, descriptions, buttons */
   --fs-base: 0.9375rem; /* 15: interface text */
@@ -77,17 +88,17 @@
   --radius-pill: 999px;
   --target: 40px; /* the smallest icon button; 44px on touch screens (see a11y.css) */
 
-  /* ----- Elevation: depth, not borders. Each is a close shadow and a far, soft one. ----- */
-  --shadow-rest: 0 1px 2px rgba(6, 3, 12, 0.3), 0 4px 14px rgba(6, 3, 12, 0.22); /* cards, the message box */
-  --shadow-pop: 0 2px 6px rgba(6, 3, 12, 0.3), 0 14px 36px rgba(6, 3, 12, 0.4); /* menus, popovers, toasts */
-  --shadow-sheet: 0 20px 48px rgba(6, 3, 12, 0.5); /* drawers */
-  --shadow-modal: 0 24px 70px rgba(6, 3, 12, 0.55); /* dialogs */
+  /* ----- Elevation: layered warm shadows ----- */
+  --shadow-rest: 0 1px 2px rgba(10, 6, 3, 0.32), 0 6px 18px -2px rgba(10, 6, 3, 0.24);
+  --shadow-pop: 0 4px 10px rgba(10, 6, 3, 0.32), 0 16px 38px -4px rgba(10, 6, 3, 0.44);
+  --shadow-sheet: 0 20px 48px rgba(10, 6, 3, 0.52);
+  --shadow-modal: 0 24px 70px rgba(10, 6, 3, 0.58);
 
   /* ----- Motion (transform and opacity only; reduced motion turns it off, see a11y.css) ----- */
   --dur-fast: 150ms;
-  --dur-base: 200ms;
-  --dur-slow: 300ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-base: 210ms;
+  --dur-slow: 320ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* ----- Layers ----- */
   --z-base: 1;
@@ -108,44 +119,89 @@
 
   /* ----- Layout ----- */
   --sidebar-w: 300px;
-  --reading-w: 46rem; /* the conversation column */
-  /* Two breakpoints, used literally in @media (custom properties can't be): 760px, where the sidebar
-     slides in over the page, and 560px, the phone layout. */
-
-  /* +1 in left-to-right layouts, -1 in right-to-left: for sliding things (transform: translateX) */
+  --reading-w: 46rem;
   --dir: 1;
 
   color-scheme: dark;
 }
 
-/* Light theme (Settings → Appearance): "the day room", designed on its own, not an inversion */
+/* Light theme (Settings → Appearance): warm cream, oat and sand */
 :root[data-theme="light"] {
-  --on-accent: #2a1a05;
-  --bg-main: #fbf9f8;
-  --bg-sidebar: #f2eeed;
-  --bg-input: #ffffff;
-  --bg-subtle: #f6f2f1;
-  --bg-hover: #e9e3e3;
-  --bg-active: color-mix(in srgb, var(--accent) 22%, #ffffff);
-  --text: #231d2a;
-  --text-muted: #5b5466;
-  --border: #d9d0d3;
-  --hairline: rgba(35, 29, 42, 0.09);
-  --link: #7a4300;
-  --focus: #7a4300;
-  --accent-text: color-mix(in srgb, var(--accent) 50%, #1c1000);
-  --danger: #b3201f;
+  --accent: #a65606;
+  --accent-hover: #8c4704;
+  --on-accent: #fffcf7;
+  --bg-main: #f9f4ec;
+  --bg-sidebar: #f1e9dc;
+  --bg-input: #fffdf9;
+  --bg-subtle: #f4ede2;
+  --bg-hover: #eae0d1;
+  --bg-active: color-mix(in srgb, var(--accent) 14%, #fffdf9);
+  --text: #241b15;
+  --text-muted: #594a3e;
+  --border: #d8cbb8;
+  --hairline: rgba(44, 30, 18, 0.09);
+  --link: #703800;
+  --focus: #703800;
+  --accent-text: #703800;
+  --accent-subtle: rgba(166, 86, 6, 0.11);
+  --danger: #a81b1b;
   --danger-border: #efb7b5;
   --danger-bg: #fdecea;
-  --success: #17724a;
-  --warning: #8a5a00;
-  --glow: color-mix(in srgb, var(--accent) 20%, transparent);
-  --scrim: rgba(35, 29, 42, 0.38);
-  --shadow-rest: 0 1px 2px rgba(60, 40, 70, 0.08), 0 4px 14px rgba(60, 40, 70, 0.07);
-  --shadow-pop: 0 2px 6px rgba(60, 40, 70, 0.1), 0 14px 36px rgba(60, 40, 70, 0.14);
-  --shadow-sheet: 0 20px 48px rgba(60, 40, 70, 0.16);
-  --shadow-modal: 0 24px 70px rgba(60, 40, 70, 0.22);
+  --success: #0d6343;
+  --success-subtle: rgba(13, 99, 67, 0.11);
+  --warning: #7c4303;
+  --glow: color-mix(in srgb, var(--accent) 18%, transparent);
+  --hero-glow-a: rgba(245, 169, 74, 0.22);
+  --hero-glow-b: rgba(235, 122, 83, 0.14);
+  --scrim: rgba(36, 27, 21, 0.36);
+  --shadow-rest: 0 1px 2px rgba(48, 32, 16, 0.07), 0 6px 16px -2px rgba(48, 32, 16, 0.06);
+  --shadow-pop: 0 3px 8px rgba(48, 32, 16, 0.09), 0 16px 36px -4px rgba(48, 32, 16, 0.13);
+  --shadow-sheet: 0 20px 48px rgba(48, 32, 16, 0.15);
+  --shadow-modal: 0 24px 70px rgba(48, 32, 16, 0.2);
   color-scheme: light;
+}
+
+/* Roundness presets (Settings → Appearance → Roundness) */
+:root[data-roundness="sharp"] {
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+}
+:root[data-roundness="soft"] {
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+}
+:root[data-roundness="pill"] {
+  --radius-xs: 8px;
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 26px;
+  --radius-xl: 32px;
+  --radius-2xl: 40px;
+}
+
+/* Animation levels (Settings → Appearance → Animation level) */
+:root[data-animation="off"] {
+  --dur-fast: 0ms;
+  --dur-base: 0ms;
+  --dur-slow: 0ms;
+}
+:root[data-animation="subtle"] {
+  --dur-fast: 110ms;
+  --dur-base: 160ms;
+  --dur-slow: 240ms;
+}
+:root[data-animation="lively"] {
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 340ms;
 }
 
 /* Right-to-left languages (Arabic): the page sets dir="rtl" on <html> (see js/i18n.js) */
@@ -153,8 +209,8 @@
   --dir: -1;
 }
 
-/* Arabic reads best in a font made for it; these ship with the system (Latin letters fall back to Figtree) */
+/* Arabic uses bundled Noto Sans Arabic with Figtree/Bricolage fallback for Latin */
 :root:lang(ar) {
-  --font-ui: "Noto Sans Arabic", "Segoe UI", Tahoma, "Figtree", system-ui, sans-serif;
-  --font-display: "Noto Sans Arabic", "Segoe UI", Tahoma, "Bricolage Grotesque", system-ui, sans-serif;
+  --font-ui: "Noto Sans Arabic", "Figtree", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-display: "Noto Sans Arabic", "Bricolage Grotesque", "Segoe UI", Tahoma, system-ui, sans-serif;
 }

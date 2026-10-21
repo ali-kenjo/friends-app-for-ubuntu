@@ -54,18 +54,42 @@ chatsNav.addEventListener("click", (e) => {
   announce(folded ? t("Chats hidden") : t("Chats shown"));
 });
 
-// A greeting that fits the time of day, with your name from Settings → Characters
+// A greeting and subtitle that fit the time of day, streaks, and context
+let topStreak = null; // { name, streak }
+
 function greet() {
   const s = getSettings();
   const name = s?.personality.userName?.trim();
   const hour = new Date().getHours();
   const part = hour < 5 ? t("Hello") : hour < 12 ? t("Good morning") : hour < 18 ? t("Good afternoon") : t("Good evening");
   const el = document.getElementById("greeting");
-  el.textContent = name ? t("{greeting}, {name}", { greeting: part, name }) : part;
-  // Who's here to talk
-  const who = s?.characters?.list.find((c) => c.id === s.characters.active);
-  el.title = who ? `${who.name}: ${who.tagline}` : "";
+  if (el) {
+    el.textContent = name ? t("{greeting}, {name}", { greeting: part, name }) : part;
+    const who = s?.characters?.list.find((c) => c.id === s.characters.active);
+    el.title = who ? `${who.name}: ${who.tagline}` : "";
+  }
+  const sub = document.getElementById("home-sub");
+  if (sub) {
+    if (topStreak && topStreak.streak >= 2) {
+      sub.textContent = t("{n}-day streak on {habit}. What are we doing today?", { n: topStreak.streak, habit: topStreak.name });
+    } else if (hour >= 5 && hour < 12) {
+      sub.textContent = t("The kettle's warm. What are we doing today?");
+    } else if (hour >= 18 && hour < 22) {
+      sub.textContent = t("Golden hour in the room. What's on your mind?");
+    } else if (hour >= 22 || hour < 5) {
+      sub.textContent = t("A quiet night for thinking, tinkering, or winding down.");
+    } else {
+      sub.textContent = t("What are we doing today?");
+    }
+  }
 }
 greet();
 onSettings(greet);
+document.addEventListener("friends:language-ready", greet);
+document.addEventListener("friends:life-today", (e) => {
+  const habits = e.detail?.habits || [];
+  const best = [...habits].sort((a, b) => (b.streak || 0) - (a.streak || 0))[0];
+  topStreak = best && best.streak >= 2 ? { name: best.name, streak: best.streak } : null;
+  greet();
+});
 setInterval(greet, 10 * 60 * 1000);

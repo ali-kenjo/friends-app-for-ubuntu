@@ -1285,3 +1285,101 @@ body {
 .has-chat .onboarding {
   display: none;
 }
+
+/* ---------- Warm atmosphere: background styles, paper grain, sidebar styles, micro-interactions ---------- */
+:root[data-background="gradient"] .main,
+:root[data-background="gradient"] .view {
+  background-image:
+    radial-gradient(ellipse 75% 55% at 50% 0%, var(--hero-glow-a), transparent 70%),
+    radial-gradient(ellipse 60% 45% at 85% 95%, var(--hero-glow-b), transparent 72%);
+}
+
+:root[data-background="aurora"] .main,
+:root[data-background="aurora"] .view {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 10%, var(--hero-glow-a), transparent 65%),
+    radial-gradient(ellipse 70% 55% at 80% 25%, var(--hero-glow-b), transparent 68%),
+    radial-gradient(ellipse 90% 60% at 50% 100%, var(--glow), transparent 75%);
+}
+
+:root[data-background="pattern"] .main,
+:root[data-background="pattern"] .view {
+  background-image:
+    radial-gradient(var(--hairline) 1px, transparent 1px),
+    radial-gradient(ellipse 70% 50% at 50% 0%, var(--hero-glow-a), transparent 70%);
+  background-size: 22px 22px, 100% 100%;
+}
+
+/* Procedural SVG paper grain (no external requests, disabled on Low quality) */
+:root[data-grain="on"]:not([data-quality="low"]) body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-top);
+  pointer-events: none;
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* Sidebar styles (Settings → Appearance → Sidebar style) */
+@media (min-width: 761px) {
+  :root[data-sidebar-style="floating"] .sidebar {
+    margin: var(--space-2h);
+    margin-inline-end: 0;
+    height: calc(100dvh - var(--space-5));
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--hairline);
+    box-shadow: var(--shadow-rest);
+  }
+
+  :root[data-sidebar-style="minimal"] .sidebar {
+    background: var(--bg-main);
+    border-inline-end: 1px dashed var(--border);
+  }
+}
+
+/* Tactile press & hover feedback (transform and opacity only) */
+.btn,
+.prompt-chip,
+.icon-btn,
+.nav-item,
+.character-chip {
+  transition: transform var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
+}
+
+.btn:active:not(:disabled),
+.prompt-chip:active:not(:disabled),
+.icon-btn:active:not(:disabled),
+.send-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.prompt-chip:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: var(--shadow-rest);
+}
+
+/* Smooth view transitions between Talk, Missions and Today */
+.main:not([hidden]),
+.view:not([hidden]) {
+  animation: view-enter var(--dur-base) var(--ease);
+}
+
+@keyframes view-enter {
+  from {
+    opacity: 0.92;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Degrade heavy effects on Low hardware quality tier */
+:root[data-quality="low"] *,
+:root[data-quality="low"] *::before,
+:root[data-quality="low"] *::after {
+  backdrop-filter: none !important;
+}

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased (0.7.0)
+
+### Workstream 1: Warm, cozy, playful look and feel
+- **Theme packs & warm design system** (`src/js/theme-packs.mjs`, `src/css/tokens.css`): refactored tokens into six switchable theme packs — *Cozy* (new default: warm cocoa and oat at golden hour), *Sunrise*, *Forest*, *Lavender night*, *Ocean*, and *Classic* — each with dark and light variants and six warm accent colours (Honey, Terracotta, Dusty rose, Sage, Lavender, Sea glass). Verified WCAG AA contrast (`>= 4.5:1`) across every pack, mode, accent, warmth level and tint in `test/theme-packs.test.js` and `npm run test:a11y`.
+- **Rich Appearance settings** (Settings → Appearance): added theme pack cards, warmth slider (`0..10`), roundness (*Sharp*, *Soft*, *Pill*), background style (*Plain*, *Warm gradient*, *Soft aurora*, *Subtle pattern*), sidebar style (*Classic panel*, *Floating card*, *Minimal*), animation level (*Off*, *Subtle*, *Lively*), procedural paper grain toggle, time-of-day tint, character mood tint (Atlas calmer, Mira brighter when *Each has its own look* is on), floating golden motes, and three new chat message styles (*Cozy cards*, *Notebook*, *Postcards*) alongside *Minimal* and *Bubbles*. Every control saves immediately as a diff and is indexed in Settings search.
+- **Bundled open-licensed fonts** (`src/fonts/`, `src/css/fonts.css`): bundled variable WOFF2 subsets for *Bricolage Grotesque* (Latin + Latin Extended), *Figtree* (Latin + Latin Extended), and *Noto Sans Arabic* (348 KB total, SIL OFL 1.1 in `src/fonts/LICENSE.txt`) so English, German, and Arabic render offline with no external requests.
+- **Alive interactions, procedural illustrations & WebAudio chimes** (`src/js/sounds.js`, `src/js/celebrate.js`, `src/js/illustrations.js`): added procedural inline SVG empty-state illustrations (companion robot and cozy props), animated SVG progress rings on habits and missions, context-aware dynamic greetings (time of day, habit streaks, active missions), sparkle celebrations respecting reduced motion, and a procedural WebAudio sound synthesizer (UI taps, reminder chimes, celebration chords, volume slider, off by default with a gentle one-time onboarding offer).
+- **Hardware-agnostic performance**: shared `data-quality-tier` with the robot's quality setting so weak devices or the *Low* quality tier automatically step down backdrop blur, grain, and ambient particles.
+
 ## 0.6.0: A companion with an assistant behind it
 
 Friends is now a companion you talk to with an assistant behind it: three places (Talk, Missions, Today), a new look, missions that plan, ask for your approval and run in the background, specialist models that fit a small graphics card, any AI you want to add, and a helper that speaks your language. There is also an AppImage next to the `.deb`, and Friends tells you when a newer release exists.

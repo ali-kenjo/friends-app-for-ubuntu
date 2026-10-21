@@ -15,6 +15,8 @@ import { toast } from "../life.js";
 import { looksLikeMission } from "./detect.mjs";
 import { statusOf, isActive, roleLabel, when } from "./labels.js";
 import { renderDetail } from "./detail.js";
+import { celebrate } from "../celebrate.js";
+import { emptyIllustration, progressRing } from "../illustrations.js";
 
 const root = document.getElementById("missions-root");
 const actionsBar = document.getElementById("missions-actions");
@@ -118,6 +120,7 @@ function missionRow(m) {
           when(m.updatedAt),
         ].filter(Boolean).join(" · "))
       ),
+      m.status === "running" && p.total ? progressRing(p.done, p.total, { size: 28, stroke: 3 }) : null,
       m.status === "running" && p.total ? h("span", { class: "bar small", "aria-hidden": "true" }, h("i", { style: `width:${pct}%` })) : null,
       iconEl("chevronRight", { size: 18 })
     )
@@ -301,6 +304,7 @@ function drawList() {
       h(
         "div",
         { class: "empty-state" },
+        emptyIllustration("missions"),
         h("span", { class: "empty-icon" }, iconEl("missions", { size: 28 })),
         h("h2", { class: "empty-title", text: t("Give me a goal") }),
         h("p", { class: "empty-text", text: t("I make a plan, you approve it once, and I get it done in the background. You can stop me at any time.") }),
@@ -379,6 +383,7 @@ export { looksLikeMission };
 // ---------- Live ----------
 onServerEvent("mission", (e) => {
   scheduleRefresh();
+  if (e?.type === "done" && missionsEnabled()) celebrate(null, { kind: "mission" });
   if (!e?.notify || !missionsEnabled()) return;
   // In the page: a message with a way to open it (the desktop and Telegram say it too)
   if (currentView() === "missions" && state.openId === e.mission?.id) return;

@@ -8,10 +8,12 @@ import { getSettings, onSettings, updateSettings, flushSettings } from "./store.
 import { announce } from "./a11y.js";
 import { t, tp } from "./i18n.js";
 import { showView } from "./views.js";
+import { playCelebrationSound } from "./sounds.js";
 
 const main = document.getElementById("main");
 const card = document.getElementById("onboarding");
 const intro = document.getElementById("missions-intro");
+const soundsIntro = document.getElementById("sounds-intro");
 const status = document.getElementById("onb-local-status");
 const actions = document.getElementById("onb-local-actions");
 const help = document.getElementById("onb-local-help");
@@ -45,14 +47,35 @@ function sync() {
   syncIntro();
 }
 
-// The card about Missions: once, after an AI is set up, on an empty Home
+// The card about Missions (and then a gentle one-time offer for soft UI sounds)
 function syncIntro() {
   const s = getSettings();
-  const show = Boolean(s) && brains !== null && hasAI() && card.hidden && s.onboarding?.done === true && s.onboarding?.missions !== true && !main.classList.contains("has-chat");
-  intro.hidden = !show;
+  const baseReady = Boolean(s) && brains !== null && hasAI() && card.hidden && s.onboarding?.done === true && !main.classList.contains("has-chat");
+  const showMissions = baseReady && s.onboarding?.missions !== true;
+  intro.hidden = !showMissions;
+  if (soundsIntro) {
+    const showSounds = baseReady && !showMissions && s.onboarding?.sounds === false && !s.sound?.enabled;
+    soundsIntro.hidden = !showSounds;
+  }
 }
 function seenIntro() {
-  updateSettings((s) => ((s.onboarding ||= {}).missions = true));
+  updateSettings((s) => {
+    s.onboarding ||= {};
+    s.onboarding.missions = true;
+    if (s.onboarding.sounds === undefined) s.onboarding.sounds = false;
+  });
+  syncIntro();
+}
+function seenSounds(enable = false) {
+  updateSettings((s) => {
+    s.onboarding ||= {};
+    s.onboarding.sounds = true;
+    if (enable) {
+      s.sound ||= {};
+      s.sound.enabled = true;
+    }
+  });
+  if (enable) playCelebrationSound({ force: true });
   syncIntro();
 }
 document.getElementById("missions-intro-go").addEventListener("click", () => {
@@ -61,6 +84,14 @@ document.getElementById("missions-intro-go").addEventListener("click", () => {
 });
 document.getElementById("missions-intro-dismiss").addEventListener("click", () => {
   seenIntro();
+  document.getElementById("composer-input").focus();
+});
+document.getElementById("sounds-intro-enable")?.addEventListener("click", () => {
+  seenSounds(true);
+  document.getElementById("composer-input").focus();
+});
+document.getElementById("sounds-intro-dismiss")?.addEventListener("click", () => {
+  seenSounds(false);
   document.getElementById("composer-input").focus();
 });
 new MutationObserver(syncIntro).observe(main, { attributes: true, attributeFilter: ["class"] });
@@ -164,7 +195,11 @@ function done(state, name) {
   brains = state.brains || [];
   // brains.js owns the list in Settings and the model menu: hand it the new state
   document.dispatchEvent(new CustomEvent("friends:brains-apply", { detail: state }));
-  updateSettings((s) => ((s.onboarding ||= {}).done = true));
+  updateSettings((s) => {
+    s.onboarding ||= {};
+    s.onboarding.done = true;
+    s.onboarding.sounds = false;
+  });
   flushSettings();
   reopened = false;
   sync();
@@ -173,7 +208,11 @@ function done(state, name) {
 }
 
 document.getElementById("onb-skip").addEventListener("click", () => {
-  updateSettings((s) => ((s.onboarding ||= {}).done = true));
+  updateSettings((s) => {
+    s.onboarding ||= {};
+    s.onboarding.done = true;
+    s.onboarding.sounds = false;
+  });
   reopened = false;
   sync();
   document.getElementById("composer-input").focus();

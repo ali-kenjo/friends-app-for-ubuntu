@@ -237,6 +237,19 @@
           </div>
         </section>
 
+        <!-- Gentle one-time offer for soft UI sounds (src/js/onboarding.js) -->
+        <section class="intro-card" id="sounds-intro" aria-labelledby="sounds-intro-title" hidden>
+          <span class="intro-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></span>
+          <div class="intro-text">
+            <h2 id="sounds-intro-title">Soft room sounds?</h2>
+            <p>Friends can play gentle, warm chimes when a mission finishes or a message arrives. They are made right here in your browser and stay off unless you want them.</p>
+          </div>
+          <div class="intro-actions">
+            <button type="button" class="btn btn-primary" id="sounds-intro-enable">Turn on soft sounds</button>
+            <button type="button" class="link-btn" id="sounds-intro-dismiss">Keep it quiet</button>
+          </div>
+        </section>
+
         <!-- A few ideas, a different few each time (src/js/activities.js) -->
         <div class="home-ideas" id="hero-prompts" role="group" aria-label="Let's do something"></div>
 
@@ -582,7 +595,41 @@
 
           <div class="subhead"><div>
             <div class="subhead-title">Theme</div>
+            <p class="hint">Pick a mood for the room, from warm golden-hour cocoa to woodland sage or twilight lavender.</p>
           </div></div>
+          <div class="row-label" id="theme-pack-label">Theme pack</div>
+          <div class="pack-grid" id="theme-packs" role="radiogroup" aria-labelledby="theme-pack-label">
+            <button type="button" class="pack-choice selected" data-pack="cozy" role="radio" aria-checked="true">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Cozy</span>
+              <span class="row-desc">Warm cocoa and oat at golden hour</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="sunrise" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Sunrise</span>
+              <span class="row-desc">Apricot light, terracotta and soft blush</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="forest" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Forest</span>
+              <span class="row-desc">Quiet moss, warm cedar and sunlit fern</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="lavender" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Lavender night</span>
+              <span class="row-desc">Velvet plum dusk, heather and starlight</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="ocean" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Ocean</span>
+              <span class="row-desc">Sea glass, coastal mist and warm driftwood</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="classic" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Classic</span>
+              <span class="row-desc">Quiet warm stone and crisp paper</span>
+            </button>
+          </div>
           <div class="row-label" id="appearance-label">Colors</div>
           <div class="choice-grid" id="appearance" role="radiogroup" aria-labelledby="appearance-label">
             <button class="choice selected" data-appearance="dark" role="radio" aria-checked="true"><span class="swatch dark"></span>Dark</button>
@@ -592,11 +639,92 @@
           <div class="row-label" id="accent-label">Accent color</div>
           <div class="colors" id="accent-colors" role="radiogroup" aria-labelledby="accent-label">
             <button class="color selected" role="radio" aria-checked="true" data-color="#f5a94a" style="background:#f5a94a" aria-label="Amber"></button>
-            <button class="color" role="radio" aria-checked="false" data-color="#f472b6" style="background:#f472b6" aria-label="Pink"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#eb7a53" style="background:#eb7a53" aria-label="Terracotta"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#fb7185" style="background:#fb7185" aria-label="Pink"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#34d399" style="background:#34d399" aria-label="Green"></button>
             <button class="color" role="radio" aria-checked="false" data-color="#a78bfa" style="background:#a78bfa" aria-label="Violet"></button>
-            <button class="color" role="radio" aria-checked="false" data-color="#6fb4f5" style="background:#6fb4f5" aria-label="Blue"></button>
-            <button class="color" role="radio" aria-checked="false" data-color="#4fd1a5" style="background:#4fd1a5" aria-label="Green"></button>
+            <button class="color" role="radio" aria-checked="false" data-color="#38bdf8" style="background:#38bdf8" aria-label="Blue"></button>
           </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Warmth</div>
+              <div class="row-desc">Shift surfaces from crisp stone toward golden candlelight</div>
+            </div>
+            <div class="slider"><span>Cool</span><input type="range" class="range" min="0" max="10" value="6" data-setting="theme.warmth"><span>Golden</span></div>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Roundness</div>
+              <div class="row-desc">How soft buttons, cards and panels feel</div>
+            </div>
+            <select class="field" data-setting="theme.roundness">
+              <option value="sharp">Sharp</option>
+              <option value="soft">Soft</option>
+              <option value="pill">Pill</option>
+            </select>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Background style</div>
+              <div class="row-desc">The atmosphere behind your conversation and views</div>
+            </div>
+            <select class="field" data-setting="theme.background">
+              <option value="plain">Plain</option>
+              <option value="gradient">Warm gradient</option>
+              <option value="aurora">Soft aurora</option>
+              <option value="pattern">Subtle pattern</option>
+            </select>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Sidebar style</div>
+              <div class="row-desc">How the navigation column sits beside the room</div>
+            </div>
+            <select class="field" data-setting="theme.sidebarStyle">
+              <option value="classic">Classic panel</option>
+              <option value="floating">Floating card</option>
+              <option value="minimal">Minimal</option>
+            </select>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Animation level</div>
+              <div class="row-desc">Reduced motion in your system settings always turns animations off</div>
+            </div>
+            <select class="field" data-setting="theme.animation">
+              <option value="off">Off</option>
+              <option value="subtle">Subtle</option>
+              <option value="lively">Lively</option>
+            </select>
+          </div>
+          <label class="row">
+            <div>
+              <div class="row-label">Paper grain</div>
+              <div class="row-desc">A quiet procedural paper texture across the room</div>
+            </div>
+            <input type="checkbox" class="toggle" data-setting="theme.grain">
+          </label>
+          <label class="row">
+            <div>
+              <div class="row-label">Follow time of day</div>
+              <div class="row-desc">A gentle morning, afternoon, evening and night tint</div>
+            </div>
+            <input type="checkbox" class="toggle" data-setting="theme.timeTint">
+          </label>
+          <label class="row">
+            <div>
+              <div class="row-label">Character mood tint</div>
+              <div class="row-desc">Atlas feels calmer and Mira brighter when “Each has its own look” is on</div>
+            </div>
+            <input type="checkbox" class="toggle" checked data-setting="theme.characterTint">
+          </label>
+          <label class="row">
+            <div>
+              <div class="row-label">Floating golden motes</div>
+              <div class="row-desc">Soft ambient dust particles drifting in the light</div>
+            </div>
+            <input type="checkbox" class="toggle" data-setting="theme.particles">
+          </label>
 
           <div class="subhead"><div>
             <div class="subhead-title">Chat text</div>
@@ -618,17 +746,21 @@
           <div class="row">
             <div>
               <div class="row-label">Message style</div>
-              <div class="row-desc">Minimal puts only your messages in bubbles</div>
+              <div class="row-desc">Choose how your words and the companion's replies are framed</div>
             </div>
             <select class="field" data-setting="chat.style">
               <option value="minimal">Minimal</option>
               <option value="bubbles">Bubbles</option>
+              <option value="cards">Cozy cards</option>
+              <option value="notebook">Notebook</option>
+              <option value="postcards">Postcards</option>
             </select>
           </div>
           <div class="row">
             <div class="row-label">Spacing</div>
             <select class="field" data-setting="chat.density">
               <option value="comfortable">Comfortable</option>
+              <option value="cozy">Cozy</option>
               <option value="compact">Compact</option>
             </select>
           </div>
@@ -645,6 +777,47 @@
               <div class="msg-avatar"><svg class="face-mini" viewBox="0 0 24 24"><rect class="face-shell" x="1" y="3" width="22" height="18" rx="7"/><rect class="face-screen" x="3.6" y="5.6" width="16.8" height="12.8" rx="5"/><rect class="face-eye" x="7.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><rect class="face-eye" x="13.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><path class="face-mouth" d="M10.2 15.4q1.8 1.2 3.6 0"/></svg></div>
               <div class="msg-main"><div class="msg-body markdown"><p>Like this. Change the font, size, style and spacing above to see it here.</p></div></div>
             </div>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Soft sounds</div>
+            <p class="hint">Gentle synthesized chimes made in your browser with WebAudio. No audio files are loaded.</p>
+          </div></div>
+          <label class="row">
+            <div>
+              <div class="row-label">Enable interface sounds</div>
+              <div class="row-desc">Off by default so Friends never surprises you with noise</div>
+            </div>
+            <input type="checkbox" class="toggle" data-setting="sound.enabled">
+          </label>
+          <div class="row">
+            <div class="row-label">Sound volume</div>
+            <div class="slider"><span>Quiet</span><input type="range" class="range" min="0" max="100" value="60" data-setting="sound.volume"><span>Warm</span></div>
+          </div>
+          <label class="row">
+            <div>
+              <div class="row-label">Buttons and switches</div>
+              <div class="row-desc">Soft felt taps when clicking controls or switching tabs</div>
+            </div>
+            <input type="checkbox" class="toggle" checked data-setting="sound.ui">
+          </label>
+          <label class="row">
+            <div>
+              <div class="row-label">Reminders and alerts</div>
+              <div class="row-desc">A two-note marimba chime when a reminder or note arrives</div>
+            </div>
+            <input type="checkbox" class="toggle" checked data-setting="sound.notifications">
+          </label>
+          <label class="row">
+            <div>
+              <div class="row-label">Celebrations</div>
+              <div class="row-desc">A warm chord when a mission finishes or you keep a habit streak</div>
+            </div>
+            <input type="checkbox" class="toggle" checked data-setting="sound.celebrations">
+          </label>
+          <div class="row">
+            <div class="row-label">Preview chime</div>
+            <button type="button" class="btn small" id="sound-test-btn">Play a sample chime</button>
           </div>
         </section>
 

@@ -711,6 +711,55 @@ mark.find-hit.current {
   background: color-mix(in srgb, var(--accent) 22%, var(--bg-main));
 }
 
+/* ----- Message style: Cozy cards ----- */
+[data-chat-style="cards"] .msg.user .bubble,
+[data-chat-style="cards"] .msg.model .msg-body:not(:empty) {
+  padding: var(--space-3h) var(--space-5);
+  border-radius: var(--radius-xl);
+  background: var(--bg-input);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-rest);
+}
+
+[data-chat-style="cards"] .msg.user .bubble {
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-input));
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--hairline));
+}
+
+/* ----- Message style: Notebook ----- */
+[data-chat-style="notebook"] .msg.user .bubble,
+[data-chat-style="notebook"] .msg.model .msg-body:not(:empty) {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  border: 1px solid var(--hairline);
+  border-inline-start: 3px solid var(--accent);
+}
+
+[data-chat-style="notebook"] .msg.model .msg-body:not(:empty) {
+  border-inline-start-color: var(--border);
+}
+
+/* ----- Message style: Postcards ----- */
+[data-chat-style="postcards"] .msg.user .bubble,
+[data-chat-style="postcards"] .msg.model .msg-body:not(:empty) {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 40%, var(--border));
+  box-shadow: var(--shadow-rest);
+}
+
+/* ----- Spacing: Cozy ----- */
+[data-chat-density="cozy"] .has-chat .messages {
+  gap: var(--space-6);
+  padding-top: var(--space-8);
+}
+
+[data-chat-density="cozy"] .bubble {
+  padding: var(--space-3h) var(--space-5);
+}
+
 /* ----- Spacing: Compact ----- */
 [data-chat-density="compact"] .has-chat .messages {
   gap: var(--space-2);

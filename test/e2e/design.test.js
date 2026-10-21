@@ -166,6 +166,42 @@ describe("The page, designed", { skip: !hasChrome && "no Chrome found" }, () => 
       await page.evaluate(() => document.getElementById("settings-close").click());
       await page.evaluate(() => fetch("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ routing: { mode: "fixed" } }) }));
     });
+
+    test("appearance theme packs, roundness, message styles and soft sounds apply right away, save, and are found by search", async () => {
+      await h.setLook({});
+      await page.evaluate(() => document.getElementById("settings-btn").click());
+      await page.focus("#settings-search");
+      await page.keyboard.type("paper grain");
+      await page.waitForSelector(".settings-result");
+      await press("Enter");
+      await page.waitForFunction(() => document.querySelector('.tab[data-tab="appearance"]').getAttribute("aria-selected") === "true");
+
+      // Switch theme pack to Forest
+      await page.click('.pack-choice[data-pack="forest"]');
+      await page.waitForFunction(() => document.documentElement.dataset.pack === "forest");
+
+      // Switch roundness to Pill, sidebar to Floating card, message style to Cozy cards
+      await page.select('select[data-setting="theme.roundness"]', "pill");
+      await page.waitForFunction(() => document.documentElement.dataset.roundness === "pill");
+      await page.select('select[data-setting="theme.sidebarStyle"]', "floating");
+      await page.waitForFunction(() => document.documentElement.dataset.sidebarStyle === "floating");
+      await page.select('select[data-setting="chat.style"]', "cards");
+      await page.waitForFunction(() => document.documentElement.dataset.chatStyle === "cards");
+
+      // Verify persisted to server
+      await page.waitForFunction(() =>
+        fetch("/api/settings")
+          .then((r) => r.json())
+          .then((s) => s.theme.pack === "forest" && s.theme.roundness === "pill" && s.theme.sidebarStyle === "floating" && s.chat.style === "cards"),
+      );
+
+      // Reset to Cozy defaults
+      await page.click('.pack-choice[data-pack="cozy"]');
+      await page.select('select[data-setting="theme.roundness"]', "soft");
+      await page.select('select[data-setting="theme.sidebarStyle"]', "classic");
+      await page.select('select[data-setting="chat.style"]', "minimal");
+      await page.evaluate(() => document.getElementById("settings-close").click());
+    });
   });
 
   describe("languages", () => {

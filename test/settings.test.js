@@ -65,4 +65,58 @@ describe("Settings Management", () => {
     assert.strictEqual(settings.sanitize({ voice: { interruptKey: "not a key!" } }).voice.interruptKey, "Space");
     assert.strictEqual(settings.sanitize({ voice: { interruptKey: "" } }).voice.interruptKey, "");
   });
+
+  test("appearance and sound settings: packs, warmth, roundness, chat styles, tints, and audio", () => {
+    const d = settings.sanitize({});
+    assert.strictEqual(d.theme.pack, "cozy");
+    assert.strictEqual(d.theme.roundness, "soft");
+    assert.strictEqual(d.theme.warmth, 6);
+    assert.strictEqual(d.sound.enabled, false);
+    assert.strictEqual(d.sound.volume, 60);
+
+    const custom = settings.sanitize({
+      theme: {
+        pack: "lavender",
+        appearance: "light",
+        accent: "#eb7a53",
+        warmth: 9,
+        roundness: "pill",
+        animation: "subtle",
+        grain: true,
+        background: "aurora",
+        sidebarStyle: "floating",
+        timeTint: true,
+        characterTint: false,
+        particles: true,
+      },
+      chat: { style: "postcards", density: "cozy" },
+      sound: { enabled: true, volume: 85, ui: false, notifications: true, celebrations: true },
+    });
+    assert.strictEqual(custom.theme.pack, "lavender");
+    assert.strictEqual(custom.theme.roundness, "pill");
+    assert.strictEqual(custom.theme.warmth, 9);
+    assert.strictEqual(custom.theme.background, "aurora");
+    assert.strictEqual(custom.theme.sidebarStyle, "floating");
+    assert.strictEqual(custom.chat.style, "postcards");
+    assert.strictEqual(custom.chat.density, "cozy");
+    assert.strictEqual(custom.sound.enabled, true);
+    assert.strictEqual(custom.sound.volume, 85);
+    assert.strictEqual(custom.sound.ui, false);
+
+    // Invalid values fall back safely
+    const invalid = settings.sanitize({
+      theme: { pack: "neon", roundness: "hexagon", animation: "hyper", background: "video", sidebarStyle: "top", warmth: 99 },
+      chat: { style: "comic", density: "huge" },
+      sound: { volume: 500 },
+    });
+    assert.strictEqual(invalid.theme.pack, "cozy");
+    assert.strictEqual(invalid.theme.roundness, "soft");
+    assert.strictEqual(invalid.theme.animation, "lively");
+    assert.strictEqual(invalid.theme.background, "gradient");
+    assert.strictEqual(invalid.theme.sidebarStyle, "classic");
+    assert.strictEqual(invalid.theme.warmth, 10);
+    assert.strictEqual(invalid.chat.style, "minimal");
+    assert.strictEqual(invalid.chat.density, "comfortable");
+    assert.strictEqual(invalid.sound.volume, 100);
+  });
 });

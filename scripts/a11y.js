@@ -13,6 +13,8 @@ const flag = (name, fallback) => {
 };
 const LANGS = flag("langs", "en,ar").split(",");
 const THEMES = flag("themes", "dark,light").split(",");
+const FULL_PACKS = flag("packs", "cozy,classic").split(",").filter(Boolean);
+const HERO_PACKS = flag("hero-packs", "sunrise,forest,lavender,ocean").split(",").filter(Boolean);
 const WIDTH = Number(flag("width", 1280));
 const REPORT = flag("report", "");
 const ACCENT = flag("accent", ""); // one of the accent colours of Settings → Appearance, e.g. #f59e0b
@@ -25,126 +27,155 @@ async function main() {
   const { page } = h;
   const results = [];
 
-  const scan = async (surface, lang, theme) => {
+  const scan = async (surface, lang, theme, pack = "cozy") => {
     await page.evaluate(axeSource).catch(() => {});
     const out = await page.evaluate(async () => {
       // Scan what's visible; hidden dialogs are scanned when they're open
       const r = await window.axe.run(document, { resultTypes: ["violations"], runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"] } });
       return r.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.slice(0, 4).map((n) => ({ target: n.target.join(" "), summary: n.failureSummary?.split("\n").slice(0, 3).join(" ") })), count: v.nodes.length }));
     });
-    for (const v of out) results.push({ surface, lang, theme, ...v });
+    for (const v of out) results.push({ surface, lang, theme, pack, ...v });
     const bad = out.filter((v) => FAIL_ON.includes(v.impact));
-    console.log(`${bad.length ? "✗" : "✓"} ${lang} ${theme} ${surface}${out.length ? `  (${out.length} finding${out.length > 1 ? "s" : ""}, ${bad.length} serious or worse)` : ""}`);
+    console.log(`${bad.length ? "✗" : "✓"} ${lang} ${pack}/${theme} ${surface}${out.length ? `  (${out.length} finding${out.length > 1 ? "s" : ""}, ${bad.length} serious or worse)` : ""}`);
   };
   const click = (sel) => page.evaluate((s) => document.querySelector(s)?.click(), sel);
 
   for (const lang of LANGS) {
     for (const theme of THEMES) {
-      // First run: nothing is set up yet
-      await h.removeBrains();
-      await h.setLook({ theme, width: WIDTH, lang, onboarding: false, accent: ACCENT });
-      await scan("first-run", lang, theme);
+      for (const pack of FULL_PACKS) {
+        // First run: nothing is set up yet
+        await h.removeBrains();
+        await h.setLook({ theme, pack, width: WIDTH, lang, onboarding: false, accent: ACCENT });
+        await scan("first-run", lang, theme, pack);
 
-      await h.setLook({ theme, width: WIDTH, lang, accent: ACCENT });
-      await scan("start-no-ai", lang, theme);
+        await h.setLook({ theme, pack, width: WIDTH, lang, accent: ACCENT });
+        await scan("start-no-ai", lang, theme, pack);
 
-      await h.addLocalBrain();
-      await h.setLook({ theme, width: WIDTH, lang, accent: ACCENT });
-      await scan("start", lang, theme);
+        await h.addLocalBrain();
+        await h.setLook({ theme, pack, width: WIDTH, lang, accent: ACCENT });
+        await scan("start", lang, theme, pack);
 
-      await page.type("#composer-input", "Show me code, math and a diagram");
-      await page.keyboard.press("Enter");
-      await page.waitForFunction(() => document.querySelector(".msg.model .msg-body")?.innerText.length > 40, { timeout: 20000 }).catch(() => {});
-      await sleep(2500);
-      await scan("chat", lang, theme);
+        await page.type("#composer-input", "Show me code, math and a diagram");
+        await page.keyboard.press("Enter");
+        await page.waitForFunction(() => document.querySelector(".msg.model .msg-body")?.innerText.length > 40, { timeout: 20000 }).catch(() => {});
+        await sleep(2500);
+        await scan("chat", lang, theme, pack);
 
-      await click("#model-picker");
-      await sleep(250);
-      await scan("model-menu", lang, theme);
-      await click("#model-picker");
-
-      await click("#search-open");
-      await sleep(250);
-      await scan("search", lang, theme);
-      await page.keyboard.press("Escape");
-
-      // The "+" menu, Today (and everything else under it), Missions
-      await click("#plus-btn");
-      await sleep(200);
-      await scan("plus-menu", lang, theme);
-      await click("#plus-btn");
-      await click("#today-open");
-      await sleep(500);
-      await scan("today", lang, theme);
-      await page.evaluate(() => (document.getElementById("today-more").open = true));
-      for (const tab of ["tasks", "reminders", "calendar", "habits", "journal"]) {
-        await click(`[data-life-tab="${tab}"]`);
+        await click("#model-picker");
         await sleep(250);
-        await scan(`today-${tab}`, lang, theme);
-      }
-      await click("#nav-missions");
-      await sleep(500);
-      await scan("missions", lang, theme);
-      await click("#nav-home");
-      await sleep(300);
+        await scan("model-menu", lang, theme, pack);
+        await click("#model-picker");
 
-      await click("#settings-btn");
-      await sleep(300);
-      const tabs = await page.evaluate(() => [...document.querySelectorAll(".modal-nav .tab")].map((t) => t.dataset.tab));
-      for (const tab of tabs) {
-        await page.evaluate((t) => document.querySelector(`.modal-nav .tab[data-tab="${t}"]`)?.click(), tab);
-        await sleep(300);
-        await scan(`settings-${tab}`, lang, theme);
-        // AI & privacy has four sections of its own, and an add form
-        if (tab === "ai-control") {
-          for (const section of ["answers", "privacy", "device"]) {
-            await page.evaluate((n) => document.querySelector(`.subtab[data-subtab="${n}"]`)?.click(), section);
-            await sleep(500);
-            await scan(`settings-ai-${section}`, lang, theme);
-          }
-          await page.evaluate(() => document.querySelector('.subtab[data-subtab="ais"]')?.click());
-          await page.evaluate(() => document.getElementById("brain-add")?.click());
-          await sleep(500);
-          await scan("settings-ai-add-pick", lang, theme);
-          await page.evaluate(() => document.querySelector('#service-grid-cloud .service-tile[data-id="groq"]')?.click());
-          await sleep(400);
-          await scan("settings-ai-add-form", lang, theme);
-          await page.evaluate(() => document.getElementById("ai-add-back")?.click());
-          await sleep(300);
+        await click("#search-open");
+        await sleep(250);
+        await scan("search", lang, theme, pack);
+        await page.keyboard.press("Escape");
+
+        // The "+" menu, Today (and everything else under it), Missions
+        await click("#plus-btn");
+        await sleep(200);
+        await scan("plus-menu", lang, theme, pack);
+        await click("#plus-btn");
+        await click("#today-open");
+        await sleep(500);
+        await scan("today", lang, theme, pack);
+        await page.evaluate(() => (document.getElementById("today-more").open = true));
+        for (const tab of ["tasks", "reminders", "calendar", "habits", "journal"]) {
+          await click(`[data-life-tab="${tab}"]`);
+          await sleep(250);
+          await scan(`today-${tab}`, lang, theme, pack);
         }
-      }
-      // The Robot Studio: every tab, and the outfit and room with something chosen (so their colors and options are showing)
-      await page.evaluate(() => document.querySelector('.modal-nav .tab[data-tab="robot"]')?.click());
-      await click("#robot-studio-open");
-      await sleep(500);
-      for (const tab of ["colors", "shape", "face", "outfit", "room", "looks"]) {
-        await click(`#rs-tab-${tab}`);
-        await sleep(250);
-        await scan(`studio-${tab}`, lang, theme);
-      }
-      await click("#rs-tab-outfit");
-      await page.evaluate(() => document.querySelector("#rs-panel-outfit .rs-tile[data-id=beanie]")?.click());
-      await page.evaluate(() => document.querySelector('#rs-panel-outfit [data-slot="torso"]')?.click());
-      await page.evaluate(() => document.querySelector("#rs-panel-outfit .rs-tile[data-id=sweater]")?.click());
-      await sleep(250);
-      await scan("studio-outfit-worn", lang, theme);
-      await click("#rs-tab-room");
-      await page.evaluate(() => document.querySelector("#rs-panel-room .rs-tile[data-id=podcast]")?.click());
-      await sleep(250);
-      await scan("studio-room-podcast", lang, theme);
-      await click("#rs-done");
-      await sleep(200);
-      await click("#settings-close");
+        await click("#nav-missions");
+        await sleep(500);
+        await scan("missions", lang, theme, pack);
+        await click("#nav-home");
+        await sleep(300);
 
-      await click("#voice-open");
-      await sleep(1200);
-      await scan("voice", lang, theme);
-      await click("#voice-filming");
-      await sleep(400);
-      await scan("filming-setup", lang, theme);
-      await page.keyboard.press("Escape");
-      await click("#voice-end");
-      await sleep(300);
+        await click("#settings-btn");
+        await sleep(300);
+        const tabs = await page.evaluate(() => [...document.querySelectorAll(".modal-nav .tab")].map((t) => t.dataset.tab));
+        for (const tab of tabs) {
+          await page.evaluate((t) => document.querySelector(`.modal-nav .tab[data-tab="${t}"]`)?.click(), tab);
+          await sleep(300);
+          await scan(`settings-${tab}`, lang, theme, pack);
+          // AI & privacy has four sections of its own, and an add form
+          if (tab === "ai-control") {
+            for (const section of ["answers", "privacy", "device"]) {
+              await page.evaluate((n) => document.querySelector(`.subtab[data-subtab="${n}"]`)?.click(), section);
+              await sleep(500);
+              await scan(`settings-ai-${section}`, lang, theme, pack);
+            }
+            await page.evaluate(() => document.querySelector('.subtab[data-subtab="ais"]')?.click());
+            await page.evaluate(() => document.getElementById("brain-add")?.click());
+            await sleep(500);
+            await scan("settings-ai-add-pick", lang, theme, pack);
+            await page.evaluate(() => document.querySelector('#service-grid-cloud .service-tile[data-id="groq"]')?.click());
+            await sleep(400);
+            await scan("settings-ai-add-form", lang, theme, pack);
+            await page.evaluate(() => document.getElementById("ai-add-back")?.click());
+            await sleep(300);
+          }
+        }
+        // The Robot Studio: every tab, and the outfit and room with something chosen (so their colors and options are showing)
+        await page.evaluate(() => document.querySelector('.modal-nav .tab[data-tab="robot"]')?.click());
+        await click("#robot-studio-open");
+        await sleep(500);
+        for (const tab of ["colors", "shape", "face", "outfit", "room", "looks"]) {
+          await click(`#rs-tab-${tab}`);
+          await sleep(250);
+          await scan(`studio-${tab}`, lang, theme, pack);
+        }
+        await click("#rs-tab-outfit");
+        await page.evaluate(() => document.querySelector("#rs-panel-outfit .rs-tile[data-id=beanie]")?.click());
+        await page.evaluate(() => document.querySelector('#rs-panel-outfit [data-slot="torso"]')?.click());
+        await page.evaluate(() => document.querySelector("#rs-panel-outfit .rs-tile[data-id=sweater]")?.click());
+        await sleep(250);
+        await scan("studio-outfit-worn", lang, theme, pack);
+        await click("#rs-tab-room");
+        await page.evaluate(() => document.querySelector("#rs-panel-room .rs-tile[data-id=podcast]")?.click());
+        await sleep(250);
+        await scan("studio-room-podcast", lang, theme, pack);
+        await click("#rs-done");
+        await sleep(200);
+        await click("#settings-close");
+
+        await click("#voice-open");
+        await sleep(1200);
+        await scan("voice", lang, theme, pack);
+        await click("#voice-filming");
+        await sleep(400);
+        await scan("filming-setup", lang, theme, pack);
+        await page.keyboard.press("Escape");
+        await click("#voice-end");
+        await sleep(300);
+      }
+
+      // Hero surfaces across the remaining theme packs
+      for (const pack of HERO_PACKS) {
+        await h.addLocalBrain();
+        await h.setLook({ theme, pack, width: WIDTH, lang, accent: ACCENT });
+        await scan("start", lang, theme, pack);
+        await page.type("#composer-input", "Show me code, math and a diagram");
+        await page.keyboard.press("Enter");
+        await page.waitForFunction(() => document.querySelector(".msg.model .msg-body")?.innerText.length > 40, { timeout: 20000 }).catch(() => {});
+        await sleep(2000);
+        await scan("chat", lang, theme, pack);
+        await click("#today-open");
+        await sleep(400);
+        await scan("today", lang, theme, pack);
+        await click("#nav-missions");
+        await sleep(400);
+        await scan("missions", lang, theme, pack);
+        await click("#nav-home");
+        await sleep(250);
+        await click("#settings-btn");
+        await sleep(300);
+        await page.evaluate(() => document.querySelector('.modal-nav .tab[data-tab="appearance"]')?.click());
+        await sleep(250);
+        await scan("settings-appearance", lang, theme, pack);
+        await click("#settings-close");
+        await sleep(200);
+      }
     }
   }
 

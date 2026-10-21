@@ -16,15 +16,35 @@ const DEFAULTS = {
   // The interface language: "auto" follows the browser (see src/js/i18n.js)
   ui: { language: "auto", design: 2 }, // design: 1 before the redesign (only used to carry the old default accent over)
   // The first-run guide (src/js/onboarding.js): done once the person has finished or skipped it;
-  // missions once they have seen the card that says Missions exist
-  onboarding: { done: false, missions: false },
+  // missions once they have seen the card that says Missions exist; sounds once offered
+  onboarding: { done: false, missions: false, sounds: true },
   font: { family: "default", size: 16 },
-  // How conversations look: "minimal" (only your messages in bubbles) or "bubbles",
-  // "comfortable" or "compact" spacing, and follow-up chips under the last reply
+  // How conversations look: "minimal", "bubbles", "cards", "notebook" or "postcards",
+  // "comfortable", "cozy" or "compact" spacing, and follow-up chips under the last reply
   chat: { style: "minimal", density: "comfortable", suggestions: true },
-  // The accent is the one colour of the interface (the lamp: a warm amber, see src/css/tokens.css); the
-  // robot's light and the glow behind it follow it. THEME_ACCENTS are the swatches in Settings → Appearance.
-  theme: { appearance: "dark", accent: "#f5a94a" },
+  // Theme pack, light/dark mode, accent, warmth, roundness, motion, procedural grain, background, sidebar, and tints
+  theme: {
+    pack: "cozy",
+    appearance: "dark",
+    accent: "#f5a94a",
+    warmth: 6,
+    roundness: "soft",
+    animation: "lively",
+    grain: false,
+    background: "gradient",
+    sidebarStyle: "classic",
+    timeTint: false,
+    characterTint: true,
+    particles: false,
+  },
+  // Synthesized WebAudio UI sounds (off by default, no audio files)
+  sound: {
+    enabled: false,
+    volume: 60,
+    ui: true,
+    notifications: true,
+    celebrations: true,
+  },
   // What the AI may do with files on this computer (see files.js)
   permissions: {
     folders: [],
@@ -195,7 +215,14 @@ const DEFAULTS = {
 // The languages the AI can be told to answer in (Settings → AI & privacy → Answers)
 const REPLY_LANGUAGES = { en: "English", de: "German", ar: "Arabic", fr: "French", es: "Spanish", it: "Italian", pt: "Portuguese", nl: "Dutch", pl: "Polish", tr: "Turkish", ru: "Russian", uk: "Ukrainian", fa: "Persian", hi: "Hindi", zh: "Chinese", ja: "Japanese", ko: "Korean" };
 
-const THEME_ACCENTS = ["#f5a94a", "#f472b6", "#a78bfa", "#6fb4f5", "#4fd1a5"];
+const THEME_ACCENTS = ["#f5a94a", "#eb7a53", "#fb7185", "#34d399", "#a78bfa", "#38bdf8"];
+const THEME_PACKS = ["cozy", "sunrise", "forest", "lavender", "ocean", "classic"];
+const ROUNDNESS = ["sharp", "soft", "pill"];
+const ANIMATIONS = ["off", "subtle", "lively"];
+const BACKGROUNDS = ["plain", "gradient", "aurora", "pattern"];
+const SIDEBAR_STYLES = ["classic", "floating", "minimal"];
+const CHAT_STYLES = ["minimal", "bubbles", "cards", "notebook", "postcards"];
+const DENSITIES = ["comfortable", "cozy", "compact"];
 // The interface was blue before the redesign (0.6.0): those who never changed the accent get the new one
 const OLD_ACCENT = "#6f9cf5";
 
@@ -248,8 +275,8 @@ function sanitize(input) {
   const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, Math.round(n) || lo));
   s.font.size = clamp(s.font.size, 12, 22);
   if (!LANGUAGES.includes(s.ui.language)) s.ui.language = "auto";
-  if (!["minimal", "bubbles"].includes(s.chat.style)) s.chat.style = "minimal";
-  if (!["comfortable", "compact"].includes(s.chat.density)) s.chat.density = "comfortable";
+  if (!CHAT_STYLES.includes(s.chat.style)) s.chat.style = "minimal";
+  if (!DENSITIES.includes(s.chat.density)) s.chat.density = "comfortable";
   s.personality.voice = s.personality.voice === 2 ? 2 : 1;
   s.personality.speed = clamp(s.personality.speed, 0, 10);
   s.personality.length = clamp(s.personality.length, 1, 3);
@@ -310,6 +337,22 @@ function sanitize(input) {
   s.onAir.show = s.onAir.show.trim().slice(0, 80);
   s.onAir.audience = s.onAir.audience.trim().slice(0, 300);
   if (!/^#[0-9a-f]{6}$/i.test(s.theme.accent)) s.theme.accent = DEFAULTS.theme.accent;
+  if (!THEME_PACKS.includes(s.theme.pack)) s.theme.pack = DEFAULTS.theme.pack;
+  if (!["dark", "light", "system"].includes(s.theme.appearance)) s.theme.appearance = DEFAULTS.theme.appearance;
+  s.theme.warmth = whole(s.theme.warmth ?? DEFAULTS.theme.warmth, 0, 10);
+  if (!ROUNDNESS.includes(s.theme.roundness)) s.theme.roundness = DEFAULTS.theme.roundness;
+  if (!ANIMATIONS.includes(s.theme.animation)) s.theme.animation = DEFAULTS.theme.animation;
+  s.theme.grain = Boolean(s.theme.grain);
+  if (!BACKGROUNDS.includes(s.theme.background)) s.theme.background = DEFAULTS.theme.background;
+  if (!SIDEBAR_STYLES.includes(s.theme.sidebarStyle)) s.theme.sidebarStyle = DEFAULTS.theme.sidebarStyle;
+  s.theme.timeTint = Boolean(s.theme.timeTint);
+  s.theme.characterTint = s.theme.characterTint !== false;
+  s.theme.particles = Boolean(s.theme.particles);
+  s.sound.enabled = Boolean(s.sound.enabled);
+  s.sound.volume = whole(s.sound.volume ?? DEFAULTS.sound.volume, 0, 100);
+  s.sound.ui = s.sound.ui !== false;
+  s.sound.notifications = s.sound.notifications !== false;
+  s.sound.celebrations = s.sound.celebrations !== false;
 
   s.routing.mode = ROUTING.modes.includes(s.routing.mode) ? s.routing.mode : "fixed";
   s.routing.askBeforeCloud = ROUTING.ask.includes(s.routing.askBeforeCloud) ? s.routing.askBeforeCloud : "chat";

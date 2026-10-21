@@ -8,6 +8,7 @@ import { renderMarkdown } from "../render.js";
 import { announce } from "../a11y.js";
 import { confirmDialog } from "../dialogs.js";
 import { statusOf, isActive, riskLabel, riskHelp, roleLabel, when, duration } from "./labels.js";
+import { progressRing } from "../illustrations.js";
 
 const ICON = (name, size = 16) => iconEl(name, { size });
 const MODE_NOTE = () => t("Private: only models on this computer, nothing goes to the cloud.");
@@ -169,13 +170,14 @@ function pausedCard(m, ctx) {
 
 function progressCard(m) {
   const p = m.progress;
+  const ring = progressRing(p.done, p.total || 1, { size: 38, stroke: 3.5 });
   const bar = h("div", { class: "bar", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": p.total, "aria-valuenow": p.done, "aria-label": t("Progress") }, h("i", { style: `width:${p.total ? Math.round((p.done / p.total) * 100) : 0}%` }));
   const bits = [p.total ? tp("{n} of {total} step done", "{n} of {total} steps done", p.done, { total: p.total }) : "", m.usage?.runMs ? t("{time} so far", { time: duration(m.usage.runMs) }) : ""].filter(Boolean).join(" · ");
   const now = p.current ? h("p", { class: "now" }, ICON("play", 15), " ", t("Now: {title}", { title: p.current.title })) : null;
   const model = m.model
     ? h("p", { class: "model-line" }, ICON(m.model.kind === "cloud" ? "cloud" : "chip", 15), " ", [m.model.kind === "cloud" ? t("The manager is doing this step") : t("{role} specialist", { role: roleLabel(m.model.role) }), m.model.model, m.model.placement === "cpu" ? t("on the processor") : m.model.placement === "split" ? t("part on the graphics card") : "", /^The .+ specialist$/.test(m.model.why || "") ? "" : t(m.model.why || "")].filter(Boolean).join(" · "))
     : null;
-  return h("section", { class: "card progress" }, bar, h("p", { class: "row-desc", text: bits }), now, model);
+  return h("section", { class: "card progress" }, h("div", { class: "progress-head" }, ring, bar), h("p", { class: "row-desc", text: bits }), now, model);
 }
 
 function timeline(m) {

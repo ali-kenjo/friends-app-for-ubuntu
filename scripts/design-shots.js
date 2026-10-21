@@ -14,6 +14,8 @@ const flag = (name, fallback) => {
 const LANGS = flag("langs", "en").split(",");
 const WIDTHS = flag("widths", "1440,1024,768,390").split(",").map(Number);
 const THEMES = flag("themes", "dark,light").split(",");
+const PACKS = flag("packs", "cozy").split(",").filter(Boolean);
+const HERO = args.includes("--hero");
 const ONLY = flag("only", "");
 const POINTER = flag("pointer", "");
 
@@ -31,7 +33,26 @@ async function both() {
   let status = 0;
   for (const [pointer, widths] of [["fine", desk], ["coarse", phone]]) {
     if (!widths.length) continue;
-    const r = spawnSync(process.execPath, [__filename, label, "--pointer", pointer, "--widths", widths.join(","), "--langs", LANGS.join(","), "--themes", THEMES.join(","), ...(ONLY ? ["--only", ONLY] : [])], { stdio: "inherit" });
+    const r = spawnSync(
+      process.execPath,
+      [
+        __filename,
+        label,
+        "--pointer",
+        pointer,
+        "--widths",
+        widths.join(","),
+        "--langs",
+        LANGS.join(","),
+        "--themes",
+        THEMES.join(","),
+        "--packs",
+        PACKS.join(","),
+        ...(HERO ? ["--hero"] : []),
+        ...(ONLY ? ["--only", ONLY] : []),
+      ],
+      { stdio: "inherit" },
+    );
     status ||= r.status;
   }
   const lists = [];
@@ -48,17 +69,18 @@ async function main() {
 
   const list = [];
   let n = 0;
-  const shot = async (name, theme, width, lang) => {
+  const shot = async (name, theme, width, lang, pack = "cozy") => {
     if (ONLY && !name.includes(ONLY)) return;
     const dir = outDirFor(lang);
     fs.mkdirSync(dir, { recursive: true });
-    const file = `${name}-${theme}-${width}.png`;
+    const suffix = PACKS.length > 1 || pack !== "cozy" ? `-${pack}-${theme}-${width}.png` : `-${theme}-${width}.png`;
+    const file = `${name}${suffix}`;
     await page.screenshot({ path: path.join(dir, file) });
     list.push(path.join(lang === "en" ? "" : lang, file));
     n++;
   };
 
-  const setLook = (theme, width, lang, onboarding = true) => look({ theme, width, lang, onboarding });
+  const setLook = (theme, width, lang, onboarding = true, pack = "cozy") => look({ theme, pack, width, lang, onboarding });
   const click = (sel) => page.evaluate((s) => document.querySelector(s)?.click(), sel);
   const closeAll = () =>
     page.evaluate(() => {
@@ -80,6 +102,42 @@ async function main() {
   for (const lang of LANGS) {
     for (const theme of THEMES) {
       for (const width of WIDTHS) {
+        if (HERO) {
+          for (const pack of PACKS) {
+            console.log(`${label} [hero]: ${lang} ${pack}/${theme} ${width}`);
+            await h.addLocalBrain();
+            await setLook(theme, width, lang, true, pack);
+            await sleep(500);
+            await shot("03-start", theme, width, lang, pack);
+
+            behave.text = REPLY;
+            await page.type("#composer-input", "Show me code, math and a diagram");
+            await page.keyboard.press("Enter");
+            await page.waitForFunction(() => document.querySelector(".msg.model .msg-body")?.innerText.length > 40, { timeout: 20000 }).catch(() => {});
+            await sleep(2200);
+            await shot("05-chat", theme, width, lang, pack);
+
+            await sidebarOpen(width);
+            await click("#today-open");
+            await sleep(450);
+            await shot("10-today", theme, width, lang, pack);
+            await closeAll();
+
+            await sidebarOpen(width);
+            await click("#nav-missions");
+            await sleep(450);
+            await shot("10b-missions", theme, width, lang, pack);
+            await closeAll();
+
+            await page.evaluate(() => document.getElementById("settings-btn").click());
+            await sleep(300);
+            await page.evaluate(() => document.querySelector('.modal-nav .tab[data-tab="appearance"]')?.click());
+            await sleep(300);
+            await shot("11-settings-appearance", theme, width, lang, pack);
+            await closeAll();
+          }
+          continue;
+        }
         console.log(`${label}: ${lang} ${theme} ${width}`);
 
         // --- First run, nothing configured yet: the guide, then (guide skipped) the start screen and a first message

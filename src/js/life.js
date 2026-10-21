@@ -14,6 +14,8 @@ import { announce } from "./a11y.js";
 import { showView, isView } from "./views.js";
 import { icon, iconEl } from "./icons.js";
 import { onServerEvent, onHello } from "./events.js";
+import { celebrate } from "./celebrate.js";
+import { progressRing, emptyIllustration } from "./illustrations.js";
 
 const view = document.getElementById("view-today");
 const more = document.getElementById("today-more");
@@ -115,7 +117,10 @@ function taskItem(task) {
   const li = el("li", `life-item task${task.done ? " done" : ""}${task.priority === "high" ? " high" : ""}`);
   const check = Object.assign(document.createElement("input"), { type: "checkbox", checked: task.done, className: "life-check" });
   check.setAttribute("aria-label", t("Done: {title}", { title: task.title }));
-  check.addEventListener("change", () => act(() => api.life.updateTask(task.id, { done: check.checked })));
+  check.addEventListener("change", () => {
+    if (check.checked) celebrate(check, { kind: "task" });
+    act(() => api.life.updateTask(task.id, { done: check.checked }));
+  });
   const text = el("span", "life-text");
   text.append(el("span", "life-title", task.title));
   const meta = [dueLabel(task.due), task.list !== "inbox" ? task.list : "", task.priority === "high" ? t("high priority") : ""].filter(Boolean).join(" · ");
@@ -211,8 +216,12 @@ function habitCheck(h) {
   b.type = "button";
   b.setAttribute("aria-pressed", String(h.today));
   b.title = h.today ? t("Done today (click to undo)") : t("Mark as done today");
-  b.append(el("span", "habit-emoji", h.emoji), el("span", "habit-name", h.name), streakEl(h.streak));
-  b.addEventListener("click", () => act(() => api.life.logHabit(h.id, { done: !h.today })));
+  const done7 = Array.isArray(h.last7) ? h.last7.filter(Boolean).length : h.today ? 1 : 0;
+  b.append(progressRing(done7, 7, { size: 22, stroke: 2.6 }), el("span", "habit-emoji", h.emoji), el("span", "habit-name", h.name), streakEl(h.streak));
+  b.addEventListener("click", () => {
+    if (!h.today) celebrate(b, { kind: "habit" });
+    act(() => api.life.logHabit(h.id, { done: !h.today }));
+  });
   return b;
 }
 
@@ -277,11 +286,14 @@ async function refresh() {
   try {
     const day = await api.life.today();
     updateBadge(day);
+    document.dispatchEvent(new CustomEvent("friends:life-today", { detail: day }));
     if (view.hidden) return;
     document.getElementById("life-date").textContent = formatDate(new Date(), { weekday: "long", day: "numeric", month: "long" });
     // What's due or late, then what has no date yet (so a task you just added is there, whatever you typed)
     const tasks = [...day.overdue, ...day.dueToday, ...day.open.slice(0, 6)];
-    document.getElementById("life-today-tasks").replaceChildren(...(tasks.length ? tasks.map(taskItem) : [empty(t("Nothing due today. Enjoy it, or add a task above."))]));
+    const emptyTaskLi = empty(t("Nothing due today. Enjoy it, or add a task above."));
+    emptyTaskLi.prepend(emptyIllustration("today"));
+    document.getElementById("life-today-tasks").replaceChildren(...(tasks.length ? tasks.map(taskItem) : [emptyTaskLi]));
     const comingUp = [...(day.events || []).map(calendarItem), ...day.reminders.map(reminderItem)];
     document.getElementById("life-today-calendar").replaceChildren(...(comingUp.length ? comingUp : [empty(t("Nothing coming up today."))]));
     document.getElementById("life-today-reminders").replaceChildren();
@@ -560,6 +572,7 @@ function syncAllowButton() {
 allowButton.addEventListener("click", askForNotifications);
 
 export function toast({ icon: iconName, title, body, actions = [] }) {
+  document.dispatchEvent(new CustomEvent("friends:toast"));
   const box = el("div", "life-toast");
   box.setAttribute("role", "alert");
   const badge = el("span", "life-toast-icon");
