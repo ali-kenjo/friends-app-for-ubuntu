@@ -358,6 +358,180 @@ async function refreshTelegramStatus() {
   }
 }
 
+// ----- Telegram pairing & user management -----
+let pairingPollTimer = null;
+
+async function renderTelegramPairedUsers() {
+  const container = document.getElementById("telegram-paired-list");
+  const emptyHint = document.getElementById("telegram-no-paired");
+  if (!container) return;
+
+  try {
+    const health = await api.telegram.health?.().catch(() => null);
+    const s = await api.settings.get();
+    const paired = s?.telegram?.pairedUsers || [];
+
+    if (!paired.length) {
+      container.innerHTML = "";
+      if (emptyHint) emptyHint.style.display = "block";
+      return;
+    }
+
+    if (emptyHint) emptyHint.style.display = "none";
+    container.innerHTML = "";
+
+    for (const u of paired) {
+      const li = document.createElement("li");
+      li.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg-subtle, rgba(0,0,0,0.03)); border-radius: 6px; font-size: 0.9em;";
+
+      const info = document.createElement("div");
+      info.innerHTML = `<strong>${u.firstName || u.username || "User"}</strong> ${u.username ? `(@${u.username})` : ""} <span style="font-family: monospace; font-size: 0.85em; opacity: 0.7;">ID: ${u.id}</span>`;
+
+      const actions = document.createElement("div");
+      actions.style.cssText = "display: flex; align-items: center; gap: 8px;";
+
+      const select = document.createElement("select");
+      select.className = "field";
+      select.style.padding = "2px 6px";
+      select.innerHTML = `
+        <option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option>
+        <option value="chat" ${u.role === "chat" ? "selected" : ""}>Chat</option>
+        <option value="notify_only" ${u.role === "notify_only" ? "selected" : ""}>Notify only</option>
+      `;
+      select.addEventListener("change", async () => {
+        await api.telegram.setUserRole(u.id, select.value);
+        renderTelegramPairedUsers();
+      });
+
+      const revokeBtn = document.createElement("button");
+      revokeBtn.type = "button";
+      revokeBtn.className = "btn small";
+      revokeBtn.textContent = t("Revoke");
+      revokeBtn.addEventListener("click", async () => {
+        await api.telegram.revokeUser(u.id);
+        renderTelegramPairedUsers();
+      });
+
+      actions.append(select, revokeBtn);
+      li.append(info, actions);
+      container.append(li);
+    }
+  } catch (err) {
+    console.debug("Failed to render paired users:", err);
+  }
+}
+
+document.getElementById("telegram-pair-btn")?.addEventListener("click", async () => {
+  const display = document.getElementById("telegram-pair-display");
+  const hint = document.getElementById("telegram-pair-hint");
+  const cmd = document.getElementById("telegram-pair-cmd");
+  try {
+    const res = await api.telegram.pairStart();
+    if (res && res.code) {
+      if (display) display.textContent = res.code;
+      if (cmd) cmd.textContent = `/pair ${res.code}`;
+      if (hint) hint.style.display = "block";
+
+      if (pairingPollTimer) clearInterval(pairingPollTimer);
+      pairingPollTimer = setInterval(async () => {
+        const st = await api.telegram.pairStatus();
+        if (!st.active) {
+          clearInterval(pairingPollTimer);
+          pairingPollTimer = null;
+          if (display) display.textContent = "";
+          if (hint) hint.style.display = "none";
+          renderTelegramPairedUsers();
+        }
+      }, 4000);
+    }
+  } catch (err) {
+    console.warn("Pairing start failed:", err);
+  }
+});
+
+// ----- Notification Router Matrix & Log -----
+const NOTIF_EVENTS = [
+  { id: "reminder", label: t("Reminders & alarms") },
+  { id: "focus_complete", label: t("Focus session complete") },
+  { id: "mission_plan", label: t("Mission plan to approve") },
+  { id: "mission_question", label: t("Mission question for you") },
+  { id: "mission_done", label: t("Mission finished") },
+  { id: "mission_trouble", label: t("Mission trouble / paused") },
+  { id: "watch_alert", label: t("Watcher alerts & system monitors") },
+  { id: "briefing", label: t("Morning daily briefing") },
+  { id: "reddit_match", label: t("Reddit community watch matches") },
+];
+
+async function renderNotificationMatrix() {
+  const tbody = document.getElementById("notif-matrix-tbody");
+  if (!tbody) return;
+
+  const s = await api.settings.get();
+  const matrix = s?.notifications?.matrix || {};
+  tbody.innerHTML = "";
+
+  const chNames = { desktop: t("Desktop"), inapp: t("In-App"), telegram: t("Telegram") };
+  for (const ev of NOTIF_EVENTS) {
+    const row = document.createElement("tr");
+    row.style.borderBottom = "1px solid var(--border)";
+
+    const labelTd = document.createElement("th");
+    labelTd.scope = "row";
+    labelTd.style.fontWeight = "normal";
+    labelTd.style.textAlign = "left";
+    labelTd.style.padding = "8px 12px";
+    labelTd.textContent = ev.label;
+    row.appendChild(labelTd);
+
+    for (const ch of ["desktop", "inapp", "telegram"]) {
+      const td = document.createElement("td");
+      td.style.cssText = "padding: 8px 12px; text-align: center;";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.setAttribute("aria-label", `${ev.label} - ${chNames[ch] || ch}`);
+      cb.checked = matrix[ev.id]?.[ch] !== false; // Default on
+      cb.addEventListener("change", () => {
+        updateSettings((settingsObj) => {
+          if (!settingsObj.notifications) settingsObj.notifications = {};
+          if (!settingsObj.notifications.matrix) settingsObj.notifications.matrix = {};
+          if (!settingsObj.notifications.matrix[ev.id]) settingsObj.notifications.matrix[ev.id] = {};
+          settingsObj.notifications.matrix[ev.id][ch] = cb.checked;
+        });
+      });
+      td.appendChild(cb);
+      row.appendChild(td);
+    }
+    tbody.appendChild(row);
+  }
+}
+
+async function renderNotificationLog() {
+  const logContainer = document.getElementById("notif-log-container");
+  if (!logContainer) return;
+  try {
+    const res = await api.notifications.getLog();
+    const list = res.log || [];
+    if (!list.length) {
+      logContainer.innerHTML = `<span class="hint">${t("No delivery logs yet.")}</span>`;
+      return;
+    }
+    logContainer.innerHTML = list.slice(0, 30).map((e) => {
+      const time = new Date(e.timestamp).toLocaleTimeString();
+      return `<div style="padding: 3px 0; border-bottom: 1px dashed rgba(128,128,128,0.2);">
+        <span style="opacity: 0.6;">[${time}]</span> <strong>${e.event}</strong>: ${e.title} → <em>${e.channel}</em> (${e.success ? "ok" : "failed"})
+      </div>`;
+    }).join("");
+  } catch (err) {
+    console.debug("Failed to read notification log:", err);
+  }
+}
+
+document.getElementById("notif-refresh-log-btn")?.addEventListener("click", renderNotificationLog);
+document.getElementById("notif-test-btn")?.addEventListener("click", async () => {
+  await api.notifications.sendTest({ title: "Test Notification", body: "Friends notification router test alert." });
+  setTimeout(renderNotificationLog, 500);
+});
+
 onSettings((s) => {
   const allowedInput = document.getElementById("telegram-allowed-users");
   if (allowedInput && document.activeElement !== allowedInput) {
@@ -366,6 +540,8 @@ onSettings((s) => {
   const tokenInput = document.getElementById("telegram-token-input");
   if (tokenInput) tokenInput.placeholder = s?.telegram?.hasToken ? t("Saved. Type a new token to replace it.") : "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ";
   refreshTelegramStatus();
+  renderTelegramPairedUsers();
+  renderNotificationMatrix();
 });
 
 // ----- Drawing it all -----
@@ -381,6 +557,16 @@ async function refresh() {
 }
 
 document.addEventListener("friends:settings", (e) => {
-  if (e.detail.open && e.detail.tab === "integrations") refresh();
+  if (e.detail.open) {
+    if (e.detail.tab === "integrations") refresh();
+    if (e.detail.tab === "telegram") {
+      refreshTelegramStatus();
+      renderTelegramPairedUsers();
+    }
+    if (e.detail.tab === "notifications") {
+      renderNotificationMatrix();
+      renderNotificationLog();
+    }
+  }
 });
 

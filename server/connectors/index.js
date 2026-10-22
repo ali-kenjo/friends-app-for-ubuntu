@@ -11,7 +11,17 @@ const path = require("path");
 const { dataDir, writeJson } = require("../config");
 const keys = require("../keys");
 
-const CONNECTORS = [require("./weather"), require("./web"), require("./wikipedia"), require("./currency"), require("./github"), require("./notion"), require("./todoist"), require("./homeassistant")];
+const CONNECTORS = [
+  require("./weather"),
+  require("./web"),
+  require("./wikipedia"),
+  require("./currency"),
+  require("./github"),
+  require("./notion"),
+  require("./todoist"),
+  require("./homeassistant"),
+  require("./reddit"),
+];
 const byId = new Map(CONNECTORS.map((c) => [c.id, c]));
 const file = path.join(dataDir, "connectors.json");
 

@@ -36,6 +36,8 @@ const connectors = require("./connectors");
 const mcp = require("./mcp");
 const localNotes = require("./local-notes");
 const telegram = require("./telegram");
+const notifications = require("./notifications");
+const redditWatcher = require("./reddit-watcher");
 const { say, noteBrowser } = require("./say");
 const companion = require("./companion");
 const missions = require("./missions");
@@ -661,13 +663,18 @@ function broadcast(type, data, { title, body, action } = {}) {
 
 life.onReminder((r) => {
   broadcast("reminder", r, { title: r.text, body: say("Friends reminder"), action: { type: "reminder", id: r.id } });
+  notifications.dispatch("reminder", { title: say("Friends reminder"), body: r.text, action: { type: "reminder", id: r.id }, urgent: true });
   if (settings.get().telegram.notifyReminders) telegram.sendAlert(say("Reminder: {text}", { text: r.text }));
 });
 life.onFocusComplete((f) => {
   broadcast("focus_complete", f, { title: say("Focus complete"), body: say("Completed focus session on {task}", { task: f.task }), action: { type: "focus" } });
+  notifications.dispatch("focus_complete", { title: say("Focus complete"), body: say("Completed focus session on {task}", { task: f.task }), action: { type: "focus" } });
   if (settings.get().telegram.notifyFocus) telegram.sendAlert(say("Focus complete! You finished your session on: {task}", { task: f.task }));
 });
-const briefingReady = (made) => broadcast("briefing", made, { title: say("Your briefing is ready"), body: made.title, action: { type: "open-chat", id: made.chatId } });
+const briefingReady = (made) => {
+  broadcast("briefing", made, { title: say("Your briefing is ready"), body: made.title, action: { type: "open-chat", id: made.chatId } });
+  notifications.dispatch("briefing", { title: say("Your briefing is ready"), body: made.title, action: { type: "open-chat", id: made.chatId } });
+};
 
 // The desktop app (electron/main.js) shows notifications itself
 function setNativeNotify(fn) {
@@ -829,8 +836,69 @@ const routes = [
 
   // Telegram bot companion
   ["GET", /^\/api\/telegram\/status$/, () => telegram.status()],
+  ["GET", /^\/api\/telegram\/health$/, () => telegram.health()],
   ["POST", /^\/api\/telegram\/test$/, () => telegram.testConnection()],
   ["PUT", /^\/api\/telegram\/token$/, async (req) => telegram.saveToken((await readJson(req)).token)],
+  ["POST", /^\/api\/telegram\/pair\/start$/, () => telegram.createPairingCode()],
+  ["GET", /^\/api\/telegram\/pair\/status$/, () => telegram.getPairingStatus()],
+  ["POST", /^\/api\/telegram\/users\/role$/, async (req) => {
+    const b = await readJson(req);
+    return { ok: telegram.setPairedUserRole(b.id, b.role) };
+  }],
+  ["DELETE", /^\/api\/telegram\/users\/([\w-]+)$/, (req, id) => ({ ok: telegram.revokePairedUser(id) })],
+
+  // Notifications router
+  ["GET", /^\/api\/notifications\/log$/, () => ({ log: notifications.getLog() })],
+  ["POST", /^\/api\/notifications\/test$/, async (req) => {
+    const b = await readJson(req);
+    return notifications.dispatch("watch_alert", {
+      title: b.title || "Test Notification",
+      body: b.body || "This is a test notification from Friends.",
+      urgent: true,
+    });
+  }],
+
+  // Reddit Watchers & Status
+  ["GET", /^\/api\/reddit\/status$/, () => {
+    const r = settings.get().reddit || {};
+    return {
+      enabled: r.enabled !== false,
+      hasSecret: Boolean(keys.getSecret("connector-reddit-clientSecret") || keys.getSecret("reddit-client-secret")),
+      hasRefreshToken: Boolean(keys.getSecret("connector-reddit-refreshToken") || keys.getSecret("reddit-refresh-token")),
+      clientId: r.clientId || "",
+      username: r.username || "",
+      safeMode: r.safeMode !== false,
+      watchersCount: (r.watchers || []).length,
+    };
+  }],
+  ["POST", /^\/api\/reddit\/watchers$/, async (req) => {
+    const b = await readJson(req);
+    const s = settings.get();
+    const r = s.reddit || {};
+    const watchers = r.watchers || [];
+    const newWatcher = {
+      id: b.id || `w_${Date.now().toString(36)}`,
+      name: b.name || b.subreddit || "Watcher",
+      subreddit: b.subreddit || "",
+      query: b.query || "",
+      keywords: Array.isArray(b.keywords) ? b.keywords : (b.keywords || "").split(",").map((k) => k.trim()).filter(Boolean),
+      enabled: b.enabled !== false,
+    };
+    const updated = [...watchers.filter((w) => w.id !== newWatcher.id), newWatcher];
+    settings.set({ ...s, reddit: { ...r, watchers: updated } });
+    return { ok: true, watcher: newWatcher };
+  }],
+  ["DELETE", /^\/api\/reddit\/watchers\/([\w-]+)$/, (req, id) => {
+    const s = settings.get();
+    const r = s.reddit || {};
+    const updated = (r.watchers || []).filter((w) => w.id !== id);
+    settings.set({ ...s, reddit: { ...r, watchers: updated } });
+    return { ok: true };
+  }],
+  ["POST", /^\/api\/reddit\/poll$/, async () => {
+    const matches = await redditWatcher.pollOnce();
+    return { ok: true, matchesCount: matches.length };
+  }],
 
   // Missions: goals carried out in the background (server/missions/)
   ["GET", /^\/api\/missions$/, () => missions.overview()],
@@ -1011,17 +1079,46 @@ function start(port = PORT, host = HOST) {
   // Telegram: the companion answers, and missions talk to you there
   telegram.setHandlers({ chat: (text) => companion.reply(text, { googleToken }) });
   telegram.start();
+
+  // Unified Notification Router channels
+  notifications.registerChannel("desktop", {
+    send: async (item) => {
+      if (nativeNotify) nativeNotify({ title: item.title, body: item.body, action: item.action });
+      else if (!eventClients.size && process.platform === "linux") execFile("notify-send", ["--app-name=Friends", "-i", "friends", item.title, item.body], () => {});
+      return { ok: true };
+    },
+  });
+  notifications.registerChannel("inapp", {
+    send: async (item) => {
+      broadcast("notification", item, { title: item.title, body: item.body, action: item.action });
+      return { ok: true };
+    },
+  });
+  notifications.registerChannel("telegram", {
+    send: async (item) => {
+      if (telegram.ready()) {
+        await telegram.sendAlert(`${item.title}\n${item.body}`);
+        return { ok: true };
+      }
+      return { ok: false, reason: "Telegram not ready" };
+    },
+  });
+
+  // Reddit Watchers daemon
+  redditWatcher.start(15);
+
   // The mission engine: it carries on after a restart, and runs its schedules and watches
   missions.init({
     push,
     notify: ({ title, body, action }) => {
+      notifications.dispatch("watch_alert", { title, body, action });
       if (nativeNotify) nativeNotify({ title, body, action });
       else if (!eventClients.size && process.platform === "linux") execFile("notify-send", ["--app-name=Friends", "-i", "friends", title, body], () => {});
     },
     telegram: { send: (text) => telegram.sendAlert(text), ready: () => telegram.ready(), event: (e) => telegram.onMissionEvent(e), alert: (text) => telegram.sendAlert(text) },
     googleToken,
   });
-  process.once("exit", () => (mcp.stopAll(), telegram.stop()));
+  process.once("exit", () => (mcp.stopAll(), telegram.stop(), redditWatcher.stop()));
   const connections = new Set();
   let isShuttingDown = false;
 

@@ -157,8 +157,23 @@ export const api = {
   },
   telegram: {
     status: () => call("GET", "/api/telegram/status"),
+    health: () => call("GET", "/api/telegram/health"),
     test: () => call("POST", "/api/telegram/test"),
     saveToken: (token) => call("PUT", "/api/telegram/token", { token }),
+    pairStart: () => call("POST", "/api/telegram/pair/start"),
+    pairStatus: () => call("GET", "/api/telegram/pair/status"),
+    setUserRole: (id, role) => call("POST", "/api/telegram/users/role", { id, role }),
+    revokeUser: (id) => call("DELETE", `/api/telegram/users/${encodeURIComponent(id)}`),
+  },
+  notifications: {
+    getLog: () => call("GET", "/api/notifications/log"),
+    sendTest: (body = {}) => call("POST", "/api/notifications/test", body),
+  },
+  reddit: {
+    status: () => call("GET", "/api/reddit/status"),
+    saveWatcher: (watcher) => call("POST", "/api/reddit/watchers", watcher),
+    removeWatcher: (id) => call("DELETE", `/api/reddit/watchers/${encodeURIComponent(id)}`),
+    poll: () => call("POST", "/api/reddit/poll"),
   },
   missions: {
     overview: () => call("GET", "/api/missions"),

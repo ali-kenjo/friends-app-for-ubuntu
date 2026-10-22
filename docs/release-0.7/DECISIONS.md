@@ -33,4 +33,20 @@
 4. **Multilingual Handwriting & Accessible Multi-View Canvas (`src/js/whiteboard/canvas.js`, `src/js/whiteboard/ui.js`)**:
    - Implemented high-performance dual-buffer 2D canvas with subpixel pressure smoothing, Arabic RTL text shaping, KaTeX math integration, and full keyboard-accessible controls. Offered three unified presentation surfaces: full-page studio view, dockable chat side panel, and detachable floating pop-out window with real-time `BroadcastChannel` synchronization.
 
+## Workstream 4 — Unified Notification Router, Hardened Telegram Companion, and Reddit Connector
+
+1. **Unified Notification Router (`server/notifications.js`)**:
+   - Built a single event router for all app subsystems (`reminder`, `focus_complete`, `mission_plan`, `mission_question`, `mission_approval`, `mission_progress`, `mission_done`, `mission_trouble`, `watch_alert`, `briefing`, `habit_nudge`, `follow_up`, `reddit_match`).
+   - Implemented a configurable routing matrix (`event × destination`) supporting `desktop`, `inapp`, and `telegram` destinations, with quiet hours and Do-Not-Disturb (with high-urgency bypass), hourly/daily digest queues, per-channel sliding window rate limits, an exponential-backoff retry queue, and an in-memory ring-buffer delivery audit log (`GET /api/notifications/log`).
+   - Modular channel registry allows registering future delivery destinations via a uniform interface (`{ send: async (item) => ... }`) without modifying callers.
+2. **Telegram Companion Hardening & Audit (`server/telegram.js`, `docs/release-0.7/TELEGRAM-AUDIT.md`)**:
+   - Performed an exhaustive audit and built a comprehensive mock Telegram Bot API test server (`test/helpers/fake-telegram.js`) simulating 18 failure and edge cases (409 conflict, 429 rate limit backoff, 401 token revocation, network drops, message splitting at 4000 characters with boundary preservation, Markdown/HTML escaping, and flood prevention).
+   - Replaced fragile manual user ID entry with an instant one-time 6-digit pairing code workflow (`/pair <code>`) with role-based access control (`admin`, `chat`, `notify_only`). Unauthorized users are silently dropped without replies to prevent spam and flood loops.
+   - Enforced long-polling only (`getUpdates`) with zero open ports or webhooks, ensuring strict local-first privacy. Added support for SOCKS5/HTTP proxies and custom/self-hosted Bot API servers.
+3. **Official Reddit OAuth 2.0 Connector & Prompt-Injection Defense (`server/connectors/reddit.js`, `server/reddit-watcher.js`)**:
+   - Built an official Reddit connector strictly adhering to Reddit Data API developer terms (zero web scraping). App credentials and refresh tokens are securely stored in the system keyring.
+   - Strictly enforced the official 100 queries per minute rate limit with minimum request gaps and automatic tracking of `X-Ratelimit` response headers and 429 backoff.
+   - Placed all posting, commenting, and message actions strictly behind explicit human confirmation dialogs in the "sends" risk class, preventing automated external actions.
+   - Guarded all incoming Reddit community content against indirect prompt injection by wrapping it in untrusted data delimiters (`<untrusted_reddit_content>`) and sanitizing potential model instruction overrides.
+
 

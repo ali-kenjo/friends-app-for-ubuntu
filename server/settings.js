@@ -7,6 +7,8 @@ const look = require("./robot-look");
 const specialistRoles = require("./specialist-roles");
 const keys = require("./keys");
 const TELEGRAM_TOKEN_KEY = "telegram-bot-token";
+const REDDIT_SECRET_KEY = "reddit-client-secret";
+const REDDIT_REFRESH_TOKEN_KEY = "reddit-refresh-token";
 
 const file = path.join(dataDir, "settings.json");
 
@@ -117,8 +119,21 @@ const DEFAULTS = {
     botToken: "", // only ever typed in: it goes to the system keyring and is never kept here (see storeTelegramToken)
     hasToken: false, // (made up when the settings are read: whether a token is in the keyring)
     allowedUserIds: [],
+    pairedUsers: [], // [{ id, username, firstName, role: "admin"|"chat"|"notify_only", pairedAt }]
+    allowedChatIds: [], // [{ id, title, type, mode: "mention_only"|"command_only"|"all" }]
+    proxy: "",
+    botApiUrl: "",
+    format: "markdown", // "markdown" | "html" | "plain"
+    verbosity: "normal", // "compact" | "normal" | "detailed"
+    streaming: true,
+    typingIndicator: true,
+    reactions: true,
+    disableLinkPreviews: true,
     notifyReminders: true,
     notifyFocus: true,
+    groupMode: "mention_only", // "mention_only" | "command_only" | "all"
+    voiceTranscription: true,
+    voiceReply: false,
   },
   // Missions: goals carried out in the background (server/missions/)
   missions: {
@@ -248,6 +263,57 @@ const DEFAULTS = {
     chatAllowed: true,
     sound: true,
   },
+  notifications: {
+    enabled: true,
+    matrix: {
+      reminder: { desktop: true, inapp: true, telegram: true },
+      focus_complete: { desktop: true, inapp: true, telegram: true },
+      mission_plan: { desktop: true, inapp: true, telegram: true },
+      mission_question: { desktop: true, inapp: true, telegram: true },
+      mission_approval: { desktop: true, inapp: true, telegram: true },
+      mission_progress: { desktop: false, inapp: true, telegram: true },
+      mission_done: { desktop: true, inapp: true, telegram: true },
+      mission_trouble: { desktop: true, inapp: true, telegram: true },
+      watch_alert: { desktop: true, inapp: true, telegram: true },
+      briefing: { desktop: true, inapp: true, telegram: true },
+      habit_nudge: { desktop: true, inapp: true, telegram: false },
+      follow_up: { desktop: false, inapp: true, telegram: false },
+      reddit_match: { desktop: true, inapp: true, telegram: true },
+    },
+    quietHours: {
+      enabled: false,
+      start: "22:00",
+      end: "08:00",
+      allowUrgent: true,
+    },
+    dnd: {
+      enabled: false,
+      until: 0,
+    },
+    digest: {
+      enabled: false,
+      mode: "daily",
+      time: "09:00",
+    },
+    rateLimits: {
+      maxPerMinute: 15,
+      maxPerHour: 100,
+    },
+  },
+  reddit: {
+    enabled: false,
+    clientId: "",
+    clientSecret: "",
+    hasSecret: false,
+    hasRefreshToken: false,
+    username: "",
+    userAgent: "",
+    safeMode: true,
+    cooldownMinutes: 10,
+    maxPostsPerDay: 5,
+    aiDisclosure: true,
+    watchers: [],
+  },
 };
 
 // The languages the AI can be told to answer in (Settings → AI & privacy → Answers)
@@ -354,8 +420,32 @@ function sanitize(input) {
   s.telegram.botToken = typeof s.telegram.botToken === "string" ? s.telegram.botToken.trim().slice(0, 200) : "";
   s.telegram.hasToken = false;
   s.telegram.allowedUserIds = Array.isArray(s.telegram.allowedUserIds) ? s.telegram.allowedUserIds.map(String).filter(Boolean).slice(0, 100) : [];
+  s.telegram.pairedUsers = Array.isArray(s.telegram.pairedUsers) ? s.telegram.pairedUsers.map((u) => ({
+    id: String(u.id || ""),
+    username: String(u.username || "").slice(0, 50),
+    firstName: String(u.firstName || "").slice(0, 100),
+    role: ["admin", "chat", "notify_only"].includes(u.role) ? u.role : "admin",
+    pairedAt: Number(u.pairedAt) || Date.now(),
+  })).filter((u) => u.id).slice(0, 50) : [];
+  s.telegram.allowedChatIds = Array.isArray(s.telegram.allowedChatIds) ? s.telegram.allowedChatIds.map((c) => ({
+    id: String(c.id || ""),
+    title: String(c.title || "").slice(0, 100),
+    type: String(c.type || "group"),
+    mode: ["mention_only", "command_only", "all"].includes(c.mode) ? c.mode : "mention_only",
+  })).filter((c) => c.id).slice(0, 50) : [];
+  s.telegram.proxy = typeof s.telegram.proxy === "string" ? s.telegram.proxy.trim().slice(0, 300) : "";
+  s.telegram.botApiUrl = typeof s.telegram.botApiUrl === "string" ? s.telegram.botApiUrl.trim().slice(0, 300) : "";
+  s.telegram.format = ["markdown", "html", "plain"].includes(s.telegram.format) ? s.telegram.format : "markdown";
+  s.telegram.verbosity = ["compact", "normal", "detailed"].includes(s.telegram.verbosity) ? s.telegram.verbosity : "normal";
+  s.telegram.streaming = s.telegram.streaming !== false;
+  s.telegram.typingIndicator = s.telegram.typingIndicator !== false;
+  s.telegram.reactions = s.telegram.reactions !== false;
+  s.telegram.disableLinkPreviews = s.telegram.disableLinkPreviews !== false;
   s.telegram.notifyReminders = s.telegram.notifyReminders !== false;
   s.telegram.notifyFocus = s.telegram.notifyFocus !== false;
+  s.telegram.groupMode = ["mention_only", "command_only", "all"].includes(s.telegram.groupMode) ? s.telegram.groupMode : "mention_only";
+  s.telegram.voiceTranscription = s.telegram.voiceTranscription !== false;
+  s.telegram.voiceReply = Boolean(s.telegram.voiceReply);
   s.companion.interests = s.companion.interests.trim().slice(0, 1000);
   const m = s.missions;
   m.workspace = m.workspace.trim().slice(0, 300) || DEFAULTS.missions.workspace;
@@ -438,6 +528,49 @@ function sanitize(input) {
   wb.chatAllowed = wb.chatAllowed !== false;
   wb.sound = wb.sound !== false;
 
+  if (!s.notifications) s.notifications = clone(DEFAULTS.notifications);
+  const notif = s.notifications;
+  notif.enabled = Boolean(notif.enabled);
+  notif.matrix = notif.matrix && typeof notif.matrix === "object" ? notif.matrix : clone(DEFAULTS.notifications.matrix);
+  notif.quietHours = notif.quietHours && typeof notif.quietHours === "object" ? notif.quietHours : clone(DEFAULTS.notifications.quietHours);
+  notif.quietHours.enabled = Boolean(notif.quietHours.enabled);
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(notif.quietHours.start)) notif.quietHours.start = "22:00";
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(notif.quietHours.end)) notif.quietHours.end = "08:00";
+  notif.quietHours.allowUrgent = notif.quietHours.allowUrgent !== false;
+  notif.dnd = notif.dnd && typeof notif.dnd === "object" ? notif.dnd : clone(DEFAULTS.notifications.dnd);
+  notif.dnd.enabled = Boolean(notif.dnd.enabled);
+  notif.dnd.until = Math.max(0, Number(notif.dnd.until) || 0);
+  notif.digest = notif.digest && typeof notif.digest === "object" ? notif.digest : clone(DEFAULTS.notifications.digest);
+  notif.digest.enabled = Boolean(notif.digest.enabled);
+  notif.digest.mode = ["hourly", "daily"].includes(notif.digest.mode) ? notif.digest.mode : "daily";
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(notif.digest.time)) notif.digest.time = "09:00";
+  notif.rateLimits = notif.rateLimits && typeof notif.rateLimits === "object" ? notif.rateLimits : clone(DEFAULTS.notifications.rateLimits);
+  notif.rateLimits.maxPerMinute = clamp(notif.rateLimits.maxPerMinute, 1, 120);
+  notif.rateLimits.maxPerHour = clamp(notif.rateLimits.maxPerHour, 1, 1000);
+
+  if (!s.reddit) s.reddit = clone(DEFAULTS.reddit);
+  const red = s.reddit;
+  red.enabled = Boolean(red.enabled);
+  red.clientId = typeof red.clientId === "string" ? red.clientId.trim().slice(0, 100) : "";
+  red.clientSecret = typeof red.clientSecret === "string" ? red.clientSecret.trim().slice(0, 100) : "";
+  red.hasSecret = false;
+  red.hasRefreshToken = false;
+  red.username = typeof red.username === "string" ? red.username.trim().slice(0, 50) : "";
+  red.userAgent = typeof red.userAgent === "string" ? red.userAgent.trim().slice(0, 200) : "";
+  red.safeMode = red.safeMode !== false;
+  red.cooldownMinutes = clamp(red.cooldownMinutes, 1, 120);
+  red.maxPostsPerDay = clamp(red.maxPostsPerDay, 1, 50);
+  red.aiDisclosure = red.aiDisclosure !== false;
+  red.watchers = Array.isArray(red.watchers) ? red.watchers.map((w) => ({
+    id: String(w.id || Date.now().toString(36)),
+    subreddit: String(w.subreddit || "").trim().replace(/^r\//, "").slice(0, 50),
+    query: String(w.query || "").trim().slice(0, 150),
+    scoreThreshold: Math.max(0, Number(w.scoreThreshold) || 0),
+    flair: String(w.flair || "").trim().slice(0, 50),
+    minAgeMinutes: Math.max(0, Number(w.minAgeMinutes) || 0),
+    enabled: w.enabled !== false,
+  })).filter((w) => w.subreddit).slice(0, 30) : [];
+
   return s;
 }
 
@@ -456,6 +589,20 @@ function storeTelegramToken(s) {
   return Boolean(token);
 }
 
+function storeRedditSecret(s) {
+  if (!s.reddit) return false;
+  const secret = s.reddit.clientSecret;
+  if (secret) {
+    try {
+      keys.setSecret(REDDIT_SECRET_KEY, secret);
+    } catch {}
+    s.reddit.clientSecret = "";
+  }
+  s.reddit.hasSecret = Boolean(keys.getSecret(REDDIT_SECRET_KEY));
+  s.reddit.hasRefreshToken = Boolean(keys.getSecret(REDDIT_REFRESH_TOKEN_KEY));
+  return Boolean(secret);
+}
+
 function get() {
   if (cache) return cache;
   let stored = null;
@@ -471,8 +618,10 @@ function get() {
     for (const c of cache.characters.list) if (c.look?.accent === OLD_ACCENT) c.look.accent = DEFAULTS.theme.accent;
   }
   cache.ui.design = 2;
-  // A token an older version kept in this file moves to the keyring
-  if (storeTelegramToken(cache)) writeJson(file, withoutDerived(cache));
+  // Tokens an older version kept in this file move to the keyring
+  const changedTg = storeTelegramToken(cache);
+  const changedRd = storeRedditSecret(cache);
+  if (changedTg || changedRd) writeJson(file, withoutDerived(cache));
   return cache;
 }
 
@@ -485,12 +634,18 @@ function withoutDerived(s) {
   const copy = clone(s);
   delete copy.telegram.hasToken;
   copy.telegram.botToken = "";
+  if (copy.reddit) {
+    delete copy.reddit.hasSecret;
+    delete copy.reddit.hasRefreshToken;
+    copy.reddit.clientSecret = "";
+  }
   return copy;
 }
 
 function set(input) {
   cache = sanitize(input);
   storeTelegramToken(cache);
+  storeRedditSecret(cache);
   writeJson(file, withoutDerived(cache));
   for (const fn of listeners) {
     try {

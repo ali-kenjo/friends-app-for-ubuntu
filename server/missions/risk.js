@@ -34,6 +34,7 @@ const TOOLS = {
   web_search: { risk: "read" }, read_webpage: { risk: "read" }, wikipedia: { risk: "read" }, get_weather: { risk: "read" }, convert_currency: { risk: "read" },
   github_my_repos: { risk: "read" }, github_issues: { risk: "read" }, github_pull_requests: { risk: "read" }, github_read_file: { risk: "read" }, github_notifications: { risk: "read" },
   notion_search: { risk: "read" }, notion_read_page: { risk: "read" }, todoist_tasks: { risk: "read" }, home_devices: { risk: "read" },
+  reddit_subreddit: { risk: "read" }, reddit_search: { risk: "read" }, reddit_read_post: { risk: "read" }, reddit_rules: { risk: "read" },
   system_status: { risk: "read" }, notify_user: { risk: "read" }, resolve_follow_up: { risk: "read" },
   // changing your files (the path decides, see classify)
   create_file: { risk: "write", type: "file_write" }, edit_file: { risk: "write", type: "file_write" }, edit_file_part: { risk: "write", type: "file_write" },
@@ -55,6 +56,7 @@ const TOOLS = {
   create_calendar_event: { risk: "external", type: "calendar_create" }, update_calendar_event: { risk: "external", type: "calendar_change" },
   github_create_issue: { risk: "external", type: "tool" }, notion_create_page: { risk: "external", type: "tool" }, notion_append: { risk: "external", type: "tool" },
   todoist_add_task: { risk: "external", type: "tool" }, todoist_complete: { risk: "external", type: "tool" }, home_control: { risk: "external", type: "tool" },
+  reddit_draft_post: { risk: "external", type: "tool" }, reddit_draft_comment: { risk: "external", type: "tool" },
   // your computer
   run_command: { risk: "system", type: "command" },
 };
