@@ -178,6 +178,84 @@ export function patternTexture(pattern, c1, c2) {
           g.fill();
         }
         break;
+      case "hearts":
+        for (const [x, y, r] of [[0.2, 0.22, 0.07], [0.7, 0.18, 0.06], [0.45, 0.52, 0.075], [0.18, 0.8, 0.06], [0.78, 0.78, 0.07]]) {
+          const cx = x * size;
+          const cy = y * size;
+          const s = r * size;
+          g.beginPath();
+          g.moveTo(cx, cy + s * 0.7);
+          g.bezierCurveTo(cx - s * 1.2, cy - s * 0.1, cx - s * 0.7, cy - s * 0.9, cx, cy - s * 0.3);
+          g.bezierCurveTo(cx + s * 0.7, cy - s * 0.9, cx + s * 1.2, cy - s * 0.1, cx, cy + s * 0.7);
+          g.fill();
+        }
+        break;
+      case "chevron":
+        g.lineWidth = size / 12;
+        g.strokeStyle = b;
+        for (let row = -1; row < 5; row++) {
+          const y0 = row * (size / 3);
+          g.beginPath();
+          for (let col = 0; col <= 4; col++) {
+            const x = (col * size) / 4;
+            const y = y0 + (col % 2 ? size / 7 : 0);
+            g[col ? "lineTo" : "moveTo"](x, y);
+          }
+          g.stroke();
+        }
+        break;
+      case "grid":
+        g.fillRect(0, 0, size, size / 16);
+        g.fillRect(0, size / 2, size, size / 16);
+        g.fillRect(0, 0, size / 16, size);
+        g.fillRect(size / 2, 0, size / 16, size);
+        break;
+      case "waves":
+        g.lineWidth = size / 14;
+        g.strokeStyle = b;
+        for (let row = 0; row < 4; row++) {
+          const y0 = (row + 0.5) * (size / 4);
+          g.beginPath();
+          for (let x = 0; x <= size; x += 8) {
+            const y = y0 + Math.sin((x / size) * Math.PI * 4) * (size / 14);
+            g[x ? "lineTo" : "moveTo"](x, y);
+          }
+          g.stroke();
+        }
+        break;
+      case "camo":
+        for (const [x, y, rx, ry] of [[0.2, 0.25, 0.18, 0.1], [0.65, 0.2, 0.15, 0.12], [0.45, 0.6, 0.22, 0.11], [0.8, 0.75, 0.16, 0.1], [0.18, 0.82, 0.14, 0.09]]) {
+          g.beginPath();
+          g.ellipse(x * size, y * size, rx * size, ry * size, 0.3, 0, Math.PI * 2);
+          g.fill();
+        }
+        break;
+      case "circuit":
+        g.lineWidth = size / 28;
+        g.strokeStyle = b;
+        for (const [x0, y0, x1, y1] of [[0.1, 0.2, 0.5, 0.2], [0.5, 0.2, 0.65, 0.45], [0.25, 0.65, 0.85, 0.65], [0.35, 0.35, 0.35, 0.85]]) {
+          g.beginPath();
+          g.moveTo(x0 * size, y0 * size);
+          g.lineTo(x1 * size, y1 * size);
+          g.stroke();
+          g.beginPath();
+          g.arc(x1 * size, y1 * size, size / 22, 0, Math.PI * 2);
+          g.fill();
+        }
+        break;
+      case "sprinkles":
+        g.lineWidth = size / 22;
+        g.lineCap = "round";
+        g.strokeStyle = b;
+        for (const [x, y, ang] of [[0.18, 0.2, 0.4], [0.55, 0.16, -0.5], [0.82, 0.32, 0.8], [0.3, 0.52, -0.3], [0.7, 0.58, 0.2], [0.2, 0.82, 0.9], [0.6, 0.84, -0.6]]) {
+          const dx = Math.cos(ang) * (size * 0.06);
+          const dy = Math.sin(ang) * (size * 0.06);
+          g.beginPath();
+          g.moveTo(x * size - dx, y * size - dy);
+          g.lineTo(x * size + dx, y * size + dy);
+          g.stroke();
+        }
+        break;
       default:
     }
     texture.needsUpdate = true;

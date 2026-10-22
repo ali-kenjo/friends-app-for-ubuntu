@@ -3,10 +3,11 @@
 // engine's last pass), the set pieces of the place (places/*.js), the floor, the light, and the
 // air that drifts through. The World (world.js) does the mirror image, the particles, the bokeh and the rings.
 import * as THREE from "three";
-import { PLACE_BY_ID, LIGHT_MOODS, resolved } from "./room.mjs";
+import { PLACE_BY_ID, LIGHT_MOODS, resolved, activeSeason } from "./room.mjs";
 import { radialTexture } from "./scene.js";
 import { Kept, canvasTexture } from "./places/kit.js";
 import { PLACE_BUILDERS } from "./places/index.js";
+import { augmentPlaceProps, buildCompanions, buildSeasonalSet, buildCustomBuilderItems } from "./places/props3d.js";
 
 const FLOOR_SIZE = 18;
 
@@ -118,14 +119,40 @@ export class RoomScene {
     const glow = room.colors.glow ? new THREE.Color(room.colors.glow) : look.light.clone();
     const colors = { wall: new THREE.Color(room.colors.wall), floor: new THREE.Color(room.colors.floor), glow, detail: new THREE.Color(room.colors.detail) };
     this.colors = colors;
-    const key = JSON.stringify([room.place, room.colors, room.props, room.sign, info.light, look.light.getHex(), look.level === "low"]);
+    const season = activeSeason(room.season);
+    const key = JSON.stringify([
+      room.place,
+      room.colors,
+      room.props,
+      room.sign,
+      room.companions,
+      season,
+      room.timeMode,
+      room.timeHour,
+      room.weatherSync,
+      this.weatherState,
+      room.builder,
+      info.light,
+      look.light.getHex(),
+      look.level === "low",
+    ]);
     if (key !== this.key) {
       this.key = key;
       this.clear();
+      const keep = (x) => this.placeKept.add(x);
       const build = PLACE_BUILDERS[room.place];
-      this.built = build ? build({ THREE, group: this.group, room, place, colors, glow, props: room.props, sign: room.sign, mood: info.light, light: look.light, level: look.level, keep: (x) => this.placeKept.add(x), stage: this.stage }) : null;
+      this.built = build ? build({ THREE, group: this.group, room, place, colors, glow, props: room.props, sign: room.sign, mood: info.light, light: look.light, level: look.level, keep, stage: this.stage }) : null;
       this.glowing = new Set(this.built?.glow || []);
       this.backdrop = this.built?.backdrop || this.backdrop;
+      this.extraUpdaters = [];
+      if (!place.chroma && room.place !== "photo") {
+        const aug = augmentPlaceProps(room.place, room.props, this.group, { keep, colors, glow, level: look.level });
+        const comp = buildCompanions(room.companions, { group: this.group, keep, glow, level: look.level });
+        const seas = buildSeasonalSet(room.season, { group: this.group, keep, level: look.level });
+        const bld = buildCustomBuilderItems(room.builder, { group: this.group, keep, colors, glow, level: look.level });
+        for (const m of [...aug.glow, ...comp.glow, ...seas.glow, ...bld.glow]) this.glowing.add(m);
+        this.extraUpdaters.push(...aug.updaters, ...comp.updaters, ...seas.updaters, ...bld.updaters);
+      }
     }
     // The floor: the one asked for, unless the place makes its own
     const kind = this.built?.ownFloor ? "none" : info.floor;
@@ -139,12 +166,40 @@ export class RoomScene {
     const grid = this.floors.grid.material.uniforms;
     grid.uColor.value.copy(colors.glow.clone().lerp(colors.detail, 0.35));
     grid.uBase.value.copy(colors.floor);
-    // The lights
-    this.stage.setMood(info.light, room.brightness);
-    // The air and the effects
+    // Time-of-day & lighting rig adjustment
+    let lightMood = info.light;
+    let brightness = room.brightness;
+    if (!place.chroma) {
+      let hour = 14;
+      if (room.timeMode === "real") hour = new Date().getHours();
+      else if (room.timeMode === "day") hour = 13;
+      else if (room.timeMode === "sunset") hour = 18.5;
+      else if (room.timeMode === "night") hour = 23;
+      else if (room.timeMode === "manual") hour = Number(room.timeHour) || 14;
+      if (room.timeMode && room.timeMode !== "place") {
+        if (hour < 6 || hour >= 21) {
+          if (room.light === "place") lightMood = "moonlight";
+          brightness *= 0.84;
+        } else if (hour >= 17 && hour < 21) {
+          if (room.light === "place") lightMood = "sunset";
+          brightness *= 0.94;
+        }
+      }
+      if (room.builder?.lightingRig && room.builder.lightingRig !== "default") {
+        const rigMap = { warm_lamp: "warm", studio_soft: "studio", neon_rim: "neon", golden_hour: "sunset", moonlight: "moonlight" };
+        if (rigMap[room.builder.lightingRig]) lightMood = rigMap[room.builder.lightingRig];
+      }
+    }
+    this.stage.setMood(lightMood, brightness);
+    // The air and the effects (including seasonal or Weather connector air when applicable)
     const chroma = Boolean(place.chroma);
+    let airKind = room.air === "none" ? "" : room.air;
+    if (!airKind && !chroma && room.weatherSync && this.weatherState === "snow") airKind = "snow";
+    else if (!airKind && !chroma && season === "winter") airKind = "snow";
+    else if (!airKind && !chroma && season === "spring") airKind = "petals";
+    else if (!airKind && !chroma && season === "summer") airKind = "fireflies";
     this.world.configure({
-      air: { kind: room.air === "none" ? "" : room.air, amount: room.airAmount, color: this.airColor(room, colors) },
+      air: { kind: airKind, amount: room.airAmount, color: this.airColor(room, colors, airKind) },
       bokeh: Boolean(room.props.bokeh),
       shaft: Boolean(room.props.shaft),
       rings: Boolean(room.props.rings),
@@ -155,10 +210,28 @@ export class RoomScene {
   }
 
   // Petals, bubbles and so on take their color from the place (its detail color), not from the robot
-  airColor(room, colors) {
-    if (room.air === "petals") return colors.detail.clone();
-    if (room.air === "fireflies" || room.air === "embers") return null;
+  airColor(room, colors, kind = room.air) {
+    if (kind === "petals") return colors.detail.clone();
+    if (kind === "fireflies" || kind === "embers") return null;
     return null;
+  }
+
+  // Interactive prop trigger by propId (from click or AI tool robot_use_prop)
+  triggerProp(propId, action = "toggle") {
+    const id = String(propId || "").toLowerCase();
+    let target = null;
+    this.group.traverse((o) => {
+      if (target) return;
+      const pid = String(o.userData?.propId || "").toLowerCase();
+      if (pid && (pid === id || pid.includes(id) || id.includes(pid))) {
+        target = o;
+      }
+    });
+    if (!target) return { triggered: false, propId };
+    const state = target.userData.trigger ? target.userData.trigger(action) : true;
+    const pos = new THREE.Vector3();
+    target.getWorldPosition(pos);
+    return { triggered: true, propId: target.userData.propId || propId, state, position: { x: pos.x, y: pos.y, z: pos.z } };
   }
 
   get isChroma() {
@@ -195,6 +268,7 @@ export class RoomScene {
     }
     this.built = null;
     this.glowing = new Set();
+    this.extraUpdaters = [];
   }
 
   update(dt, pose, fx) {
@@ -207,7 +281,11 @@ export class RoomScene {
       mesh.position.z = z;
     }
     this.floors.grid.material.uniforms.uTime.value = this.time;
-    this.built?.update?.(dt, this.time, pose, fx || {});
+    const fxObj = fx || {};
+    this.built?.update?.(dt, this.time, pose, fxObj);
+    if (this.extraUpdaters?.length) {
+      for (const fn of this.extraUpdaters) fn(dt, this.time, fxObj);
+    }
   }
 
   dispose() {

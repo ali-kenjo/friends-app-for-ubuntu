@@ -318,9 +318,47 @@ const ROBOT_TOOLS = {
   ),
   robot_gesture: fn(
     "robot_gesture",
-    "Make your robot body do one short move: nod, head_shake, tilt, wave (hello and goodbye), shrug, bounce, celebrate (a happy spin), look_around, lean_in, point_left or point_right (at the left or right side of the video picture), double_take, shy (hides its eyes).",
+    "Make your robot body do one short move: nod, head_shake, tilt, wave, shrug, bounce, celebrate, look_around, lean_in, point_left, point_right, double_take, shy, wink, blow_kiss, facepalm, clap, thumbs_up, fist_pump, dance_groove, dance_spin, dance_robot, shiver, stretch, yawn, sneeze, hiccup, hug, high_five, bow, salute, big_shrug, chin_on_hand, scratch_head, big_wave, royal_wave, peek, hide, dizzy, whistle, drum_roll, flex.",
     { gesture: { type: "STRING", enum: robot.GESTURES, description: "The move to make" } }
   ),
+  robot_use_prop: fn(
+    "robot_use_prop",
+    "Have your robot body interact with a prop or companion in the room (e.g. lamp, radio, record_player, tv, fireplace, plant, kettle, blinds, book, tablet, mug, cat, fish_tank, lava_lamp, clock, window).",
+    {
+      prop: str("The prop or companion id to use, e.g. 'lamp', 'radio', 'plant', 'cat', 'fireplace', 'tv', 'tablet', 'book', 'kettle'"),
+      action: str("Optional action: 'use', 'toggle', 'on', 'off', 'inspect', 'water', 'pat'"),
+    },
+    ["prop"]
+  ),
+  robot_go_to: fn(
+    "robot_go_to",
+    "Move your robot body to a spot or prop in the room (e.g. 'center', 'left', 'right', 'front', 'back', 'window', 'desk', or a prop id).",
+    {
+      target: str("Spot or prop name: 'center', 'left', 'right', 'front', 'back', 'window', 'desk', or a prop id"),
+      x: num("Optional horizontal offset from -1 (left) to 1 (right)"),
+      z: num("Optional depth offset from -1 (back) to 1 (front)"),
+    },
+    ["target"]
+  ),
+  robot_look_at: fn(
+    "robot_look_at",
+    "Turn your robot body's eyes and head toward a target ('user', 'audience', 'left', 'right', 'up', 'down', 'window', 'companion', or a prop id).",
+    {
+      target: str("Where to look: 'user', 'audience', 'left', 'right', 'up', 'down', 'window', 'companion', or a prop id"),
+      x: num("Optional horizontal gaze from -1 (left) to 1 (right)"),
+      y: num("Optional vertical gaze from -1 (down) to 1 (up)"),
+    },
+    ["target"]
+  ),
+};
+
+// Compact versions of the robot tools for small local models ("essential" tool set)
+const ROBOT_TOOLS_LOCAL = {
+  robot_mood: fn("robot_mood", "Set robot face mood.", { mood: { type: "STRING", enum: robot.MOODS } }),
+  robot_gesture: fn("robot_gesture", "Play robot gesture.", { gesture: { type: "STRING", enum: robot.GESTURES } }),
+  robot_use_prop: fn("robot_use_prop", "Use a room prop (lamp, radio, plant, cat, tv, fireplace, book, tablet).", { prop: str("Prop id"), action: str("use|toggle|on|off") }, ["prop"]),
+  robot_go_to: fn("robot_go_to", "Move robot in room (center, left, right, front, back, or prop id).", { target: str("Spot or prop") }, ["target"]),
+  robot_look_at: fn("robot_look_at", "Look at target (user, audience, window, companion, or prop id).", { target: str("Target") }, ["target"]),
 };
 
 // Goals that take many steps and time: handed to the mission engine (server/missions/)
@@ -344,11 +382,41 @@ function robotToolsOn(settings, { voice, robot: onScreen }) {
   return onScreen === true && (voice ? allowed.voice : allowed.chat) === true;
 }
 
-// What a robot tool call shows: { mood } or { gesture }; throws when it's not one it knows
+// What a robot tool call shows: { mood }, { gesture }, { useProp }, { goTo }, or { lookAt }; throws when invalid
 function robotEvent(name, args = {}) {
-  if (name === "robot_mood" && robot.MOODS.includes(args.mood)) return { mood: args.mood };
-  if (name === "robot_gesture" && robot.GESTURES.includes(args.gesture)) return { gesture: args.gesture };
-  throw new Error(name === "robot_mood" ? `Use one of these moods: ${robot.MOODS.join(", ")}.` : `Use one of these gestures: ${robot.GESTURES.join(", ")}.`);
+  if (name === "robot_mood") {
+    if (robot.MOODS.includes(args.mood)) return { mood: args.mood };
+    throw new Error(`Use one of these moods: ${robot.MOODS.join(", ")}.`);
+  }
+  if (name === "robot_gesture") {
+    if (robot.GESTURES.includes(args.gesture)) return { gesture: args.gesture };
+    throw new Error(`Use one of these gestures: ${robot.GESTURES.join(", ")}.`);
+  }
+  if (name === "robot_use_prop") {
+    const prop = String(args.prop || "").trim().slice(0, 64);
+    if (!prop) throw new Error("Give a prop name to use (e.g. 'lamp', 'radio', 'plant', 'cat').");
+    const action = String(args.action || "use").trim().slice(0, 32) || "use";
+    return { useProp: { prop, action } };
+  }
+  if (name === "robot_go_to") {
+    const target = String(args.target || args.place || "").trim().slice(0, 64);
+    const hasCoords = Number.isFinite(Number(args.x)) || Number.isFinite(Number(args.z));
+    if (!target && !hasCoords) throw new Error("Give a target spot or prop name (e.g. 'center', 'left', 'right', 'window').");
+    const out = { target: target || "spot" };
+    if (Number.isFinite(Number(args.x))) out.x = Math.max(-1, Math.min(1, Number(args.x)));
+    if (Number.isFinite(Number(args.z))) out.z = Math.max(-1, Math.min(1, Number(args.z)));
+    return { goTo: out };
+  }
+  if (name === "robot_look_at") {
+    const target = String(args.target || "").trim().slice(0, 64);
+    const hasCoords = Number.isFinite(Number(args.x)) || Number.isFinite(Number(args.y));
+    if (!target && !hasCoords) throw new Error("Give a target to look at (e.g. 'user', 'audience', 'window', 'clock').");
+    const out = { target: target || "point" };
+    if (Number.isFinite(Number(args.x))) out.x = Math.max(-1, Math.min(1, Number(args.x)));
+    if (Number.isFinite(Number(args.y))) out.y = Math.max(-1, Math.min(1, Number(args.y)));
+    return { lookAt: out };
+  }
+  throw new Error(`Unknown robot tool: ${name}`);
 }
 
 // options.voice: a spoken conversation, which also gets write_draft.
@@ -433,12 +501,15 @@ const ESSENTIAL = new Set([
   "get_weather", "web_search", "read_webpage",
   "search_gmail", "get_calendar_events",
   "home_devices", "home_control", "start_mission",
+  "robot_mood", "robot_gesture", "robot_use_prop", "robot_go_to", "robot_look_at",
 ]);
 
 function forLocal(list, settings) {
   if (settings.aiControl?.localTools === "all") return list;
-  // Apps you added yourself (MCP) are kept too
-  return list.filter((t) => ESSENTIAL.has(t.name) || Object.hasOwn(FILE_TOOLS, t.name) || isRobotTool(t.name) || t.name.startsWith("mcp_"));
+  // Apps you added yourself (MCP) are kept too; robot tools use their compact essential schema
+  return list
+    .filter((t) => ESSENTIAL.has(t.name) || Object.hasOwn(FILE_TOOLS, t.name) || isRobotTool(t.name) || t.name.startsWith("mcp_"))
+    .map((t) => ROBOT_TOOLS_LOCAL[t.name] || t);
 }
 
 // "folder" → the dirs permissions, "file" → the files permissions

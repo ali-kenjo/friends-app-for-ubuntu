@@ -125,6 +125,101 @@ const LEXICON = {
     "نعسان", "تعبان", "تصبح على خير", "نوم", "انام", "منهك", "متعب", "ليله سعيده",
     "😴|1.6", "💤|1.6", "🥱|1.6", "😪",
   ],
+  love: [
+    "adore you|1.8", "madly in love|2", "heart eyes|1.6", "my heart|1.3", "xoxo|1.6", "smooch|1.6",
+    "schwärm*", "verliebt|1.6", "von ganzem herzen|1.6",
+    "اعشقك|1.8", "مغرم|1.6", "من كل قلبي|1.5",
+    "💘|1.8", "💝|1.6", "💞|1.6", "💓|1.5",
+  ],
+  embarrassed: [
+    "embarrassed|1.6", "embarrassing|1.5", "blushing|1.6", "awkward|1.3", "oopsie|1.4", "my bad|1.3",
+    "peinlich|1.6", "rot werd*|1.5", "ups|1.2", "unangenehm|1.2",
+    "محرج|1.6", "احراج|1.6", "خجلان|1.5", "اخجل|1.5",
+    "😳|1.3", "🙈|1.6", "🫣|1.6",
+  ],
+  mischievous: [
+    "hehehe|1.6", "muahaha|1.8", "plot*", "prank*", "sneaky|1.5", "mischief|1.6", "up to something|1.5",
+    "hihi", "streich", "frech|1.4", "ausheck*", "schabernack|1.6",
+    "مقلب|1.5", "شقي|1.4", "مكر|1.4",
+    "😈|1.8", "😼|1.6",
+  ],
+  bored: [
+    "bored|1.6", "boring|1.5", "nothing to do|1.5", "meh|1.4", "dull|1.3", "same old|1.3",
+    "langweilig|1.6", "gelangweilt|1.6", "öde|1.5", "nichts los|1.4",
+    "ملل|1.6", "ممل|1.5", "طفشان|1.6", "زهقان|1.6",
+    "😑|1.5", "😐|1.3",
+  ],
+  determined: [
+    "let's do this|1.6", "i got this|1.6", "we got this|1.6", "determined|1.5", "unstoppable|1.6", "no giving up|1.6",
+    "wir schaffen das|1.6", "ich schaffe das|1.6", "entschlossen|1.5", "durchziehen|1.5",
+    "عزيمه|1.5", "سافعلها|1.6", "قدها|1.5", "لا استسلام|1.6",
+    "😤|1.5", "🫡|1.5",
+  ],
+  dreamy: [
+    "daydream*", "dreamy|1.6", "magical|1.3", "floating on air|1.6", "imagine if|1.4", "starry|1.3",
+    "verträumt|1.6", "tagtraum*", "märchenhaft|1.5", "traumhaft|1.4",
+    "حالم|1.6", "خيالي|1.4", "ساحر|1.3",
+    "✨|1.3", "🌙|1.3", "☁|1.2",
+  ],
+  grumpy: [
+    "grumpy|1.6", "annoying|1.5", "annoyed|1.5", "irritat*", "ugh|1.4", "hrumph|1.6", "bah|1.4",
+    "grummelig|1.6", "genervt|1.5", "nervig|1.5", "muffelig|1.6", "ärgerlich|1.4",
+    "معصب|1.6", "منزعج|1.5", "مزعج|1.5", "افف|1.5",
+    "😠|1.6", "😡|1.6", "💢|1.6",
+  ],
+  startled: [
+    "yikes|1.6", "eek|1.6", "jump scare|1.8", "startled|1.6", "scared me|1.6",
+    "huch|1.6", "erschrocken|1.6", "schreck|1.5", "erschreckt|1.6",
+    "فزعتني|1.6", "خرعتني|1.6", "مرعب|1.4",
+    "😨|1.6", "🙀|1.6",
+  ],
+  relieved: [
+    "phew|1.8", "thank goodness|1.6", "what a relief|1.8", "relieved|1.6", "close call|1.5",
+    "puh|1.8", "zum glück|1.5", "erleichtert|1.6", "stein vom herzen|1.8",
+    "الحمد لله|1.5", "ارتحت|1.6", "يا للراحه|1.6",
+    "😮‍💨|1.8", "😅|1.5",
+  ],
+  smug: [
+    "told you so|1.8", "i knew it|1.6", "too easy|1.6", "piece of cake|1.5", "naturally|1.2",
+    "hab ich doch gesagt|1.8", "wusste ich's doch|1.6", "kinderleicht|1.5",
+    "قلت لك|1.6", "كنت اعرف|1.5", "سهل جدا|1.4",
+    "😎|1.6",
+  ],
+  worried: [
+    "worried|1.5", "nervous|1.5", "anxious|1.5", "concerned|1.4", "uh oh|1.6", "oh no|1.5",
+    "besorgt|1.5", "nervös|1.5", "mach mir sorgen|1.6", "oh je|1.5", "oje|1.5",
+    "قلق|1.5", "قلقان|1.5", "متوتر|1.4", "يا ساتر|1.4",
+    "😰|1.6", "😥|1.5", "😧|1.5",
+  ],
+  laughing_hard: [
+    "dying of laughter|2", "crying laughing|2", "can't breathe|1.8", "belly laugh|1.8", "bwahaha|2",
+    "bauchschmerzen vor lachen|2", "tränen gelacht|2", "kann nicht mehr vor lachen|2",
+    "مت من الضحك|2", "فطست ضحك|2", "دمعت من الضحك|2",
+  ],
+  winking: [
+    "wink|1.6", "winking|1.6", "you know what i mean|1.6", "between us|1.4",
+    "zwinker*", "unter uns|1.4", "du weißt schon|1.5",
+    "غمزه|1.6", "بيننا|1.4",
+    "😉|1.8",
+  ],
+  inspired: [
+    "inspired|1.6", "inspiring|1.6", "eureka|1.8", "lightbulb moment|1.8", "brilliant idea|1.6", "visionary|1.5",
+    "inspiriert|1.6", "geistesblitz|1.8", "zündende idee|1.7", "heureka|1.8",
+    "ملهم|1.6", "الهام|1.6", "فكره عبقريه|1.7", "وجدتها|1.7",
+    "💡|1.8", "🌟|1.6",
+  ],
+  playful: [
+    "boop|1.6", "gotcha|1.6", "tag you're it|1.8", "just kidding|1.5", "teasing|1.5", "silly|1.4",
+    "quatsch|1.3", "nur spaß|1.5", "necken|1.5", "albern|1.4",
+    "امزح|1.5", "مزحه|1.5", "دمك خفيف|1.5",
+    "😜|1.8", "😝|1.7", "😛|1.6",
+  ],
+  shy_smile: [
+    "aww thanks|1.6", "you flatter me|1.7", "stop it you|1.6", "too kind|1.5",
+    "du schmeichelst mir|1.7", "ach hör auf|1.5", "zu gütig|1.5",
+    "اخجلتني|1.7", "كلك ذوق|1.5",
+    "🥹|1.6",
+  ],
 };
 
 // Things you might say about your day; the robot reacts to them
@@ -150,6 +245,10 @@ const REACTION = {
   happy: "happy", excited: "excited", laughing: "laughing", curious: "curious", thinking: "curious",
   focused: "focused", surprised: "surprised", confused: "focused", skeptical: "curious", sad: "sad",
   affectionate: "affectionate", proud: "proud", sleepy: "sleepy", neutral: "neutral",
+  love: "love", embarrassed: "affectionate", mischievous: "playful", bored: "playful",
+  determined: "determined", dreamy: "dreamy", grumpy: "affectionate", startled: "surprised",
+  relieved: "relieved", smug: "skeptical", worried: "affectionate", laughing_hard: "laughing_hard",
+  winking: "winking", inspired: "inspired", playful: "playful", shy_smile: "shy_smile",
 };
 
 // Gestures some words call for. at: "start" = only as a sentence begins,
@@ -217,10 +316,43 @@ const GESTURE_CUES = [
       "انت لطيف", "انت ذكي", "انت رائع", "احبك", "انت الافضل",
     ],
   },
+  {
+    gesture: "high_five", at: "any",
+    words: ["high five", "up top", "give me five", "einschlagen", "gib mir fünf", "هاي فايف", "كفك"],
+  },
+  {
+    gesture: "thumbs_up", at: "any",
+    words: ["thumbs up", "daumen hoch", "ممتاز جدا"],
+  },
+  {
+    gesture: "hug", at: "any",
+    words: ["send a hug", "big hug", "here's a hug", "fühl dich gedrückt", "dicke umarmung", "حضن كبير"],
+  },
+  {
+    gesture: "facepalm", at: "any",
+    words: ["facepalm", "oh man", "doh", "hand vor die stirn", "يا راسي"],
+  },
+  {
+    gesture: "salute", at: "any",
+    words: ["aye aye", "sir yes sir", "at your service", "zu befehl", "تحت امرك"],
+  },
+  {
+    gesture: "bow", at: "any",
+    words: ["my pleasure", "take a bow", "verbeugung", "على الرحب والسعه"],
+  },
+  {
+    gesture: "drum_roll", at: "any",
+    words: ["drum roll", "drumroll", "trommelwirbel", "قرع الطبول"],
+  },
 ];
 
 // Mood order when two score the same (the livelier one shows)
-const ORDER = ["laughing", "surprised", "excited", "sad", "affectionate", "proud", "confused", "skeptical", "sleepy", "happy", "curious", "focused", "thinking"];
+const ORDER = [
+  "laughing_hard", "laughing", "love", "surprised", "startled", "excited", "inspired",
+  "sad", "worried", "grumpy", "embarrassed", "affectionate", "shy_smile", "proud",
+  "determined", "mischievous", "playful", "winking", "smug", "relieved", "dreamy",
+  "confused", "skeptical", "bored", "sleepy", "happy", "curious", "focused", "thinking",
+];
 
 // ---------- Compiled matchers ----------
 const WORD = "\\p{L}\\p{N}";

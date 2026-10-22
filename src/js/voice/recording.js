@@ -3,6 +3,7 @@
 import { t } from "../i18n.js";
 import { VoiceRecorder, videoType, download } from "../recorder.js";
 import { autoOnAir } from "../onair.js";
+import { robotSound } from "../robot/sound.js";
 import { audio } from "./audio.js";
 import { canvas, store, voiceMode } from "./dom.js";
 import { setFrame } from "./stage.js";
@@ -13,9 +14,10 @@ const recordPop = document.getElementById("voice-record-pop");
 const recordFrames = document.getElementById("voice-rec-frame");
 const recordMic = document.getElementById("voice-rec-mic");
 const recordCaptions = document.getElementById("voice-rec-captions");
+const recordRobotSound = document.getElementById("voice-rec-robot-sound");
 const recordTime = document.getElementById("voice-rec-time");
 
-const options = { frame: "screen", mic: true, captions: true };
+const options = { frame: "screen", mic: true, captions: true, robotSound: false };
 try {
   Object.assign(options, JSON.parse(store.get("friends.recordOptions") || "{}"));
 } catch {}
@@ -31,6 +33,7 @@ function syncPop() {
   recordFrames.querySelectorAll("[data-frame]").forEach((b) => b.classList.toggle("active", b.dataset.frame === options.frame));
   recordMic.checked = options.mic;
   recordCaptions.checked = options.captions;
+  if (recordRobotSound) recordRobotSound.checked = Boolean(options.robotSound || robotSound.config.recordMix);
 }
 
 function openPop() {
@@ -53,6 +56,11 @@ function start() {
   prepare();
   const sources = [audio.bus];
   if (options.mic && audio.micSource) sources.push(audio.micSource);
+  if (options.robotSound || robotSound.config.recordMix) {
+    robotSound.configure({ recordMix: true });
+    const rsNode = robotSound.recordingNode(audio.ctx);
+    if (rsNode) sources.push(rsNode);
+  }
   const next = new VoiceRecorder({ canvas, audioCtx: audio.ctx, sources });
   try {
     next.start();
@@ -106,6 +114,11 @@ recordMic.addEventListener("change", () => {
 });
 recordCaptions.addEventListener("change", () => {
   options.captions = recordCaptions.checked;
+  saveOptions();
+});
+recordRobotSound?.addEventListener("change", () => {
+  options.robotSound = recordRobotSound.checked;
+  robotSound.configure({ recordMix: recordRobotSound.checked });
   saveOptions();
 });
 document.getElementById("voice-rec-start").addEventListener("click", start);

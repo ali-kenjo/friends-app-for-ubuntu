@@ -7,9 +7,18 @@
 import { Animator } from "./animator.mjs";
 import { Director } from "./director.mjs";
 import { FaceTracker } from "./facetrack.js";
+import { robotSound } from "./sound.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
 
 export const animator = new Animator();
+animator.onSound = (kind, sub) => {
+  const fn = robotSound[kind] || robotSound.blip;
+  if (typeof fn === "function") fn.call(robotSound, sub);
+};
+animator.onUseProp = (info) => {
+  if (!info?.prop) return;
+  engine?.triggerProp(info.prop, info.action);
+};
 
 async function smartMood(text, heard) {
   if (!getSettings()?.robot?.smartMoods) return null;
@@ -32,7 +41,8 @@ let modelInfo = { custom: false };
 
 export function webglSupported() {
   try {
-    return Boolean(document.createElement("canvas").getContext("webgl2"));
+    const c = document.createElement("canvas");
+    return Boolean(c.getContext("webgl2") || c.getContext("webgl"));
   } catch {
     return false;
   }
@@ -42,7 +52,7 @@ function notify(name, detail) {
   document.dispatchEvent(new CustomEvent(`friends:robot-${name}`, { detail }));
 }
 
-// The engine, loaded once. Rejects (and stays unavailable) without WebGL 2.
+// The engine, loaded once. Rejects (and stays unavailable) without WebGL.
 export function loadEngine() {
   if (engine) return Promise.resolve(engine);
   if (!unavailable && !loading && !webglSupported()) {
@@ -53,7 +63,23 @@ export function loadEngine() {
   if (unavailable) return Promise.reject(new Error(unavailable));
   loading ||= (async () => {
     const { RobotEngine } = await import("./engine.js");
-    const e = new RobotEngine({ animator, hooks: { beforeUpdate: (dt) => director.frame(dt) } });
+    const e = new RobotEngine({
+      animator,
+      hooks: {
+        beforeUpdate: (dt) => director.frame(dt),
+        onTouch: (zone) => {
+          if (zone === "head" || zone === "cheek") robotSound.giggle();
+          else robotSound.blip("tap");
+        },
+        onPropUsed: (res) => {
+          const id = res?.propId || "";
+          if (id === "radio" || id === "record_player") robotSound.toggleAmbience("music");
+          else if (id === "fireplace" || id === "fire_pit" || id === "wood_stove") robotSound.toggleAmbience("fireplace");
+          else if (id === "plant" || id.includes("plant") || id.includes("fern")) robotSound.water();
+          else robotSound.blip("tap");
+        },
+      },
+    });
     engine = e;
     applySettings(getSettings());
     for (const [name, h] of hosts) {
@@ -86,6 +112,10 @@ function applySettings(s) {
   const d = r.design;
   animator.setOptions({ mouth: d.face.mouth !== "none" });
   animator.setSeat(r.seat);
+  animator.setBehaviors(d.behaviors);
+  animator.setFaceConfig(d.face);
+  director.setReactions(r.reactions);
+  robotSound.configure(r.sound);
   // The 2D faces (chat avatars) match the robot: its shell, its light and its eyes
   const root = document.documentElement;
   const light = d.colors.light || s.theme.accent;
@@ -95,6 +125,9 @@ function applySettings(s) {
   root.dataset.robotEyes = d.face.eyes;
   root.dataset.robotMouth = d.face.mouth === "none" ? "off" : "on";
   if (!engine) return;
+  if (engine.rooms) {
+    engine.rooms.weatherState = !s.privateMode && r.room?.weatherSync ? (window.__friendsWeatherState || "") : "";
+  }
   engine.setLook({
     design: d,
     accent: s.theme.accent,
@@ -104,6 +137,7 @@ function applySettings(s) {
     cinematic: r.cinematic,
     roam: r.roam !== false,
     world: r.world !== false,
+    eyesFollowCursor: r.eyesFollowCursor !== false,
     cameraFriendly: filming.on && filming.cameraFriendly,
     largerFace: filming.on && filming.largerFace,
     theme: { bg: themeBackground(), glow: document.documentElement.dataset.theme === "light" ? 0.06 : 0.08 },
@@ -192,14 +226,38 @@ async function useBackground(info) {
   notify("background", { info: backgroundInfo });
 }
 
+// Event listeners for app-wide reactions (missions, reminders, notifications, tasks, streaks, hourly, return)
+document.addEventListener("friends:robot-event", (e) => {
+  const d = e.detail || {};
+  if (d.type) director.reactEvent(d.type, d);
+});
+
+let hiddenSince = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    hiddenSince = Date.now();
+  } else if (hiddenSince && Date.now() - hiddenSince > 180000) {
+    hiddenSince = 0;
+    director.reactEvent("user_return");
+  }
+});
+
 export const robot = {
   director,
   animator,
+  sound: robotSound,
+  reactEvent: (type, detail = {}) => director.reactEvent(type, detail),
   get engine() {
     return engine;
   },
   get unavailable() {
     return unavailable;
+  },
+  capturePhoto(options) {
+    return engine?.capturePhoto(options) || "";
+  },
+  captureThumbnail(size) {
+    return engine?.captureThumbnail(size) || "";
   },
 
   // A place that shows the robot. options: see RobotEngine.attach

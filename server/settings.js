@@ -193,16 +193,38 @@ const DEFAULTS = {
     design: look.design.defaultDesign(), // what it looks like: colors, shape, face, clothes (src/js/robot/design.mjs)
     room: look.room.defaultRoom(), // what's around it: place, colors, light, air (src/js/robot/room.mjs)
     looks: [], // looks you saved: { id, name, design, room }
+    customRooms: [], // custom rooms you saved in the Room Builder: { id, name, room }
+    cameraMoves: [], // saved custom camera moves: { id, name, shot, view, yaw, pitch, zoom }
     shot: "medium", // ROBOT.shots
     position: "center", // ROBOT.positions: where the robot stands in the picture
     seat: "front", // ROBOT.seats: where you sit, so it can turn to you
     followFace: false, // eyes follow you through the webcam (all on this computer)
+    eyesFollowCursor: true, // eyes subtly track the pointer when hovering near the stage
     cinematic: false, // gentle camera drift and a push-in on emphasis
     roam: true, // in voice mode it moves about the room, and you can poke it and drag the view
     world: true, // the room around it: glossy floor and reflection, drifting light, rings on the floor
     aiGestures: { voice: true, chat: false }, // the AI moves the robot itself (robot_mood / robot_gesture)
     smartMoods: false, // one small extra Gemini request per turn to read the mood
     quality: "auto", // ROBOT.qualities
+    sound: {
+      enabled: false, // synthesized WebAudio blips, hums, servo whirs, giggles, sighs, chimes (off by default)
+      volume: 50, // 0..100
+      pitch: 1, // 0.6..1.5 per-character pitch multiplier
+      blips: true,
+      servos: true,
+      emotes: true,
+      ambience: true,
+      recordMix: false, // mix robot sounds into video recordings only when chosen
+    },
+    reactions: {
+      mission: true,
+      reminder: true,
+      notifications: true, // incoming Telegram or Reddit notifications (looks at tablet/phone prop)
+      taskDone: true,
+      habitStreak: true,
+      timeOfDay: true,
+      userReturn: true,
+    },
     filming: {
       delay: 3, // seconds before the conversation starts (ROBOT.delays)
       cameraFriendly: true, // no flicker, fine lines or pure white; steadier frames
@@ -242,7 +264,7 @@ const ON_AIR = {
 const ROUTING = { modes: ["fixed", "auto", "dynamic", "fastest", "local", "cloud"], ask: ["always", "chat", "never"] };
 
 const ROBOT = {
-  shots: ["close", "medium", "wide"],
+  shots: ["close", "medium", "wide", "orbit", "dolly", "rack_focus", "handheld", "security_cam", "cinematic"],
   positions: ["center", "left", "right"],
   seats: ["front", "left", "right"],
   qualities: ["auto", "low", "medium", "high"],
@@ -364,10 +386,15 @@ function sanitize(input) {
   r.design = look.design.sanitizeDesign(raw.design);
   r.room = look.room.sanitizeRoom(raw.room);
   r.looks = look.cleanLooks(raw.looks);
+  r.customRooms = look.cleanCustomRooms(raw.customRooms);
+  r.cameraMoves = look.cleanCameraMoves(raw.cameraMoves);
   r.shot = oneOf(r.shot, ROBOT.shots, DEFAULTS.robot.shot);
   r.position = oneOf(r.position, ROBOT.positions, DEFAULTS.robot.position);
   r.seat = oneOf(r.seat, ROBOT.seats, DEFAULTS.robot.seat);
   r.quality = oneOf(r.quality, ROBOT.qualities, DEFAULTS.robot.quality);
+  r.sound.volume = whole(r.sound.volume ?? DEFAULTS.robot.sound.volume, 0, 100);
+  const pitch = Number(r.sound.pitch);
+  r.sound.pitch = Number.isFinite(pitch) ? Math.min(1.5, Math.max(0.6, Math.round(pitch * 100) / 100)) : 1;
   // Any number of seconds becomes the nearest allowed delay
   const delay = Number.isFinite(r.filming.delay) ? Math.min(10, Math.max(0, r.filming.delay)) : DEFAULTS.robot.filming.delay;
   r.filming.delay = ROBOT.delays.reduce((best, d) => (Math.abs(d - delay) < Math.abs(best - delay) ? d : best));

@@ -17,13 +17,52 @@ const TAU = Math.PI * 2;
 const SILENT = [0, 0, 0, 0];
 
 // Where each gaze mode looks, -1..1 (+x the viewer's right, +y up)
-const GAZE = { audience: [0, 0], up: [0.35, 0.55], down: [0, -0.5], composer: [-0.6, -0.45] };
+const GAZE = {
+  audience: [0, 0],
+  up: [0.35, 0.55],
+  down: [0, -0.5],
+  composer: [-0.6, -0.45],
+  left: [-0.75, 0.05],
+  right: [0.75, 0.05],
+  window: [0.65, 0.35],
+  clock: [-0.55, 0.65],
+  cat: [0.5, -0.55],
+  fish: [-0.65, 0.1],
+  plant: [-0.6, -0.25],
+  tv: [0.6, 0.1],
+  fireplace: [0.45, -0.35],
+  book: [0, -0.55],
+  tablet: [0.15, -0.5],
+};
+// Named spots in the room (-0.48..0.48 sideways, -0.38..0.38 depth)
+export const ROOM_SPOTS = {
+  center: [0, 0],
+  left: [-0.38, -0.05],
+  right: [0.38, -0.05],
+  front: [0, 0.28],
+  back: [0, -0.32],
+  window: [0.36, -0.28],
+  desk: [-0.34, -0.22],
+  couch: [0.32, -0.18],
+  plant: [-0.38, -0.15],
+  lamp: [0.35, -0.25],
+  fireplace: [0.3, -0.26],
+  bookshelf: [-0.4, -0.28],
+  bed: [-0.35, -0.24],
+  kitchen: [-0.32, -0.2],
+  arcade: [0.36, -0.22],
+  telescope: [0.28, -0.3],
+  tea_table: [0, -0.16],
+  helm: [0, 0.18],
+};
 // Where you sit, as you look at the screen
 export const SEATS = { front: [0, -0.05], left: [-0.85, -0.05], right: [0.85, -0.05] };
 
 export class Animator {
-  constructor({ random = Math.random } = {}) {
+  constructor({ random = Math.random, onUseProp = null, onSound = null } = {}) {
     this.random = random;
+    this.onUseProp = onUseProp;
+    this.onSound = onSound;
     this.springs = new Springs(CHANNELS);
     this.mixer = new Mixer(NEUTRAL);
     this.moods = new MoodSmoother();
@@ -32,10 +71,29 @@ export class Animator {
     this.t = 0; // seconds of animation so far
     this.state = "idle";
     this.stateSince = 0;
-    this.options = { reducedMotion: false, cameraFriendly: false, mouth: true, roam: 0 };
+    this.options = { reducedMotion: false, cameraFriendly: false, mouth: true, roam: 0, eyesFollowCursor: true };
+    this.faceConfig = { blinkRate: 1, blinkStyle: "normal", pupilStyle: "dot" };
+    this.behaviors = {
+      preset: "balanced",
+      energy: 0.5,
+      curiosity: 0.5,
+      playfulness: 0.5,
+      clumsiness: 0.15,
+      shyness: 0.2,
+      expressiveness: 0.6,
+      talkMotion: 0.5,
+      roamRange: 0.5,
+      personalSpace: 0.5,
+      reactionStrength: 0.6,
+      idle: null,
+    };
     this.wander = { x: 0, z: 0, next: 0, state: "", side: 1 }; // where it is heading in the room
+    this.moveTarget = null; // { target, x, z, until } from robot_go_to or idle prop inspection
+    this.lookTarget = null; // { target, x, y, until } from robot_look_at or prop use
+    this.dragState = { active: false, x: 0, z: 0 };
+    this.lastPropUse = null;
     this.pointer = null; // { x, y, at } the mouse or finger, relative to the robot
-    this.pokes = { count: 0, last: -100, hover: -100 };
+    this.pokes = { count: 0, last: -100, hover: -100, zoneCounts: {} };
     this.seat = "front";
     this.face = null; // { x, y } from "Follow my face", or null
     this.audio = { bands: [0, 0, 0, 0], at: -Infinity };
@@ -47,13 +105,36 @@ export class Animator {
     this.nextIdleGesture = 10 + random() * 8;
     this.bobPhase = random() * TAU;
     this.breathPhase = random() * TAU;
+    this.idleSeed = this.bobPhase * 13.37 + 1;
+    this.idleActivity = { kind: "breathe", until: 0, next: 14, isNapping: false, heldOverride: "" };
+    this.contextHour = null; // optional 0..23 hour for time-of-day reactions
     this.chasePhase = 0;
     this.emphasisAvg = 0;
     this.lastEmphasis = -10;
     this.lastActivity = 0;
     this.offsets = { ...NEUTRAL }; // reused every frame: additive changes (zeroed each frame)
     this.gestureOffsets = {};
-    this.pose = { ...NEUTRAL, blink: 0, spin: 0, chasePhase: 0, mouthVisible: 1, speaking: 0, userTalking: 0, mood: "neutral", gesture: "", t: 0 };
+    this.pose = {
+      ...NEUTRAL,
+      blink: 0,
+      spin: 0,
+      chasePhase: 0,
+      mouthVisible: 1,
+      speaking: 0,
+      userTalking: 0,
+      mood: "neutral",
+      gesture: "",
+      viseme: "rest",
+      idleKind: "breathe",
+      heldOverride: "",
+      t: 0,
+    };
+  }
+
+  // Deterministic secondary RNG for idle scheduler so primary random() sequence stays repeatable
+  idleRng() {
+    this.idleSeed = (this.idleSeed * 1664525 + 1013904223) % 4294967296;
+    return this.idleSeed / 4294967296;
   }
 
   // ---------- Inputs ----------
@@ -63,6 +144,7 @@ export class Animator {
 
   setState(state) {
     if (!STATES[state] || state === this.state) return;
+    if (this.idleActivity.isNapping && state !== "standby" && state !== "idle") this.wakeFromNap();
     this.state = state;
     this.stateSince = this.t;
     this.lastActivity = this.t;
@@ -71,6 +153,35 @@ export class Animator {
 
   setOptions(options) {
     Object.assign(this.options, options);
+  }
+
+  setBehaviors(behaviors) {
+    if (!behaviors || typeof behaviors !== "object") return;
+    Object.assign(this.behaviors, behaviors);
+  }
+
+  setFaceConfig(face) {
+    if (!face || typeof face !== "object") return;
+    if (face.blinkRate != null) this.faceConfig.blinkRate = clamp(Number(face.blinkRate) || 1, 0.2, 2.5);
+    if (face.blinkStyle) this.faceConfig.blinkStyle = String(face.blinkStyle);
+    if (face.pupilStyle) this.faceConfig.pupilStyle = String(face.pupilStyle);
+  }
+
+  setContextHour(hour) {
+    this.contextHour = hour == null ? null : ((Number(hour) % 24) + 24) % 24;
+  }
+
+  wakeFromNap() {
+    if (!this.idleActivity.isNapping) return false;
+    this.idleActivity.isNapping = false;
+    this.idleActivity.kind = "breathe";
+    this.idleActivity.heldOverride = "";
+    this.idleActivity.until = this.t + 3;
+    this.lastActivity = this.t;
+    this.setMood("relieved", { source: "smart", strength: 0.75 });
+    this.gestures.push("wake_up", { priority: PRIORITY.reaction, now: this.now });
+    this.onSound?.("sigh");
+    return true;
   }
 
   setSeat(seat) {
@@ -88,11 +199,75 @@ export class Animator {
     this.pointer = pointer ? { x: clamp(pointer.x, -1, 1), y: clamp(pointer.y, -1, 1), at: this.t } : null;
   }
 
-  // Someone touches the robot. kind: "hover" | "tap" | "hold"; x: where on it
-  // (-1 left .. 1 right), so a poke on one side pushes it the other way.
-  // Taps escalate: a start, a laugh, then a victory spin.
-  poke(kind = "tap", { x = 0 } = {}) {
+  // Drag the robot around the room within stage bounds; when released it floats back
+  drag(x = 0, z = 0, active = true) {
+    if (!active) {
+      if (this.dragState.active) {
+        this.dragState.active = false;
+        this.onSound?.("servo");
+      }
+      return;
+    }
+    this.wakeFromNap();
+    this.lastActivity = this.t;
+    this.dragState.active = true;
+    this.dragState.x = clamp(Number(x) || 0, -0.5, 0.5);
+    this.dragState.z = clamp(Number(z) || 0, -0.38, 0.38);
+  }
+
+  // Move to a named spot or explicit room coordinate (-0.48..0.48, -0.38..0.38)
+  goTo({ target = "center", x = null, z = null, duration = 6 } = {}) {
+    this.wakeFromNap();
+    this.lastActivity = this.t;
+    const spot = ROOM_SPOTS[target] || ROOM_SPOTS.center;
+    const tx = x != null && Number.isFinite(Number(x)) ? clamp(Number(x), -0.48, 0.48) : spot[0];
+    const tz = z != null && Number.isFinite(Number(z)) ? clamp(Number(z), -0.38, 0.38) : spot[1];
+    this.moveTarget = { target, x: tx, z: tz, until: this.t + clamp(Number(duration) || 6, 1, 30) };
+    this.onSound?.("servo");
+    return this.moveTarget;
+  }
+
+  // Look toward a named target or explicit gaze coordinate (-1..1)
+  lookAt({ target = "user", x = null, y = null, duration = 5 } = {}) {
+    this.wakeFromNap();
+    this.lastActivity = this.t;
+    const base = target === "user" ? SEATS[this.seat] : GAZE[target] || GAZE.audience;
+    const lx = x != null && Number.isFinite(Number(x)) ? clamp(Number(x), -1, 1) : base[0];
+    const ly = y != null && Number.isFinite(Number(y)) ? clamp(Number(y), -1, 1) : base[1];
+    this.lookTarget = { target, x: lx, y: ly, until: this.t + clamp(Number(duration) || 5, 1, 25) };
+    return this.lookTarget;
+  }
+
+  // Interact with a room prop (by AI tool, idle behavior, or user request)
+  useProp({ prop = "", action = "toggle", source = "tool" } = {}) {
+    if (!prop) return false;
+    this.wakeFromNap();
+    this.lastActivity = this.t;
+    this.lastPropUse = { prop: String(prop), action: String(action || "toggle"), source, at: this.t };
+    const key = String(prop).toLowerCase();
+    if (GAZE[key]) this.lookAt({ target: key, duration: 4 });
+    else if (ROOM_SPOTS[key]) {
+      const [sx] = ROOM_SPOTS[key];
+      this.lookAt({ x: clamp(sx * 1.6, -0.85, 0.85), y: -0.15, duration: 4 });
+    }
+    if (!this.gestures.busy) {
+      const g = key.includes("left") || key.includes("plant") || key.includes("book") ? "point_left" : "point_right";
+      this.gestures.push(g, { priority: source === "idle" ? PRIORITY.idle : PRIORITY.tool, now: this.now });
+    }
+    this.onSound?.("blip");
+    this.onUseProp?.(this.lastPropUse);
+    return true;
+  }
+
+  // Someone touches the robot. kind: "hover" | "tap" | "hold" | "pat"; x: where on it
+  // (-1 left .. 1 right), zone: "" | "head" | "cheek" | "arm" | "belly".
+  // Taps escalate: a start, a laugh, then a victory spin (or zone-specific reactions).
+  poke(kind = "tap", { x = 0, y = 0, zone = "" } = {}) {
     const k = this.pokes;
+    if (this.idleActivity.isNapping && kind !== "hover") {
+      this.wakeFromNap();
+      return true;
+    }
     if (kind === "hover") {
       if (this.t - k.hover < 6 || this.gestures.busy || this.state === "thinking") return false;
       k.hover = this.t;
@@ -106,12 +281,87 @@ export class Animator {
     if (kind === "hold") {
       this.setMood("affectionate", { source: "tool", strength: 0.9 });
       this.gestures.push("lean_in", { priority: PRIORITY.tool, now: this.now });
+      this.onSound?.("sigh");
       return true;
     }
     k.count = this.t - k.last < 5 ? k.count + 1 : 1;
     k.last = this.t;
     const rm = this.options.reducedMotion;
-    const push = this.options.roam > 0 && !rm ? 1 : 0.25;
+    const reactMul = clamp((this.behaviors.reactionStrength ?? 0.6) / 0.6, 0.4, 1.6);
+    const push = (this.options.roam > 0 && !rm ? 1 : 0.25) * reactMul;
+
+    if (zone === "head" || kind === "pat") {
+      const zc = (k.zoneCounts.head = this.t - (k.zoneCounts.headAt || -100) < 6 ? (k.zoneCounts.head || 0) + 1 : 1);
+      k.zoneCounts.headAt = this.t;
+      this.springs.impulse("squash", 0.55 * reactMul);
+      this.springs.impulse("blush", 1.2);
+      this.springs.impulse("eyeHearts", zc >= 3 ? 2.2 : 0.8);
+      const headSteps = [
+        ["happy", "nod"],
+        ["affectionate", "shy"],
+        ["love", "hug"],
+      ];
+      const [mood, gesture] = headSteps[Math.min(zc, 3) - 1];
+      this.setMood(mood, { source: "tool", strength: 0.95 });
+      this.gestures.push(gesture, { priority: PRIORITY.tool, now: this.now });
+      this.onSound?.("chime");
+      return true;
+    }
+
+    if (zone === "cheek") {
+      const zc = (k.zoneCounts.cheek = this.t - (k.zoneCounts.cheekAt || -100) < 6 ? (k.zoneCounts.cheek || 0) + 1 : 1);
+      k.zoneCounts.cheekAt = this.t;
+      this.springs.impulse("headYaw", -clamp(x || 0.5, -1, 1) * 0.9 * reactMul);
+      this.springs.impulse("blush", 1.8);
+      this.springs.impulse("cheekLight", 2.4);
+      const cheekSteps = [
+        ["surprised", "wink"],
+        ["embarrassed", "shy"],
+        ["mischievous", "blow_kiss"],
+        ["laughing", "dizzy"],
+      ];
+      const [mood, gesture] = cheekSteps[Math.min(zc, 4) - 1];
+      this.setMood(mood, { source: "tool", strength: 0.9 });
+      this.gestures.push(gesture, { priority: PRIORITY.tool, now: this.now });
+      this.onSound?.("blip");
+      return true;
+    }
+
+    if (zone === "arm") {
+      const zc = (k.zoneCounts.arm = this.t - (k.zoneCounts.armAt || -100) < 6 ? (k.zoneCounts.arm || 0) + 1 : 1);
+      k.zoneCounts.armAt = this.t;
+      this.springs.impulse(x < 0 ? "armLRaise" : "armRRaise", 1.8 * reactMul);
+      const armSteps = [
+        ["happy", "high_five"],
+        ["excited", "fist_pump"],
+        ["proud", "flex"],
+        ["excited", "clap"],
+      ];
+      const [mood, gesture] = armSteps[Math.min(zc, 4) - 1];
+      this.setMood(mood, { source: "tool", strength: 0.9 });
+      this.gestures.push(gesture, { priority: PRIORITY.tool, now: this.now });
+      this.onSound?.("chime");
+      return true;
+    }
+
+    if (zone === "belly") {
+      const zc = (k.zoneCounts.belly = this.t - (k.zoneCounts.bellyAt || -100) < 6 ? (k.zoneCounts.belly || 0) + 1 : 1);
+      k.zoneCounts.bellyAt = this.t;
+      this.springs.impulse("squash", 0.9 * reactMul);
+      this.springs.impulse("posZ", -0.5 * push);
+      const bellySteps = [
+        ["surprised", "hiccup"],
+        ["playful", "bounce"],
+        ["laughing", "shiver"],
+        ["laughing_hard", "dance_groove"],
+      ];
+      const [mood, gesture] = bellySteps[Math.min(zc, 4) - 1];
+      this.setMood(mood, { source: "tool", strength: 0.95 });
+      this.gestures.push(gesture, { priority: PRIORITY.tool, now: this.now });
+      this.onSound?.("giggle");
+      return true;
+    }
+
     this.springs.impulse("posX", -clamp(x, -1, 1) * 1.1 * push);
     this.springs.impulse("posZ", -0.8 * push);
     this.springs.impulse("squash", 0.7);
@@ -126,6 +376,7 @@ export class Animator {
     const [mood, gesture] = steps[Math.min(k.count, 4) - 1] || ["excited", "celebrate"];
     this.setMood(mood, { source: "tool", strength: 0.9 });
     this.gestures.push(gesture, { priority: PRIORITY.tool, now: this.now });
+    this.onSound?.(k.count >= 3 ? "giggle" : "blip");
     return true;
   }
 
@@ -145,7 +396,9 @@ export class Animator {
   setMood(mood, { source = "caption", strength = 0.6 } = {}) {
     if (!MOODS.includes(mood)) return false;
     this.lastActivity = this.t;
-    return this.moods.request(mood, { source, strength, now: this.now });
+    const expr = clamp((this.behaviors.expressiveness ?? 0.6) / 0.6, 0.35, 1.5);
+    const scaled = source === "tool" ? strength : clamp(strength * expr, 0.1, 1);
+    return this.moods.request(mood, { source, strength: scaled, now: this.now });
   }
 
   gesture(name, { priority = PRIORITY.caption } = {}) {
@@ -178,6 +431,7 @@ export class Animator {
     m.blend(state.pose, 1);
     m.blend(MOOD_POSES[mood], state.moodWeight);
     this.idle(o, dt, mood);
+    this.stepIdleActivity(o, dt, mood);
     this.roam(o);
     this.maybeIdleGesture(mood);
 
@@ -224,6 +478,9 @@ export class Animator {
     p.userTalking = this.userTalking;
     p.mood = mood;
     p.gesture = g ? g.name : "";
+    p.viseme = this.shape?.viseme || "rest";
+    p.idleKind = this.idleActivity.isNapping ? "nap" : this.idleActivity.kind;
+    p.heldOverride = this.idleActivity.heldOverride || "";
     p.t = this.t;
     return p;
   }
@@ -232,9 +489,10 @@ export class Animator {
   idle(o, dt, mood) {
     const t = this.t;
     const body = this.options.reducedMotion ? 0.3 : 1;
-    const sleepy = mood === "sleepy" || this.state === "standby";
-    this.bobPhase += dt * TAU * (sleepy ? 0.2 : mood === "excited" ? 0.5 : 0.33);
-    this.breathPhase += dt * TAU * (sleepy ? 0.15 : 0.25);
+    const energyMul = clamp(0.6 + (this.behaviors.energy ?? 0.5) * 0.8, 0.4, 1.5);
+    const sleepy = mood === "sleepy" || this.state === "standby" || this.idleActivity.isNapping;
+    this.bobPhase += dt * TAU * (sleepy ? 0.2 : mood === "excited" ? 0.5 : 0.33 * energyMul);
+    this.breathPhase += dt * TAU * (sleepy ? 0.15 : 0.25 * energyMul);
     o.hoverY += Math.sin(this.bobPhase) * 0.016 * body;
     o.ringGlow += Math.sin(this.bobPhase + 1.2) * 0.08; // the ring brightens as it dips
     o.bodyRoll += noise1(t * 0.35, 1) * 0.025 * body;
@@ -249,16 +507,211 @@ export class Animator {
     o.finL += noise1(t * 0.5, 8) * 0.05 * body;
     o.finR += noise1(t * 0.5, 9) * 0.05 * body;
 
-    if (mood === "laughing") {
-      const k = 0.5 + 0.5 * Math.sin(t * TAU * 4.2);
-      o.hoverY += 0.012 * k * body;
-      o.headPitch -= 0.035 * k;
-      o.squash += 0.012 * k;
-      o.bodyRoll += 0.02 * Math.sin(t * TAU * 2.1) * body;
-    } else if (mood === "excited") {
+    if (mood === "laughing" || mood === "laughing_hard") {
+      const k = 0.5 + 0.5 * Math.sin(t * TAU * (mood === "laughing_hard" ? 5.2 : 4.2));
+      const amp = mood === "laughing_hard" ? 1.4 : 1;
+      o.hoverY += 0.012 * k * body * amp;
+      o.headPitch -= 0.035 * k * amp;
+      o.squash += 0.012 * k * amp;
+      o.bodyRoll += 0.02 * Math.sin(t * TAU * 2.1) * body * amp;
+    } else if (mood === "excited" || mood === "playful") {
       o.hoverY += 0.006 * Math.sin(t * TAU * 1.6) * body;
-    } else if (mood === "happy" || mood === "affectionate") {
+    } else if (mood === "happy" || mood === "affectionate" || mood === "love") {
       o.bodyRoll += 0.02 * Math.sin(t * TAU * 0.45) * body;
+    } else if (mood === "dreamy") {
+      o.bodyRoll += 0.03 * Math.sin(t * TAU * 0.28) * body;
+      o.hoverY += 0.008 * Math.sin(t * TAU * 0.3) * body;
+    }
+
+    // Context-aware micro-reactions (gated off in filming / cameraFriendly mode)
+    if (!this.options.cameraFriendly) {
+      const inState = t - this.stateSince;
+      // 1. Sleepy at night when idle
+      const isNight = this.contextHour != null && (this.contextHour >= 23 || this.contextHour < 6);
+      if (isNight && this.state === "idle" && t - this.lastActivity > 25) {
+        o.eyeH -= 0.16;
+        o.headPitch -= 0.04;
+      }
+      // 2. Tapping fingers while a reply is slow
+      if (this.state === "waiting" && inState > 3.5) {
+        const tap = Math.max(0, Math.sin(t * TAU * 3.2));
+        o.armRRaise += 0.14 * tap * body;
+        o.armLRaise += 0.08 * Math.max(0, Math.sin(t * TAU * 3.2 + Math.PI)) * body;
+        o.foreheadLight += 0.35 * tap;
+      }
+      // 3. Pacing while thinking long
+      if ((this.state === "thinking" || this.state === "busy") && inState > 5.0) {
+        o.bodyYaw += Math.sin(t * 1.8) * 0.08 * body;
+        o.foreheadLight += 0.45 + 0.35 * Math.sin(t * 5);
+        if (this.options.roam > 0 && !this.options.reducedMotion) {
+          o.posX += Math.sin(t * 1.1) * 0.08 * clamp(this.options.roam, 0, 1);
+        }
+      }
+      // 4. Peeking while you type
+      if (this.state === "typing" && inState > 1.2) {
+        o.headPitch += 0.05 * Math.sin(t * 2.2) * body;
+        o.pupilSize += 0.08;
+      }
+    }
+  }
+
+  // Weighted idle-behavior scheduler so the robot is never frozen when idle
+  stepIdleActivity(o, dt, mood) {
+    if (this.options.cameraFriendly) {
+      this.idleActivity.kind = "breathe";
+      this.idleActivity.heldOverride = "";
+      return;
+    }
+    const act = this.idleActivity;
+    const quiet = this.t - this.lastActivity;
+    const isIdle = (this.state === "idle" || this.state === "listening" || this.state === "standby") &&
+      this.t - this.audio.at > 2.5 &&
+      this.userTalking <= 0 &&
+      !this.gestures.busy;
+
+    if (!isIdle) {
+      if (act.isNapping && this.state !== "standby") this.wakeFromNap();
+      act.kind = "breathe";
+      act.heldOverride = "";
+      return;
+    }
+
+    // Long idle -> nap (when enabled, default on after 95s quiet)
+    const idleCfg = this.behaviors.idle;
+    const napOn = !idleCfg?.nap || idleCfg.nap.on !== false;
+    const napThreshold = 95 / clamp(idleCfg?.nap?.freq ?? 0.4, 0.15, 1);
+    if (napOn && !act.isNapping && quiet > napThreshold) {
+      act.isNapping = true;
+      act.kind = "nap";
+      act.heldOverride = "";
+      this.moods.request("sleepy", { source: "smart", strength: 0.9, now: this.now });
+    }
+
+    if (act.isNapping) {
+      const deep = Math.sin(this.t * 1.2);
+      o.eyeH -= 0.42;
+      o.headPitch -= 0.12 + 0.03 * deep;
+      o.hoverY -= 0.04;
+      o.squash += 0.015 * deep;
+      return;
+    }
+
+    // Pick a new weighted idle activity when the timer expires
+    if (this.t >= act.next && quiet > 12) {
+      const b = this.behaviors;
+      const wOf = (id, defWeight, trait = 0.5) => {
+        const entry = idleCfg?.[id];
+        if (entry && entry.on === false) return 0;
+        const f = entry?.freq ?? defWeight;
+        return Math.max(0, f * (0.5 + trait));
+      };
+      const candidates = [
+        ["breathe", wOf("breathe", 0.8, 1 - (b.energy ?? 0.5))],
+        ["lookAround", wOf("lookAround", 0.7, b.curiosity ?? 0.5)],
+        ["inspectProp", wOf("inspectProp", 0.5, b.curiosity ?? 0.5)],
+        ["stretch", wOf("stretch", 0.4, b.energy ?? 0.5)],
+        ["yawn", wOf("yawn", 0.35, 1 - (b.energy ?? 0.5))],
+        ["hum", wOf("hum", 0.45, b.playfulness ?? 0.5)],
+        ["fidget", wOf("fidget", 0.5, b.clumsiness ?? 0.2)],
+        ["tinker", wOf("tinker", 0.35, b.curiosity ?? 0.5)],
+        ["readBook", wOf("readBook", 0.3, 1 - (b.energy ?? 0.5))],
+        ["waterPlant", wOf("waterPlant", 0.25, b.curiosity ?? 0.5)],
+        ["sipDrink", wOf("sipDrink", 0.3, 0.5)],
+        ["checkTablet", wOf("checkTablet", 0.3, b.curiosity ?? 0.5)],
+      ];
+      let total = 0;
+      for (const [, w] of candidates) total += w;
+      let pick = "breathe";
+      if (total > 0) {
+        let r = this.idleRng() * total;
+        for (const [id, w] of candidates) {
+          r -= w;
+          if (r <= 0) {
+            pick = id;
+            break;
+          }
+        }
+      }
+      act.kind = pick;
+      const dur = pick === "readBook" || pick === "tinker" ? 6.5 : pick === "hum" ? 5 : 4;
+      act.until = this.t + dur;
+      const freqScale = clamp(1.3 - (b.energy ?? 0.5) * 0.6, 0.6, 1.5);
+      act.next = this.t + dur + (6 + this.idleRng() * 8) * freqScale;
+      act.heldOverride =
+        pick === "readBook" ? "book" : pick === "sipDrink" ? "mug" : pick === "checkTablet" ? "tablet" : pick === "tinker" ? "wrench" : "";
+
+      if (pick === "stretch") this.gestures.push("stretch", { priority: PRIORITY.idle, now: this.now });
+      else if (pick === "yawn") this.gestures.push("yawn", { priority: PRIORITY.idle, now: this.now });
+      else if (pick === "lookAround") this.gestures.push("look_around", { priority: PRIORITY.idle, now: this.now });
+      else if (pick === "inspectProp") {
+        const props = ["plant", "window", "clock", "bookshelf", "lamp"];
+        const target = props[Math.floor(this.idleRng() * props.length)];
+        this.lookAt({ target, duration: 3.8 });
+      } else if (pick === "waterPlant") {
+        this.useProp({ prop: "plant", action: "water", source: "idle" });
+      } else if (pick === "hum") {
+        this.onSound?.("hum");
+      }
+    }
+
+    if (this.t > act.until) {
+      act.kind = "breathe";
+      act.heldOverride = "";
+      return;
+    }
+
+    const body = this.options.reducedMotion ? 0.35 : 1;
+    const phase = this.t * TAU;
+    switch (act.kind) {
+      case "hum":
+        o.bodyRoll += Math.sin(phase * 0.8) * 0.05 * body;
+        o.headPitch += Math.sin(phase * 1.6) * 0.03 * body;
+        o.cheekLight += 0.35 + 0.25 * Math.sin(phase * 1.6);
+        o.mouthCurve += 0.25;
+        break;
+      case "fidget":
+        o.armLRaise += (0.12 + 0.1 * Math.sin(phase * 1.9)) * body;
+        o.armRRaise += (0.12 + 0.1 * Math.cos(phase * 2.1)) * body;
+        o.finL += 0.12 * Math.sin(phase * 2.5) * body;
+        o.finR -= 0.12 * Math.sin(phase * 2.5) * body;
+        break;
+      case "tinker":
+        o.armLRaise += 0.45 * body;
+        o.armRRaise += 0.48 * body;
+        o.armLSpread -= 0.22 * body;
+        o.armRSpread -= 0.22 * body;
+        o.headPitch -= 0.14 * body;
+        o.foreheadLight += 0.4 + 0.3 * Math.sin(phase * 3);
+        break;
+      case "readBook":
+        o.armLRaise += 0.42 * body;
+        o.armRRaise += 0.42 * body;
+        o.armLSpread -= 0.18 * body;
+        o.armRSpread -= 0.18 * body;
+        o.headPitch -= 0.16 * body;
+        o.lookY -= 0.35;
+        o.lookX += Math.sin(this.t * 1.4) * 0.18;
+        break;
+      case "sipDrink": {
+        const sip = Math.max(0, Math.sin((this.t - (act.until - 4)) * Math.PI * 0.5));
+        o.armRRaise += (0.35 + 0.45 * sip) * body;
+        o.armRSpread -= 0.18 * sip * body;
+        o.headPitch += 0.08 * sip * body;
+        o.mouthRound += 0.35 * sip;
+        break;
+      }
+      case "checkTablet":
+        o.armLRaise += 0.46 * body;
+        o.armLSpread -= 0.16 * body;
+        o.headPitch -= 0.14 * body;
+        o.headYaw -= 0.1 * body;
+        o.lookY -= 0.3;
+        o.foreheadLight += 0.35;
+        break;
+      case "inspectProp":
+        o.headRoll += 0.08 * body;
+        o.pupilSize += 0.12;
+        break;
     }
   }
 
@@ -267,6 +720,19 @@ export class Animator {
   // seconds, and the state decides where: closer and turned to you while you
   // talk, back and to the side while it thinks, drifting about while it talks.
   roam(o) {
+    if (this.dragState.active) {
+      o.posX += this.dragState.x;
+      o.posZ += this.dragState.z;
+      return;
+    }
+    if (this.moveTarget) {
+      if (this.t <= this.moveTarget.until && !this.options.reducedMotion) {
+        o.posX += this.moveTarget.x;
+        o.posZ += this.moveTarget.z;
+        return;
+      }
+      this.moveTarget = null;
+    }
     const amount = this.options.reducedMotion ? 0 : clamp(this.options.roam || 0, 0, 1);
     if (amount <= 0) return;
     const w = this.wander;
@@ -304,8 +770,8 @@ export class Animator {
     }
     // When you move in front of the camera, it keeps its eyes (and a little of itself) on you
     const follow = this.face && (state === "listening" || state === "hearing") ? this.face.x * 0.12 : 0;
-    o.posX += (w.x + follow) * amount;
-    o.posZ += w.z * amount + 0.05 * clamp(this.springs.value.emphasis || 0, 0, 2) * amount;
+    o.posX += clamp((w.x + follow) * amount, -0.46, 0.46);
+    o.posZ += clamp(w.z * amount + 0.05 * clamp(this.springs.value.emphasis || 0, 0, 2) * amount, -0.36, 0.36);
   }
 
   // Now and then, when nothing else is going on: a yawn, a tilt, a look around
@@ -326,12 +792,16 @@ export class Animator {
   gaze(o, mode) {
     let [x, y] = GAZE[mode] || GAZE.audience;
     if (mode === "user") [x, y] = this.face ? [this.face.x, this.face.y] : SEATS[this.seat];
-    // Your mouse (or finger) wins for a few seconds after it moves, unless the webcam sees you
-    const ptr = this.pointer;
-    if (ptr && !this.face && this.t - ptr.at < 5 && (mode === "audience" || mode === "user")) [x, y] = [ptr.x, ptr.y];
+    if (this.lookTarget) {
+      if (this.t <= this.lookTarget.until) [x, y] = [this.lookTarget.x, this.lookTarget.y];
+      else this.lookTarget = null;
+    }
+    // Your mouse (or finger) wins for a few seconds after it moves, unless the webcam sees you or eyesFollowCursor is off
+    const ptr = this.options.eyesFollowCursor !== false ? this.pointer : null;
+    if (ptr && !this.face && !this.lookTarget && this.t - ptr.at < 5 && (mode === "audience" || mode === "user")) [x, y] = [ptr.x, ptr.y];
     // Talking to the audience: straight out, but the eyes still find your face
     let eyesOnly = null;
-    if (mode === "audience" && this.face) eyesOnly = [this.face.x * 0.5, this.face.y * 0.5];
+    if (mode === "audience" && this.face && !this.lookTarget) eyesOnly = [this.face.x * 0.5, this.face.y * 0.5];
 
     const body = this.options.reducedMotion ? 0.5 : 1;
     o.headYaw += x * 0.42 * body;
@@ -355,6 +825,8 @@ export class Animator {
     const [ex, ey] = eyesOnly || [x, y];
     o.lookX += ex * 0.55 + s.x;
     o.lookY += ey * 0.5 + s.y;
+    o.pupilX += clamp(ex * 0.7 + s.x * 1.2, -1, 1);
+    o.pupilY += clamp(ey * 0.7 + s.y * 1.2, -1, 1);
   }
 
   // You're talking: it leans in, its eyes follow your voice, its fins take
@@ -367,6 +839,7 @@ export class Animator {
       if (tk.since < 0) tk.since = this.t;
       tk.quietSince = -1;
       this.lastActivity = this.t;
+      if (this.idleActivity.isNapping) this.wakeFromNap();
     } else if (tk.since >= 0) {
       if (tk.quietSince < 0) tk.quietSince = this.t;
       const talkedFor = tk.quietSince - tk.since;
@@ -387,6 +860,7 @@ export class Animator {
     o.hoverZ += 0.04 * k * body;
     o.eyeW += 0.05 * level;
     o.eyeH += 0.1 * level;
+    o.pupilSize += 0.12 * level;
     o.finL += 0.2 * level;
     o.finR += 0.2 * level;
   }
@@ -398,49 +872,57 @@ export class Animator {
     const shape = voiceShape(bands, (this.shape ||= {}));
     const e = shape.energy;
     const w = clamp(e * 4);
+    const talkScale = clamp((this.behaviors.talkMotion ?? 0.5) / 0.5, 0.3, 1.6);
     if (w > 0) {
       // Speech opens the mouth wider than tall ("a", "e"); only clear "o" sounds round it
       target.mouthOpen = Math.max(target.mouthOpen * (1 - w * 0.6), shape.open * 0.8);
       target.mouthWide = lerp(target.mouthWide, 0.45 + 0.45 * shape.wide, w);
       target.mouthRound = lerp(target.mouthRound, shape.round, w * 0.6);
+      target.mouthTeeth = lerp(target.mouthTeeth || 0, shape.teeth || 0, w * 0.8);
+      target.mouthTongue = lerp(target.mouthTongue || 0, shape.tongue || 0, w * 0.8);
       target.finGlowL += 0.45 * bands[0] + 0.3 * bands[1];
       target.finGlowR += 0.45 * bands[2] + 0.35 * bands[3];
+      target.cheekLight = (target.cheekLight || 0) + 0.35 * e;
       target.glow += 0.06 * e;
       target.finUser *= 1 - w; // its own voice: its own color
       this.lastActivity = this.t;
     }
     if (this.syllables.update(e, dt)) {
       this.springs.impulse("eyeH", -(1.6 + 1.6 * e));
-      this.springs.impulse("headPitch", (this.options.reducedMotion ? 0.15 : 0.45) + 0.5 * e);
-      this.springs.impulse("squash", 0.3 + 0.3 * e);
+      this.springs.impulse("headPitch", ((this.options.reducedMotion ? 0.15 : 0.45) + 0.5 * e) * talkScale);
+      this.springs.impulse("squash", (0.3 + 0.3 * e) * talkScale);
     }
     // Clearly louder than lately: emphasis (the camera may push in)
     this.emphasisAvg += (e - this.emphasisAvg) * (1 - Math.exp(-dt / 2.5));
     if (e > 0.5 && e > this.emphasisAvg * 1.7 && this.t - this.lastEmphasis > 4) {
-      this.springs.impulse("emphasis", 2.8);
+      this.springs.impulse("emphasis", 2.8 * talkScale);
       this.lastEmphasis = this.t;
     }
     return e;
   }
 
-  // Random blinks, sometimes two in a row; slow ones when sleepy
+  // Random blinks, sometimes two in a row; adjustable rate and style
   blink(dt, mood) {
     const b = this.blinkState;
-    const sleepy = mood === "sleepy" || this.state === "standby";
+    const style = this.faceConfig.blinkStyle || "normal";
+    const rate = clamp(this.faceConfig.blinkRate || 1, 0.2, 2.5);
+    const sleepy = mood === "sleepy" || this.state === "standby" || style === "slow";
     if (b.start < 0 && this.t >= b.next) {
       b.start = this.t;
-      b.length = sleepy ? 0.38 : 0.15;
+      b.length = sleepy ? 0.38 : style === "crisp" ? 0.1 : style === "flutter" ? 0.12 : 0.15;
     }
     if (b.start < 0) return 0;
     const p = (this.t - b.start) / b.length;
     if (p >= 1) {
       b.start = -1;
-      if (!b.double && this.random() < 0.14) {
+      const doubleChance = style === "flutter" ? 0.42 : 0.14;
+      if (!b.double && this.random() < doubleChance) {
         b.double = true;
         b.next = this.t + 0.09;
       } else {
         b.double = false;
-        b.next = this.t + (sleepy ? 1.6 + this.random() * 2 : 2.2 + this.random() * 4.2);
+        const interval = sleepy ? 1.6 + this.random() * 2 : 2.2 + this.random() * 4.2;
+        b.next = this.t + interval / rate;
       }
       return 0;
     }

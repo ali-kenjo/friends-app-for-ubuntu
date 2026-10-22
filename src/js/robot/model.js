@@ -16,6 +16,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { dimsOf, superellipsoid, faceScreen, lathe, bodyGeometry, buildTop, buildArm, buildHover } from "./parts.js";
 import { dress } from "./outfit/index.js";
+import { patternTexture } from "./outfit/kit.js";
 
 export const NODE_NAMES = ["Root", "Hover", "Body", "Neck", "Head", "FaceScreen", "Fin_L", "Fin_R", "Arm_L", "Arm_R", "HoverRing"];
 
@@ -30,6 +31,13 @@ const FINISH = {
   glossy: [0.42, 0, 0.35, 0.3, 0, 1],
   metal: [0.3, 0.85, 0.15, 0, 0, 2.6],
   pearl: [0.3, 0, 0.8, 0.6, 0.7, 1.3],
+  felt: [0.95, 0, 0, 0.75, 0, 0.7],
+  clay: [0.88, 0, 0.04, 0.18, 0, 0.8],
+  glass: [0.14, 0.05, 0.9, 0.2, 0.3, 1.8],
+  wood: [0.68, 0.02, 0.18, 0.15, 0, 0.95],
+  brushed_metal: [0.42, 0.92, 0.22, 0.08, 0, 2.2],
+  holographic: [0.22, 0.38, 0.85, 0.65, 1.0, 2.0],
+  glow_in_dark: [0.48, 0, 0.2, 0.3, 0, 1.0],
 };
 
 const SHELL_KEYS = ["head", "body", "arms"];
@@ -40,18 +48,54 @@ function setShell(mat, hex, finish) {
   const [roughness, metalness, clearcoat, sheen, iridescence, env] = FINISH[finish] || FINISH.glossy;
   mat.color.set(hex);
   const dark = lightness(mat.color) < 0.4;
-  mat.roughness = dark && finish !== "metal" ? roughness + 0.08 : roughness;
+  mat.roughness = dark && finish !== "metal" && finish !== "brushed_metal" ? roughness + 0.08 : roughness;
   mat.metalness = metalness;
   mat.envMapIntensity = env;
   mat.sheenColor.set("#fff3e6");
-  mat.sheenRoughness = 0.6;
-  mat.clearcoatRoughness = 0.35;
-  mat.iridescenceIOR = 1.35;
+  mat.sheenRoughness = finish === "felt" ? 0.85 : 0.6;
+  mat.clearcoatRoughness = finish === "glass" ? 0.12 : 0.35;
+  mat.iridescenceIOR = finish === "holographic" ? 1.6 : 1.35;
+  mat.transparent = finish === "glass";
+  mat.opacity = finish === "glass" ? 0.84 : 1;
+  if (finish === "glow_in_dark") {
+    mat.emissive.set(hex);
+    mat.emissiveIntensity = 0.26;
+  } else {
+    mat.emissive.set("#000000");
+    mat.emissiveIntensity = 0;
+  }
   mat.userData.rich = { clearcoat, sheen: dark ? sheen * 0.5 : sheen, iridescence };
   const rich = mat.userData.simple !== true;
   mat.clearcoat = rich ? clearcoat : 0;
   mat.sheen = rich ? mat.userData.rich.sheen : 0;
   mat.iridescence = rich ? iridescence : 0;
+  mat.needsUpdate = true;
+}
+
+function applyBodyPattern(mat, design) {
+  const pat = design.pattern || "solid";
+  if (pat === "solid") {
+    if (mat.map) {
+      mat.map.dispose();
+      mat.map = null;
+      mat.needsUpdate = true;
+    }
+    mat.userData.patternInfo = null;
+    return;
+  }
+  const c1 = design.colors.body || "#e9e6df";
+  const c2 = design.colors.pattern || "#d97736";
+  if (mat.userData.patternInfo?.pattern === pat) {
+    mat.userData.patternInfo.redraw(c1, c2);
+    mat.color.set("#ffffff");
+    return;
+  }
+  if (mat.map) mat.map.dispose();
+  const { texture, redraw } = patternTexture(pat, c1, c2);
+  texture.repeat.set(2, 1);
+  mat.map = texture;
+  mat.color.set("#ffffff");
+  mat.userData.patternInfo = { pattern: pat, redraw };
   mat.needsUpdate = true;
 }
 
@@ -76,8 +120,11 @@ export function makeMaterials(design, light) {
     finGlowL: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(light), emissiveIntensity: 1 }),
     finGlowR: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(light), emissiveIntensity: 1 }),
     ring: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(light), emissiveIntensity: 1 }),
+    cheekLed: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(light), emissiveIntensity: 0.4 }),
+    foreheadLed: new THREE.MeshStandardMaterial({ color: new THREE.Color("#101216"), roughness: 0.3, emissive: new THREE.Color(light), emissiveIntensity: 0.3 }),
   };
   for (const key of SHELL_KEYS) setShell(m[key], design.colors[key], design.finish);
+  applyBodyPattern(m.body, design);
   return m;
 }
 
@@ -132,6 +179,28 @@ export function buildRobot({ design, light, faceTexture }) {
   screen.receiveShadow = true;
   headNode.add(screen);
 
+  // Cheek & forehead indicator lights on the head shell
+  const hs = head.a / 0.36;
+  const cheekLights = [];
+  for (const s of [-1, 1]) {
+    const cx = s * head.a * 0.88;
+    const cy = head.y - 0.03 * hs;
+    const cz = dims.headFront(cx * 0.7, cy) * 0.55;
+    const led = make(new THREE.SphereGeometry(0.016 * hs, 14, 10), m.cheekLed, { shadow: false });
+    led.scale.set(0.55, 0.85, 1.2);
+    led.position.set(cx, cy, cz);
+    led.visible = design.face?.cheekLight !== false;
+    headNode.add(led);
+    cheekLights.push(led);
+  }
+  const fy = head.y + head.b * 0.76;
+  const fz = dims.headFront(0, fy) + 0.003;
+  const foreheadLight = make(new THREE.CapsuleGeometry(0.008 * hs, 0.028 * hs, 6, 12), m.foreheadLed, { shadow: false });
+  foreheadLight.rotation.z = Math.PI / 2;
+  foreheadLight.position.set(0, fy, fz);
+  foreheadLight.visible = design.face?.foreheadLight !== false;
+  headNode.add(foreheadLight);
+
   // The top (fins, antennae, ears…)
   const tops = buildTop(design.build.topStyle, design.build.top, dims, m, make);
   for (const t of tops) headNode.add(t);
@@ -143,7 +212,14 @@ export function buildRobot({ design, light, faceTexture }) {
   const ring = buildHover(design.build.hover, dims, m, make);
   if (ring) hover.add(ring);
 
-  const robot = finish(root, m, { builtIn: true, screenAspect: SCREEN_ASPECT, dims, light: new THREE.Color(light), simple: false });
+  const robot = finish(root, m, {
+    builtIn: true,
+    screenAspect: SCREEN_ASPECT,
+    dims,
+    light: new THREE.Color(light),
+    simple: false,
+    indicators: { cheekLights, foreheadLight },
+  });
   robot.design = design;
   dress(robot, design, { make, group });
   robot.bounds = measure(root);
@@ -183,9 +259,14 @@ export function applyLook(robot, design, light) {
   const m = robot.materials;
   robot.design = design;
   for (const key of SHELL_KEYS) setShell(m[key], design.colors[key], design.finish);
+  applyBodyPattern(m.body, design);
   m.joint.color.set(design.colors.joint);
   robot.light.set(light);
-  for (const key of ["finGlowL", "finGlowR", "ring"]) m[key]?.emissive.set(light);
+  for (const key of ["finGlowL", "finGlowR", "ring", "cheekLed", "foreheadLed"]) m[key]?.emissive.set(light);
+  if (robot.indicators) {
+    for (const c of robot.indicators.cheekLights) c.visible = design.face?.cheekLight !== false;
+    if (robot.indicators.foreheadLight) robot.indicators.foreheadLight.visible = design.face?.foreheadLight !== false;
+  }
   robot.glow = design.glow;
   robot.outfit?.recolor(design, robot.light);
 }
@@ -236,6 +317,14 @@ export function applyPose(robot, pose, { accent, user, cameraFriendly = false, g
   if (m.finGlowR) {
     m.finGlowR.emissive.copy(white);
     m.finGlowR.emissiveIntensity = 0.25 + glowR * finBoost;
+  }
+  if (m.cheekLed) {
+    m.cheekLed.emissive.copy(white);
+    m.cheekLed.emissiveIntensity = Math.max(0.15, (pose.cheekLight ?? 0.35) * 1.8 * strength);
+  }
+  if (m.foreheadLed) {
+    m.foreheadLed.emissive.copy(accent).lerp(user, mix);
+    m.foreheadLed.emissiveIntensity = Math.max(0.1, (pose.foreheadLight ?? 0.25) * 2.1 * strength);
   }
   if (m.ring) {
     m.ring.emissive.copy(accent).lerp(user, mix * 0.5);

@@ -17,20 +17,41 @@ void main() {
 const FRAGMENT = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
-uniform vec4 uEyeL;   // center x, y, half width, half height (face units)
+uniform vec4 uEyeL;    // center x, y, half width, half height (face units)
 uniform vec4 uEyeR;
-uniform vec4 uLidL;   // top 0..1, bottom 0..1, slant, smile 0..1
+uniform vec4 uLidL;    // top 0..1, bottom 0..1, slant, smile 0..1
 uniform vec4 uLidR;
-uniform vec2 uEye;    // roundness, blink
-uniform vec4 uMouth;  // center x, y, half width, opening
-uniform vec4 uMouth2; // curve, skew, roundness, line thickness
-uniform vec4 uMisc;   // unused, blush, mouth visible, aspect (height / width)
+uniform vec2 uEye;     // roundness, blink
+uniform vec4 uPupil;   // offsetX, offsetY, size, style (0=none,1=dot,2=ring,3=slit,4=star,5=heart)
+uniform vec4 uEffects; // hearts, stars, spirals, tears
+uniform vec2 uEffects2;// sparkles, mouthStyle (0=normal,1=cat,2=zigzag,3=tooth,4=beak)
+uniform vec4 uMouth;   // center x, y, half width, opening
+uniform vec4 uMouth2;  // curve, skew, roundness, line thickness
+uniform vec2 uMouth3;  // teeth 0..1, tongue 0..1
+uniform vec4 uMisc;    // time, blush, mouth visible, aspect (height / width)
 uniform vec3 uColor;
 uniform vec3 uBlush;
 
 float sdRoundBox(vec2 p, vec2 b, float r) {
   vec2 q = abs(p) - b + r;
   return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+}
+
+float dot2(vec2 v) { return dot(v, v); }
+
+// Signed distance to a heart centered at origin with radius s
+float sdHeart(vec2 p, float s) {
+  vec2 q = p / max(s, 1e-4);
+  q.y += 0.25;
+  q.x = abs(q.x);
+  if (q.y + q.x > 1.0) return (sqrt(dot2(q - vec2(0.25, 0.75))) - sqrt(2.0) / 4.0) * s;
+  return (sqrt(min(dot2(q - vec2(0.0, 1.0)), dot2(q - 0.5 * max(q.x + q.y, 0.0)))) * sign(q.x - q.y)) * s;
+}
+
+// Signed distance to a 4-point sparkle/star centered at origin with radius s
+float sdStar4(vec2 p, float s) {
+  vec2 q = abs(p);
+  return (q.x + q.y + (q.x * q.y) / max(s * 0.35, 1e-4) - s) * 0.55;
 }
 
 // Inside = 1, outside = 0, with a soft edge about a pixel wide
@@ -62,6 +83,53 @@ float eye(vec2 p, vec4 e, vec4 lid, float side) {
   return d;
 }
 
+// Pupil cutout/highlight inside an eye
+float pupilMask(vec2 p, vec4 e) {
+  float style = uPupil.w;
+  if (style < 0.5) return 0.0;
+  float rad = min(e.z, e.w) * 0.38 * uPupil.z;
+  vec2 center = e.xy + uPupil.xy * e.zw * 0.32;
+  vec2 q = p - center;
+  float d = 1.0;
+  if (style < 1.5) {
+    d = length(q) - rad;
+  } else if (style < 2.5) {
+    d = abs(length(q) - rad * 0.85) - rad * 0.25;
+  } else if (style < 3.5) {
+    d = sdRoundBox(q, vec2(rad * 0.28, rad * 1.15), rad * 0.2);
+  } else if (style < 4.5) {
+    d = sdStar4(q, rad * 1.25);
+  } else {
+    d = sdHeart(q, rad * 1.25);
+  }
+  return fill(d) * (1.0 - uEye.y);
+}
+
+// Eye overlay effects: hearts, stars, spirals, sparkles
+float eyeEffectOverlay(vec2 p, vec4 e) {
+  vec2 q = p - e.xy;
+  float rad = min(e.z, e.w) * 0.72;
+  float res = 0.0;
+  if (uEffects.x > 0.02) {
+    res = max(res, fill(sdHeart(q, rad * (0.7 + 0.3 * uEffects.x))) * uEffects.x);
+  }
+  if (uEffects.y > 0.02) {
+    res = max(res, fill(sdStar4(q, rad * (0.75 + 0.35 * uEffects.y))) * uEffects.y);
+  }
+  if (uEffects.z > 0.02) {
+    float r = length(q) / max(rad, 1e-4);
+    float ang = atan(q.y, q.x) + uMisc.x * 5.0;
+    float spiral = sin(r * 14.0 - ang * 2.0);
+    res = max(res, smoothstep(0.2, 0.7, spiral) * step(r, 1.05) * uEffects.z);
+  }
+  if (uEffects2.x > 0.02) {
+    float s1 = fill(sdStar4(q - vec2(-0.28, 0.32) * e.zw, rad * 0.42));
+    float s2 = fill(sdStar4(q - vec2(0.32, -0.22) * e.zw, rad * 0.32));
+    res = max(res, (s1 + s2) * uEffects2.x);
+  }
+  return res * (1.0 - uEye.y);
+}
+
 // The mouth: a rounded line bent by curve and skew that opens into a shape
 float mouth(vec2 p) {
   vec2 q = p - uMouth.xy;
@@ -69,10 +137,22 @@ float mouth(vec2 p) {
   float curve = uMouth2.x;
   float skew = uMouth2.y;
   float t = uMouth2.w;
+  float mStyle = uEffects2.y;
   float xc = clamp(q.x, -w, w);
   float u = xc / w;
   float bend = 0.55 * w * curve;
   float c = bend * (u * u - 0.35) + skew * 0.3 * w * u;
+  // Cat mouth (:3): double arch
+  if (mStyle > 0.5 && mStyle < 1.5) {
+    float arch = abs(u) * 2.0 - 1.0;
+    c = 0.28 * w * (arch * arch - 0.45);
+  } else if (mStyle > 1.5 && mStyle < 2.5) {
+    // Zigzag mouth
+    c += 0.12 * w * (abs(fract(u * 2.0) * 2.0 - 1.0) - 0.5);
+  } else if (mStyle > 3.5) {
+    // Beak mouth (V point)
+    c = 0.32 * w * (abs(u) - 0.4);
+  }
   float slope = (2.0 * bend * u + skew * 0.3 * w) / w;
   float profile = sqrt(max(0.0, 1.0 - u * u));
   // A happy open mouth has a flat top; a round one opens evenly
@@ -83,8 +163,6 @@ float mouth(vec2 p) {
   return (abs(dy) - half_) / sqrt(1.0 + slope * slope);
 }
 
-float dot2(vec2 v) { return dot(v, v); }
-
 void main() {
   vec2 p = vec2(vUv.x * 2.0 - 1.0, (vUv.y * 2.0 - 1.0) * uMisc.w);
   float dL = eye(p, uEyeL, uLidL, 1.0);
@@ -92,25 +170,49 @@ void main() {
   float dE = min(dL, dR);
   // Eyes glow a little brighter inside, like a lit screen
   float eyes = fill(dE) * (0.86 + 0.14 * smoothstep(0.0, -0.06, dE));
+  // Pupils (softly darken inner eye or add bright ring)
+  float pup = (pupilMask(p, uEyeL) * fill(dL) + pupilMask(p, uEyeR) * fill(dR));
+  eyes *= 1.0 - 0.42 * pup;
   // A soft highlight in each eye (same light direction in both)
   float hl = fill(length(p - (uEyeL.xy + vec2(-0.3, 0.42) * uEyeL.zw)) - 0.3 * min(uEyeL.z, uEyeL.w)) * fill(dL);
   hl += fill(length(p - (uEyeR.xy + vec2(-0.3, 0.42) * uEyeR.zw)) - 0.3 * min(uEyeR.z, uEyeR.w)) * fill(dR);
   hl *= 1.0 - uEye.y;
-  // The mouth: a bright rim, darker inside when it's open
+  // Eye effects (hearts, stars, spirals, sparkles)
+  float fxL = eyeEffectOverlay(p, uEyeL) * fill(dL);
+  float fxR = eyeEffectOverlay(p, uEyeR) * fill(dR);
+  float fx = clamp(fxL + fxR, 0.0, 1.0);
+  // Tears under outer corners of the eyes when sad/laughing hard
+  float tearL = fill(sdRoundBox(p - vec2(uEyeL.x + uEyeL.z * 0.65, uEyeL.y - uEyeL.w * 0.85), vec2(0.018, 0.042 * uEffects.w), 0.015)) * step(0.05, uEffects.w);
+  float tearR = fill(sdRoundBox(p - vec2(uEyeR.x - uEyeR.z * 0.65, uEyeR.y - uEyeR.w * 0.85), vec2(0.018, 0.042 * uEffects.w), 0.015)) * step(0.05, uEffects.w);
+  float tears = clamp(tearL + tearR, 0.0, 1.0);
+
+  // The mouth: a bright rim, darker inside when it's open, with optional teeth & tongue
   float dM = mouth(p);
-  float mo = (fill(dM) - 0.7 * fill(dM + uMouth2.w * 0.9)) * uMisc.z;
+  float insideM = fill(dM + uMouth2.w * 0.9);
+  float mo = (fill(dM) - 0.7 * insideM) * uMisc.z;
+  // Teeth band near top of open mouth + cute snaggletooth when mouthStyle == 3
+  float openAmt = clamp(uMouth.w * 4.5, 0.0, 1.0);
+  float teethBand = insideM * step(uMouth.y + uMouth.w * 0.12, p.y) * uMouth3.x * openAmt * uMisc.z;
+  float snaggle = step(2.5, uEffects2.y) * step(uEffects2.y, 3.5) * fill(sdRoundBox(p - vec2(uMouth.x + uMouth.z * 0.35, uMouth.y - 0.025), vec2(0.018, 0.024), 0.008)) * uMisc.z;
+  float tongue = insideM * fill(length((p - vec2(uMouth.x, uMouth.y - uMouth.w * 0.55)) * vec2(1.0, 1.6)) - uMouth.z * 0.45) * uMouth3.y * openAmt * uMisc.z;
+
   // Light spilling softly around the features
   float halo = exp(-max(dE, 0.0) * 18.0) * 0.16 + exp(-max(dM, 0.0) * 22.0) * 0.08 * uMisc.z;
   // Blush under the eyes
   float bl = exp(-dot2((p - vec2(uEyeL.x, uEyeL.y - uEyeL.w - 0.08)) * vec2(6.0, 11.0)));
   bl += exp(-dot2((p - vec2(uEyeR.x, uEyeR.y - uEyeR.w - 0.08)) * vec2(6.0, 11.0)));
-  vec3 color = uColor * (eyes + mo + halo) + vec3(1.0, 0.97, 0.93) * hl * 0.5 + uBlush * bl * uMisc.y * 0.5;
+  vec3 color = uColor * (eyes + mo + halo + snaggle * 0.9)
+    + vec3(1.0, 0.97, 0.93) * (hl * 0.5 + fx * 0.65 + teethBand * 0.55)
+    + vec3(0.45, 0.82, 1.0) * tears * 0.75
+    + uBlush * (bl * uMisc.y * 0.55 + tongue * 0.55);
   gl_FragColor = vec4(min(color, vec3(1.0)), 1.0);
 }`;
 
 // Width of the face texture per quality level (its height follows the screen's shape)
-const SIZES = { low: 1024, medium: 1536, high: 2048 };
+const SIZES = { low: 512, medium: 1024, high: 1536 };
 const BLUSH = new THREE.Color("#ff6f91");
+const PUPIL_CODE = { none: 0, dot: 1, ring: 2, slit: 3, star: 4, heart: 5 };
+const MOUTH_CODE = { cat_mouth: 1, zigzag: 2, tooth: 3, beak: 4 };
 
 export class Face {
   // aspect: the face screen's height / width
@@ -124,8 +226,12 @@ export class Face {
       uLidL: { value: new THREE.Vector4() },
       uLidR: { value: new THREE.Vector4() },
       uEye: { value: new THREE.Vector2() },
+      uPupil: { value: new THREE.Vector4(0, 0, 1, 1) },
+      uEffects: { value: new THREE.Vector4(0, 0, 0, 0) },
+      uEffects2: { value: new THREE.Vector2(0, 0) },
       uMouth: { value: new THREE.Vector4() },
       uMouth2: { value: new THREE.Vector4() },
+      uMouth3: { value: new THREE.Vector2(0, 0) },
       uMisc: { value: new THREE.Vector4(1, 0, 1, aspect) },
       uColor: { value: new THREE.Color("#6f9cf5") },
       uBlush: { value: BLUSH.clone() },
@@ -170,7 +276,7 @@ export class Face {
     return true;
   }
 
-  // pose: the animator's output; look: { face (the design's: eyes, eyeSize, eyeGap, mouth, blush), largerFace, color }
+  // pose: the animator's output; look: { face (the design's: eyes, eyeSize, eyeGap, mouth, blush, pupilStyle, blushLevel), largerFace, color }
   render(pose, { face = {}, largerFace = false, color }) {
     const s = EYE_STYLES[face.eyes] || EYE_STYLES.classic;
     const mouth = MOUTH_STYLES[face.mouth] || MOUTH_STYLES.line;
@@ -184,19 +290,33 @@ export class Face {
     const w = s.w * k * size * pose.eyeW;
     const h = s.h * k * size * pose.eyeH;
     const gap = s.gap * k * gapScale;
+    const winkEye = face.eyes === "wink_eyes" ? 0.85 : 0;
     // The robot's left eye is on the viewer's right
     u.uEyeL.value.set(gap + lookX, y, w * pose.eyeScaleL, h * pose.eyeScaleL);
     u.uEyeR.value.set(-gap + lookX, y, w * pose.eyeScaleR, h * pose.eyeScaleR);
-    u.uLidL.value.set(clamp01(pose.lidTopL), clamp01(pose.lidBotL), pose.lidAngleL, clamp01(pose.smile));
-    u.uLidR.value.set(clamp01(pose.lidTopR), clamp01(pose.lidBotR), pose.lidAngleR, clamp01(pose.smile));
+    u.uLidL.value.set(clamp01(pose.lidTopL), clamp01(pose.lidBotL), pose.lidAngleL, clamp01(pose.smile + (face.eyes === "crescent" ? 0.75 : 0)));
+    u.uLidR.value.set(clamp01(Math.max(pose.lidTopR, winkEye)), clamp01(Math.max(pose.lidBotR, winkEye * 0.5)), pose.lidAngleR, clamp01(pose.smile + (face.eyes === "crescent" ? 0.75 : 0)));
     u.uEye.value.set(clamp01(s.round + (1 - s.round) * pose.eyeRound), clamp01(pose.blink));
 
-    const round = clamp01(pose.mouthRound);
-    const open = clamp01(pose.mouthOpen);
+    const pStyle = PUPIL_CODE[face.pupilStyle] ?? 1;
+    u.uPupil.value.set(pose.pupilX || 0, pose.pupilY || 0, pose.pupilSize ?? 1, pStyle);
+    const heartFx = clamp01((pose.eyeHearts || 0) + (face.eyes === "heart_eyes" ? 0.85 : 0));
+    const starFx = clamp01((pose.eyeStars || 0) + (face.eyes === "star_eyes" ? 0.85 : 0));
+    const spiralFx = clamp01(pose.eyeSpirals || 0);
+    const tearFx = clamp01(pose.eyeTears || 0);
+    const sparkleFx = clamp01((pose.eyeSparkles || 0) + (face.eyes === "anime" ? 0.65 : 0));
+    u.uEffects.value.set(heartFx, starFx, spiralFx, tearFx);
+    u.uEffects2.value.set(sparkleFx, MOUTH_CODE[face.mouth] || 0);
+
+    const round = clamp01((pose.mouthRound || 0) + (face.mouth === "o_mouth" ? 0.7 : 0));
+    const open = clamp01((pose.mouthOpen || 0) + (face.mouth === "o_mouth" ? 0.25 : 0));
+    const skew = (pose.mouthSkew || 0) + (face.mouth === "smirk" ? 0.65 : 0);
     const halfWidth = 0.15 * k * mouth.width * (0.55 + 0.9 * clamp01(pose.mouthWide)) * (1 - 0.45 * round);
-    u.uMouth.value.set(pose.mouthSkew * 0.03 + lookX * 0.4, -0.3 * k + lookY * 0.4 - open * 0.05, halfWidth, open * 0.3 * k * (1 + 0.35 * round));
-    u.uMouth2.value.set(pose.mouthCurve, pose.mouthSkew, round, 0.05 * k * mouth.weight);
-    u.uMisc.value.set(1, clamp01(pose.blush), pose.mouthVisible * mouth.show, this.aspect);
+    u.uMouth.value.set(skew * 0.03 + lookX * 0.4, -0.3 * k + lookY * 0.4 - open * 0.05, halfWidth, open * 0.3 * k * (1 + 0.35 * round));
+    u.uMouth2.value.set(pose.mouthCurve, skew, round, 0.05 * k * mouth.weight);
+    u.uMouth3.value.set(clamp01(pose.mouthTeeth || 0), clamp01(pose.mouthTongue || 0));
+    const blushMul = face.blushLevel ?? 1;
+    u.uMisc.value.set(pose.t || 0, clamp01((pose.blush || 0) * blushMul), pose.mouthVisible * mouth.show, this.aspect);
     if (color) u.uColor.value.copy(color);
     if (face.blush) u.uBlush.value.set(face.blush);
 

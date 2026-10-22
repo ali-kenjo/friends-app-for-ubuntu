@@ -24,11 +24,25 @@ export class Director {
     this.userWords = new CaptionMood({ role: "user" });
     this.turn = { ai: "", user: "" };
     this.greeted = false;
-    this.last = { gesture: -10, wave: -20, nod: -10 };
+    this.last = { gesture: -10, wave: -20, nod: -10, event: -5 };
     this.chat = { state: "idle", until: 0, pending: 0, phase: 0, text: "", reading: null };
     this.mission = false; // a mission is running (working())
+    this.reactions = {
+      missions: true,
+      reminders: true,
+      notifications: true,
+      tasks: true,
+      streaks: true,
+      hourly: true,
+      welcomeBack: true,
+    };
     this.levels = [0, 0, 0, 0];
     this.floor = [0, 0, 0, 0];
+  }
+
+  setReactions(cfg) {
+    if (!cfg || typeof cfg !== "object") return;
+    Object.assign(this.reactions, cfg);
   }
 
   // ---------- Voice mode ----------
@@ -122,10 +136,101 @@ export class Director {
     return 1000;
   }
 
-  // ---------- The AI moving its body (robot_mood, robot_gesture) ----------
-  toolEvent({ mood, gesture } = {}) {
+  // ---------- The AI moving its body (robot_mood, robot_gesture, robot_use_prop, robot_go_to, robot_look_at) ----------
+  toolEvent({ mood, gesture, useProp, goTo, lookAt } = {}) {
     if (mood) this.a.setMood(mood, { source: "tool", strength: 1 });
     if (gesture) this.gesture(gesture, PRIORITY.tool);
+    if (goTo && typeof goTo === "object") this.a.goTo(goTo);
+    if (lookAt && typeof lookAt === "object") this.a.lookAt(lookAt);
+    if (useProp && typeof useProp === "object") this.a.useProp({ ...useProp, source: "tool" });
+  }
+
+  // ---------- Event reactions (configurable per category) ----------
+  reactEvent(type, detail = {}) {
+    const r = this.reactions;
+    switch (type) {
+      case "mission_started":
+        if (r.missions === false) return false;
+        this.working(true);
+        this.a.setMood("determined", { source: "smart", strength: 0.85 });
+        this.gesture("salute", PRIORITY.reaction, false);
+        this.a.onSound?.("blip");
+        return true;
+      case "mission_progress":
+        if (r.missions === false) return false;
+        this.a.setMood("focused", { source: "smart", strength: 0.75 });
+        this.gesture("nod", PRIORITY.reaction, true);
+        return true;
+      case "mission_finished":
+        this.working(false);
+        if (r.missions === false) return false;
+        this.a.setMood("proud", { source: "smart", strength: 0.95 });
+        this.gesture("fist_pump", PRIORITY.reaction, false);
+        this.a.onSound?.("chime");
+        return true;
+      case "mission_failed":
+        this.working(false);
+        if (r.missions === false) return false;
+        this.a.setMood("worried", { source: "smart", strength: 0.9 });
+        this.gesture("facepalm", PRIORITY.reaction, false);
+        this.a.onSound?.("sigh");
+        return true;
+      case "reminder":
+        if (r.reminders === false) return false;
+        this.a.setMood("surprised", { source: "smart", strength: 0.85 });
+        this.gesture("lean_in", PRIORITY.reaction, false);
+        this.a.springs.impulse("foreheadLight", 2.5);
+        this.a.onSound?.("chime");
+        return true;
+      case "notification": {
+        if (r.notifications === false) return false;
+        this.a.setMood("curious", { source: "smart", strength: 0.8 });
+        this.a.lookAt({ target: "tablet", duration: 4.5 });
+        this.a.idleActivity.kind = "checkTablet";
+        this.a.idleActivity.heldOverride = "tablet";
+        this.a.idleActivity.until = this.a.t + 4.5;
+        this.a.springs.impulse("foreheadLight", 2.2);
+        this.a.onSound?.("blip");
+        return true;
+      }
+      case "task_done":
+        if (r.tasks === false) return false;
+        this.a.setMood("happy", { source: "smart", strength: 0.85 });
+        this.gesture("thumbs_up", PRIORITY.reaction, false);
+        this.a.onSound?.("chime");
+        return true;
+      case "habit_streak":
+        if (r.streaks === false) return false;
+        this.a.setMood("excited", { source: "smart", strength: 0.95 });
+        this.gesture("celebrate", PRIORITY.reaction, false);
+        this.a.onSound?.("chime");
+        return true;
+      case "time_of_day": {
+        if (r.hourly === false) return false;
+        const hour = detail.hour ?? new Date().getHours();
+        this.a.setContextHour(hour);
+        if (hour >= 6 && hour <= 9) {
+          this.a.setMood("happy", { source: "smart", strength: 0.7 });
+          this.gesture("stretch", PRIORITY.reaction, true);
+        } else if (hour >= 22 || hour < 5) {
+          this.a.setMood("sleepy", { source: "smart", strength: 0.75 });
+          this.gesture("yawn", PRIORITY.reaction, true);
+        } else {
+          this.a.lookAt({ target: "clock", duration: 3 });
+        }
+        return true;
+      }
+      case "user_return":
+        if (r.welcomeBack === false) return false;
+        if (!this.a.wakeFromNap()) {
+          this.a.setMood("happy", { source: "smart", strength: 0.85 });
+          this.gesture("big_wave", PRIORITY.reaction, false);
+          this.a.onSound?.("chime");
+        }
+        return true;
+      default:
+        return false;
+    }
   }
 
   // ---------- Text chat ----------

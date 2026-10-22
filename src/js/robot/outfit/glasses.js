@@ -220,4 +220,134 @@ const mustache = (c) => {
   return { object: g };
 };
 
-export default { round, square, sunglasses, heart, star, visor, monocle, eyepatch, mustache };
+const aviators = (c) => rectFrame(0.16, 0.115, 0.04, 0.007)(c, { lens: 0.65 });
+const cat_eye = (c) => rectFrame(0.165, 0.095, 0.032, 0.01)(c, { lens: 0.45 });
+const goggles = (c) => rectFrame(0.155, 0.12, 0.055, 0.016)(c, { lens: 0.35 });
+
+const vr_headset = (c) => {
+  const g = new THREE.Group();
+  const e = eyeSpec(c);
+  const body = c.paint(1, { roughness: 0.4 });
+  const front = c.paint(2, { roughness: 0.25, metalness: 0.2 });
+  const w = (e.x + e.rx) * 2 + 0.08;
+  const h = Math.max(0.12, e.ry * 2 * 1.6);
+  const box = c.make(plate(roundedRect(w, h, 0.035), 0.065, 0.008), body);
+  box.position.set(0, e.y, e.z + 0.018);
+  g.add(box);
+  const shield = c.make(plate(roundedRect(w * 0.88, h * 0.76, 0.025), 0.01, 0.002), front);
+  shield.position.set(0, e.y, e.z + 0.052);
+  g.add(shield);
+  return { object: g };
+};
+
+const sleep_mask = (c) => {
+  const g = new THREE.Group();
+  const e = eyeSpec(c);
+  const cloth = c.paint(1, { roughness: 0.85 });
+  const trim = c.paint(2, { roughness: 0.8 });
+  const w = (e.x + e.rx) * 2 + 0.07;
+  const h = Math.max(0.105, e.ry * 2 * 1.45);
+  const pad = c.make(plate(roundedRect(w, h, h * 0.46), 0.014, 0.004), cloth);
+  pad.position.set(0, e.y, e.z + 0.006);
+  g.add(pad);
+  const edge = c.make(plate(roundedRect(w + 0.008, h + 0.008, h * 0.48, 0.007), 0.015, 0.002), trim, { shadow: false });
+  edge.position.set(0, e.y, e.z + 0.006);
+  g.add(edge);
+  return { object: g };
+};
+
+const cyber_visor = (c) => {
+  const g = new THREE.Group();
+  const e = eyeSpec(c);
+  const glowMat = c.glow(1, 1.9);
+  const frameMat = c.paint(2, { roughness: 0.3, metalness: 0.6 });
+  const w = (e.x + e.rx) * 2 + 0.09;
+  const h = 0.058;
+  const bar = c.make(plate(roundedRect(w, h, 0.02), 0.016, 0.003), glowMat, { shadow: false });
+  bar.position.set(0, e.y, e.z + 0.01);
+  g.add(bar);
+  const topRim = c.make(new THREE.BoxGeometry(w * 0.95, 0.012, 0.022), frameMat);
+  topRim.position.set(0, e.y + h * 0.55, e.z + 0.01);
+  g.add(topRim);
+  return { object: g };
+};
+
+const clown_nose = (c) => {
+  const g = new THREE.Group();
+  const e = eyeSpec(c);
+  const red = c.paint(1, { roughness: 0.3, physical: true });
+  const y = c.dims.head.y + c.dims.head.screen.y - 0.06 * e.half;
+  const z = c.dims.headFront(0, y) + 0.025;
+  const nose = c.make(new THREE.SphereGeometry(0.042, 24, 18), red);
+  nose.position.set(0, y, z);
+  g.add(nose);
+  return { object: g };
+};
+
+const pacifier = (c) => {
+  const g = new THREE.Group();
+  const e = eyeSpec(c);
+  const shieldMat = c.paint(1, { roughness: 0.4, physical: true });
+  const ringMat = c.paint(2, { roughness: 0.35 });
+  const y = c.dims.head.y + c.dims.head.screen.y - 0.28 * e.half;
+  const z = c.dims.headFront(0, y) + 0.016;
+  const guard = c.make(plate(roundedRect(0.095, 0.068, 0.03), 0.01, 0.003), shieldMat);
+  guard.position.set(0, y, z);
+  g.add(guard);
+  const knob = c.make(new THREE.SphereGeometry(0.02, 16, 12), shieldMat);
+  knob.position.set(0, y, z + 0.012);
+  g.add(knob);
+  const handle = c.make(new THREE.TorusGeometry(0.024, 0.005, 8, 20), ringMat);
+  handle.position.set(0, y - 0.018, z + 0.018);
+  handle.rotation.x = 0.4;
+  g.add(handle);
+  return { object: g };
+};
+
+const bandaid = (c) => {
+  const g = new THREE.Group();
+  const e = eyeSpec(c);
+  const stripMat = c.paint(1, { roughness: 0.8 });
+  const padMat = c.paint(2, { roughness: 0.85 });
+  const x = e.x * 1.05;
+  const y = e.y - e.ry * 1.45;
+  const z = c.dims.headFront(x, y) + 0.012;
+  const wrap = new THREE.Group();
+  wrap.position.set(x, y, z);
+  wrap.rotation.z = -0.35;
+  wrap.rotation.y = 0.25;
+  wrap.add(c.make(plate(roundedRect(0.085, 0.028, 0.012), 0.005, 0.001), stripMat, { shadow: false }));
+  const pad = c.make(plate(roundedRect(0.03, 0.024, 0.005), 0.006, 0.001), padMat, { shadow: false });
+  pad.position.z = 0.001;
+  wrap.add(pad);
+  g.add(wrap);
+  return { object: g };
+};
+
+const whiskers = (c) => {
+  const g = new THREE.Group();
+  const e = eyeSpec(c);
+  const lineMat = c.paint(1, { roughness: 0.5 });
+  const noseMat = c.paint(2, { roughness: 0.5 });
+  const y0 = c.dims.head.y + c.dims.head.screen.y - 0.14 * e.half;
+  const nose = c.make(new THREE.SphereGeometry(0.016, 14, 10), noseMat);
+  nose.scale.set(1.2, 0.85, 0.6);
+  nose.position.set(0, y0 + 0.01, c.dims.headFront(0, y0) + 0.014);
+  g.add(nose);
+  for (const s of [-1, 1]) {
+    for (const dy of [-0.018, 0, 0.018]) {
+      const w = c.make(new THREE.CylinderGeometry(0.0025, 0.0025, 0.09, 6), lineMat, { shadow: false });
+      w.rotation.z = Math.PI / 2 + s * dy * 4;
+      const x = s * (e.x * 1.15);
+      w.position.set(x, y0 + dy, c.dims.headFront(x * 0.7, y0 + dy) + 0.014);
+      w.rotation.y = -s * 0.25;
+      g.add(w);
+    }
+  }
+  return { object: g };
+};
+
+export default {
+  round, square, sunglasses, heart, star, visor, monocle, eyepatch, mustache,
+  aviators, cat_eye, goggles, vr_headset, sleep_mask, cyber_visor, clown_nose, pacifier, bandaid, whiskers,
+};

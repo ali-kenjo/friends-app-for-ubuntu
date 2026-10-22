@@ -40,7 +40,15 @@ export function voiceShape(levels, out = {}) {
   out.open = Math.min(1, energy * 1.5 + f1 * 0.25);
   out.wide = Math.min(1, Math.max(0, 0.45 + (f2 - f1) * 0.7 + hiss * 0.15));
   out.round = Math.min(1, Math.max(0, (low - f2) * 1.1 + (f1 - hiss) * 0.2));
+  out.teeth = Math.min(1, Math.max(0, f2 * 0.65 + hiss * 0.7 - low * 0.2));
+  out.tongue = Math.min(1, Math.max(0, f1 * 0.75 + low * 0.25 - hiss * 0.3));
   out.energy = Math.min(1, energy * 1.3);
+  if (out.energy < 0.06) out.viseme = "rest";
+  else if (hiss > 0.45 && out.open < 0.35) out.viseme = "ss";
+  else if (out.round > 0.55) out.viseme = out.open > 0.45 ? "oh" : "oo";
+  else if (out.wide > 0.65) out.viseme = "ee";
+  else if (out.open > 0.38) out.viseme = "aa";
+  else out.viseme = "mm";
   return out;
 }
 

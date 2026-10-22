@@ -33,16 +33,28 @@ export const QUALITY = {
   medium: { ratio: 1.25, samples: 4, float: true, rich: true, bloom: true, shadows: true, shadowSize: 1024, face: "medium" },
   high: { ratio: 2, samples: 4, float: true, rich: true, bloom: true, shadows: true, shadowSize: 2048, face: "high" },
 };
+// Hardware-agnostic per-tier scene budget (drawCalls, triangles, particles)
+export const QUALITY_BUDGETS = {
+  low: { drawCalls: 140, triangles: 60000, particles: 45 },
+  medium: { drawCalls: 220, triangles: 120000, particles: 90 },
+  high: { drawCalls: 320, triangles: 240000, particles: 160 },
+};
 const DOWN = { high: "medium", medium: "low" };
 // What the built-in robot measures with its default design (model.js measure()): the camera shots are made for it
 const STANDARD = { height: 1.312, width: 0.72 };
 
 // Camera shots: how much of the robot (meters, measured upward) is in the
 // picture and where its middle is; `width` must also fit (portrait videos)
-const SHOTS = {
+export const SHOTS = {
   close: { height: 0.84, center: 1.0, width: 0.95 },
   medium: { height: 1.52, center: 0.74, width: 1.12 },
   wide: { height: 2.6, center: 0.84, width: 1.9 },
+  orbit: { height: 1.65, center: 0.76, width: 1.25, mode: "orbit" },
+  dolly: { height: 1.48, center: 0.78, width: 1.15, mode: "dolly" },
+  rack_focus: { height: 1.15, center: 0.92, width: 1.02, mode: "rack_focus" },
+  handheld: { height: 1.45, center: 0.76, width: 1.12, mode: "handheld" },
+  security_cam: { height: 2.35, center: 0.65, width: 1.75, mode: "security_cam" },
+  cinematic: { height: 1.38, center: 0.8, width: 1.2, mode: "cinematic" },
   dock: { height: 1.46, center: 0.7, width: 1.22 },
 };
 
@@ -70,6 +82,7 @@ const FINAL = {
     uExposure: { value: 1 },
     uFriendly: { value: 0 },
     uSeed: { value: 0 },
+    uTransparent: { value: 0 },
   },
   vertexShader: /* glsl */ `
 varying vec2 vUv;
@@ -101,6 +114,7 @@ uniform float uAspect;
 uniform float uExposure;
 uniform float uFriendly; // camera-friendly look
 uniform float uSeed;
+uniform float uTransparent;
 
 // Khronos PBR Neutral: keeps the shell's and the accent's colors true
 vec3 neutral(vec3 color) {
@@ -135,6 +149,12 @@ void main() {
     // A little brighter in the middle tones, and never a glaring white
     lit = pow(lit, vec3(0.92));
     lit *= 1.0 - 0.12 * smoothstep(0.72, 1.0, max(lit.r, max(lit.g, lit.b)));
+  }
+  if (uTransparent > 0.5) {
+    vec3 fg = lit;
+    if (uBloom > 0.5) fg += texture2D(tBloom, vUv).rgb * uExposure;
+    gl_FragColor = vec4(toSRGB(clamp(fg, 0.0, 1.0)), a);
+    return;
   }
   vec3 bg = uBg;
   float r = length((vUv - uCenter) * vec2(uAspect, 1.0));
@@ -187,7 +207,7 @@ export class RobotEngine {
     this.canvas = document.createElement("canvas");
     this.canvas.className = "robot-canvas";
     this.canvas.setAttribute("aria-hidden", "true");
-    const renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, alpha: false, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, alpha: true, powerPreference: "high-performance" });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NoToneMapping;
     renderer.shadowMap.enabled = true;
@@ -204,6 +224,7 @@ export class RobotEngine {
       cinematic: false,
       roam: true,
       world: true,
+      eyesFollowCursor: true,
       largerFace: false,
       cameraFriendly: false,
       quality: "auto",
@@ -424,8 +445,9 @@ export class RobotEngine {
   }
 
   applyQuality() {
-    const q = QUALITY[this.level];
-    const samples = Math.min(q.samples, this.renderer.capabilities.maxSamples || 4);
+    const q = QUALITY[this.level] || QUALITY.high;
+    const maxSamples = this.renderer.capabilities.isWebGL2 ? (this.renderer.capabilities.maxSamples || 4) : 0;
+    const samples = Math.min(q.samples, maxSamples);
     // Float (for bloom's bright highlights) or 8-bit sRGB (Low, no bloom)
     const type = q.float ? THREE.HalfFloatType : THREE.UnsignedByteType;
     const colorSpace = q.float ? THREE.NoColorSpace : THREE.SRGBColorSpace;
@@ -443,11 +465,37 @@ export class RobotEngine {
     this.resize();
     this.fps = { frames: 0, time: 0, warm: 0 };
     this.emit("quality", { setting: this.look.quality, level: this.level });
+    this.emit("stats", this.getStats());
+  }
+
+  getStats() {
+    const info = this.renderer.info?.render || { calls: 0, triangles: 0 };
+    const budget = QUALITY_BUDGETS[this.level] || QUALITY_BUDGETS.high;
+    const particles = this.world?.particles?.geometry?.drawRange?.count || (this.look.room?.air && this.look.room.air !== "none" ? 36 : 0);
+    return {
+      fps: Math.round(this.liveFps || 60),
+      level: this.level,
+      setting: this.look.quality,
+      drawCalls: info.calls || 0,
+      triangles: info.triangles || 0,
+      particles,
+      budget,
+    };
   }
 
   // Auto: below about 50 frames a second for 3 seconds steps down one level
   // (not while filming: the look must not change in the middle of a shot)
   measure(dt) {
+    if (dt > 0) {
+      this.statFrames = (this.statFrames || 0) + 1;
+      this.statTime = (this.statTime || 0) + dt;
+      if (this.statTime >= 1.0) {
+        this.liveFps = Math.min(120, this.statFrames / this.statTime);
+        this.statFrames = 0;
+        this.statTime = 0;
+        this.emit("stats", this.getStats());
+      }
+    }
     if (this.look.quality !== "auto" || !DOWN[this.level] || this.look.cameraFriendly || this.qualityLocked) return;
     const f = this.fps;
     if (f.warm < 2) {
@@ -735,7 +783,8 @@ export class RobotEngine {
   // The virtual camera: the shot, the robot's place in the picture (thirds),
   // a slow drift and a push-in on emphasis when "cinematic" is on
   frameCamera(dt, pose) {
-    const base = SHOTS[this.hostOption("shot")] || SHOTS.medium;
+    const shotId = this.hostOption("shot") || "medium";
+    const base = SHOTS[shotId] || SHOTS.medium;
     // A taller, wider or smaller robot (or one in a tall hat) is framed in proportion
     const fit = this.fitFor(this.robot);
     const shot = { height: base.height * fit.height, center: base.center * fit.height, width: base.width * fit.width };
@@ -749,17 +798,44 @@ export class RobotEngine {
     let center = shot.center - 0.09 * roomy;
     // Portrait voice mode and videos: a little room below for the captions
     if (portrait && this.hostOption("roomBelow")) center -= height * 0.08;
-    const moving = this.hostOption("cinematic") && !this.reducedMotion.matches;
+    const steady = Boolean(this.look.cameraFriendly || this.reducedMotion.matches);
+    const moving = (this.hostOption("cinematic") || Boolean(base.mode)) && !steady;
     const time = pose.t;
     let orbit = 0;
     let rise = 0;
     if (moving) {
-      dist *= 1 - 0.07 * Math.max(0, pose.emphasis) + 0.025 * Math.sin((time * Math.PI * 2) / 31 + 1);
-      orbit = 0.06 * Math.sin((time * Math.PI * 2) / 23);
-      rise = 0.02 * Math.sin((time * Math.PI * 2) / 19 + 2);
+      const mode = base.mode || "cinematic";
+      if (mode === "orbit") {
+        orbit = 0.28 * Math.sin((time * Math.PI * 2) / 18);
+        rise = 0.04 * Math.cos((time * Math.PI * 2) / 18);
+      } else if (mode === "dolly") {
+        dist *= 0.92 + 0.14 * Math.sin((time * Math.PI * 2) / 14);
+      } else if (mode === "rack_focus") {
+        dist *= 0.88 + 0.12 * Math.sin((time * Math.PI * 2) / 11);
+        orbit = 0.05 * Math.cos((time * Math.PI * 2) / 11);
+      } else if (mode === "handheld") {
+        orbit = 0.035 * Math.sin(time * 2.1) + 0.018 * Math.cos(time * 3.7);
+        rise = 0.025 * Math.sin(time * 2.6 + 1) + 0.012 * Math.cos(time * 4.3);
+      } else if (mode === "security_cam") {
+        orbit = 0.36 * Math.sin((time * Math.PI * 2) / 24);
+        rise = 0.35;
+      } else {
+        dist *= 1 - 0.07 * Math.max(0, pose.emphasis) + 0.025 * Math.sin((time * Math.PI * 2) / 31 + 1);
+        orbit = 0.06 * Math.sin((time * Math.PI * 2) / 23);
+        rise = 0.02 * Math.sin((time * Math.PI * 2) / 19 + 2);
+      }
+    }
+    // Saved custom camera move playback
+    if (this.customMove && !steady) {
+      this.customMove.elapsed += dt;
+      const p = clamp(this.customMove.elapsed / Math.max(0.5, this.customMove.duration || 4), 0, 1);
+      const s = Math.sin(p * Math.PI);
+      orbit += ((this.customMove.yaw || 0) * Math.PI / 180) * s;
+      rise += ((this.customMove.pitch || 0) * Math.PI / 180) * s;
+      dist /= 1 + ((this.customMove.zoom || 1) - 1) * s;
+      if (p >= 1) this.customMove = null;
     }
     // Peeking around with the pointer, dragging the view, and keeping a roaming robot in frame
-    const pointer = this.pointer;
     const interactive = Boolean(this.hostOption("interactive")) && !this.look.cameraFriendly && !this.active?.options.fixed && !this.reducedMotion.matches;
     let yaw = 0;
     let pitch = 0;
@@ -807,6 +883,11 @@ export class RobotEngine {
     else this.camera.clearViewOffset();
   }
 
+  playCameraMove(move) {
+    if (!move) return;
+    this.customMove = { ...move, elapsed: 0 };
+  }
+
   // ---------- Roaming, and the room ----------
   // How far it may roam (0 = stays put): not while filming (the frame must
   // stay steady), less where there are things in the way (the desk)
@@ -850,7 +931,7 @@ export class RobotEngine {
     this.onPointerLeave();
   }
 
-  // Updates the pointer's place (-1..1 on the picture) and tests it against the robot
+  // Updates the pointer's place (-1..1 on the picture) and tests it against the robot and interactive props
   trackPointer(e) {
     const rect = this.listening.el.getBoundingClientRect();
     const p = this.pointer;
@@ -860,17 +941,54 @@ export class RobotEngine {
     const pose = this.animator.pose;
     this.hitSphere.center.set(pose.posX || 0, 0.72 + (pose.hoverY || 0), pose.posZ || 0);
     this.raycaster.setFromCamera({ x: p.x, y: p.y }, this.camera);
-    const hit = this.raycaster.ray.intersectSphere(this.hitSphere, this.tmp) !== null;
+    const hitPoint = new THREE.Vector3();
+    const hit = this.raycaster.ray.intersectSphere(this.hitSphere, hitPoint) !== null;
     // Where it is on the picture, so the pointer is "to its left" or "above it"
     this.tmp.set(this.hitSphere.center.x, 0.72, this.hitSphere.center.z).project(this.camera);
     const rel = { x: clamp((p.x - this.tmp.x) * 1.1, -1, 1), y: clamp((p.y - this.tmp.y) * 1.1, -1, 1) };
-    return { hit, rel };
+    // Determine specific touch zone on the robot (head, cheek, arm, belly)
+    let zone = "belly";
+    if (hit) {
+      const localY = hitPoint.y - (pose.hoverY || 0);
+      if (localY > 0.92 || rel.y > 0.25) zone = "head";
+      else if (localY > 0.65 && Math.abs(rel.x) > 0.16) zone = "cheek";
+      else if (Math.abs(rel.x) > 0.24) zone = "arm";
+      else zone = "belly";
+    }
+    return { hit, rel, zone };
+  }
+
+  // Raycast interactive props in the room
+  hitInteractiveProp() {
+    if (!this.rooms?.group) return null;
+    const hits = this.raycaster.intersectObjects(this.rooms.group.children, true);
+    for (const h of hits) {
+      let cur = h.object;
+      while (cur && cur !== this.rooms.group) {
+        if (cur.userData?.propId && cur.userData.interactive !== false) return cur.userData.propId;
+        cur = cur.parent;
+      }
+    }
+    return null;
+  }
+
+  triggerProp(propId, action = "toggle") {
+    const res = this.rooms.triggerProp(propId, action);
+    if (res.triggered) {
+      this.hooks.onPropUsed?.(res);
+      this.emit("prop", res);
+    }
+    return res;
   }
 
   onPointerMove(e) {
     if (this.look.cameraFriendly) return;
     const p = this.pointer;
-    const { hit, rel } = this.trackPointer(e);
+    const { hit, rel, zone } = this.trackPointer(e);
+    p.zone = zone;
+    if (this.look.eyesFollowCursor !== false) {
+      this.animator.setPointer({ x: p.x, y: p.y });
+    }
     if (hit !== p.hover) {
       p.hover = hit;
       this.listening.el.style.cursor = hit ? "pointer" : "";
@@ -885,21 +1003,27 @@ export class RobotEngine {
         this.drag.until = performance.now() + 3000;
       } else if (p.onRobot && p.moved > 10) {
         clearTimeout(p.timer);
+        p.draggingRobot = true;
+        const dx = clamp((e.clientX - p.sx) * 0.0032, -0.85, 0.85);
+        const dz = clamp((e.clientY - p.sy) * 0.0024, -0.55, 0.55);
+        this.animator.drag(dx, dz, true);
       }
     }
+    void rel;
   }
 
   onPointerDown(e) {
     if (this.look.cameraFriendly || (e.pointerType === "mouse" && e.button !== 0)) return;
     const p = this.pointer;
-    const { hit, rel } = this.trackPointer(e);
-    Object.assign(p, { down: true, onRobot: hit, moved: 0, held: false, sx: e.clientX, sy: e.clientY, rel: rel.x });
+    const { hit, rel, zone } = this.trackPointer(e);
+    Object.assign(p, { down: true, onRobot: hit, moved: 0, held: false, draggingRobot: false, sx: e.clientX, sy: e.clientY, rel: rel.x, zone });
     this.listening.el.setPointerCapture?.(e.pointerId);
     clearTimeout(p.timer);
     if (hit) p.timer = setTimeout(() => {
       if (p.down && p.onRobot && p.moved < 10) {
         p.held = true;
         this.animator.poke("hold");
+        this.hooks.onTouch?.("head", { held: true });
       }
     }, 650);
   }
@@ -910,14 +1034,29 @@ export class RobotEngine {
     clearTimeout(p.timer);
     p.down = false;
     this.listening?.el.releasePointerCapture?.(e.pointerId);
-    if (p.onRobot && !p.held && p.moved < 10) this.animator.poke("tap", { x: p.rel });
-    else if (!p.onRobot) this.drag.until = performance.now() + 1800;
+    if (p.draggingRobot) {
+      p.draggingRobot = false;
+      this.animator.drag(0, 0, false);
+      return;
+    }
+    if (p.onRobot && !p.held && p.moved < 10) {
+      const zone = p.zone || "belly";
+      this.animator.touchZone(zone, { x: p.rel });
+      this.hooks.onTouch?.(zone, { x: p.rel });
+    } else if (!p.onRobot && p.moved < 10) {
+      const propId = this.hitInteractiveProp();
+      if (propId) this.triggerProp(propId, "toggle");
+      else this.drag.until = performance.now() + 1800;
+    } else if (!p.onRobot) {
+      this.drag.until = performance.now() + 1800;
+    }
   }
 
   onPointerLeave() {
     const p = this.pointer;
     clearTimeout(p.timer);
-    Object.assign(p, { inside: false, down: false, hover: false });
+    if (p.draggingRobot) this.animator.drag(0, 0, false);
+    Object.assign(p, { inside: false, down: false, hover: false, draggingRobot: false });
     if (this.listening) this.listening.el.style.cursor = "";
     this.animator.setPointer(null);
   }
@@ -925,7 +1064,38 @@ export class RobotEngine {
   // Draws one frame right now (used before a snapshot); the loop keeps going
   renderNow() {
     if (!this.active || this.lost) return;
+    if (this.designDirty) this.syncDesign();
+    if (this.roomDirty || this.roomKey !== `${this.placeId()}|${this.level}`) this.syncRoom();
     this.draw(this.animator.pose, 0);
+  }
+
+  // Captures a PNG data URL (optionally with transparent background)
+  capturePhoto({ transparent = false } = {}) {
+    if (!this.active || this.lost) return "";
+    if (this.designDirty) this.syncDesign();
+    if (this.roomDirty || this.roomKey !== `${this.placeId()}|${this.level}`) this.syncRoom();
+    const u = this.final.material.uniforms;
+    u.uTransparent.value = transparent && !this.rooms.isChroma ? 1 : 0;
+    this.draw(this.animator.pose, 0);
+    const dataUrl = this.canvas.toDataURL("image/png");
+    u.uTransparent.value = 0;
+    this.draw(this.animator.pose, 0);
+    return dataUrl;
+  }
+
+  // Generates a compact square thumbnail data URL for Looks and Custom Rooms
+  captureThumbnail(size = 96) {
+    if (!this.active || this.lost) return "";
+    this.renderNow();
+    const c = document.createElement("canvas");
+    c.width = size;
+    c.height = size;
+    const ctx = c.getContext("2d");
+    const sw = this.canvas.width;
+    const sh = this.canvas.height;
+    const s = Math.min(sw, sh);
+    ctx.drawImage(this.canvas, (sw - s) / 2, (sh - s) / 2, s, s, 0, 0, size, size);
+    return c.toDataURL("image/png");
   }
 
   dispose() {

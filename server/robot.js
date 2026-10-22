@@ -8,11 +8,19 @@ const { dataDir } = require("./config");
 const MOODS = [
   "neutral", "happy", "excited", "laughing", "curious", "thinking", "focused",
   "surprised", "confused", "skeptical", "sad", "affectionate", "proud", "sleepy",
+  "love", "embarrassed", "mischievous", "bored", "determined", "dreamy", "grumpy",
+  "startled", "relieved", "smug", "worried", "laughing_hard", "winking", "inspired",
+  "playful", "shy_smile",
 ];
 
 const GESTURES = [
   "nod", "head_shake", "tilt", "wave", "shrug", "bounce", "celebrate", "look_around",
   "lean_in", "point_left", "point_right", "double_take", "shy",
+  "wink", "blow_kiss", "facepalm", "clap", "thumbs_up", "fist_pump",
+  "dance_groove", "dance_spin", "dance_robot", "shiver", "stretch", "yawn",
+  "sneeze", "hiccup", "hug", "high_five", "bow", "salute", "big_shrug",
+  "chin_on_hand", "scratch_head", "big_wave", "royal_wave", "peek", "hide",
+  "dizzy", "whistle", "drum_roll", "flex",
 ];
 
 // ---------- Your own model ----------

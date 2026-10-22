@@ -143,6 +143,14 @@ document.addEventListener("friends:robot-quality", (e) => {
   qualityStatus.textContent = setting === "auto" ? t("Auto is using {level} now (it steps down if it gets slow)", { level: LEVELS[level] }) : `${LEVELS[level]}`;
 });
 
+const fpsStatus = document.getElementById("robot-fps-status");
+document.addEventListener("friends:robot-stats", (e) => {
+  const { fps, level, drawCalls, triangles } = e.detail;
+  if (fpsStatus) {
+    fpsStatus.textContent = `${fps} FPS · ${LEVELS[level] || level} (${drawCalls} draws, ${triangles} tris)`;
+  }
+});
+
 // ---------- "Follow my face" ----------
 const faceStatus = document.getElementById("robot-face-status");
 const FACE_HINT = t("Its eyes follow you through the webcam. Everything stays on this computer.");

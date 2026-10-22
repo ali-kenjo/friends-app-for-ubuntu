@@ -201,4 +201,116 @@ const collar = (c) => {
   return { object: g };
 };
 
-export default { scarf, bowtie, tie, bandana, ruff, medal, bell, collar };
+const pearls = (c) => {
+  const g = new THREE.Group();
+  const pearl = c.paint(1, { roughness: 0.25, physical: true });
+  const gem = c.paint(2, { roughness: 0.2 });
+  g.add(around(18, 0.112, (i) => {
+    const p = c.make(new THREE.SphereGeometry(i === 0 ? 0.017 : 0.013, 14, 10), i === 0 ? gem : pearl);
+    p.position.y = -0.008;
+    return p;
+  }));
+  return { object: g };
+};
+
+const lanyard = (c) => {
+  const g = new THREE.Group();
+  const strapMat = c.paint(1, { roughness: 0.7 });
+  const cardMat = c.paint(2, { roughness: 0.4 });
+  g.add(ringAround(c, strapMat, 0.102, 0.007, 0.01));
+  for (const s of [-1, 1]) {
+    const strip = c.make(new THREE.BoxGeometry(0.018, 0.15, 0.005), strapMat);
+    strip.position.set(s * 0.036, -0.07, chestZ(c, -0.07, s * 0.036) - 0.006);
+    strip.rotation.z = s * -0.28;
+    strip.rotation.x = -0.18;
+    g.add(strip);
+  }
+  const badge = c.make(new THREE.BoxGeometry(0.075, 0.095, 0.007), cardMat);
+  badge.position.set(0, -0.175, chestZ(c, -0.175) + 0.003);
+  badge.rotation.x = -0.14;
+  g.add(badge);
+  return { object: g };
+};
+
+const lei = (c) => {
+  const g = new THREE.Group();
+  const f1 = c.paint(1, { roughness: 0.65 });
+  const f2 = c.paint(2, { roughness: 0.65 });
+  g.add(around(16, 0.12, (i) => {
+    const fl = c.make(new THREE.SphereGeometry(0.026, 12, 10), i % 2 ? f1 : f2);
+    fl.scale.set(1.1, 0.7, 1.1);
+    fl.position.y = -0.01 + Math.sin((i / 16) * Math.PI * 2) * 0.008;
+    return fl;
+  }));
+  return { object: g };
+};
+
+const stethoscope = (c) => {
+  const g = new THREE.Group();
+  const tubeMat = c.paint(1, { roughness: 0.55 });
+  const metal = c.paint(2, { roughness: 0.25, metalness: 0.8 });
+  g.add(ringAround(c, tubeMat, 0.11, 0.011, 0.005));
+  const drop = c.make(new THREE.CylinderGeometry(0.007, 0.007, 0.15, 10), tubeMat);
+  drop.position.set(0.04, -0.08, chestZ(c, -0.08, 0.04));
+  drop.rotation.x = -0.18;
+  g.add(drop);
+  const disc = c.make(new THREE.CylinderGeometry(0.026, 0.026, 0.01, 24), metal);
+  disc.rotation.x = Math.PI / 2 - 0.16;
+  disc.position.set(0.04, -0.155, chestZ(c, -0.155, 0.04) + 0.004);
+  g.add(disc);
+  return { object: g };
+};
+
+const choker = (c) => {
+  const g = new THREE.Group();
+  const bandMat = c.paint(1, { roughness: 0.6 });
+  const studMat = c.paint(2, { roughness: 0.25, metalness: 0.85 });
+  g.add(ringAround(c, bandMat, 0.098, 0.012, 0.018));
+  g.add(around(8, 0.108, () => {
+    const spike = c.make(new THREE.ConeGeometry(0.008, 0.018, 6), studMat);
+    spike.rotation.x = Math.PI / 2;
+    spike.position.y = 0.018;
+    return spike;
+  }));
+  return { object: g };
+};
+
+const gold_chain = (c) => {
+  const g = new THREE.Group();
+  const gold = c.paint(1, { roughness: 0.22, metalness: 0.88 });
+  const shine = c.paint(2, { roughness: 0.18, metalness: 0.9 });
+  g.add(ringAround(c, gold, 0.116, 0.014, -0.006));
+  const medallion = c.make(new THREE.CylinderGeometry(0.032, 0.032, 0.008, 24), shine);
+  medallion.rotation.x = Math.PI / 2 - 0.18;
+  medallion.position.set(0, -0.065, chestZ(c, -0.065) + 0.004);
+  g.add(medallion);
+  return { object: g };
+};
+
+const camera_strap = (c) => {
+  const g = new THREE.Group();
+  const bodyMat = c.paint(1, { roughness: 0.45 });
+  const lensMat = c.paint(2, { roughness: 0.3, metalness: 0.7 });
+  g.add(ringAround(c, bodyMat, 0.105, 0.008, 0.008));
+  for (const s of [-1, 1]) {
+    const st = c.make(new THREE.BoxGeometry(0.014, 0.14, 0.004), bodyMat);
+    st.position.set(s * 0.042, -0.065, chestZ(c, -0.065, s * 0.042) - 0.004);
+    st.rotation.z = s * -0.25;
+    st.rotation.x = -0.18;
+    g.add(st);
+  }
+  const camZ = chestZ(c, -0.15) + 0.018;
+  const cam = c.make(new THREE.BoxGeometry(0.11, 0.075, 0.045), bodyMat);
+  cam.position.set(0, -0.15, camZ);
+  g.add(cam);
+  const barrel = c.make(new THREE.CylinderGeometry(0.026, 0.026, 0.032, 24), lensMat);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, -0.15, camZ + 0.03);
+  g.add(barrel);
+  return { object: g };
+};
+
+export default {
+  scarf, bowtie, tie, bandana, ruff, medal, bell, collar,
+  pearls, lanyard, lei, stethoscope, choker, gold_chain, camera_strap,
+};

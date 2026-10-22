@@ -1854,7 +1854,7 @@
           </label>
 
           <div class="subhead"><div>
-            <div class="subhead-title">Quality</div>
+            <div class="subhead-title">Quality & performance</div>
           </div></div>
           <div class="row">
             <div><div class="row-label">Quality</div><div class="row-desc" id="robot-quality-status">Auto starts high and steps down if it gets slow</div></div>
@@ -1865,6 +1865,43 @@
               <option value="high">High</option>
             </select>
           </div>
+          <div class="row">
+            <div><div class="row-label">Performance & FPS</div><div class="row-desc" id="robot-fps-status">Measuring performance…</div></div>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Synthesized sound</div>
+            <p class="hint">WebAudio synthesizer for blips, hums, servos and prop ambience.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Robot sound effects</div><div class="row-desc">Synthesizes blips, hums and servos procedurally</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.sound.enabled">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Volume</div><div class="row-desc">Sound effects volume</div></div>
+            <input type="range" min="0" max="100" class="field range" data-setting="robot.sound.volume" data-type="number" aria-label="Robot sound volume">
+          </div>
+          <label class="row">
+            <div><div class="row-label">Mix into recordings</div><div class="row-desc">Include synthesized robot sounds in voice mode recordings</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.sound.recordMix" id="voice-rec-robot-sound">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Event reactions</div>
+            <p class="hint">How the robot reacts to life events and notifications.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Mission events</div><div class="row-desc">Celebrates when a mission progresses or completes</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.reactions.mission">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Reminders & habits</div><div class="row-desc">Reacts when reminders fire or habit streaks are kept</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.reactions.reminder">
+          </label>
+          <label class="row">
+            <div><div class="row-label">When you return</div><div class="row-desc">Wakes up gently when you return after being away</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.reactions.userReturn">
+          </label>
 
           <div class="subhead"><div>
             <div class="subhead-title">Filming mode</div>
@@ -2426,6 +2463,10 @@
               <button type="button" role="radio" data-value="close" aria-checked="false">Close</button>
               <button type="button" role="radio" data-value="medium" aria-checked="true">Medium</button>
               <button type="button" role="radio" data-value="wide" aria-checked="false">Wide</button>
+              <button type="button" role="radio" data-value="orbit" aria-checked="false">Orbit</button>
+              <button type="button" role="radio" data-value="dolly" aria-checked="false">Dolly</button>
+              <button type="button" role="radio" data-value="rack_focus" aria-checked="false">Focus</button>
+              <button type="button" role="radio" data-value="cinematic" aria-checked="false">Cinema</button>
             </div>
             <div class="seg" id="rs-view" role="radiogroup" aria-label="View from">
               <button type="button" role="radio" data-value="front" aria-checked="true">Front</button>
@@ -2434,6 +2475,8 @@
               <button type="button" role="radio" data-value="back" aria-checked="false">Back</button>
               <button type="button" role="radio" data-value="turn" aria-checked="false">Turn</button>
             </div>
+            <button type="button" class="btn small" id="rs-photo" title="Take a picture (PNG)">Photo</button>
+            <button type="button" class="btn small" id="rs-photo-trans" title="Take a picture with transparent background">Cutout</button>
             <label class="robot-try-field"><span class="sr-only">Try a mood</span>
               <select class="field" id="rs-mood" aria-label="Try a mood"></select>
             </label>

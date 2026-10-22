@@ -36,9 +36,12 @@ describe("Robot settings are kept, checked and repaired", () => {
   test("every robot choice is saved when it's valid", () => {
     const input = {
       robot: {
-        chatDock: false, shot: "close",
-        position: "left", seat: "right", followFace: true, cinematic: true, roam: false, world: false, aiGestures: { voice: false, chat: true },
-        smartMoods: true, quality: "high", filming: { delay: 10, cameraFriendly: false, largeCaptions: true, largerFace: true },
+        chatDock: false, customRooms: [], cameraMoves: [], shot: "close",
+        position: "left", seat: "right", followFace: true, eyesFollowCursor: false, cinematic: true, roam: false, world: false, aiGestures: { voice: false, chat: true },
+        smartMoods: true, quality: "high",
+        sound: { enabled: true, volume: 80, pitch: 1.2, blips: false, servos: true, emotes: true, ambience: false, recordMix: true },
+        reactions: { mission: false, reminder: true, notifications: false, taskDone: true, habitStreak: false, timeOfDay: true, userReturn: false },
+        filming: { delay: 10, cameraFriendly: false, largeCaptions: true, largerFace: true },
       },
     };
     const saved = settings.set(input).robot;

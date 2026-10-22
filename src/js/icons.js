@@ -113,6 +113,8 @@ const PATHS = {
   couch: '<path d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M3 12a2 2 0 0 1 4 0v3h10v-3a2 2 0 0 1 4 0v6H3z"/><path d="M6 21v-3M18 21v-3"/>',
   desk: '<path d="M3 9h18"/><path d="M5 9v11M19 9v11"/><path d="M9 9v5h6V9"/>',
   video: '<rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10 5-3v10l-5-3"/>',
+  cube: '<path d="m21 16-9 5-9-5V8l9-5 9 5v8z"/><path d="m3.3 7 8.7 5 8.7-5M12 12v9"/>',
+  camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
 };
 
 export const iconNames = Object.keys(PATHS);

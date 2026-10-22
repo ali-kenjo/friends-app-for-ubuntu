@@ -8,5 +8,49 @@ import { space } from "./space.js";
 import { garden } from "./garden.js";
 import { city } from "./city.js";
 import { sky } from "./sky.js";
+import {
+  bedroom,
+  kitchen,
+  library,
+  greenhouse,
+  rooftop,
+  workshop,
+  cabin,
+  seaside,
+  campfire,
+  cafe,
+  arcade,
+  observatory,
+  tatami,
+  spaceship,
+} from "./new-places.js";
 
-export const PLACE_BUILDERS = { studio, glow, desk, podcast, lounge, space, garden, city, sky, gradient, photo, green, blue };
+export const PLACE_BUILDERS = {
+  studio,
+  glow,
+  desk,
+  podcast,
+  lounge,
+  space,
+  garden,
+  city,
+  sky,
+  bedroom,
+  kitchen,
+  library,
+  greenhouse,
+  rooftop,
+  workshop,
+  cabin,
+  seaside,
+  campfire,
+  cafe,
+  arcade,
+  observatory,
+  tatami,
+  spaceship,
+  gradient,
+  photo,
+  green,
+  blue,
+};

@@ -227,4 +227,244 @@ const tail = (c) => {
   };
 };
 
-export default { cape, backpack, wings, butterfly, jetpack, tail };
+const bat_wings = (c) => {
+  const { body } = c.dims;
+  const web = c.paint(1, { roughness: 0.7, side: THREE.DoubleSide });
+  const bone = c.paint(2, { roughness: 0.5 });
+  const g = new THREE.Group();
+  const y = shoulderY(c) - 0.02;
+  const s = bodySurface(c, y + body.h / 2);
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(0.22, 0.16);
+  shape.lineTo(0.36, 0.08);
+  shape.lineTo(0.28, -0.14);
+  shape.lineTo(0.14, -0.06);
+  shape.lineTo(0.06, -0.16);
+  shape.closePath();
+  const sides = [1, -1].map((side) => {
+    const pivot = new THREE.Group();
+    pivot.position.set(side * 0.06, y, -(s.z + 0.01));
+    const m = c.make(plate(shape, 0.008, 0.002), web, { shadow: false });
+    m.scale.x = side;
+    const tip = c.make(new THREE.SphereGeometry(0.014, 10, 8), bone);
+    tip.position.set(side * 0.22, 0.16, 0);
+    pivot.add(m, tip);
+    pivot.rotation.y = side * 0.4;
+    g.add(pivot);
+    return [pivot, side];
+  });
+  return {
+    object: g,
+    update(pose, time) {
+      const flap = Math.sin(time * 2.1) * 0.09 + (pose.speaking || 0) * Math.sin(time * 10) * 0.06;
+      for (const [pivot, side] of sides) pivot.rotation.y = side * (0.4 + flap);
+    },
+  };
+};
+
+const fairy_wings = (c) => {
+  const { body } = c.dims;
+  const wingMat = c.glow(1, 1.3, { transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  const veinMat = c.paint(2, { roughness: 0.3 });
+  const g = new THREE.Group();
+  const y = shoulderY(c) - 0.03;
+  const s = bodySurface(c, y + body.h / 2);
+  const sides = [1, -1].map((side) => {
+    const pivot = new THREE.Group();
+    pivot.position.set(side * 0.05, y, -(s.z + 0.012));
+    for (const [dy, rx, ry, ang] of [[0.08, 0.19, 0.09, 0.42], [-0.08, 0.14, 0.07, -0.38]]) {
+      const leaf = c.make(new THREE.SphereGeometry(1, 20, 14), wingMat, { shadow: false });
+      leaf.scale.set(rx, ry, 0.01);
+      leaf.position.set(side * rx * 0.85, dy, 0);
+      leaf.rotation.z = side * ang;
+      pivot.add(leaf);
+    }
+    const hub = c.make(new THREE.SphereGeometry(0.018, 12, 10), veinMat);
+    pivot.add(hub);
+    pivot.rotation.y = side * 0.5;
+    g.add(pivot);
+    return [pivot, side];
+  });
+  return {
+    object: g,
+    update(pose, time) {
+      const flap = Math.sin(time * 3.8) * 0.14;
+      for (const [pivot, side] of sides) pivot.rotation.y = side * (0.5 + flap);
+    },
+  };
+};
+
+const mechanical_wings = (c) => {
+  const { body } = c.dims;
+  const metal = c.paint(1, { roughness: 0.28, metalness: 0.8 });
+  const light = c.glow(2, 1.8);
+  const g = new THREE.Group();
+  const y = shoulderY(c) - 0.02;
+  const s = bodySurface(c, y + body.h / 2);
+  for (const side of [1, -1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(side * 0.06, y, -(s.z + 0.015));
+    for (let i = 0; i < 4; i++) {
+      const blade = c.make(new THREE.BoxGeometry(0.28 - i * 0.04, 0.028, 0.008), i % 2 ? light : metal);
+      blade.position.set(side * (0.14 - i * 0.015), 0.06 - i * 0.045, -i * 0.004);
+      blade.rotation.z = side * (0.35 - i * 0.22);
+      pivot.add(blade);
+    }
+    pivot.rotation.y = side * 0.35;
+    g.add(pivot);
+  }
+  return { object: g };
+};
+
+const windup_key = (c) => {
+  const { body } = c.dims;
+  const brass = c.paint(1, { roughness: 0.25, metalness: 0.85 });
+  const hubMat = c.paint(2, { roughness: 0.35, metalness: 0.75 });
+  const y = body.h * 0.55;
+  const s = bodySurface(c, y);
+  const root = new THREE.Group();
+  root.position.set(0, y - body.h / 2, -(s.z + 0.01));
+  const key = new THREE.Group();
+  root.add(key);
+  const stem = c.make(new THREE.CylinderGeometry(0.018, 0.018, 0.09, 16), hubMat);
+  stem.rotation.x = Math.PI / 2;
+  stem.position.z = -0.045;
+  key.add(stem);
+  for (const dir of [-1, 1]) {
+    const loop = c.make(new THREE.TorusGeometry(0.068, 0.014, 12, 28), brass);
+    loop.position.set(dir * 0.065, 0, -0.11);
+    key.add(loop);
+  }
+  return {
+    object: root,
+    update(pose, time) {
+      key.rotation.z = time * 1.4;
+    },
+  };
+};
+
+const quiver = (c) => {
+  const { body } = c.dims;
+  const leather = c.paint(1, { roughness: 0.8 });
+  const fletch = c.paint(2, { roughness: 0.6 });
+  const y = body.h * 0.55;
+  const s = bodySurface(c, y);
+  const g = new THREE.Group();
+  g.position.set(0.04, y - body.h / 2, -(s.z + 0.055));
+  g.rotation.z = -0.32;
+  g.add(c.make(new THREE.CylinderGeometry(0.052, 0.042, 0.28, 20), leather));
+  for (const dx of [-0.018, 0, 0.018]) {
+    const shaft = c.make(new THREE.CylinderGeometry(0.005, 0.005, 0.12, 8), fletch);
+    shaft.position.set(dx, 0.16, 0);
+    g.add(shaft);
+  }
+  return { object: g };
+};
+
+const guitar_back = (c) => {
+  const { body } = c.dims;
+  const wood = c.paint(1, { roughness: 0.45, physical: true });
+  const dark = c.paint(2, { roughness: 0.6 });
+  const y = body.h * 0.52;
+  const s = bodySurface(c, y);
+  const g = new THREE.Group();
+  g.position.set(0, y - body.h / 2, -(s.z + 0.055));
+  g.rotation.z = -0.38;
+  const lower = c.make(new THREE.CylinderGeometry(0.11, 0.11, 0.036, 28), wood);
+  lower.rotation.x = Math.PI / 2;
+  lower.position.y = -0.06;
+  g.add(lower);
+  const upper = c.make(new THREE.CylinderGeometry(0.082, 0.082, 0.036, 24), wood);
+  upper.rotation.x = Math.PI / 2;
+  upper.position.y = 0.04;
+  g.add(upper);
+  const neck = c.make(new THREE.BoxGeometry(0.028, 0.26, 0.018), dark);
+  neck.position.y = 0.2;
+  g.add(neck);
+  return { object: g };
+};
+
+const skateboard_back = (c) => {
+  const { body } = c.dims;
+  const deckMat = c.paint(1, { roughness: 0.6 });
+  const wheelMat = c.paint(2, { roughness: 0.4 });
+  const y = body.h * 0.52;
+  const s = bodySurface(c, y);
+  const g = new THREE.Group();
+  g.position.set(0, y - body.h / 2, -(s.z + 0.05));
+  g.rotation.z = 0.35;
+  g.add(c.make(plate(roundedRect(0.11, 0.38, 0.052), 0.012, 0.002), deckMat));
+  for (const dy of [-0.11, 0.11]) {
+    for (const dx of [-0.042, 0.042]) {
+      const w = c.make(new THREE.CylinderGeometry(0.018, 0.018, 0.018, 14), wheelMat);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(dx, dy, -0.022);
+      g.add(w);
+    }
+  }
+  return { object: g };
+};
+
+const cat_tail = (c) => {
+  const { body } = c.dims;
+  const fur = c.paint(1, { roughness: 0.9 });
+  const tip = c.paint(2, { roughness: 0.9 });
+  const y = body.h * 0.18;
+  const s = bodySurface(c, y);
+  const root = new THREE.Group();
+  root.position.set(0, y - body.h / 2, -(s.z - 0.01));
+  const sway = new THREE.Group();
+  root.add(sway);
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(0.04, 0.02, -0.1),
+    new THREE.Vector3(0.1, 0.12, -0.16),
+    new THREE.Vector3(0.06, 0.25, -0.14),
+    new THREE.Vector3(0.12, 0.33, -0.11),
+  ]);
+  sway.add(c.make(new THREE.TubeGeometry(curve, 28, 0.022, 10), fur));
+  const end = c.make(new THREE.SphereGeometry(0.026, 14, 10), tip);
+  end.position.set(0.12, 0.33, -0.11);
+  sway.add(end);
+  return {
+    object: root,
+    update(pose, time) {
+      sway.rotation.y = Math.sin(time * 2.1) * 0.32;
+    },
+  };
+};
+
+const devil_tail = (c) => {
+  const { body } = c.dims;
+  const red = c.paint(1, { roughness: 0.5 });
+  const spadeMat = c.paint(2, { roughness: 0.4 });
+  const y = body.h * 0.18;
+  const s = bodySurface(c, y);
+  const root = new THREE.Group();
+  root.position.set(0, y - body.h / 2, -(s.z - 0.01));
+  const sway = new THREE.Group();
+  root.add(sway);
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(-0.05, 0.03, -0.1),
+    new THREE.Vector3(-0.14, 0.14, -0.15),
+    new THREE.Vector3(-0.18, 0.26, -0.12),
+  ]);
+  sway.add(c.make(new THREE.TubeGeometry(curve, 24, 0.014, 8), red));
+  const tip = c.make(new THREE.ConeGeometry(0.032, 0.065, 4), spadeMat);
+  tip.position.set(-0.18, 0.28, -0.12);
+  tip.rotation.z = 0.35;
+  sway.add(tip);
+  return {
+    object: root,
+    update(pose, time) {
+      sway.rotation.y = Math.sin(time * 2.4) * 0.28;
+    },
+  };
+};
+
+export default {
+  cape, backpack, wings, butterfly, jetpack, tail,
+  bat_wings, fairy_wings, mechanical_wings, windup_key, quiver, guitar_back, skateboard_back, cat_tail, devil_tail,
+};

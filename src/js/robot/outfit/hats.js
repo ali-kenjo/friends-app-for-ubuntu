@@ -284,4 +284,237 @@ const halo = (c) => {
   };
 };
 
-export default { beanie, cap, tophat, beret, party, crown, wizard, chef, propeller, cowboy, santa, bow, flower, halo };
+const witch = (c) => {
+  const g = base(c, 0.03);
+  const hat = c.paint(1, { roughness: 0.85 });
+  const band = c.paint(2, { roughness: 0.4, metalness: 0.4 });
+  g.add(c.make(new THREE.CylinderGeometry(0.24, 0.24, 0.01, 48), hat).translateY(0.005));
+  const cone = new THREE.ConeGeometry(0.12, 0.34, 36);
+  cone.translate(0, 0.17, 0);
+  bend(cone, -0.65, "z");
+  g.add(c.make(cone, hat));
+  g.add(c.make(new THREE.CylinderGeometry(0.118, 0.123, 0.028, 36), band).translateY(0.025));
+  return { object: g };
+};
+
+const pirate = (c) => {
+  const g = base(c, 0.03);
+  const hat = c.paint(1, { roughness: 0.8 });
+  const trim = c.paint(2, { roughness: 0.4, metalness: 0.6 });
+  const tricorne = c.make(new THREE.CylinderGeometry(0.21, 0.15, 0.08, 3), hat);
+  tricorne.position.y = 0.045;
+  g.add(tricorne);
+  const edge = c.make(new THREE.TorusGeometry(0.19, 0.01, 8, 3), trim);
+  edge.rotation.x = Math.PI / 2;
+  edge.rotation.z = Math.PI / 6;
+  edge.position.y = 0.08;
+  g.add(edge);
+  return { object: g };
+};
+
+const viking = (c) => {
+  const g = base(c, 0.035);
+  const helm = c.paint(1, { roughness: 0.4, metalness: 0.7 });
+  const hornMat = c.paint(2, { roughness: 0.6 });
+  g.add(c.make(dome(0.195, 0.14, 0.185), helm).translateY(0.01));
+  g.add(c.make(new THREE.CylinderGeometry(0.198, 0.198, 0.025, 36), helm).translateY(0.015));
+  for (const s of [-1, 1]) {
+    const horn = new THREE.ConeGeometry(0.04, 0.18, 16);
+    horn.translate(0, 0.09, 0);
+    bend(horn, -s * 1.4, "x");
+    const m = c.make(horn, hornMat);
+    m.position.set(s * 0.18, 0.05, 0);
+    m.rotation.z = -s * 0.85;
+    g.add(m);
+  }
+  return { object: g };
+};
+
+const astronaut_dome = (c) => {
+  const g = base(c, 0.18, 0);
+  const rim = c.paint(1, { roughness: 0.35, metalness: 0.5 });
+  const glass = c.paint(2, { roughness: 0.08, transparent: true, opacity: 0.26, depthWrite: false });
+  const collar = c.make(new THREE.TorusGeometry(0.24, 0.022, 14, 48), rim);
+  collar.rotation.x = Math.PI / 2;
+  collar.position.y = -0.04;
+  g.add(collar);
+  const bubble = c.make(new THREE.SphereGeometry(0.28, 36, 28), glass, { shadow: false });
+  bubble.position.y = 0.08;
+  g.add(bubble);
+  return { object: g };
+};
+
+const graduation = (c) => {
+  const g = base(c, 0.025);
+  const capMat = c.paint(1, { roughness: 0.75 });
+  const tasselMat = c.paint(2, { roughness: 0.5 });
+  g.add(c.make(new THREE.CylinderGeometry(0.14, 0.15, 0.06, 32), capMat).translateY(0.03));
+  const board = c.make(new THREE.BoxGeometry(0.32, 0.014, 0.32), capMat);
+  board.position.y = 0.065;
+  board.rotation.y = Math.PI / 4;
+  g.add(board);
+  const tassel = c.make(new THREE.CapsuleGeometry(0.01, 0.09, 6, 10), tasselMat);
+  tassel.position.set(0.15, 0.025, 0.08);
+  g.add(tassel);
+  return { object: g };
+};
+
+const sombrero = (c) => {
+  const g = base(c, 0.03);
+  const straw = c.paint(1, { roughness: 0.85 });
+  const band = c.paint(2, { roughness: 0.6 });
+  g.add(c.make(new THREE.CylinderGeometry(0.29, 0.27, 0.018, 48), straw).translateY(0.01));
+  g.add(c.make(new THREE.TorusGeometry(0.28, 0.018, 12, 48), straw).rotateX(Math.PI / 2).translateZ(-0.02));
+  g.add(c.make(new THREE.ConeGeometry(0.12, 0.19, 36), straw).translateY(0.1));
+  g.add(c.make(new THREE.CylinderGeometry(0.118, 0.122, 0.028, 36), band).translateY(0.03));
+  return { object: g };
+};
+
+const hardhat = (c) => {
+  const g = base(c, 0.03);
+  const shell = c.paint(1, { roughness: 0.35, physical: true });
+  const stripe = c.paint(2, { roughness: 0.5 });
+  g.add(c.make(dome(0.195, 0.15, 0.21), shell).translateY(0.01));
+  const brim = c.make(new THREE.CylinderGeometry(0.21, 0.21, 0.012, 36), shell);
+  brim.scale.set(0.95, 1, 1.12);
+  brim.position.set(0, 0.01, 0.02);
+  g.add(brim);
+  const ridge = c.make(new THREE.BoxGeometry(0.036, 0.03, 0.32), stripe);
+  ridge.position.set(0, 0.145, 0);
+  g.add(ridge);
+  return { object: g };
+};
+
+const detective = (c) => {
+  const g = base(c, 0.03);
+  const tweed = c.paint(1, { roughness: 0.9 });
+  const ribbon = c.paint(2, { roughness: 0.75 });
+  g.add(c.make(dome(0.18, 0.14, 0.19), tweed).translateY(0.01));
+  for (const dir of [-1, 1]) {
+    const visor = c.make(new THREE.CylinderGeometry(0.18, 0.18, 0.012, 32, 1, false, -Math.PI / 2, Math.PI), tweed);
+    visor.position.set(0, 0.01, dir * 0.09);
+    if (dir < 0) visor.rotation.y = Math.PI;
+    g.add(visor);
+  }
+  const bowTop = c.make(new THREE.SphereGeometry(0.022, 14, 10), ribbon);
+  bowTop.position.y = 0.155;
+  g.add(bowTop);
+  return { object: g };
+};
+
+const sailor = (c) => {
+  const g = base(c, 0.025);
+  const white = c.paint(1, { roughness: 0.8 });
+  const navy = c.paint(2, { roughness: 0.7 });
+  g.add(c.make(new THREE.CylinderGeometry(0.165, 0.135, 0.085, 36), white).translateY(0.045));
+  g.add(c.make(new THREE.CylinderGeometry(0.138, 0.138, 0.026, 36), navy).translateY(0.02));
+  return { object: g };
+};
+
+const straw_hat = (c) => {
+  const g = base(c, 0.03);
+  const straw = c.paint(1, { roughness: 0.85 });
+  const band = c.paint(2, { roughness: 0.65 });
+  g.add(c.make(new THREE.CylinderGeometry(0.25, 0.25, 0.012, 48), straw).translateY(0.008));
+  g.add(c.make(new THREE.CylinderGeometry(0.135, 0.14, 0.095, 40), straw).translateY(0.055));
+  g.add(c.make(new THREE.CylinderGeometry(0.142, 0.142, 0.028, 40), band).translateY(0.026));
+  return { object: g };
+};
+
+const fez = (c) => {
+  const g = base(c, 0.02);
+  const felt = c.paint(1, { roughness: 0.9 });
+  const tassel = c.paint(2, { roughness: 0.6 });
+  g.add(c.make(new THREE.CylinderGeometry(0.095, 0.118, 0.13, 36), felt).translateY(0.065));
+  const cord = c.make(new THREE.CapsuleGeometry(0.009, 0.075, 6, 10), tassel);
+  cord.position.set(0.095, 0.085, 0);
+  cord.rotation.z = -0.25;
+  g.add(cord);
+  return { object: g };
+};
+
+const tiara = (c) => {
+  const g = base(c, 0.02, -0.04);
+  const silver = c.paint(1, { roughness: 0.25, metalness: 0.85 });
+  const gem = c.paint(2, { roughness: 0.15, metalness: 0.2 });
+  const arc = c.make(new THREE.TorusGeometry(0.14, 0.01, 10, 36, Math.PI), silver);
+  arc.rotation.x = Math.PI / 2;
+  arc.rotation.z = -Math.PI / 2;
+  g.add(arc);
+  for (const [x, h] of [[-0.08, 0.05], [-0.04, 0.075], [0, 0.1], [0.04, 0.075], [0.08, 0.05]]) {
+    const peak = c.make(new THREE.ConeGeometry(0.018, h, 4), silver);
+    peak.position.set(x, h / 2, Math.sqrt(Math.max(0, 0.14 * 0.14 - x * x)));
+    g.add(peak);
+  }
+  const centerGem = c.make(new THREE.SphereGeometry(0.018, 14, 10), gem);
+  centerGem.position.set(0, 0.05, 0.145);
+  g.add(centerGem);
+  return { object: g };
+};
+
+const mushroom_cap = (c) => {
+  const g = base(c, 0.03);
+  const capMat = c.paint(1, { roughness: 0.75 });
+  const spotMat = c.paint(2, { roughness: 0.85 });
+  const cap = c.make(dome(0.24, 0.15, 0.23, Math.PI * 0.58), capMat);
+  cap.position.y = 0.02;
+  g.add(cap);
+  for (const [x, y, z, r] of [[0, 0.16, 0.05, 0.032], [-0.12, 0.11, 0.12, 0.026], [0.13, 0.1, 0.1, 0.028], [-0.1, 0.12, -0.12, 0.025], [0.11, 0.12, -0.11, 0.026]]) {
+    const dot = c.make(new THREE.SphereGeometry(r, 14, 10), spotMat);
+    dot.scale.y = 0.45;
+    dot.position.set(x, y, z);
+    g.add(dot);
+  }
+  return { object: g };
+};
+
+const frog_hat = (c) => {
+  const g = base(c, 0.035);
+  const green = c.paint(1, { roughness: 0.85 });
+  const white = c.paint(2, { roughness: 0.5 });
+  g.add(c.make(dome(0.195, 0.135, 0.185), green).translateY(0.01));
+  for (const s of [-1, 1]) {
+    const bump = c.make(new THREE.SphereGeometry(0.048, 20, 14), green);
+    bump.position.set(s * 0.095, 0.135, 0.06);
+    g.add(bump);
+    const eye = c.make(new THREE.SphereGeometry(0.032, 16, 12), white);
+    eye.position.set(s * 0.095, 0.14, 0.088);
+    g.add(eye);
+  }
+  return { object: g };
+};
+
+const leaf_hat = (c) => {
+  const g = base(c, 0.015);
+  const leafMat = c.paint(1, { roughness: 0.7 });
+  const stemMat = c.paint(2, { roughness: 0.8 });
+  const leaf = new THREE.SphereGeometry(0.16, 24, 16);
+  leaf.scale(1.1, 0.18, 0.85);
+  const m = c.make(leaf, leafMat);
+  m.position.set(0.03, 0.03, 0.02);
+  m.rotation.z = -0.18;
+  g.add(m);
+  const stem = c.make(new THREE.CylinderGeometry(0.008, 0.012, 0.07, 10), stemMat);
+  stem.position.set(-0.08, 0.06, 0);
+  stem.rotation.z = 0.35;
+  g.add(stem);
+  return { object: g };
+};
+
+const nightcap = (c) => {
+  const g = base(c, 0.03);
+  const cloth = c.paint(1, { roughness: 0.9 });
+  const pomMat = c.paint(2, { roughness: 0.95 });
+  const cone = turned(smooth([[0.17, 0], [0.145, 0.06], [0.11, 0.13], [0.07, 0.2], [0.03, 0.26], [0.01, 0.3]]), 36);
+  bend(cone, 1.85);
+  g.add(c.make(cone, cloth).translateY(0.01));
+  const pom = c.make(new THREE.SphereGeometry(0.034, 18, 14), pomMat);
+  pom.position.set(1.85 * 0.3 * 0.3, 0.31, 0);
+  g.add(pom);
+  return { object: g };
+};
+
+export default {
+  beanie, cap, tophat, beret, party, crown, wizard, chef, propeller, cowboy, santa, bow, flower, halo,
+  witch, pirate, viking, astronaut_dome, graduation, sombrero, hardhat, detective, sailor, straw_hat, fez, tiara, mushroom_cap, frog_hat, leaf_hat, nightcap,
+};

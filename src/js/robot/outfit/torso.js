@@ -6,7 +6,21 @@ import { sliceProfile, patternTexture, turned } from "./kit.js";
 const SKIN = 0.012; // how far a garment stands off the body
 
 // How often a pattern repeats around and up the body (the body is wider around than it is tall)
-const REPEAT = { stripes: [2, 1], bands: [1, 1.5], dots: [3, 1], checks: [3, 1], gradient: [1, 1], stars: [3, 1] };
+const REPEAT = {
+  stripes: [2, 1],
+  bands: [1, 1.5],
+  dots: [3, 1],
+  checks: [3, 1],
+  gradient: [1, 1],
+  stars: [3, 1],
+  hearts: [3, 1],
+  chevron: [2, 1.5],
+  grid: [3, 1.5],
+  waves: [2, 1.5],
+  camo: [2, 1],
+  circuit: [2, 1],
+  sprinkles: [3, 1.5],
+};
 
 // The garment's material: the first color, or a pattern of both
 function fabric(c, { roughness = 0.92, side } = {}) {
@@ -205,4 +219,117 @@ const jacket = (c) => {
   return { object: g, extra: sleeves(c, () => sleeve(c, f.material, trim, c.dims.arm.length + 0.095)), recolor: f.redraw };
 };
 
-export default { tee, sweater, hoodie, vest, overalls, apron, jacket };
+const tuxedo = (c) => {
+  const f = fabric(c, { roughness: 0.45 });
+  const shirt = c.paint(2, { roughness: 0.8 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.4, 0.96, { front: 0.52, off: SKIN - 0.002 }), shirt)));
+  g.add(placed(c, c.make(shell(c, 0.1, 0.97, { gap: 0.48 }), f.material)));
+  return { object: g, extra: sleeves(c, () => sleeve(c, f.material, shirt, c.dims.arm.length + 0.095)), recolor: f.redraw };
+};
+
+const kimono = (c) => {
+  const f = fabric(c, { roughness: 0.7 });
+  const obi = c.paint(2, { roughness: 0.55 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.06, 0.96), f.material)));
+  g.add(placed(c, c.make(shell(c, 0.34, 0.54, { off: SKIN + 0.006 }), obi)));
+  return { object: g, extra: sleeves(c, () => sleeve(c, f.material, obi, c.dims.arm.length + 0.08, 0.072)), recolor: f.redraw };
+};
+
+const lab_coat = (c) => {
+  const f = fabric(c, { roughness: 0.8 });
+  const inner = c.paint(2, { roughness: 0.75 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.25, 0.95, { front: 0.5, off: SKIN - 0.002 }), inner)));
+  g.add(placed(c, c.make(shell(c, 0.05, 0.96, { gap: 0.45 }), f.material)));
+  return { object: g, extra: sleeves(c, () => sleeve(c, f.material, inner, c.dims.arm.length + 0.095)), recolor: f.redraw };
+};
+
+const puffer = (c) => {
+  const f = fabric(c, { roughness: 0.45 });
+  const trim = c.paint(2, { roughness: 0.5 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.12, 0.97, { off: SKIN + 0.014 }), f.material)));
+  for (const frac of [0.25, 0.48, 0.72, 0.92]) {
+    g.add(ring(c, f.material, c.dims.bodyRadius(h * frac) + SKIN + 0.012, 0.022, h * frac - h / 2, c.dims.body.depth));
+  }
+  const zip = c.make(new THREE.BoxGeometry(0.01, h * 0.8, 0.006), trim);
+  zip.position.set(0, 0.52 * h - h / 2, c.dims.body.depth * c.dims.bodyRadius(0.52 * h) + SKIN + 0.022);
+  g.add(zip);
+  return { object: g, extra: sleeves(c, () => sleeve(c, f.material, trim, c.dims.arm.length + 0.095, 0.064)), recolor: f.redraw };
+};
+
+const raincoat = (c) => {
+  const f = fabric(c, { roughness: 0.25 });
+  const trim = c.paint(2, { roughness: 0.35 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.06, 0.97, { off: SKIN + 0.006 }), f.material)));
+  g.add(ring(c, trim, c.dims.bodyRadius(h * 0.96) + SKIN + 0.008, 0.022, h * 0.96 - h / 2, c.dims.body.depth));
+  return { object: g, extra: sleeves(c, () => sleeve(c, f.material, trim, c.dims.arm.length + 0.095)), recolor: f.redraw };
+};
+
+const space_suit = (c) => {
+  const f = fabric(c, { roughness: 0.45 });
+  const trim = c.paint(2, { roughness: 0.35, metalness: 0.6 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.08, 0.98, { off: SKIN + 0.008 }), f.material)));
+  g.add(ring(c, trim, c.dims.bodyRadius(h * 0.97) + SKIN + 0.012, 0.02, h * 0.97 - h / 2, c.dims.body.depth));
+  g.add(ring(c, trim, c.dims.bodyRadius(h * 0.42) + SKIN + 0.01, 0.015, h * 0.42 - h / 2, c.dims.body.depth));
+  return { object: g, extra: sleeves(c, () => sleeve(c, f.material, trim, c.dims.arm.length + 0.095, 0.062)), recolor: f.redraw };
+};
+
+const knight_armor = (c) => {
+  const plateMat = c.paint(1, { roughness: 0.28, metalness: 0.85 });
+  const goldMat = c.paint(2, { roughness: 0.25, metalness: 0.8 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.14, 0.97, { off: SKIN + 0.01 }), plateMat)));
+  g.add(ring(c, goldMat, c.dims.bodyRadius(h * 0.96) + SKIN + 0.014, 0.018, h * 0.96 - h / 2, c.dims.body.depth));
+  g.add(ring(c, goldMat, c.dims.bodyRadius(h * 0.22) + SKIN + 0.012, 0.014, h * 0.22 - h / 2, c.dims.body.depth));
+  return { object: g, extra: sleeves(c, () => sleeve(c, plateMat, goldMat, 0.09, 0.066)) };
+};
+
+const cardigan = (c) => {
+  const f = fabric(c, { roughness: 0.95 });
+  const trim = c.paint(2, { roughness: 0.9 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.12, 0.96, { gap: 0.36 }), f.material)));
+  g.add(ring(c, trim, c.dims.bodyRadius(h * 0.12) + SKIN, 0.014, h * 0.12 - h / 2, c.dims.body.depth));
+  return { object: g, extra: sleeves(c, () => sleeve(c, f.material, trim, c.dims.arm.length + 0.095)), recolor: f.redraw };
+};
+
+const hawaiian = (c) => {
+  const f = fabric(c, { roughness: 0.8 });
+  const trim = c.paint(2, { roughness: 0.7 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  g.add(placed(c, c.make(shell(c, 0.22, 0.96, { gap: 0.18 }), f.material)));
+  g.add(ring(c, trim, c.dims.bodyRadius(h * 0.96) + SKIN, 0.014, h * 0.96 - h / 2, c.dims.body.depth));
+  return { object: g, extra: sleeves(c, () => sleeve(c, f.material, trim, 0.08, 0.062)), recolor: f.redraw };
+};
+
+const poncho = (c) => {
+  const f = fabric(c, { roughness: 0.92, side: THREE.DoubleSide });
+  const trim = c.paint(2, { roughness: 0.85 });
+  const g = new THREE.Group();
+  const h = c.dims.body.h;
+  const cone = c.make(new THREE.ConeGeometry(0.34 * c.dims.body.W, h * 0.75, 40, 1, true), f.material);
+  cone.position.y = h * 0.12;
+  cone.scale.z = c.dims.body.depth;
+  g.add(cone);
+  g.add(ring(c, trim, c.dims.bodyRadius(h * 0.96) + SKIN + 0.008, 0.018, h * 0.96 - h / 2, c.dims.body.depth));
+  return { object: g, recolor: f.redraw };
+};
+
+export default {
+  tee, sweater, hoodie, vest, overalls, apron, jacket,
+  tuxedo, kimono, lab_coat, puffer, raincoat, space_suit, knight_armor, cardigan, hawaiian, poncho,
+};

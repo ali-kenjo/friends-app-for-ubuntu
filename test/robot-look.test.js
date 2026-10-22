@@ -93,7 +93,8 @@ describe("The robot's look: design, room and saved looks", () => {
   test("a room belongs to a place, and only that place's props are kept", () => {
     const r = R.sanitizeRoom({ place: "podcast", props: { sign: false, plant: true, planet: true }, sign: "  LIVE\n NOW  ", light: "disco", brightness: 7, air: "snow", colors: { wall: "#101010", floor: "bad" } });
     assert.strictEqual(r.place, "podcast");
-    assert.deepStrictEqual(Object.keys(r.props), ["sign", "panels", "mic", "pendants", "plant"]);
+    assert.deepStrictEqual(Object.keys(r.props), R.PLACE_BY_ID.podcast.props.map((p) => p.id));
+    assert.deepStrictEqual(Object.keys(r.props).slice(0, 5), ["sign", "panels", "mic", "pendants", "plant"]);
     assert.strictEqual(r.props.sign, false);
     assert.strictEqual(r.props.plant, true);
     assert.strictEqual(r.props.panels, true);
