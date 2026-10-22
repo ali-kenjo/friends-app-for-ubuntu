@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { canvasTexture, matte, glossy, glowSprite, shade, css } from "./kit.js";
 import { CATALOG_BY_ID } from "../room-catalog.mjs";
 import { activeSeason } from "../room.mjs";
+import { buildWhiteboard3D } from "./whiteboard3d.js";
 
 // Default placement coordinates [x, y, z, rotY] for named place props when added to a room
 const PROP_SLOTS = {
@@ -33,6 +34,7 @@ const PROP_SLOTS = {
   telescope: [1.15, 0, -1.45, -0.4],
   bonsai: [-0.95, 0.65, -0.85, 0],
   lanterns: [0, 2.35, -1.45, 0],
+  whiteboard: [-1.45, 1.45, -2.15, 0.22],
 };
 
 // Builds a procedural prop mesh group + optional update(dt, time, fx, state) and interactive metadata
@@ -56,6 +58,16 @@ export function buildPropMesh(id, { keep, colors, glow, level = "high", customCo
     g.add(m);
     return m;
   };
+
+  if (id === "whiteboard" || id.startsWith("whiteboard_") || id === "chalkboard") {
+    const style = id.startsWith("whiteboard_") ? id.replace("whiteboard_", "") : (id === "chalkboard" ? "chalkboard" : "whiteboard");
+    const wb = buildWhiteboard3D({ style, keep, colors, glow, level });
+    g.add(wb.group);
+    updater = wb.update;
+    g.userData.whiteboard = wb;
+    g.userData.propId = "whiteboard";
+    return { group: g, glow: glowing, update: updater, state, whiteboard: wb };
+  }
 
   if (id === "clock" || id === "wall_clock" || id === "station_clock") {
     const rim = add(new THREE.TorusGeometry(0.24, 0.022, 10, seg), glossy(cMain, 0.4, { metalness: 0.4 }), 0, 0, 0, false);

@@ -15,6 +15,7 @@ const DEFAULT_CONFIG = {
     sighs: true,
     chimes: true,
     ambience: true,
+    whiteboard: true,
   },
 };
 
@@ -117,6 +118,10 @@ class RobotSoundEngine {
       water: "ambience",
       music: "ambience",
       fireplace: "ambience",
+      marker: "whiteboard",
+      chalk: "whiteboard",
+      eraser: "whiteboard",
+      sticky: "whiteboard",
     };
     const cat = catMap[kind] || "blips";
     if (!force && this.config.categories[cat] === false) return false;
@@ -228,6 +233,55 @@ class RobotSoundEngine {
           osc.start(st);
           osc.stop(st + 0.08);
         });
+      } else if (kind === "marker") {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(1400 * p, t0);
+        osc.frequency.exponentialRampToValueAtTime(1900 * p, t0 + 0.05);
+        osc.frequency.exponentialRampToValueAtTime(1600 * p, t0 + 0.09);
+        gain.gain.setValueAtTime(0.001, t0);
+        gain.gain.linearRampToValueAtTime(0.08, t0 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.1);
+        osc.connect(gain).connect(dest);
+        osc.start(t0);
+        osc.stop(t0 + 0.11);
+      } else if (kind === "chalk") {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(800 * p, t0);
+        osc.frequency.exponentialRampToValueAtTime(350 * p, t0 + 0.04);
+        gain.gain.setValueAtTime(0.001, t0);
+        gain.gain.linearRampToValueAtTime(0.06, t0 + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.05);
+        osc.connect(gain).connect(dest);
+        osc.start(t0);
+        osc.stop(t0 + 0.06);
+      } else if (kind === "eraser") {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(220 * p, t0);
+        osc.frequency.exponentialRampToValueAtTime(140 * p, t0 + 0.14);
+        gain.gain.setValueAtTime(0.001, t0);
+        gain.gain.linearRampToValueAtTime(0.09, t0 + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
+        osc.connect(gain).connect(dest);
+        osc.start(t0);
+        osc.stop(t0 + 0.16);
+      } else if (kind === "sticky") {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(440 * p, t0);
+        osc.frequency.exponentialRampToValueAtTime(880 * p, t0 + 0.04);
+        gain.gain.setValueAtTime(0.001, t0);
+        gain.gain.linearRampToValueAtTime(0.12, t0 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+        osc.connect(gain).connect(dest);
+        osc.start(t0);
+        osc.stop(t0 + 0.09);
       }
     });
     return true;

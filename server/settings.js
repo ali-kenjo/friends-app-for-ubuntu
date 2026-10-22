@@ -232,6 +232,22 @@ const DEFAULTS = {
       largerFace: false,
     },
   },
+  whiteboard: {
+    enabled: true,
+    roomBoardStyle: "whiteboard", // whiteboard | chalkboard | glass | cork | easel | flipchart | screen
+    writingStyle: "marker", // marker | chalk | print | cursive | plain
+    writingSpeed: "normal", // slow | normal | fast
+    markerColor: "#2563eb",
+    markerSize: 3,
+    autoHideEmpty: true,
+    askBeforeDrawOverUser: true,
+    showInFilming: true,
+    showInRecordings: true,
+    missionAllowed: true,
+    voiceAllowed: true,
+    chatAllowed: true,
+    sound: true,
+  },
 };
 
 // The languages the AI can be told to answer in (Settings → AI & privacy → Answers)
@@ -269,6 +285,12 @@ const ROBOT = {
   seats: ["front", "left", "right"],
   qualities: ["auto", "low", "medium", "high"],
   delays: [0, 3, 5, 10],
+};
+
+const WHITEBOARD = {
+  roomBoardStyles: ["whiteboard", "chalkboard", "glass", "cork", "easel", "flipchart", "screen"],
+  writingStyles: ["marker", "chalk", "print", "cursive", "plain"],
+  writingSpeeds: ["slow", "normal", "fast"],
 };
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -398,6 +420,24 @@ function sanitize(input) {
   // Any number of seconds becomes the nearest allowed delay
   const delay = Number.isFinite(r.filming.delay) ? Math.min(10, Math.max(0, r.filming.delay)) : DEFAULTS.robot.filming.delay;
   r.filming.delay = ROBOT.delays.reduce((best, d) => (Math.abs(d - delay) < Math.abs(best - delay) ? d : best));
+
+  if (!s.whiteboard) s.whiteboard = clone(DEFAULTS.whiteboard);
+  const wb = s.whiteboard;
+  wb.enabled = Boolean(wb.enabled);
+  wb.roomBoardStyle = WHITEBOARD.roomBoardStyles.includes(wb.roomBoardStyle) ? wb.roomBoardStyle : DEFAULTS.whiteboard.roomBoardStyle;
+  wb.writingStyle = WHITEBOARD.writingStyles.includes(wb.writingStyle) ? wb.writingStyle : DEFAULTS.whiteboard.writingStyle;
+  wb.writingSpeed = WHITEBOARD.writingSpeeds.includes(wb.writingSpeed) ? wb.writingSpeed : DEFAULTS.whiteboard.writingSpeed;
+  if (!/^#[0-9a-f]{6}$/i.test(wb.markerColor)) wb.markerColor = DEFAULTS.whiteboard.markerColor;
+  wb.markerSize = whole(wb.markerSize ?? DEFAULTS.whiteboard.markerSize, 1, 32);
+  wb.autoHideEmpty = Boolean(wb.autoHideEmpty);
+  wb.askBeforeDrawOverUser = wb.askBeforeDrawOverUser !== false;
+  wb.showInFilming = wb.showInFilming !== false;
+  wb.showInRecordings = wb.showInRecordings !== false;
+  wb.missionAllowed = wb.missionAllowed !== false;
+  wb.voiceAllowed = wb.voiceAllowed !== false;
+  wb.chatAllowed = wb.chatAllowed !== false;
+  wb.sound = wb.sound !== false;
+
   return s;
 }
 

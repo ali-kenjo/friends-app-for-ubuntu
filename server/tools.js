@@ -13,6 +13,7 @@ const life = require("./life");
 const connectors = require("./connectors");
 const mcp = require("./mcp");
 const localNotes = require("./local-notes");
+const whiteboardTools = require("./whiteboard-tools");
 
 const str = (description) => ({ type: "STRING", description });
 const num = (description) => ({ type: "NUMBER", description });
@@ -483,6 +484,9 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
   }
   if (settings.missions?.enabled !== false && !hidden) list.push(MISSION_TOOL);
   if (voice) list.push(DRAFT_TOOL);
+  if (settings.whiteboard?.enabled !== false && settings.whiteboard?.aiDrawing !== false && !hidden) {
+    list.push(...Object.values(whiteboardTools.WHITEBOARD_TOOLS));
+  }
   if (robotToolsOn(settings, { voice, robot: onScreen })) {
     for (const tool of Object.values(ROBOT_TOOLS)) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
   }
@@ -502,6 +506,8 @@ const ESSENTIAL = new Set([
   "search_gmail", "get_calendar_events",
   "home_devices", "home_control", "start_mission",
   "robot_mood", "robot_gesture", "robot_use_prop", "robot_go_to", "robot_look_at",
+  "whiteboard_write_text", "whiteboard_draw_shape", "whiteboard_add_sticky",
+  "whiteboard_point_at", "whiteboard_read_board", "whiteboard_clear",
 ]);
 
 function forLocal(list, settings) {
@@ -509,7 +515,7 @@ function forLocal(list, settings) {
   // Apps you added yourself (MCP) are kept too; robot tools use their compact essential schema
   return list
     .filter((t) => ESSENTIAL.has(t.name) || Object.hasOwn(FILE_TOOLS, t.name) || isRobotTool(t.name) || t.name.startsWith("mcp_"))
-    .map((t) => ROBOT_TOOLS_LOCAL[t.name] || t);
+    .map((t) => ROBOT_TOOLS_LOCAL[t.name] || whiteboardTools.WHITEBOARD_TOOLS_LOCAL[t.name] || t);
 }
 
 // "folder" → the dirs permissions, "file" → the files permissions
@@ -801,6 +807,12 @@ async function run(name, args, ctx) {
 
     // Local Markdown Notes Vault
     if (VAULT_NAMES.has(name)) return await runVault(name, args, ctx);
+
+    // Whiteboard tools
+    if (whiteboardTools.isWhiteboardTool(name)) {
+      if (ctx.settings?.whiteboard?.enabled === false) throw new Error("Whiteboard is switched off in Settings.");
+      return await whiteboardTools.run(name, args, ctx);
+    }
 
     // Connected apps
     if (connectors.find(name)) return await connectors.run(name, args, ctx);

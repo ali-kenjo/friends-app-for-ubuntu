@@ -1,0 +1,342 @@
+/* ---------- Whiteboard UI Styles ---------- */
+
+#view-whiteboard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-surface, #f8fafc);
+}
+
+#view-whiteboard[hidden] {
+  display: none !important;
+}
+
+.whiteboard-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: calc(100% - 60px);
+}
+
+/* Viewport Canvas Container */
+.whiteboard-viewport {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  touch-action: none;
+  background-color: var(--bg-canvas, #ffffff);
+}
+
+.whiteboard-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Floating Toolbar */
+.whiteboard-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--bg-panel-translucent, rgba(255, 255, 255, 0.85));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  border-radius: 9999px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  z-index: 10;
+  max-width: calc(100% - 32px);
+  overflow-x: auto;
+}
+
+.wb-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wb-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle, rgba(0, 0, 0, 0.1));
+  margin: 0 2px;
+}
+
+.wb-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-base, #1e293b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 15px;
+}
+
+.wb-btn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.wb-btn.active {
+  background: var(--primary, #3b82f6);
+  color: #ffffff;
+}
+
+.wb-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Color Swatches */
+.wb-color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.wb-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.wb-color-swatch.active {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+
+/* Size Pickers */
+.wb-size-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  cursor: pointer;
+}
+
+.wb-size-btn.active {
+  border-color: var(--primary, #3b82f6);
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.wb-size-dot {
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.wb-size-thin .wb-size-dot { width: 4px; height: 4px; }
+.wb-size-medium .wb-size-dot { width: 8px; height: 8px; }
+.wb-size-thick .wb-size-dot { width: 12px; height: 12px; }
+
+/* Page Strip at Bottom */
+.whiteboard-pages-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-surface, #ffffff);
+  border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  overflow-x: auto;
+  z-index: 5;
+}
+
+.wb-pages-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wb-page-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.1));
+  background: var(--bg-surface-elevated, #ffffff);
+  color: var(--text-base, #1e293b);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.wb-page-tab:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.wb-page-tab.active {
+  background: var(--primary-subtle, #eff6ff);
+  border-color: var(--primary, #3b82f6);
+  color: var(--primary, #2563eb);
+  font-weight: 500;
+}
+
+.wb-page-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: var(--bg-badge, #e2e8f0);
+  color: var(--text-muted, #64748b);
+}
+
+/* Zoom Controls Widget in Corner */
+.whiteboard-zoom-widget {
+  position: absolute;
+  bottom: 60px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-panel-translucent, rgba(255, 255, 255, 0.88));
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+/* Export Dropdown Menu */
+.wb-dropdown-menu {
+  position: absolute;
+  top: 48px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.1));
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+}
+
+.wb-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-base, #1e293b);
+  border-radius: 6px;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.wb-menu-item:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+}
+
+/* Modals */
+.wb-modal-body {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.wb-board-item, .wb-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  border-radius: 8px;
+  background: var(--bg-surface-elevated, #ffffff);
+}
+
+.wb-board-item.active {
+  border-color: var(--primary, #3b82f6);
+  background: var(--primary-subtle, #f0f7ff);
+}
+
+.wb-board-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wb-board-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.wb-board-meta {
+  font-size: 12px;
+  color: var(--text-muted, #64748b);
+}
+
+.wb-board-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Dockable Side Panel in Chat / Voice */
+.whiteboard-dock-panel {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 480px;
+  height: calc(100% - 60px);
+  background: var(--bg-surface, #ffffff);
+  border-left: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.1));
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.whiteboard-dock-panel[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .whiteboard-toolbar {
+    top: auto;
+    bottom: 60px;
+    padding: 4px 8px;
+    gap: 2px;
+  }
+  .whiteboard-dock-panel {
+    width: 100%;
+  }
+}

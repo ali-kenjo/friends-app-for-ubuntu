@@ -42,6 +42,7 @@ const missions = require("./missions");
 const specialists = require("./specialists");
 const specialistsApi = require("./specialists-api");
 const google = require("./google");
+const whiteboard = require("./whiteboard");
 const { execFile } = require("child_process");
 
 const PORT = defaultPort;
@@ -375,6 +376,7 @@ async function chat(req, res) {
           settings: current,
           googleAccessToken: activeToken,
           onRobot: (event) => send({ type: "robot", ...event }),
+          onWhiteboard: (event) => send({ type: "whiteboard", ...event }),
           // tools.js decides which actions need asking (see its settings checks)
           confirm: (summary, details) => {
             const id = crypto.randomUUID();
@@ -742,6 +744,19 @@ const routes = [
   ["PUT", /^\/api\/notes\/([\w-]+)$/, async (req, id) => notes.save({ ...(await readJson(req)), id })],
   ["DELETE", /^\/api\/notes\/([\w-]+)$/, (req, id) => notes.remove(id)],
   ["DELETE", /^\/api\/notes$/, () => notes.clear()],
+
+  // Whiteboards
+  ["GET", /^\/api\/whiteboards$/, (req, id, url) => whiteboard.list({ scope: url.searchParams.get("scope") || "", scopeId: url.searchParams.get("scopeId") || "", search: url.searchParams.get("q") || "" })],
+  ["POST", /^\/api\/whiteboards$/, async (req) => whiteboard.create(await readJson(req))],
+  ["GET", /^\/api\/whiteboards\/active$/, (req, id, url) => whiteboard.getActive(url.searchParams.get("scope") || "general", url.searchParams.get("scopeId") || "")],
+  ["GET", /^\/api\/whiteboards\/([\w-]+)$/, (req, id) => whiteboard.get(id) || { error: "Not found" }],
+  ["PUT", /^\/api\/whiteboards\/([\w-]+)$/, async (req, id) => whiteboard.save(id, await readJson(req))],
+  ["PATCH", /^\/api\/whiteboards\/([\w-]+)$/, async (req, id) => whiteboard.patch(id, await readJson(req))],
+  ["DELETE", /^\/api\/whiteboards\/([\w-]+)$/, (req, id) => ({ ok: whiteboard.remove(id) })],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/duplicate$/, (req, id) => whiteboard.duplicate(id)],
+  ["GET", /^\/api\/whiteboards\/([\w-]+)\/history$/, (req, id) => ({ history: whiteboard.getHistory(id) })],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/restore$/, async (req, id) => whiteboard.restoreVersion(id, (await readJson(req)).timestamp)],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/export$/, async (req, id) => whiteboard.exportData(id, await readJson(req))],
 
   ["POST", /^\/api\/confirm\/([\w-]+)$/, async (req, id) => {
     const { allow } = await readJson(req);

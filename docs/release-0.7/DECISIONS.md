@@ -20,5 +20,17 @@
 3. **Rigorous Quality Budgets & Live Monitoring (`src/js/robot/engine.js`, `test/robot-budget.test.js`)**:
    - Enforced hardware-agnostic budgets across tiers (`low`: 140 draw calls / 60,000 triangles / 45 particles; `medium`: 220 / 120,000 / 90; `high`: 320 / 240,000 / 160). Automated testing verifies budget tiers, feature gating (bloom, shadows, high-res face meshes), and graceful down-stepping under frame drops. Settings → Robot features live FPS and draw-call telemetry.
 4. **Camera & Photo Studio Export**:
-   - Implemented extended camera presets (`orbit`, `dolly`, `rack_focus`, `handheld`, `security_cam`, `cinematic`) alongside direct PNG photo and cutout export (`robot.capturePhoto({ transparent })`), preserving background keying and custom camera orientations.
+
+
+## Workstream 3 — Vector Whiteboard, 3D Room Prop, Robot Arm Kinematics, and AI Tools
+
+1. **Universal Vector Document Model (`src/js/whiteboard/model.mjs`, `server/whiteboard-model.js`)**:
+   - Designed a shared vector document schema (`version: 1`) supporting strokes, geometric shapes, arrows, curved connectors, rich typography with handwriting fonts, KaTeX formulas, code blocks, sticky notes, checklists, tables, images, and Mermaid diagrams. Each stroke and item tracks progressive timestamps (`t0`, `duration`) and parametric progress for real-time stroke-by-stroke replay and synchronized robot drawing choreography.
+2. **Dynamic 3D Canvas Reflection & Arm Kinematics (`src/js/robot/places/whiteboard3d.js`, `src/js/robot/animator.mjs`)**:
+   - Integrated the whiteboard directly into the 3D room across 7 distinct prop styles (`whiteboard`, `chalkboard`, `glass`, `cork`, `easel`, `flipchart`, `screen`). Rendered via an offscreen 2D canvas dynamically projected onto Three.js `CanvasTexture` with dirty-rect flagging. Synchronized robot arm forward kinematics, gaze targeting, eraser sweeping gestures, laser pointer spotlight beam, and procedural marker/chalk WebAudio sounds.
+3. **AI Tools Suite & Fenced Block Fallback (`server/whiteboard-tools.js`, `server/whiteboard-parser.js`)**:
+   - Declared 15 expressive whiteboard tools with a compact 6-tool subset for small local models. Integrated a resilient fenced markdown block fallback (` ```whiteboard ... ``` `) supporting both concise declarative DSL commands (`write`, `shape`, `sticky`, `clear`, `diagram`) and structured JSON lines, ensuring zero-configuration operation for non-function-calling models.
+4. **Multilingual Handwriting & Accessible Multi-View Canvas (`src/js/whiteboard/canvas.js`, `src/js/whiteboard/ui.js`)**:
+   - Implemented high-performance dual-buffer 2D canvas with subpixel pressure smoothing, Arabic RTL text shaping, KaTeX math integration, and full keyboard-accessible controls. Offered three unified presentation surfaces: full-page studio view, dockable chat side panel, and detachable floating pop-out window with real-time `BroadcastChannel` synchronization.
+
 

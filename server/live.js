@@ -487,6 +487,8 @@ class LiveSession {
         this.turn.drafts.push(draft);
         this.toPage({ type: "draft", draft });
       },
+      onRobot: (event) => this.toPage({ type: "robot", ...event }),
+      onWhiteboard: (event) => this.toPage({ type: "whiteboard", ...event }),
     };
   }
 

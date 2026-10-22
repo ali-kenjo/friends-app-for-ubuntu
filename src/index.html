@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/shell.css">
   <link rel="stylesheet" href="css/missions.css">
+  <link rel="stylesheet" href="css/whiteboard.css">
   <link rel="stylesheet" href="css/ai.css">
   <link rel="stylesheet" href="css/rtl.css">
   <link rel="stylesheet" href="css/a11y.css">
@@ -77,6 +78,10 @@
           <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
           <span>Today</span>
           <span class="nav-badge" id="today-badge" hidden></span>
+        </button>
+        <button type="button" class="nav-item" id="nav-whiteboard" data-view="whiteboard" title="Whiteboard for drawing, notes, math and diagrams">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M7 20h10"/><path d="M12 17v3"/><path d="M7 13l2-2 3 3 5-5"/></svg>
+          <span>Whiteboard</span>
         </button>
       </nav>
 
@@ -500,6 +505,176 @@
       </div>
     </section>
 
+    <!-- Whiteboard View (src/js/whiteboard/ui.js) -->
+    <section class="view" id="view-whiteboard" data-view="whiteboard" role="main" aria-labelledby="whiteboard-title-text" hidden>
+      <header class="topbar view-bar">
+        <button type="button" class="sidebar-show icon-btn" id="whiteboard-sidebar-show" title="Show sidebar" aria-label="Show sidebar">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="view-titles">
+          <h1 class="view-title" id="whiteboard-title-text" tabindex="-1">Whiteboard</h1>
+          <p class="view-sub" id="whiteboard-subtitle-text">Main Whiteboard</p>
+        </div>
+        <div class="view-actions">
+          <button type="button" class="btn small" id="wb-btn-boards" title="Switch or create whiteboard">Boards</button>
+          <button type="button" class="btn small" id="wb-btn-history" title="Revision history snapshots">History</button>
+          <button type="button" class="btn small" id="wb-btn-export" title="Export board as PNG, SVG, PDF or Markdown" aria-haspopup="true">Export ▾</button>
+          <div class="wb-dropdown-menu" id="wb-export-menu" hidden>
+            <button type="button" class="wb-menu-item" id="wb-export-png">Export PNG image</button>
+            <button type="button" class="wb-menu-item" id="wb-export-svg">Export vector SVG</button>
+            <button type="button" class="wb-menu-item" id="wb-export-pdf">Print / Save as PDF</button>
+            <button type="button" class="wb-menu-item" id="wb-export-md">Save to Notes Vault (.md)</button>
+          </div>
+          <button type="button" class="icon-btn small" id="wb-btn-dock" title="Dock in chat view">
+            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg>
+          </button>
+          <button type="button" class="icon-btn small" id="wb-btn-popout" title="Pop out into separate window">
+            <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="whiteboard-layout">
+        <!-- Floating Canvas Toolbar -->
+        <div class="whiteboard-toolbar" id="whiteboard-toolbar" role="toolbar" aria-label="Whiteboard tools">
+          <div class="wb-tool-group">
+            <button type="button" class="wb-btn" data-wb-tool="select" title="Select and move items (V)">
+              <svg viewBox="0 0 24 24"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="pan" title="Pan canvas (Space + Drag / H)">
+              <svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v4"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-16 0v-2"/></svg>
+            </button>
+          </div>
+
+          <div class="wb-divider"></div>
+
+          <div class="wb-tool-group">
+            <button type="button" class="wb-btn active" data-wb-tool="pen" title="Drawing pen / marker (P)">
+              <svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="highlighter" title="Translucent highlighter (H)">
+              <svg viewBox="0 0 24 24"><path d="M9 11l-6 6v3h3l6-6"/><path d="M22 7l-5-5-10 10 5 5 10-10z"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="eraser" title="Eraser (E)">
+              <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L20 20Z"/><line x1="6" y1="13" x2="15" y2="22"/></svg>
+            </button>
+          </div>
+
+          <div class="wb-divider"></div>
+
+          <!-- Color swatches -->
+          <div class="wb-tool-group" role="radiogroup" aria-label="Stroke color">
+            <button type="button" class="wb-color-swatch active" data-wb-color="#1e293b" style="background:#1e293b" title="Black/Slate" aria-label="Black"></button>
+            <button type="button" class="wb-color-swatch" data-wb-color="#2563eb" style="background:#2563eb" title="Blue" aria-label="Blue"></button>
+            <button type="button" class="wb-color-swatch" data-wb-color="#dc2626" style="background:#dc2626" title="Red" aria-label="Red"></button>
+            <button type="button" class="wb-color-swatch" data-wb-color="#16a34a" style="background:#16a34a" title="Green" aria-label="Green"></button>
+            <button type="button" class="wb-color-swatch" data-wb-color="#d97706" style="background:#d97706" title="Amber" aria-label="Amber"></button>
+            <button type="button" class="wb-color-swatch" data-wb-color="#9333ea" style="background:#9333ea" title="Purple" aria-label="Purple"></button>
+          </div>
+
+          <div class="wb-divider"></div>
+
+          <!-- Size buttons -->
+          <div class="wb-tool-group">
+            <button type="button" class="wb-size-btn wb-size-thin" data-wb-size="2" title="Thin stroke"><span class="wb-size-dot"></span></button>
+            <button type="button" class="wb-size-btn wb-size-medium active" data-wb-size="4" title="Normal stroke"><span class="wb-size-dot"></span></button>
+            <button type="button" class="wb-size-btn wb-size-thick" data-wb-size="8" title="Thick stroke"><span class="wb-size-dot"></span></button>
+          </div>
+
+          <div class="wb-divider"></div>
+
+          <!-- Rich Items -->
+          <div class="wb-tool-group">
+            <button type="button" class="wb-btn" data-wb-shape="rect" title="Rectangle (R)">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-shape="circle" title="Circle (O)">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="text" title="Text / Formula (T)">
+              <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="sticky" title="Sticky Note (N)">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="checklist" title="Checklist (K)">
+              <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="table" title="Table">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="diagram" title="Mermaid Diagram">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="8.5" y="14" width="7" height="7"/><path d="M6.5 10v2a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2"/></svg>
+            </button>
+            <button type="button" class="wb-btn" data-wb-tool="laser" title="Laser pointer (L)">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+            </button>
+          </div>
+
+          <div class="wb-divider"></div>
+
+          <!-- Actions -->
+          <div class="wb-tool-group">
+            <button type="button" class="wb-btn" id="wb-tool-undo" title="Undo (Ctrl+Z)">
+              <svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+            </button>
+            <button type="button" class="wb-btn" id="wb-tool-redo" title="Redo (Ctrl+Y)">
+              <svg viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg>
+            </button>
+            <button type="button" class="wb-btn" id="wb-tool-grid" title="Switch grid pattern">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><circle cx="16" cy="8" r="1"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/></svg>
+            </button>
+            <button type="button" class="wb-btn" id="wb-tool-clear" title="Clear page">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Viewport -->
+        <div class="whiteboard-viewport" id="whiteboard-viewport-container"></div>
+
+        <!-- Zoom Floating Widget -->
+        <div class="whiteboard-zoom-widget">
+          <button type="button" class="wb-btn small" id="wb-zoom-out" title="Zoom out">-</button>
+          <span id="wb-zoom-level">100%</span>
+          <button type="button" class="wb-btn small" id="wb-zoom-in" title="Zoom in">+</button>
+          <button type="button" class="wb-btn small" id="wb-zoom-reset" title="Reset zoom">1:1</button>
+          <button type="button" class="wb-btn small" id="wb-zoom-fit" title="Fit to content">Fit</button>
+        </div>
+
+        <!-- Pages Strip -->
+        <footer class="whiteboard-pages-bar">
+          <div class="wb-pages-list" id="wb-pages-list"></div>
+          <button type="button" class="btn small" id="wb-add-page-btn">+ Page</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- Boards Switcher Modal -->
+    <div class="modal-backdrop" id="wb-boards-modal" data-modal hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wb-boards-title">
+        <header class="modal-head">
+          <h2 id="wb-boards-title">Whiteboards</h2>
+          <div class="modal-actions">
+            <button type="button" class="btn small btn-primary" id="wb-boards-new">New board</button>
+            <button type="button" class="icon-btn small" id="wb-boards-close" aria-label="Close">✕</button>
+          </div>
+        </header>
+        <div class="wb-modal-body" id="wb-boards-list"></div>
+      </div>
+    </div>
+
+    <!-- Snapshots History Modal -->
+    <div class="modal-backdrop" id="wb-history-modal" data-modal hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wb-history-title">
+        <header class="modal-head">
+          <h2 id="wb-history-title">Revision History</h2>
+          <button type="button" class="icon-btn small" id="wb-history-close" aria-label="Close">✕</button>
+        </header>
+        <div class="wb-modal-body" id="wb-history-list"></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Settings panel -->
@@ -530,6 +705,10 @@
           <button class="tab" data-tab="robot" role="tab" id="tab-robot" aria-controls="pane-robot" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg>
             <span>Robot</span>
+          </button>
+          <button class="tab" data-tab="whiteboard" role="tab" id="tab-whiteboard" aria-controls="pane-whiteboard" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><path d="M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 17l-3 4"/><path d="M17 17l3 4"/></svg>
+            <span>Whiteboard</span>
           </button>
           <div class="nav-group" role="presentation">AI</div>
           <button class="tab" data-tab="ai-control" role="tab" id="tab-ai-control" aria-controls="pane-ai-control" aria-selected="false" tabindex="-1">
@@ -1941,6 +2120,102 @@
               <input type="file" id="robot-model-file" accept=".glb,model/gltf-binary" hidden>
             </div>
           </div>
+        </section>
+
+        <!-- Whiteboard -->
+        <section class="pane" data-pane="whiteboard" id="pane-whiteboard" role="tabpanel" aria-labelledby="tab-whiteboard">
+          <h3>Whiteboard</h3>
+          <p class="hint">A shared visual board for the companion and you to draw, sketch, explain math and take notes together.</p>
+
+          <label class="row">
+            <div><div class="row-label">Enable Whiteboard</div><div class="row-desc">Allows the companion to create diagrams, notes, and drawings</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.enabled">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">3D Room board</div>
+            <p class="hint">How the whiteboard appears when placed inside the 3D room.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Board appearance</div><div class="row-desc">Texture and frame style in the 3D room</div></div>
+            <select class="field" data-setting="whiteboard.roomBoardStyle" aria-label="Board appearance">
+              <option value="whiteboard">Whiteboard</option>
+              <option value="chalkboard">Chalkboard</option>
+              <option value="glass">Glass board</option>
+              <option value="cork">Cork pinboard</option>
+              <option value="easel">Artist easel</option>
+              <option value="flipchart">Paper flipchart</option>
+              <option value="screen">Digital screen</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Drawing sound effects</div><div class="row-desc">Synthesized marker squeaks, chalk scrapes, and eraser sweeps</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.sound">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Auto-hide when empty</div><div class="row-desc">Only display the 3D board prop in the room when it has content</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.autoHideEmpty">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Robot drawing style</div>
+            <p class="hint">How the robot writes and draws on the board.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Writing style</div><div class="row-desc">Stroke appearance and handwriting aesthetic</div></div>
+            <select class="field" data-setting="whiteboard.writingStyle" aria-label="Writing style">
+              <option value="marker">Marker pen</option>
+              <option value="chalk">Chalk</option>
+              <option value="print">Neat print</option>
+              <option value="cursive">Cursive handwriting</option>
+              <option value="plain">Technical plain</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Writing speed</div><div class="row-desc">Stroke pacing during live drawing animations</div></div>
+            <select class="field" data-setting="whiteboard.writingSpeed" aria-label="Writing speed">
+              <option value="slow">Slow &amp; deliberate</option>
+              <option value="normal">Normal</option>
+              <option value="fast">Fast sketch</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Default marker color</div><div class="row-desc">The robot's primary ink color</div></div>
+            <input type="color" class="field color" data-setting="whiteboard.markerColor" aria-label="Default marker color">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Marker stroke width</div><div class="row-desc">Default pen tip thickness in pixels</div></div>
+            <input type="range" min="1" max="12" class="field range" data-setting="whiteboard.markerSize" data-type="number" aria-label="Marker stroke width">
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Modes &amp; Permissions</div>
+            <p class="hint">Where the companion is allowed to use the whiteboard.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Voice mode</div><div class="row-desc">Robot can draw while speaking to explain concepts visually</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.voiceAllowed">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Chat mode</div><div class="row-desc">Robot can attach drawings and diagrams to chat answers</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.chatAllowed">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Background missions</div><div class="row-desc">Allow autonomous missions to generate diagrams and mind maps</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.missionAllowed">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Show in filming mode</div><div class="row-desc">Keep board visible when filming content on camera</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.showInFilming">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Show in recordings</div><div class="row-desc">Capture whiteboard drawings in video recordings</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.showInRecordings">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Confirm before erasing your work</div><div class="row-desc">Ask before the robot modifies or clears items you drew</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.askBeforeDrawOverUser">
+          </label>
         </section>
 
         <!-- Connected Apps & Workspace -->

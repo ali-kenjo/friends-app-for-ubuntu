@@ -14,6 +14,7 @@ const VIEWS = {
   home: { el: () => document.getElementById("main"), nav: "nav-home", title: () => t("Talk") },
   missions: { el: () => document.getElementById("view-missions"), nav: "nav-missions", title: () => t("Missions"), heading: "missions-title" },
   today: { el: () => document.getElementById("view-today"), nav: "today-open", title: () => t("Today"), heading: "life-title" },
+  whiteboard: { el: () => document.getElementById("view-whiteboard"), nav: "nav-whiteboard", title: () => t("Whiteboard"), heading: "whiteboard-title-text" },
 };
 
 let current = "home";

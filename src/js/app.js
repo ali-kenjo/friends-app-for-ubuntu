@@ -32,6 +32,7 @@ import "./workspace.js";
 import "./data.js";
 import "./robot/settings-pane.js";
 import "./voice-settings.js";
+import "./whiteboard/ui.js";
 
 // The address (#today, #missions, #voice, #chat/<id>) says where to start
 startViews();

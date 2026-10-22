@@ -33,6 +33,8 @@ const GAZE = {
   fireplace: [0.45, -0.35],
   book: [0, -0.55],
   tablet: [0.15, -0.5],
+  whiteboard: [-0.65, 0.25],
+  board: [-0.65, 0.25],
 };
 // Named spots in the room (-0.48..0.48 sideways, -0.38..0.38 depth)
 export const ROOM_SPOTS = {
@@ -54,6 +56,8 @@ export const ROOM_SPOTS = {
   telescope: [0.28, -0.3],
   tea_table: [0, -0.16],
   helm: [0, 0.18],
+  whiteboard: [-0.35, -0.15],
+  board: [-0.35, -0.15],
 };
 // Where you sit, as you look at the screen
 export const SEATS = { front: [0, -0.05], left: [-0.85, -0.05], right: [0.85, -0.05] };
