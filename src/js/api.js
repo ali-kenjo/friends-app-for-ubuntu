@@ -1,5 +1,6 @@
 // Talks to the Friends helper (server/server.js) that serves this page.
 import { t } from "./i18n.js";
+import { showAuthGate } from "./session.js";
 
 // The helper's messages are English; the ones with a fixed text have translations (i18n/elsewhere.js)
 const said = (message) => (typeof message === "string" ? t(message) : message);
@@ -15,6 +16,10 @@ async function call(method, url, body) {
     });
   } catch {
     throw new Error(t(OFFLINE));
+  }
+  if (res.status === 401) {
+    showAuthGate();
+    throw new Error(t("Unauthorized"));
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(said(data.error) || t("Request failed ({status}).", { status: res.status }));
@@ -34,6 +39,10 @@ async function streamChat(request, signal, handlers) {
   } catch (err) {
     if (err.name === "AbortError") return handlers.onDone({ stopped: true });
     return handlers.onError(t(OFFLINE));
+  }
+  if (res.status === 401) {
+    showAuthGate();
+    return handlers.onError(t("Unauthorized"));
   }
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

@@ -431,4 +431,145 @@ describe("Telegram Bot Audit & Hardening", () => {
     assert.ok(typeof health.allowedCount === "number");
     assert.strictEqual(health.groupMode, "command_only");
   });
+
+  test("19. Stranger's first message with nobody paired gets no access", async () => {
+    const s = settings.get();
+    settings.set({
+      ...s,
+      telegram: {
+        ...s.telegram,
+        pairedUsers: [],
+        allowedUserIds: [],
+      },
+    });
+
+    fakeTg.clear();
+    const STRANGER_ID = 8888;
+    // Stranger messages bot directly
+    await tg.handleMessage({
+      chat: { id: STRANGER_ID, type: "private" },
+      from: { id: STRANGER_ID, username: "stranger" },
+      text: "hello bot",
+    });
+
+    // Check no auto-pairing occurred
+    const updatedSettings = settings.get();
+    assert.strictEqual(updatedSettings.telegram.pairedUsers.length, 0);
+    assert.strictEqual(updatedSettings.telegram.allowedUserIds.length, 0);
+
+    // Stranger receives short hint to pair
+    assert.strictEqual(fakeTg.sentMessages.length, 1);
+    assert.match(fakeTg.sentMessages[0].text, /\/pair <code>/i);
+  });
+
+  test("20. Stranger mentioning the bot in a group gets no reply and no AI call", async () => {
+    let aiCalled = false;
+    tg.setHandlers({
+      chat: async () => {
+        aiCalled = true;
+        return "AI response";
+      },
+    });
+
+    fakeTg.clear();
+    const STRANGER_ID = 9999;
+    const GROUP_ID = -100555666;
+    await tg.handleMessage({
+      chat: { id: GROUP_ID, type: "supergroup" },
+      from: { id: STRANGER_ID, username: "stranger_group" },
+      text: "@friends_test_bot what is the weather?",
+    });
+
+    assert.strictEqual(aiCalled, false, "AI must not be called for unpaired group user");
+    assert.strictEqual(fakeTg.sentMessages.length, 0, "No message should be sent to group for unpaired user");
+  });
+
+  test("21. Paired chat user in a group gets a reply with private data withheld", async () => {
+    const PAIRED_CHAT_USER = 7777;
+    const GROUP_ID = -100777888;
+    const s = settings.get();
+    settings.set({
+      ...s,
+      telegram: {
+        ...s.telegram,
+        groupMode: "mention_only",
+        pairedUsers: [{ id: String(PAIRED_CHAT_USER), role: "chat", username: "chat_user" }],
+        allowedUserIds: [String(PAIRED_CHAT_USER)],
+        allowedChatIds: [{ id: String(GROUP_ID), title: "Test Group", type: "supergroup", allowPrivate: false }],
+      },
+    });
+
+    let receivedOpts = null;
+    tg.setHandlers({
+      chat: async (text, opts) => {
+        receivedOpts = opts;
+        return "I am answering in a group!";
+      },
+    });
+
+    fakeTg.clear();
+    await tg.handleMessage({
+      chat: { id: GROUP_ID, type: "supergroup" },
+      from: { id: PAIRED_CHAT_USER, username: "chat_user" },
+      text: "@friends_test_bot what's on the schedule?",
+    });
+
+    assert.ok(receivedOpts, "Chat handler should be called");
+    assert.strictEqual(receivedOpts.onAir, true, "onAir must be true in group without allowPrivate");
+    assert.strictEqual(receivedOpts.withhold, true, "withhold must be true in group without allowPrivate");
+    assert.ok(fakeTg.sentMessages.some((m) => m.text.includes("I am answering in a group!")));
+  });
+
+  test("22. Stranger pressing Approve button in a group/chat is refused", async () => {
+    fakeTg.clear();
+    const STRANGER_ID = 4321;
+    const cb = {
+      id: "cb_stranger_approve",
+      from: { id: STRANGER_ID },
+      message: { message_id: 99, chat: { id: -10012345 } },
+      data: "m:some_mission:approve",
+    };
+
+    await tg.handleCallback(cb);
+    assert.ok(fakeTg.callbackAnswers.length > 0, "Callback query must be answered");
+    assert.match(fakeTg.callbackAnswers[0].text, /Only admins/i);
+  });
+
+  test("23. Pairing code is burned and app notified after 5 wrong attempts", async () => {
+    let notifiedBurned = false;
+    tg.setHandlers({
+      onPairingBurned: () => {
+        notifiedBurned = true;
+      },
+    });
+
+    const pairing = tg.createPairingCode();
+    assert.ok(pairing && pairing.code);
+
+    const CHAT_ID = 654321;
+    fakeTg.clear();
+
+    // 4 wrong attempts
+    for (let i = 0; i < 4; i++) {
+      await tg.handleMessage({
+        chat: { id: CHAT_ID, type: "private" },
+        from: { id: CHAT_ID },
+        text: "/pair 000000",
+      });
+      assert.strictEqual(notifiedBurned, false);
+      const status = tg.getPairingStatus();
+      assert.strictEqual(status.active, true);
+    }
+
+    // 5th wrong attempt burns the code
+    await tg.handleMessage({
+      chat: { id: CHAT_ID, type: "private" },
+      from: { id: CHAT_ID },
+      text: "/pair 000000",
+    });
+
+    assert.strictEqual(notifiedBurned, true, "App should be notified of burned pairing code");
+    const statusAfter = tg.getPairingStatus();
+    assert.strictEqual(statusAfter.active, false, "Pairing code must be burned/nullified");
+  });
 });

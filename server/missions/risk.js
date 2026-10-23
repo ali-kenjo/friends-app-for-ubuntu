@@ -321,6 +321,8 @@ function covered(action, declared = [], { workdir = "", folders = [] } = {}) {
     }
     case "tool":
       return same.some((d) => d.tool === action.tool) ? { ok: true } : none(`${action.tool.replace(/_/g, " ")} isn't in the plan`);
+    case "internet":
+      return same.length ? { ok: true } : none("using the internet isn't in the plan");
     default:
       return action.risk === "write" ? { ok: true } : none("it isn't in the plan");
   }

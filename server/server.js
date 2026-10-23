@@ -46,7 +46,10 @@ const specialists = require("./specialists");
 const specialistsApi = require("./specialists-api");
 const google = require("./google");
 const whiteboard = require("./whiteboard");
+const auth = require("./auth");
 const { execFile } = require("child_process");
+
+let serverRequiresAuth = true;
 
 const PORT = defaultPort;
 const VOICE_CHAT_TITLE = "Voice conversation"; // the same as live.js uses
@@ -1043,6 +1046,43 @@ async function handle(req, res) {
 
   if (!isTrusted(req)) return sendJson(res, 403, { error: "Forbidden" });
 
+  // Session token exchange for HttpOnly cookie
+  if (pathname === "/api/session" && req.method === "POST") {
+    try {
+      const body = await readJson(req);
+      if (auth.validateToken(body.token)) {
+        res.writeHead(200, securityHeaders({
+          "Content-Type": "application/json; charset=utf-8",
+          "Set-Cookie": auth.createSessionCookie(auth.getToken()),
+        }));
+        return res.end(JSON.stringify({ ok: true }));
+      }
+    } catch {}
+    return sendJson(res, 401, { error: "Invalid session token." });
+  }
+
+  // Google OAuth callback: whitelisted so cross-site OAuth return navigation can complete
+  if (pathname === "/api/google/callback" && req.method === "GET") {
+    let ok = true;
+    let message = "";
+    try {
+      await google.finish(Object.fromEntries(url.searchParams));
+      for (const client of eventClients) client.write(`event: google\ndata: ${JSON.stringify(google.status())}\n\n`);
+    } catch (err) {
+      ok = false;
+      message = err.message;
+    }
+    res.writeHead(200, securityHeaders({ "Content-Type": "text/html; charset=utf-8" }));
+    return res.end(google.callbackPage(ok, message));
+  }
+
+  // Enforce session authentication for all other /api/* endpoints
+  if (pathname.startsWith("/api/")) {
+    if (serverRequiresAuth && !auth.validateSession(req)) {
+      return sendJson(res, 401, { error: "Unauthorized: session required" });
+    }
+  }
+
   if (pathname === "/api/chat" && req.method === "POST") return chat(req, res);
   if (pathname === "/api/events" && req.method === "GET") return events(req, res);
   // The sign-in popup opens here (this app's own address, so the desktop app allows it) and goes on to Google
@@ -1056,20 +1096,6 @@ async function handle(req, res) {
       res.writeHead(200, securityHeaders({ "Content-Type": "text/html; charset=utf-8" }));
       return res.end(google.callbackPage(false, err.message));
     }
-  }
-  // Google's sign-in popup comes back here
-  if (pathname === "/api/google/callback" && req.method === "GET") {
-    let ok = true;
-    let message = "";
-    try {
-      await google.finish(Object.fromEntries(url.searchParams));
-      for (const client of eventClients) client.write(`event: google\ndata: ${JSON.stringify(google.status())}\n\n`);
-    } catch (err) {
-      ok = false;
-      message = err.message;
-    }
-    res.writeHead(200, securityHeaders({ "Content-Type": "text/html; charset=utf-8" }));
-    return res.end(google.callbackPage(ok, message));
   }
   if (pathname === "/api/voice/speak" && req.method === "POST") return speak(req, res);
   if (pathname === "/api/specialists/pull" && req.method === "POST") return pullModel(req, res);
@@ -1108,7 +1134,8 @@ async function handle(req, res) {
   serveStatic(req, res, pathname);
 }
 
-function start(port = PORT, host = HOST) {
+function start(port = PORT, host = HOST, opts = {}) {
+  serverRequiresAuth = opts.requireAuth ?? (!process.env.NODE_TEST_CONTEXT || process.env.FRIENDS_REQUIRE_AUTH === "1");
   allowedHosts = computeAllowedHosts(port, host);
   backup.schedule(settings.get);
   updates.schedule(settings.get);
@@ -1121,8 +1148,10 @@ function start(port = PORT, host = HOST) {
   briefing.schedule(briefingReady);
   // Apps connected through MCP start in the background; they stop with Friends
   mcp.startAll();
-  // Telegram: the companion answers, and missions talk to you there
-  telegram.setHandlers({ chat: (text) => companion.reply(text, { googleToken }) });
+  telegram.setHandlers({
+    chat: (text, opts) => companion.reply(text, { ...opts, googleToken }),
+    onPairingBurned: () => broadcast("telegram_pairing_invalidated", {}),
+  });
   telegram.start();
 
   // Unified Notification Router channels
@@ -1187,6 +1216,10 @@ function start(port = PORT, host = HOST) {
       socket.end("HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
       return;
     }
+    if (serverRequiresAuth && !auth.validateSession(req)) {
+      socket.end("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+      return;
+    }
     live.handleUpgrade(req, socket, head);
   });
 
@@ -1198,7 +1231,8 @@ function start(port = PORT, host = HOST) {
   server.listen(port, host, () => {
     const actualPort = server.address()?.port || port;
     allowedHosts = computeAllowedHosts(actualPort, host);
-    logger.info(`Friends v${version} running at http://${host}:${actualPort}`);
+    const token = auth.getToken();
+    logger.info(`Friends v${version} running at http://${host}:${actualPort}/#token=${token}`);
     logger.info(`Data folder: ${dataDir}`);
     logger.info(`Allowed hosts: ${allowedHosts.join(", ")}`);
   });
@@ -1244,4 +1278,4 @@ function start(port = PORT, host = HOST) {
 
 if (require.main === module) start();
 
-module.exports = { start, handle, computeAllowedHosts, setNativeNotify };
+module.exports = { start, handle, computeAllowedHosts, setNativeNotify, setRequireAuthForTesting: (v) => (serverRequiresAuth = v) };

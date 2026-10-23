@@ -26,6 +26,7 @@ const TYPES = {
   data_write: { risk: "write", fields: ["kind"], label: "Change your tasks, reminders or calendar" },
   command: { risk: "system", fields: ["command"], label: "Run a command" },
   install: { risk: "system", fields: ["what"], label: "Install a package in the project" },
+  internet: { risk: "external", fields: [], label: "Uses the internet" },
 };
 const DATA_KINDS = ["tasks", "reminders", "calendar", "habits", "journal", "memory", "focus"];
 const MAX_STEPS_IN_PLAN = 20;
@@ -97,6 +98,8 @@ function describeAction(a) {
       return `Run: ${a.command}`;
     case "install":
       return `Install ${a.what} (inside the project)`;
+    case "internet":
+      return "Uses the internet";
     default:
       return a.type;
   }

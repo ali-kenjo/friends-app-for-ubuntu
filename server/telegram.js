@@ -5,6 +5,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const settingsModule = require("./settings");
 const keys = require("./keys");
 const logger = require("./logger");
@@ -97,10 +98,11 @@ function canUserAdmin(fromId) {
 
 // Pairing code workflow
 function createPairingCode() {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
   activePairing = {
     code,
     expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+    wrongAttempts: 0,
   };
   return activePairing;
 }
@@ -588,10 +590,28 @@ async function handleCommand(chatId, text, msg = {}) {
   // Pairing command can be issued by anyone with a valid code
   if (name === "/pair") {
     if (!arg) {
-      return sendMessage(chatId, say("To pair, open Settings → Telegram in the app, click 'Generate pairing code', and send: /pair <code>"));
+      return sendMessage(chatId, say("To pair, open Settings → Telegram in the app, click 'Generate pairing code', and send: /pair <code>."));
     }
     const cleanArg = arg.trim();
-    if (!activePairing || Date.now() > activePairing.expiresAt || activePairing.code !== cleanArg) {
+    if (!activePairing || Date.now() > activePairing.expiresAt) {
+      activePairing = null;
+      return sendMessage(chatId, say("That pairing code is invalid or has expired. Generate a new code in the app."));
+    }
+    if (activePairing.code !== cleanArg) {
+      activePairing.wrongAttempts = (activePairing.wrongAttempts || 0) + 1;
+      if (activePairing.wrongAttempts >= 5) {
+        activePairing = null;
+        logger.warn("Telegram pairing code invalidated after 5 wrong attempts");
+        handlers.onPairingBurned?.();
+        try {
+          const notifications = require("./notifications");
+          notifications.dispatch("watch_alert", {
+            title: say("Telegram pairing code invalidated"),
+            body: say("A pairing code was burned after 5 wrong attempts."),
+            urgent: true,
+          });
+        } catch {}
+      }
       return sendMessage(chatId, say("That pairing code is invalid or has expired. Generate a new code in the app."));
     }
 
@@ -611,11 +631,13 @@ async function handleCommand(chatId, text, msg = {}) {
     };
 
     const updatedPaired = [...currentPaired.filter((u) => String(u.id) !== fromId), newUser];
+    const updatedAllowed = [...new Set([...(s.telegram.allowedUserIds || []).map(String), fromId])];
     settingsModule.set({
       ...s,
       telegram: {
         ...s.telegram,
         pairedUsers: updatedPaired,
+        allowedUserIds: updatedAllowed,
       },
     });
 
@@ -624,7 +646,11 @@ async function handleCommand(chatId, text, msg = {}) {
 
   // All other commands require at least chat permission
   if (!canUserChat(fromId)) {
-    return sendMessage(chatId, say("You are not paired with this bot. Ask the owner for a pairing code or send /pair <code>."));
+    const isGroup = msg.chat?.type === "group" || msg.chat?.type === "supergroup";
+    if (!isGroup) {
+      return sendMessage(chatId, say("To use this bot, pair it in the app: send /pair <code>."));
+    }
+    return;
   }
 
   switch (name) {
@@ -736,8 +762,14 @@ async function handleCommand(chatId, text, msg = {}) {
 async function handleMedia(msg) {
   const chatId = msg.chat?.id;
   const fromId = String(msg.from?.id || "");
+  const isGroup = msg.chat?.type === "group" || msg.chat?.type === "supergroup";
 
-  if (!canUserChat(fromId)) return;
+  if (!canUserChat(fromId)) {
+    if (!isGroup) {
+      sendMessage(chatId, say("To use this bot, pair it in the app: send /pair <code>."));
+    }
+    return;
+  }
 
   // 1. Voice Note / Audio
   if (msg.voice || msg.audio) {
@@ -791,6 +823,22 @@ async function handleMessage(msg) {
   const isGroup = msg.chat.type === "group" || msg.chat.type === "supergroup";
   const text = (msg.text || "").trim();
 
+  // Handle pairing command before authorization check
+  if (text.startsWith("/pair")) {
+    return handleCommand(chatId, text, msg);
+  }
+
+  // Check pairing and role on every message, in all chats.
+  // Anyone who is not paired gets nothing. In a group, drop silently (no reply, no AI call).
+  // In private chats, give a short hint.
+  if (!canUserChat(fromId)) {
+    if (isGroup) {
+      return; // Silent drop in groups
+    }
+    logger.warn(`Rejected unauthorized Telegram message from ${fromId}`);
+    return sendMessage(chatId, say("To use this bot, pair it in the app: send /pair <code>."));
+  }
+
   // Group chat filtering by groupMode
   if (isGroup) {
     const gMode = cfg().groupMode || "mention_only";
@@ -804,46 +852,12 @@ async function handleMessage(msg) {
       const botMention = `@${botUsername}`.toLowerCase();
       const hasMention = text.toLowerCase().includes(botMention);
       const isReplyToBot = msg.reply_to_message?.from?.id === botId;
-      if (!hasMention && !isReplyToBot && !text.startsWith("/pair")) {
+      if (!hasMention && !isReplyToBot) {
         return; // Ignore general chatter
       }
     } else if (gMode === "command_only") {
       if (!text.startsWith("/")) return;
     }
-  }
-
-  // Auto-pair first user if no users are configured yet
-  const allAllowed = allowedIds();
-  if (!allAllowed.length && fromId && !isGroup) {
-    const s = settingsModule.get();
-    const newUser = {
-      id: fromId,
-      username: msg.from?.username || "",
-      firstName: msg.from?.first_name || "",
-      role: "admin",
-      pairedAt: Date.now(),
-    };
-    settingsModule.set({
-      ...s,
-      telegram: {
-        ...s.telegram,
-        pairedUsers: [newUser],
-        allowedUserIds: [fromId],
-      },
-    });
-    await sendMessage(chatId, `${say("Nice to meet you. Your Telegram id is {id}: it's saved as the only one allowed to talk to me. Change it in Settings → Telegram.", { id: fromId })}\n\n${help()}`);
-    return;
-  }
-
-  // Handle pairing command before authorization check
-  if (text.startsWith("/pair")) {
-    return handleCommand(chatId, text, msg);
-  }
-
-  // Check authorization - unauthorized messages get nothing (silent drop) unless /start
-  if (!allAllowed.includes(fromId) && !isGroup) {
-    logger.warn(`Rejected unauthorized Telegram message from ${fromId}`);
-    return;
   }
 
   // Handle media messages (photos, voice, audio, documents)
@@ -888,12 +902,24 @@ async function handleMessage(msg) {
     });
   }
 
-  return chatReply(chatId, cleanText, { fromId });
+  return chatReply(chatId, cleanText, { fromId, isGroup });
 }
 
-async function chatReply(chatId, text, { fromId } = {}) {
+async function chatReply(chatId, text, { fromId, isGroup = false } = {}) {
   if (!handlers.chat) {
     return sendMessage(chatId, say("No AI is set up yet. Add one in Settings → AI & privacy."));
+  }
+
+  // Withhold private data in groups by default
+  let onAir = false;
+  let withhold = false;
+  if (isGroup) {
+    const groupConfig = (cfg().allowedChatIds || []).find((c) => String(c.id || c) === String(chatId));
+    const allowPrivate = Boolean(groupConfig && groupConfig.allowPrivate === true);
+    if (!allowPrivate) {
+      onAir = true;
+      withhold = true;
+    }
   }
 
   apiCall("sendChatAction", { chat_id: chatId, action: "typing" }).catch(() => {});
@@ -905,6 +931,11 @@ async function chatReply(chatId, text, { fromId } = {}) {
     try {
       await handlers.chatStream(text, {
         platform: "telegram",
+        fromId,
+        chatId,
+        isGroup,
+        onAir,
+        withhold,
         onToken: (tok, full) => streamer.update(full),
       });
       return;
@@ -914,7 +945,7 @@ async function chatReply(chatId, text, { fromId } = {}) {
   }
 
   try {
-    const reply = await handlers.chat(text, { platform: "telegram", fromId });
+    const reply = await handlers.chat(text, { platform: "telegram", fromId, chatId, isGroup, onAir, withhold });
     if (reply) await sendMessage(chatId, reply);
   } catch (err) {
     await sendMessage(chatId, say("Couldn't answer: {reason}", { reason: err.message }));

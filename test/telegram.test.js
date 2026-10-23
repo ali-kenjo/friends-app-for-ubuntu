@@ -66,7 +66,7 @@ describe("Telegram", () => {
     await brains.saveBrain({ provider: "gemini", name: "Gemini", model: "gemini-3.8-flash", key: "test-key" });
     await brains.saveBrain({ provider: "local", protocol: "ollama", name: "tiny", baseUrl: ai.localUrl(), model: "tiny:latest", contextSize: 8192 });
     const s = settings.get();
-    settings.set({ ...s, localNotes: { ...s.localNotes, folder: path.join(tempDir, "vault") }, missions: { ...s.missions, workspace: path.join(tempDir, "ws") }, routing: { ...s.routing, mode: "local" } });
+    settings.set({ ...s, localNotes: { ...s.localNotes, folder: path.join(tempDir, "vault") }, missions: { ...s.missions, enabled: true, workspace: path.join(tempDir, "ws") }, routing: { ...s.routing, mode: "local" } });
     tg.setHandlers({ chat: (text) => companion.reply(text, {}) });
     // The same wiring as server.js: missions tell the bot
     runner.onEvent((e) => e.notify && tg.onMissionEvent(e));
@@ -113,26 +113,55 @@ describe("Telegram", () => {
       tg.saveToken("123456:ABC-secret");
     });
 
-    test("switching it on starts the listener; the first person to write becomes the owner", async () => {
+    test("switching it on starts the listener; pairing is required to talk to it", async () => {
       const s = settings.get();
-      settings.set({ ...s, telegram: { ...s.telegram, enabled: true, allowedUserIds: [] } });
+      settings.set({ ...s, telegram: { ...s.telegram, enabled: true, allowedUserIds: [], pairedUsers: [] } });
       await waitFor(() => tg.status().running, 5000, "the listener");
       assert.strictEqual(tg.status().botUsername, "friends_test_bot");
+
+      // Stranger messaging before pairing gets only a hint in private chat
       say("hello there", 555);
-      await waitFor(() => said(/Telegram id is 555/), 5000, "the welcome");
-      assert.deepStrictEqual(settings.get().telegram.allowedUserIds, ["555"]);
-      say("let me in too", 777);
-      await new Promise((r) => setTimeout(r, 200));
-      assert.ok(!sent.some((m) => m.chat === 777), "a second person gets no answer");
-      settings.set({ ...settings.get(), telegram: { ...settings.get().telegram, allowedUserIds: [String(ME)] } });
+      await waitFor(() => said(/send \/pair <code>/), 5000, "the pairing hint");
+      assert.strictEqual(settings.get().telegram.pairedUsers.length, 0);
+
+      // Pair ME first (becomes admin)
+      const { code } = tg.createPairingCode();
+      say(`/pair ${code}`, ME);
+      await waitFor(() => said(/Pairing successful!.*admin/i), 5000, "ME pairing confirmation");
+      assert.strictEqual(settings.get().telegram.pairedUsers[0].id, String(ME));
+      assert.strictEqual(settings.get().telegram.pairedUsers[0].role, "admin");
+
+      // Pair user 555 second (becomes chat)
+      const { code: code555 } = tg.createPairingCode();
+      say(`/pair ${code555}`, 555);
+      await waitFor(() => said(/Pairing successful!.*chat/i), 5000, "555 pairing confirmation");
+      assert.strictEqual(settings.get().telegram.pairedUsers.length, 2);
+
+      // Settle any pending async dispatching
+      await new Promise((r) => setTimeout(r, 100));
     });
   });
 
   describe("Talking to it", () => {
-    test("someone who isn't allowed gets nothing", async () => {
-      say("what is on my list?", 424242);
+    test("someone who isn't allowed gets nothing in group, hint in private", async () => {
+      sent.length = 0;
+      // In a group, silent drop
+      queue.push({
+        update_id: nextUpdate++,
+        message: {
+          message_id: nextUpdate,
+          from: { id: 424242 },
+          chat: { id: -100123456789, type: "group" },
+          text: "@friends_test_bot what is on my list?",
+        },
+      });
       await new Promise((r) => setTimeout(r, 250));
       assert.strictEqual(sent.length, 0);
+
+      // In a private chat, short pairing hint
+      say("what is on my list?", 424242);
+      await waitFor(() => said(/send \/pair <code>/), 2000, "the hint");
+      assert.strictEqual(sent.length, 1);
     });
 
     test("commands: the day, tasks, a reminder, a note", async () => {

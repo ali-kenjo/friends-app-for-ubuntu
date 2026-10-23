@@ -27,7 +27,7 @@ describe("The missions API", () => {
     settings = require("../server/settings");
     brains = require("../server/brains");
     const s = settings.get();
-    settings.set({ ...s, onboarding: { done: true }, missions: { ...s.missions, workspace: path.join(tempDir, "ws") }, localNotes: { ...s.localNotes, folder: path.join(tempDir, "vault") } });
+    settings.set({ ...s, onboarding: { done: true }, missions: { ...s.missions, workspace: path.join(tempDir, "ws"), enabled: true }, localNotes: { ...s.localNotes, folder: path.join(tempDir, "vault") } });
     await brains.saveBrain({ provider: "gemini", name: "Gemini", model: "gemini-3.8-flash", key: "test-key" });
     await brains.saveBrain({ provider: "local", protocol: "ollama", name: "tiny", baseUrl: ai.localUrl(), model: "tiny:latest", contextSize: 8192 });
     server = require("../server/server").start(0, "127.0.0.1");

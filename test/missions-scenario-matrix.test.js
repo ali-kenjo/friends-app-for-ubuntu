@@ -75,7 +75,7 @@ describe("Missions & Local AI Scenario Test Matrix", () => {
         files: { create: true, read: true, edit: true, delete: true },
         dirs: { create: true, read: true, edit: true, delete: true },
       },
-      missions: { ...s.missions, workspace: dirs.workspace },
+      missions: { ...s.missions, workspace: dirs.workspace, enabled: true },
       localNotes: { ...s.localNotes, folder: dirs.vault, enabled: true },
     }));
 

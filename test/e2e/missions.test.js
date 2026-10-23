@@ -35,7 +35,7 @@ describe("Missions in the page", { skip: !CHROME && "no Chrome found" }, () => {
     const brains = require("../../server/brains");
     const s = settings.get();
     // No robot in the page (a software renderer would only slow it down)
-    settings.set({ ...s, onboarding: { done: true, missions: true }, robot: { ...s.robot, chatDock: false }, missions: { ...s.missions, workspace: path.join(tempDir, "ws") }, localNotes: { ...s.localNotes, folder: path.join(tempDir, "vault") }, routing: { ...s.routing, mode: "fixed" } });
+    settings.set({ ...s, onboarding: { done: true, missions: true }, robot: { ...s.robot, chatDock: false }, missions: { ...s.missions, workspace: path.join(tempDir, "ws"), enabled: true }, localNotes: { ...s.localNotes, folder: path.join(tempDir, "vault") }, routing: { ...s.routing, mode: "fixed" } });
     await brains.saveBrain({ provider: "gemini", name: "Gemini", model: "gemini-3.8-flash", key: "test-key" });
     await brains.saveBrain({ provider: "local", protocol: "ollama", name: "tiny", baseUrl: ai.localUrl(), model: "tiny:latest", contextSize: 8192 });
     server = require("../../server/server").start(0, "127.0.0.1");

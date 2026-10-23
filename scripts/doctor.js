@@ -102,6 +102,19 @@ async function assistant() {
     fail(`Missions can't write to their workspace folder (${err.code || err.message})`, "Choose another in Settings → AI → Missions → Workspace folder");
   }
 
+  // Bubblewrap sandbox for Missions
+  const sandbox = require("../server/missions/sandbox");
+  const sb = sandbox.check();
+  if (sb.ok) {
+    ok("Mission sandbox: bubblewrap is ready (process, filesystem, and network isolation)");
+  } else if (sb.reason === "missing") {
+    fail("Mission sandbox: bubblewrap (bwrap) is not installed", "Install it: sudo apt install bubblewrap");
+  } else if (sb.reason === "userns") {
+    fail(`Mission sandbox: unprivileged user namespaces are blocked (${sb.message})`, "Enable them: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0");
+  } else {
+    fail(`Mission sandbox check failed: ${sb.message}`, "Ensure bubblewrap can create sandboxes");
+  }
+
   // Updates: what the last check found (this script never goes to the internet)
   const state = require("../server/updates").state(settings);
   if (state.available) warn(`Friends ${state.latest.version} is available (you have ${state.current})`, `See what's new: ${state.latest.url || "Settings → Data & backups → Updates"}`);

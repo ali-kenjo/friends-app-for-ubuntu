@@ -836,6 +836,19 @@ details.form-field[open] {
   font-weight: 500;
 }
 
+.badge-labs {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--bg-active);
+  color: var(--accent-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  margin-inline-start: var(--space-1);
+}
+
 .brain-actions {
   display: flex;
   align-items: center;

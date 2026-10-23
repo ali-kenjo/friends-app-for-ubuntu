@@ -187,6 +187,14 @@ async function settle(m, err, where) {
     emit(m, "stopped");
     return;
   }
+  if (err.name === "SandboxError") {
+    m.status = "paused";
+    m.pause = { kind: "sandbox", message: err.message, reason: err.reason };
+    line(m, "paused", err.message);
+    save(m);
+    emit(m, "paused", { notify: { title: say("Mission paused"), body: err.message } });
+    return;
+  }
   if (err.name === "QuotaPause") {
     m.status = "paused";
     m.pause = { kind: "quota", message: err.message, until: err.until };
@@ -632,7 +640,7 @@ async function runStep(m, entry, s, belt, c, signal) {
               return callModel(b, control);
             });
           } catch (err) {
-            if ((err.name === "AbortError" && signal.aborted) || err.name === "QuotaPause" || err.name === "LimitReached") fatal = err;
+            if ((err.name === "AbortError" && signal.aborted) || err.name === "QuotaPause" || err.name === "LimitReached" || err.name === "SandboxError") fatal = err;
             throw err;
           }
         },
@@ -642,7 +650,7 @@ async function runStep(m, entry, s, belt, c, signal) {
       store.audit(m.id, { type: "model-used", step: s.id, attempt, model: result.step.brain.model, kind: result.step.kind });
     } catch (err) {
       if (fatal) throw fatal;
-      if (err.name === "AbortError" || err.name === "QuotaPause" || err.name === "LimitReached" || err instanceof router.RouteError) throw err;
+      if (err.name === "AbortError" || err.name === "QuotaPause" || err.name === "LimitReached" || err.name === "SandboxError" || err instanceof router.RouteError) throw err;
       lastError = err;
       hint = `It failed with: ${clip(err.message, 300)}. Try another way.`;
       line(m, "retry", `Step ${index}, try ${attempt} of ${MAX_ATTEMPTS}: ${clip(err.message, 160)}`, { step: s.id });

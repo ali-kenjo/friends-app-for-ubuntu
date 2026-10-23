@@ -33,6 +33,10 @@ import "./data.js";
 import "./robot/settings-pane.js";
 import "./voice-settings.js";
 import "./whiteboard/ui.js";
+import { initSession } from "./session.js";
+
+// Exchange launch token for session cookie if present
+await initSession();
 
 // The address (#today, #missions, #voice, #chat/<id>) says where to start
 startViews();

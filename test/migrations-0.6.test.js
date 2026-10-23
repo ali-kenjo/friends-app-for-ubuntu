@@ -45,7 +45,7 @@ test("Migration 0.6: settings normalize cleanly populates 0.7 defaults without l
   assert(normalized.notifications.matrix, "Notification matrix must exist");
 
   assert(normalized.missions, "Missions settings must exist");
-  assert.equal(normalized.missions.enabled, true);
+  assert.equal(normalized.missions.enabled, false);
   assert.equal(normalized.missions.workspace, "~/friends-workspace");
 });
 

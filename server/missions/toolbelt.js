@@ -12,6 +12,7 @@ const files = require("../files");
 const risk = require("./risk");
 const store = require("./store");
 const system = require("./system");
+const sandbox = require("./sandbox");
 const logger = require("../logger");
 
 const str = (description) => ({ type: "STRING", description });
@@ -100,68 +101,25 @@ function create(opts) {
   const classifyCtx = { workdir, folders, resolveFile, googleCalendar: Boolean(opts.google) };
   const effects = []; // external and destructive things done in the running step (for a restart: don't repeat them)
 
-  async function runCommand(args) {
+  async function runCommand(args, step) {
     const command = String(args.command || "").trim();
     const remaining = opts.remainingMs?.() ?? Infinity;
     const wanted = Number(args.timeout_seconds) > 0 ? Number(args.timeout_seconds) * 1000 : timeoutDefault;
     const timeout = Math.max(2000, Math.min(wanted, timeoutDefault * 5, remaining));
-    const gitName = process.env.FRIENDS_GIT_NAME || opts.gitIdentity?.name || "Friends";
-    const gitEmail = process.env.FRIENDS_GIT_EMAIL || opts.gitIdentity?.email || "friends@localhost";
-    const env = {
-      PATH: process.env.PATH,
-      HOME: workdir, // no access to your dotfiles, keys or caches
-      LANG: "C.UTF-8",
-      TERM: "dumb",
-      CI: "1",
-      NO_COLOR: "1",
-      TMPDIR: os.tmpdir(),
-      npm_config_cache: path.join(workdir, ".npm-cache"),
-      XDG_CACHE_HOME: path.join(workdir, ".cache"),
-      GIT_AUTHOR_NAME: gitName,
-      GIT_COMMITTER_NAME: gitName,
-      GIT_AUTHOR_EMAIL: gitEmail,
-      GIT_COMMITTER_EMAIL: gitEmail,
-      GIT_TERMINAL_PROMPT: "0",
-    };
-    const started = Date.now();
-    return new Promise((resolve) => {
-      const child = spawn("bash", ["-c", command], { cwd: workdir, env, detached: true, stdio: ["ignore", "pipe", "pipe"] });
-      let out = "";
-      let killed = "";
-      const add = (chunk) => {
-        out += chunk;
-        if (out.length > 200000) out = out.slice(0, 20000) + out.slice(-120000);
-      };
-      child.stdout.on("data", (c) => add(c.toString()));
-      child.stderr.on("data", (c) => add(c.toString()));
-      const kill = (why) => {
-        if (killed) return;
-        killed = why;
-        try {
-          process.kill(-child.pid, "SIGTERM");
-        } catch {}
-        setTimeout(() => {
-          try {
-            process.kill(-child.pid, "SIGKILL");
-          } catch {}
-        }, 3000).unref();
-      };
-      const timer = setTimeout(() => kill("timeout"), timeout);
-      const onAbort = () => kill("stopped");
-      signal?.addEventListener("abort", onAbort, { once: true });
-      if (signal?.aborted) onAbort();
-      child.on("error", (err) => {
-        clearTimeout(timer);
-        resolve({ error: `Couldn't run it: ${err.message}` });
-      });
-      child.on("close", (code) => {
-        clearTimeout(timer);
-        signal?.removeEventListener("abort", onAbort);
-        const result = { ok: code === 0 && !killed, exitCode: code, output: cap(out), seconds: +((Date.now() - started) / 1000).toFixed(1) };
-        if (killed === "timeout") result.error = `The command ran longer than ${Math.round(timeout / 1000)} seconds and was stopped.`;
-        if (killed === "stopped") result.error = "The mission was stopped.";
-        resolve(result);
-      });
+    const hasInternet =
+      step?.actions?.some((a) => a.type === "internet") ||
+      mission.scope?.some((d) => d.type === "internet" && (d.step === step?.id || !d.step));
+
+    return sandbox.run({
+      command,
+      workdir,
+      folders,
+      allowNet: Boolean(hasInternet),
+      permissions: settings.permissions,
+      gitIdentity: opts.gitIdentity,
+      timeout,
+      signal,
+      cap,
     });
   }
 
@@ -230,7 +188,7 @@ function create(opts) {
     };
     let result;
     try {
-      if (name === "run_command") result = await runCommand(args);
+      if (name === "run_command") result = await runCommand(args, step);
       else if (name === "system_status") result = { ok: true, ...(await system.snapshot(args.parts ? String(args.parts).split(/[\s,]+/).filter(Boolean) : null)) };
       else if (name === "semantic_search_notes") result = { ok: true, ...(await require("../embeddings").search(String(args.query || ""), { limit: Math.min(15, Number(args.limit) || 6), settings })) };
       else if (name === "notify_user") {
@@ -249,7 +207,7 @@ function create(opts) {
       } else if (FILE_TOOLS.has(name)) result = await runFileTool(name, args, ctx);
       else result = await tools.run(name, args, ctx);
     } catch (err) {
-      if (err.name === "AbortError") throw err;
+      if (err.name === "AbortError" || err.name === "SandboxError") throw err;
       result = { error: err.message };
     }
     const ok = !result?.error;

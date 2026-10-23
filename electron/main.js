@@ -114,7 +114,9 @@ function createWindow({ show = true } = {}) {
     }
   });
   win.on("closed", () => (win = null));
-  win.loadURL(origin);
+  const auth = require("../server/auth");
+  const launchUrl = `${origin}/#token=${auth.getToken()}`;
+  win.loadURL(launchUrl);
 
   // Only the helper's own pages load here; links go to the browser, sign-in gets a popup
   win.webContents.on("will-navigate", (e, url) => {
@@ -133,6 +135,16 @@ function createWindow({ show = true } = {}) {
 function setUpSession() {
   const ses = session.defaultSession;
   ses.setUserAgent(policy.cleanUserAgent(ses.getUserAgent()));
+  try {
+    const auth = require("../server/auth");
+    ses.cookies.set({
+      url: origin,
+      name: "friends_session",
+      value: auth.getToken(),
+      httpOnly: true,
+      sameSite: "strict",
+    }).catch(() => {});
+  } catch {}
   // The microphone and camera for this app's own page only (voice mode, Follow my face)
   ses.setPermissionRequestHandler((wc, permission, callback, details) => callback(policy.permissionAllowed(permission, details.requestingUrl || wc.getURL(), origin)));
   ses.setPermissionCheckHandler((wc, permission, requestingOrigin) => policy.permissionAllowed(permission, requestingOrigin, origin));

@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.7.1] - 2026-10-23
+
+Friends 0.7.1 is a security hardening release and feature freeze. No new features were added; existing features (robot, whiteboard, voice, themes, and Daily life) were untouched.
+
+### Security fixes & hardening
+- **Telegram pairing is the only way in** (`server/telegram.js`):
+  - Completely removed the automatic admin assignment rule that previously granted the first user messaging the bot full admin privileges.
+  - Enforced pairing via one-time 6-digit cryptographically secure codes (`crypto.randomInt(100000, 1000000)`) with a 10-minute expiry window.
+  - Added code invalidation burning the pairing code after 5 invalid attempts.
+  - Enforced role and pairing checks across every message, command, media upload, and inline callback button.
+  - Unpaired users in private chats receive a single hint pointing them to Settings → Telegram to pair; in group chats, unpaired users are dropped silently without executing any handler.
+- **Telegram group chat privacy & data withholding** (`server/telegram.js`, `server/companion.js`):
+  - In group chats, personal data (notes vault, calendar events, personal past chats, and Google tokens) is withheld by default (`withhold: true, onAir: true`).
+  - Added per-group `allowPrivate` toggle (default false) in Settings → Telegram with clear explanation that enabling allows members of that group to search personal notes, calendar, and chats.
+  - Plan approval buttons, command execution, and mission controls strictly require the `admin` role.
+- **Missions Bubblewrap (`bwrap`) sandbox** (`server/missions/sandbox.js`, `server/missions/toolbelt.js`, `server/missions/runner.js`):
+  - All mission command executions are isolated within Bubblewrap unprivileged user namespace containers.
+  - Sealed environment: minimal read-only mounts (`/usr`, symlinks for `/bin`, `/lib`, `/lib64`, minimal `/etc`), private `/tmp`, fresh `/proc` and `/dev`, and zero access to real `$HOME` or `~/.config/friends`.
+  - Scrubbed environment variables stripping all API keys, tokens, and ambient credentials.
+  - Network namespace is unshared by default. Outbound network and internet access is blocked unless the approved mission plan explicitly declared a step with `{"type":"internet"}`. Shell wildcards (e.g. `node *`) never grant network access.
+  - Hard failure mode: If `bwrap` is missing or unprivileged user namespaces are disabled (e.g. by AppArmor restrictions on Ubuntu 24.04+), commands refuse to run outside the sandbox; missions cleanly pause with a `"sandbox"` error and actionable remediation steps (`sudo apt install bubblewrap` or adjusting kernel user namespace sysctls).
+  - Added sandbox diagnostic checks in `scripts/doctor.js`, install checks in `scripts/install.sh`, and `bubblewrap` package dependency in `scripts/build-deb.js`.
+- **Local API key authentication & session cookies** (`server/auth.js`, `server/server.js`, `src/js/session.js`):
+  - Generates a per-installation 32-byte cryptographic secret stored in `<dataDir>/session-token` (file mode `0600`).
+  - Enforced session validation requiring an HttpOnly, `SameSite=Strict` `friends_session` cookie for all `/api/*` endpoints, SSE event streams (`/api/events`), and WebSockets (`/api/live`).
+  - Whitelisted endpoints: `/api/health`, `/healthz`, `POST /api/session`, `/api/google/callback`, and static assets.
+  - Desktop and web launchers (`friends-web`, Electron) provide the token in a URL hash fragment (`/#token=...`), which the frontend exchanges for the session cookie via `POST /api/session` and immediately scrubs from the browser URL and history via `history.replaceState`.
+  - Unauthenticated requests receive `401 Unauthorized` with an authentication gate screen directing the user to open Friends from its launcher.
+- **Labs status & settings migration** (`server/settings.js`, `src/index.html`, `src/js/apps.js`):
+  - Marked Missions and Telegram as "Labs" features with UI badges and clear descriptions.
+  - New installations default both Missions and Telegram to disabled (`enabled: false`). Existing installations seamlessly preserve their enabled state upon upgrade.
+  - Added a one-time 0.7.1 notice in Telegram Settings for existing paired setups, listing paired users with individual Remove buttons.
+  - Added a group chat permissions manager in Telegram Settings displaying active groups and their `allowPrivate` toggles.
+- **Documentation & 100% Translations** (`SECURITY.md`, `README.md`, `src/js/i18n/`):
+  - Updated `SECURITY.md` and `README.md` to accurately document the Bubblewrap sandbox model, local session authentication, and Telegram pairing security.
+  - Complete English, German, and Arabic translation parity (100% across all 3584 strings, verified with `npm run i18n --strict`).
+
 ## [0.7.0] - 2026-10-23
 
 ### Workstream 1: Warm, cozy, playful look and feel

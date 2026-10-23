@@ -735,6 +735,7 @@
           <button class="tab" data-tab="missions" role="tab" id="tab-missions" aria-controls="pane-missions" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 5h11l-2 3.5L16 12H5"/></svg>
             <span>Missions</span>
+            <span class="badge-labs">Labs</span>
           </button>
           <div class="nav-group" role="presentation">Extras</div>
           <button class="tab" data-tab="integrations" role="tab" id="tab-integrations" aria-controls="pane-integrations" aria-selected="false" tabindex="-1">
@@ -744,6 +745,7 @@
           <button class="tab" data-tab="telegram" role="tab" id="tab-telegram" aria-controls="pane-telegram" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><path d="M21 4 3 11l6 2 2 6 3-4 5 3z"/><path d="M9 13l8-6"/></svg>
             <span>Telegram</span>
+            <span class="badge-labs">Labs</span>
           </button>
           <button class="tab" data-tab="notifications" role="tab" id="tab-notifications" aria-controls="pane-notifications" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -2297,7 +2299,7 @@
 
         <!-- Missions -->
         <section class="pane" data-pane="missions" id="pane-missions" role="tabpanel" aria-labelledby="tab-missions">
-          <h3>Missions</h3>
+          <h3>Missions <span class="badge-labs">Labs</span></h3>
           <p class="hint">Goals that your companion carries out in the background: it makes a plan, you approve it once, and it gets done. Where they work, how long they may take, and who plans them.</p>
           <label class="row">
             <div><div class="row-label">Missions on</div><div class="row-desc">Switch off to hide Missions and stop the companion from starting them</div></div>
@@ -2540,11 +2542,22 @@
 
         <!-- Telegram -->
         <section class="pane" data-pane="telegram" id="pane-telegram" role="tabpanel" aria-labelledby="tab-telegram">
-          <h3>Telegram</h3>
+          <h3>Telegram <span class="badge-labs">Labs</span></h3>
           <div class="subhead"><div>
-            <div class="subhead-title">Telegram companion bot</div>
+            <div class="subhead-title">Telegram companion bot <span class="badge-labs">Labs</span></div>
             <p class="hint">Talk to Friends and receive alerts from anywhere via Telegram. Safe outbound connection with zero open ports or webhooks required.</p>
           </div></div>
+
+          <!-- 0.7.1 Security Notice for existing paired users -->
+          <div class="honesty-note" id="telegram-071-notice" style="display: none; margin-bottom: 16px;">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <div style="flex: 1;">
+              <strong>Security update (Friends 0.7.1)</strong>
+              <p style="margin: 4px 0 8px 0; font-size: 0.9em;">In Friends 0.7.1, pairing via one-time 6-digit codes is the only way to connect. Automatic admin assignment has been removed. Review your paired users below and remove any you do not recognize.</p>
+              <ul id="telegram-071-users-list" style="list-style: none; padding: 0; margin: 0 0 10px 0; display: flex; flex-direction: column; gap: 6px;"></ul>
+              <button type="button" class="btn small" id="telegram-071-dismiss-btn">I've reviewed my paired users</button>
+            </div>
+          </div>
           <div class="app-card" id="telegram-card">
             <div class="app-head">
               <div class="app-title">
@@ -2600,6 +2613,16 @@
                   <option value="all">All messages</option>
                 </select>
               </label>
+
+              <!-- Group Chat Permissions -->
+              <div class="setting-subcard" id="telegram-groups-card" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <span class="row-label">Group Chat Permissions</span>
+                <span class="row-desc">Manage privacy settings for group chats where this bot has been added.</span>
+                <div id="telegram-groups-container" style="margin-top: 8px;">
+                  <span class="hint" id="telegram-no-groups">No group chats active yet. When the bot is added to a group, it will appear here.</span>
+                  <ul id="telegram-groups-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;"></ul>
+                </div>
+              </div>
 
               <!-- Custom Bot API URL & Proxy -->
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
@@ -3216,6 +3239,14 @@
         <svg viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
       </button>
     </form>
+  </div>
+
+  <div id="auth-gate" class="auth-gate" hidden>
+    <div class="auth-gate-box">
+      <div class="auth-gate-icon" aria-hidden="true">🔒</div>
+      <h1 data-i18n="auth_gate_title">Authentication required</h1>
+      <p data-i18n="auth_gate_message">Friends is running, but this browser window isn't authenticated. Open Friends from its launcher, or run <code>friends-web</code> in your terminal.</p>
+    </div>
   </div>
 
   <script type="module" src="js/app.js"></script>

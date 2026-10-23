@@ -61,7 +61,7 @@ try {
       `Installed-Size: ${kb}`,
       `Maintainer: ${pkg.author || "Friends contributors <noreply@example.com>"}`,
       ...(pkg.homepage ? [`Homepage: ${pkg.homepage}`] : []),
-      "Depends: libgtk-3-0t64 | libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0t64 | libatspi2.0-0, libuuid1, libsecret-1-0, libasound2t64 | libasound2",
+      "Depends: libgtk-3-0t64 | libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0t64 | libatspi2.0-0, libuuid1, libsecret-1-0, libasound2t64 | libasound2, bubblewrap",
       "Recommends: python3, python3-venv",
       "Description: Friends, a personal AI chat app",
       " Chat, voice conversation and a 3D companion robot, running on this",

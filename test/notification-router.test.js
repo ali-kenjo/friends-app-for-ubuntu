@@ -1,15 +1,38 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "friends-notif-router-"));
+process.env.FRIENDS_DATA_DIR = tempDir;
 
 const notifications = require("../server/notifications");
 const settings = require("../server/settings");
 
 test("Unified Notification Router", async (t) => {
+  t.after(() => {
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch {}
+  });
+
   t.beforeEach(() => {
     notifications.clearLog();
     notifications.unregisterChannel("desktop");
     notifications.unregisterChannel("inapp");
     notifications.unregisterChannel("telegram");
+    const s = settings.get();
+    settings.set({
+      ...s,
+      notifications: {
+        ...s.notifications,
+        dnd: { enabled: false, until: 0 },
+        digest: { enabled: false, mode: "hourly", time: "09:00" },
+        quietHours: { enabled: false, start: "22:00", end: "08:00", allowUrgent: true },
+        rateLimits: { maxPerMinute: 15, maxPerHour: 100 },
+      },
+    });
   });
 
   await t.test("registers channels and dispatches events based on matrix", async () => {

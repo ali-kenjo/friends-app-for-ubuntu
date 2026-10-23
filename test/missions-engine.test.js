@@ -67,7 +67,7 @@ describe("The mission engine", () => {
     setSettings((s) => ({
       ...s,
       permissions: { ...s.permissions, folders: [dirs.allowed], files: { create: true, read: true, edit: true, delete: true }, dirs: { create: true, read: true, edit: true, delete: true } },
-      missions: { ...s.missions, workspace: dirs.workspace },
+      missions: { ...s.missions, workspace: dirs.workspace, enabled: true },
       localNotes: { ...s.localNotes, folder: dirs.vault },
     }));
     await brains.saveBrain({ provider: "gemini", name: "Gemini", model: "gemini-3.8-flash", key: "test-key" });

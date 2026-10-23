@@ -416,8 +416,102 @@ async function renderTelegramPairedUsers() {
       li.append(info, actions);
       container.append(li);
     }
+    renderTelegram071Notice(s);
+    renderTelegramGroups(s);
   } catch (err) {
     console.debug("Failed to render paired users:", err);
+  }
+}
+
+function renderTelegram071Notice(s) {
+  const notice = document.getElementById("telegram-071-notice");
+  const list = document.getElementById("telegram-071-users-list");
+  if (!notice || !list) return;
+
+  const paired = s?.telegram?.pairedUsers || [];
+  if (s?.telegram?.pairedNotice071Seen || paired.length === 0) {
+    notice.style.display = "none";
+    return;
+  }
+
+  notice.style.display = "flex";
+  list.innerHTML = "";
+  for (const u of paired) {
+    const li = document.createElement("li");
+    li.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: rgba(0,0,0,0.05); border-radius: 4px; font-size: 0.9em;";
+    const info = document.createElement("span");
+    info.textContent = `${u.firstName || u.username || "User"} (${u.role || "admin"}) - ID: ${u.id}`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn small";
+    btn.textContent = t("Remove");
+    btn.addEventListener("click", async () => {
+      await api.telegram.revokeUser(u.id);
+      renderTelegramPairedUsers();
+    });
+    li.append(info, btn);
+    list.append(li);
+  }
+}
+
+document.getElementById("telegram-071-dismiss-btn")?.addEventListener("click", () => {
+  updateSettings((s) => {
+    s.telegram.pairedNotice071Seen = true;
+  });
+  const notice = document.getElementById("telegram-071-notice");
+  if (notice) notice.style.display = "none";
+});
+
+function renderTelegramGroups(s) {
+  const container = document.getElementById("telegram-groups-list");
+  const emptyHint = document.getElementById("telegram-no-groups");
+  if (!container) return;
+
+  const groups = s?.telegram?.allowedChatIds || [];
+  if (!groups.length) {
+    container.innerHTML = "";
+    if (emptyHint) emptyHint.style.display = "block";
+    return;
+  }
+
+  if (emptyHint) emptyHint.style.display = "none";
+  container.innerHTML = "";
+
+  for (const g of groups) {
+    const li = document.createElement("li");
+    li.style.cssText = "padding: 8px 12px; background: var(--bg-subtle, rgba(0,0,0,0.03)); border-radius: 6px; font-size: 0.9em;";
+
+    const header = document.createElement("div");
+    header.style.cssText = "display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;";
+    header.innerHTML = `<strong>${g.title || t("Group")}</strong> <span style="font-family: monospace; font-size: 0.85em; opacity: 0.7;">ID: ${g.id}</span>`;
+
+    const label = document.createElement("label");
+    label.className = "life-toggle";
+    label.style.cssText = "display: flex; align-items: flex-start; gap: 8px; cursor: pointer;";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(g.allowPrivate);
+    checkbox.addEventListener("change", () => {
+      updateSettings((settings) => {
+        const target = settings.telegram.allowedChatIds.find((c) => String(c.id) === String(g.id));
+        if (target) target.allowPrivate = checkbox.checked;
+      });
+    });
+
+    const textDiv = document.createElement("div");
+    const titleSpan = document.createElement("div");
+    titleSpan.style.fontWeight = "500";
+    titleSpan.textContent = t("Allow this group to search your notes, calendar, and personal chats");
+    const descSpan = document.createElement("div");
+    descSpan.className = "row-desc";
+    descSpan.style.marginTop = "2px";
+    descSpan.textContent = t("Anyone in this group could ask the companion to reveal private information.");
+    textDiv.append(titleSpan, descSpan);
+
+    label.append(checkbox, textDiv);
+    li.append(header, label);
+    container.append(li);
   }
 }
 
@@ -541,6 +635,8 @@ onSettings((s) => {
   if (tokenInput) tokenInput.placeholder = s?.telegram?.hasToken ? t("Saved. Type a new token to replace it.") : "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ";
   refreshTelegramStatus();
   renderTelegramPairedUsers();
+  renderTelegram071Notice(s);
+  renderTelegramGroups(s);
   renderNotificationMatrix();
 });
 

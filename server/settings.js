@@ -134,10 +134,11 @@ const DEFAULTS = {
     groupMode: "mention_only", // "mention_only" | "command_only" | "all"
     voiceTranscription: true,
     voiceReply: false,
+    pairedNotice071Seen: false,
   },
   // Missions: goals carried out in the background (server/missions/)
   missions: {
-    enabled: true,
+    enabled: false,
     workspace: "~/friends-workspace", // where each mission gets a folder of its own to work in
     // The manager is Gemini: a stronger model plans and checks, a faster one does routine steps. "" = choose by itself.
     manager: { planModel: "", fastModel: "" },
@@ -427,11 +428,13 @@ function sanitize(input) {
     role: ["admin", "chat", "notify_only"].includes(u.role) ? u.role : "admin",
     pairedAt: Number(u.pairedAt) || Date.now(),
   })).filter((u) => u.id).slice(0, 50) : [];
+  s.telegram.pairedNotice071Seen = Boolean(s.telegram.pairedNotice071Seen);
   s.telegram.allowedChatIds = Array.isArray(s.telegram.allowedChatIds) ? s.telegram.allowedChatIds.map((c) => ({
     id: String(c.id || ""),
     title: String(c.title || "").slice(0, 100),
     type: String(c.type || "group"),
     mode: ["mention_only", "command_only", "all"].includes(c.mode) ? c.mode : "mention_only",
+    allowPrivate: Boolean(c.allowPrivate),
   })).filter((c) => c.id).slice(0, 50) : [];
   s.telegram.proxy = typeof s.telegram.proxy === "string" ? s.telegram.proxy.trim().slice(0, 300) : "";
   s.telegram.botApiUrl = typeof s.telegram.botApiUrl === "string" ? s.telegram.botApiUrl.trim().slice(0, 300) : "";
@@ -618,6 +621,24 @@ function get() {
     for (const c of cache.characters.list) if (c.look?.accent === OLD_ACCENT) c.look.accent = DEFAULTS.theme.accent;
   }
   cache.ui.design = 2;
+  // 0.7.1 migration: keep Missions and Telegram enabled for existing setups that used them
+  if (stored) {
+    if (stored.missions && stored.missions.enabled !== false) {
+      cache.missions.enabled = true;
+    } else if (stored.missions?.enabled === undefined) {
+      try {
+        const missionsDir = path.join(dataDir, "missions");
+        if (fs.existsSync(missionsDir) && fs.readdirSync(missionsDir).length > 0) {
+          cache.missions.enabled = true;
+        }
+      } catch {}
+    }
+    if (stored.telegram && stored.telegram.enabled === true) {
+      cache.telegram.enabled = true;
+    }
+  } else {
+    cache.telegram.pairedNotice071Seen = true;
+  }
   // Tokens an older version kept in this file move to the keyring
   const changedTg = storeTelegramToken(cache);
   const changedRd = storeRedditSecret(cache);

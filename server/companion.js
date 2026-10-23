@@ -15,11 +15,11 @@ const redact = require("./redact");
 const TITLE = "Telegram";
 const WINDOW = 14; // messages the AI sees
 
-function findChat() {
-  const existing = chats.list().find((c) => c.title === TITLE);
+function findChat(title = TITLE) {
+  const existing = chats.list().find((c) => c.title === title);
   if (existing) return chats.get(existing.id);
-  const chat = chats.create(TITLE);
-  chat.title = TITLE;
+  const chat = chats.create(title);
+  chat.title = title;
   return chat;
 }
 
@@ -27,9 +27,10 @@ const toContents = (messages) =>
   messages.slice(-WINDOW).map((m) => ({ role: m.role === "model" ? "model" : "user", parts: [{ text: m.text || "(empty)" }] }));
 
 // googleToken: () → the token the helper keeps (or null). Returns the reply text.
-async function reply(text, { platform = TITLE, googleToken = async () => null, onActivity = () => {} } = {}) {
+async function reply(text, { platform = TITLE, googleToken = async () => null, onActivity = () => {}, onAir = false, withhold = false, isGroup = false, chatId: tgChatId = null } = {}) {
   const settings = settingsModule.get();
-  const chat = findChat();
+  const chatTitle = isGroup && tgChatId ? `Telegram (Group ${tgChatId})` : TITLE;
+  const chat = findChat(chatTitle);
   const userMessage = { id: require("crypto").randomUUID(), role: "user", text: String(text).trim(), at: Date.now() };
   chat.messages.push(userMessage);
   chats.save(chat);
@@ -48,7 +49,7 @@ async function reply(text, { platform = TITLE, googleToken = async () => null, o
 
   let out = "";
   const activity = [];
-  const token = settings.privacy?.localOnly ? null : await googleToken().catch(() => null);
+  const token = (onAir || withhold || settings.privacy?.localOnly) ? null : await googleToken().catch(() => null);
   const { step } = await router.execute(routePlan, {
     emit: () => {},
     signal: undefined,
@@ -60,11 +61,11 @@ async function reply(text, { platform = TITLE, googleToken = async () => null, o
     run: async (rs, { signal, started }) => {
       out = "";
       const brain = rs.brain;
-      const withhold = brain.kind === "cloud" && settings.privacy?.shareMemoryWithCloud === false;
-      const all = tools.declarations(settings, { voice: false, robot: false, workspace: brain.kind !== "local" || Boolean(token), onAir: false, withhold });
+      const effectiveWithhold = withhold || (brain.kind === "cloud" && settings.privacy?.shareMemoryWithCloud === false);
+      const all = tools.declarations(settings, { voice: false, robot: false, workspace: !onAir && !effectiveWithhold && (brain.kind !== "local" || Boolean(token)), onAir, withhold: effectiveWithhold });
       const offered = brain.kind === "local" ? tools.forLocal(all, settings) : all;
       const redactOpts = brain.kind === "cloud" ? settings.privacy?.redact : null;
-      const rawSystem = prompt.build(settings, { voice: false, toolsOffered: offered, summary: chat.summary?.text, chatId: chat.id, withhold }) + "\n\n# Where you are\nThe user is writing to you on Telegram, on their phone: keep replies short and plain (no tables, no big code blocks). Things that need their OK (sending email, changing files) can't be confirmed here: tell them to do it in the app, or to start it as a mission.";
+      const rawSystem = prompt.build(settings, { voice: false, toolsOffered: offered, summary: (onAir || effectiveWithhold) ? "" : chat.summary?.text, chatId: chat.id, onAir, withhold: effectiveWithhold }) + "\n\n# Where you are\nThe user is writing to you on Telegram, on their phone: keep replies short and plain (no tables, no big code blocks). Things that need their OK (sending email, changing files) can't be confirmed here: tell them to do it in the app, or to start it as a mission.";
       const cleanSystem = redact.active(redactOpts) ? redact.redactText(rawSystem, redactOpts) : rawSystem;
       const rawContents = toContents(chat.messages);
       const cleanContents = redact.active(redactOpts) ? redact.redactContents(rawContents, redactOpts) : rawContents;

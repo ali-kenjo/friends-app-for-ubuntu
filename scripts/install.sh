@@ -32,6 +32,11 @@ command -v node >/dev/null || die "Node.js isn't installed. Install version 22.1
 node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 12) ? 0 : 1)' || die "Node.js $(node -v) is too old; Friends needs 22.12 or newer (https://nodejs.org or: nvm install --lts)."
 command -v npm >/dev/null || die "npm isn't installed (it comes with Node.js)."
 say "✓ Node.js $(node -v)"
+if command -v bwrap >/dev/null 2>&1; then
+  say "✓ bubblewrap sandbox available"
+else
+  say "! bubblewrap is not installed (Missions sandbox needs it: sudo apt install bubblewrap)"
+fi
 
 # 2. Dependencies (the desktop app's Electron only when asked: it is about 100 MB)
 if [[ "${1:-}" == "--desktop" || "${2:-}" == "--desktop" ]]; then
@@ -67,8 +72,11 @@ if ! running; then
   echo \$! > "$HOME/.cache/friends/pid"
   for _ in \$(seq 1 40); do running && break; sleep 0.25; done
 fi
-running || { echo "Friends didn't start. See $HOME/.cache/friends/server.log"; exit 1; }
-xdg-open "\$URL" >/dev/null 2>&1 || echo "Open \$URL in your browser."
+TOKEN_FILE="$DATA/session-token"
+TOKEN=""
+[[ -f "$TOKEN_FILE" ]] && TOKEN="$(cat "$TOKEN_FILE" 2>/dev/null || true)"
+LAUNCH_URL="$URL\${TOKEN:+#token=\$TOKEN}"
+xdg-open "$LAUNCH_URL" >/dev/null 2>&1 || echo "Open \$LAUNCH_URL in your browser."
 LAUNCHER
 chmod +x "$BIN"
 
