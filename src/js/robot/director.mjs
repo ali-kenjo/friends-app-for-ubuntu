@@ -182,7 +182,11 @@ export class Director {
         this.a.springs.impulse("foreheadLight", 2.5);
         this.a.onSound?.("chime");
         return true;
-      case "notification": {
+      case "notification":
+      case "telegram":
+      case "telegram_message":
+      case "reddit":
+      case "reddit_match": {
         if (r.notifications === false) return false;
         this.a.setMood("curious", { source: "smart", strength: 0.8 });
         this.a.lookAt({ target: "tablet", duration: 4.5 });

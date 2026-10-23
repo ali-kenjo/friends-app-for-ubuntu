@@ -10,6 +10,7 @@ const tools = require("./tools");
 const prompt = require("./prompt");
 const characters = require("./characters");
 const logger = require("./logger");
+const redact = require("./redact");
 
 const TITLE = "Telegram";
 const WINDOW = 14; // messages the AI sees
@@ -62,11 +63,16 @@ async function reply(text, { platform = TITLE, googleToken = async () => null, o
       const withhold = brain.kind === "cloud" && settings.privacy?.shareMemoryWithCloud === false;
       const all = tools.declarations(settings, { voice: false, robot: false, workspace: brain.kind !== "local" || Boolean(token), onAir: false, withhold });
       const offered = brain.kind === "local" ? tools.forLocal(all, settings) : all;
+      const redactOpts = brain.kind === "cloud" ? settings.privacy?.redact : null;
+      const rawSystem = prompt.build(settings, { voice: false, toolsOffered: offered, summary: chat.summary?.text, chatId: chat.id, withhold }) + "\n\n# Where you are\nThe user is writing to you on Telegram, on their phone: keep replies short and plain (no tables, no big code blocks). Things that need their OK (sending email, changing files) can't be confirmed here: tell them to do it in the app, or to start it as a mission.";
+      const cleanSystem = redact.active(redactOpts) ? redact.redactText(rawSystem, redactOpts) : rawSystem;
+      const rawContents = toContents(chat.messages);
+      const cleanContents = redact.active(redactOpts) ? redact.redactContents(rawContents, redactOpts) : rawContents;
       await brain.api.streamChat({
         key: brain.key,
         model: brain.model,
-        contents: toContents(chat.messages),
-        system: prompt.build(settings, { voice: false, toolsOffered: offered, summary: chat.summary?.text, chatId: chat.id, withhold }) + "\n\n# Where you are\nThe user is writing to you on Telegram, on their phone: keep replies short and plain (no tables, no big code blocks). Things that need their OK (sending email, changing files) can't be confirmed here: tell them to do it in the app, or to start it as a mission.",
+        contents: cleanContents,
+        system: cleanSystem,
         temperature: prompt.temperature(settings),
         fast: true,
         tools: offered,
@@ -86,7 +92,7 @@ async function reply(text, { platform = TITLE, googleToken = async () => null, o
             onActivity: (line) => (activity.push(line), onActivity(line)),
             onDraft: () => {},
             onRobot: () => {},
-          });
+          }).then((res) => (redact.active(redactOpts) ? redact.redactDeep(res, redactOpts) : res));
         },
       });
     },

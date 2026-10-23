@@ -17,6 +17,8 @@ import { statusOf, isActive, roleLabel, when } from "./labels.js";
 import { renderDetail } from "./detail.js";
 import { celebrate } from "../celebrate.js";
 import { emptyIllustration, progressRing } from "../illustrations.js";
+import { confirmDialog } from "../dialogs.js";
+import { renderGallery } from "./templates.mjs";
 
 const root = document.getElementById("missions-root");
 const actionsBar = document.getElementById("missions-actions");
@@ -78,6 +80,12 @@ function updateOutside() {
   badge.classList.toggle("attention", needs.length > 0);
   const running = list.filter((m) => m.status === "running" && !m.pause).length + list.filter((m) => m.status === "planning").length;
   if (running !== lastActive) {
+    if (running > lastActive && running > 0) {
+      document.dispatchEvent(new CustomEvent("friends:robot-event", { detail: { type: "mission_started" } }));
+    } else if (running < lastActive && running === 0) {
+      const anyFailed = list.some((m) => m.status === "failed");
+      document.dispatchEvent(new CustomEvent("friends:robot-event", { detail: { type: anyFailed ? "mission_failed" : "mission_finished" } }));
+    }
     lastActive = running;
     document.dispatchEvent(new CustomEvent("friends:missions-active", { detail: { running, needs: needs.length } }));
   }
@@ -215,14 +223,79 @@ function newMissionForm() {
         }
       },
     },
-    h("h2", { class: "section-title", text: t("A new mission") }),
+    h("div", { class: "flex items-center justify-between gap-2 mb-2" }, h("h2", { class: "section-title", text: t("A new mission") }), h("button", { type: "button", class: "btn small", onclick: () => openTemplateGallery() }, iconEl("list", 14), t("Use a template"))),
     goal,
     h("div", { class: "form-row" }, h("label", { class: "inline-toggle" }, priv, h("span", { text: t("Private: only models on this computer") })), h("span", { class: "spacer" }), repeat, day, time, folder, percent),
     hint,
-    h("div", { class: "actions-row" }, start, h("button", { type: "button", class: "btn btn-ghost", onclick: () => ((state.composer = false), draw({ force: true })) }, t("Cancel")))
+    h(
+      "div",
+      { class: "actions-row" },
+      start,
+      typeof window !== "undefined" && ("webkitSpeechRecognition" in window || "SpeechRecognition" in window)
+        ? h(
+            "button",
+            {
+              type: "button",
+              class: "btn",
+              title: t("Dictate goal with voice"),
+              onclick: () => {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const rec = new SR();
+                rec.lang = getSettings()?.language || "en";
+                rec.onresult = (ev) => {
+                  const transcript = Array.from(ev.results).map((r) => r[0].transcript).join("");
+                  goal.value = (goal.value ? goal.value + " " : "") + transcript;
+                };
+                rec.start();
+              },
+            },
+            iconEl("mic", 16),
+            t("Voice")
+          )
+        : null,
+      h("button", { type: "button", class: "btn btn-ghost", onclick: () => ((state.composer = false), draw({ force: true })) }, t("Cancel"))
+    )
   );
   form.goal = goal;
   return form;
+}
+
+export function openTemplateGallery() {
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop template-gallery-backdrop";
+  const modal = document.createElement("div");
+  modal.className = "modal max-w-4xl p-6 overflow-y-auto max-h-[85vh]";
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+
+  const closeBtn = h(
+    "button",
+    {
+      type: "button",
+      class: "icon-btn absolute top-4 right-4",
+      onclick: () => backdrop.remove(),
+      "aria-label": t("Close"),
+    },
+    iconEl("close", { size: 18 })
+  );
+
+  const gallery = renderGallery({
+    onSelectTemplate: (tpl) => {
+      backdrop.remove();
+      openComposer(tpl.goal || tpl.title);
+    },
+    onImport: (imported) => {
+      backdrop.remove();
+      openComposer(imported.goal || imported.title);
+    },
+  });
+
+  modal.append(closeBtn, gallery);
+  backdrop.append(modal);
+  document.body.append(backdrop);
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) backdrop.remove();
+  });
 }
 
 function examples() {
@@ -319,8 +392,26 @@ function drawList() {
   }
   if (state.error) nodes.push(h("p", { class: "form-error", role: "alert", text: state.error }));
   root.replaceChildren(...nodes.filter(Boolean));
+  const anyActive = list.some(isActive);
   actionsBar.replaceChildren(
+    h("button", { type: "button", class: "btn", onclick: () => openTemplateGallery() }, iconEl("list", 16), t("Templates")),
     h("button", { type: "button", class: "btn", onclick: () => ((state.watching = !state.watching), draw({ force: true })) }, iconEl("gauge", { size: 16 }), t("Watch my computer")),
+    anyActive
+      ? h(
+          "button",
+          {
+            type: "button",
+            class: "btn btn-danger",
+            onclick: async () => {
+              if (await confirmDialog({ title: t("Stop all running missions?"), message: t("All in-progress mission steps will be halted immediately."), confirm: t("Stop all"), danger: true })) {
+                run(() => api.missions.stopAll());
+              }
+            },
+          },
+          iconEl("stop", 16),
+          t("Stop all")
+        )
+      : null,
     h("button", { type: "button", class: "btn btn-primary", onclick: () => openComposer() }, iconEl("plus", { size: 16 }), t("New mission"))
   );
 }

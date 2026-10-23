@@ -213,6 +213,12 @@ function create(opts) {
       store.save(mission);
     }
 
+    if (mission.dryRun && (action.risk === "external" || action.risk === "destructive" || action.risk === "system" || action.risk === "write")) {
+      const simulated = { ok: true, dryRun: true, simulated: true, output: `[Dry Run] Would perform: ${action.summary}` };
+      log({ ok: true, risk: action.risk, action: action.type, dryRun: true, result: store.short(simulated, 600) });
+      return simulated;
+    }
+
     const ctx = {
       settings: toolSettings("grid"),
       googleAccessToken: opts.google || null,
@@ -250,6 +256,7 @@ function create(opts) {
     if (ok && (action.risk === "external" || action.risk === "destructive") && step) {
       step.effects ||= [];
       step.effects.push({ tool: name, summary: action.summary, at: Date.now() });
+      store.save(mission);
     }
     log({ ok, risk: action.risk, action: action.type, result: store.short(result, 600) });
     return result;

@@ -60,6 +60,14 @@ function create(fields) {
     automationId: fields.automationId || null,
     automation: fields.automation || null, // what to repeat when the plan is approved: { name, schedule | trigger }
     character: fields.character || null,
+    dryRun: fields.dryRun === true,
+    managerChoice: fields.managerChoice || "auto",
+    modelOverrides: fields.modelOverrides || {},
+    leastPrivilege: fields.leastPrivilege || null,
+    approvalPolicy: fields.approvalPolicy || null,
+    notificationRouting: fields.notificationRouting || null,
+    reportFormat: fields.reportFormat || "vault",
+    archived: false,
     timeline: [], // short lines for the page: { at, type, text, step? }
     error: "",
   };
@@ -115,6 +123,8 @@ function note(mission, type, text, extra = {}) {
 
 // ---------- The audit log ----------
 const MAX_AUDIT_BYTES = 8 * 1024 * 1024;
+const GENESIS_HASH = "0".repeat(64);
+
 const short = (value, max = 700) => {
   let text;
   try {
@@ -126,8 +136,25 @@ const short = (value, max = 700) => {
   return text.length > max ? `${text.slice(0, max)}… (${text.length} characters)` : text;
 };
 
+function hashEntry(seq, prevHash, at, entry) {
+  const canonical = JSON.stringify(entry, Object.keys(entry).sort());
+  return crypto.createHash("sha256").update(`${seq}:${prevHash}:${at}:${canonical}`).digest("hex");
+}
+
+function getLastEntry(missionId) {
+  try {
+    const file = auditFile(missionId);
+    if (!fs.existsSync(file)) return null;
+    const content = fs.readFileSync(file, "utf8");
+    const lines = content.trim().split("\n").filter(Boolean);
+    if (!lines.length) return null;
+    return JSON.parse(lines[lines.length - 1]);
+  } catch {
+    return null;
+  }
+}
+
 function audit(missionId, entry) {
-  const line = JSON.stringify({ at: now(), ...entry });
   try {
     const file = auditFile(missionId);
     let size = 0;
@@ -135,6 +162,15 @@ function audit(missionId, entry) {
       size = fs.statSync(file).size;
     } catch {}
     if (size > MAX_AUDIT_BYTES) return; // a runaway mission can't fill the disk with its own log
+
+    const last = getLastEntry(missionId);
+    const seq = last?.seq ? last.seq + 1 : 1;
+    const prevHash = last?.entryHash || GENESIS_HASH;
+    const t = now();
+    const entryHash = hashEntry(seq, prevHash, t, entry);
+    const record = { seq, at: t, prevHash, entryHash, ...entry };
+    const line = JSON.stringify(record);
+
     fs.appendFileSync(file, line + "\n", { mode: 0o600 });
   } catch {}
 }
@@ -154,6 +190,81 @@ function readAudit(missionId, { limit = 500 } = {}) {
   }
 }
 
+function verifyAudit(missionId) {
+  try {
+    const file = auditFile(missionId);
+    if (!fs.existsSync(file)) return { valid: true, count: 0 };
+    const content = fs.readFileSync(file, "utf8");
+    const lines = content.split("\n").filter(Boolean);
+    if (!lines.length) return { valid: true, count: 0 };
+
+    let expectedSeq = 1;
+    let expectedPrevHash = GENESIS_HASH;
+    let firstAt = null;
+    let lastAt = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      let rec;
+      try {
+        rec = JSON.parse(lines[i]);
+      } catch {
+        return { valid: false, count: lines.length, brokenAt: i + 1, reason: `Malformed JSON on line ${i + 1}` };
+      }
+      if (firstAt === null) firstAt = rec.at;
+      lastAt = rec.at;
+
+      const { seq, at, prevHash, entryHash, ...originalEntry } = rec;
+
+      if (seq !== expectedSeq) {
+        return { valid: false, count: lines.length, brokenAt: i + 1, reason: `Sequence gap or mismatch: expected ${expectedSeq}, got ${seq}` };
+      }
+      if (prevHash !== expectedPrevHash) {
+        return { valid: false, count: lines.length, brokenAt: i + 1, reason: `Hash chain broken at line ${i + 1}: prevHash mismatch` };
+      }
+      const calculatedHash = hashEntry(seq, prevHash, at, originalEntry);
+      if (calculatedHash !== entryHash) {
+        return { valid: false, count: lines.length, brokenAt: i + 1, reason: `Hash verification failed at line ${i + 1}: entry was altered` };
+      }
+      expectedSeq++;
+      expectedPrevHash = entryHash;
+    }
+
+    return { valid: true, count: lines.length, firstAt, lastAt };
+  } catch (err) {
+    return { valid: false, count: 0, reason: err.message };
+  }
+}
+
+function exportAuditJson(missionId) {
+  const records = readAudit(missionId, { limit: 10000 });
+  const verification = verifyAudit(missionId);
+  return JSON.stringify({ missionId, exportedAt: now(), verified: verification.valid, verification, count: records.length, records }, null, 2);
+}
+
+function exportAuditCsv(missionId) {
+  const records = readAudit(missionId, { limit: 10000 });
+  const escapeCsv = (str) => `"${String(str ?? "").replace(/"/g, '""')}"`;
+  const header = ["seq", "at", "isoTime", "type", "step", "risk", "tool", "action", "ok", "summary", "result", "prevHash", "entryHash"];
+  const rows = records.map((r) =>
+    [
+      r.seq || "",
+      r.at || "",
+      r.at ? new Date(r.at).toISOString() : "",
+      escapeCsv(r.type),
+      escapeCsv(r.step),
+      escapeCsv(r.risk),
+      escapeCsv(r.tool),
+      escapeCsv(r.action),
+      r.ok !== undefined ? r.ok : "",
+      escapeCsv(r.summary || r.text || ""),
+      escapeCsv(r.result || r.error || ""),
+      escapeCsv(r.prevHash),
+      escapeCsv(r.entryHash),
+    ].join(",")
+  );
+  return [header.join(","), ...rows].join("\n");
+}
+
 function readReport(missionId) {
   try {
     return fs.readFileSync(path.join(dirOf(missionId), "report.md"), "utf8");
@@ -167,4 +278,24 @@ function writeReport(missionId, markdown) {
   fs.writeFileSync(path.join(dirOf(missionId), "report.md"), markdown, { mode: 0o600 });
 }
 
-module.exports = { create, save, get, find, all, remove, reload, note, audit, readAudit, readReport, writeReport, short, dirOf, root, newId };
+module.exports = {
+  create,
+  save,
+  get,
+  find,
+  all,
+  remove,
+  reload,
+  note,
+  audit,
+  readAudit,
+  verifyAudit,
+  exportAuditJson,
+  exportAuditCsv,
+  readReport,
+  writeReport,
+  short,
+  dirOf,
+  root,
+  newId,
+};

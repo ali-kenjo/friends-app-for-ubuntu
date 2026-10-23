@@ -4,6 +4,7 @@
 const runner = require("./runner");
 const automations = require("./automations");
 const cloud = require("./cloud");
+const templates = require("./templates");
 const models = require("../models");
 const settingsModule = require("../settings");
 
@@ -47,4 +48,4 @@ function overview() {
   };
 }
 
-module.exports = { init, overview, runner, automations, cloud, ...runner };
+module.exports = { init, overview, runner, automations, cloud, templates, ...runner };

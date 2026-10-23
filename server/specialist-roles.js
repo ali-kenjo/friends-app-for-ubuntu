@@ -64,6 +64,96 @@ const DEFAULT_ROLES = [
     system: "You are the vision specialist of Friends. You look closely at the pictures you are given and describe or read what is in them accurately: text, layout, objects, what looks wrong. You never claim to see what isn't there.",
   },
   {
+    id: "planner",
+    label: "Planner",
+    when: "Breaking down ambitious goals into ordered, safe, and concrete mission steps.",
+    kind: "chat",
+    tools: group("vault", "web"),
+    contextSize: 8192,
+    system: "You are the planning specialist of Friends. You design clear, safe, concrete steps for goals. You favor small steps with verifiable outcomes, keep permissions minimal, and consider safety first.",
+  },
+  {
+    id: "checker",
+    label: "Checker",
+    when: "Verifying step results, validating factual accuracy, and catching mistakes early.",
+    kind: "chat",
+    tools: group("filesRead", "vault"),
+    contextSize: 8192,
+    system: "You are the checking specialist of Friends. You inspect step outputs rigorously: verifying against requirements, checking for hallucinated facts, and ensuring errors are detected before subsequent steps run.",
+  },
+  {
+    id: "summarizer",
+    label: "Summarizer",
+    when: "Distilling long documents, meeting notes, research, and composing final mission reports.",
+    kind: "chat",
+    tools: group("vault", "filesRead"),
+    contextSize: 8192,
+    system: "You are the summarizer specialist of Friends. You condense complex material into clear, concise, well-structured summaries and reports with no filler and zero loss of crucial nuance.",
+  },
+  {
+    id: "translator",
+    label: "Translator",
+    when: "Translating text between languages with idiomatic precision and RTL layout support.",
+    kind: "chat",
+    tools: [],
+    contextSize: 8192,
+    system: "You are the translation specialist of Friends. You translate text accurately and naturally, preserving tone, idioms, and formatting across English, German, Arabic, and other languages.",
+  },
+  {
+    id: "extraction",
+    label: "Data extraction",
+    when: "Extracting structured data, tables, dates, prices, and facts from unstructured text or web pages.",
+    kind: "chat",
+    tools: group("filesRead", "web"),
+    contextSize: 8192,
+    system: "You are the data extraction specialist of Friends. You convert unstructured documents, web pages, and messages into clean, accurate, structured JSON or tabular data without inventing anything.",
+  },
+  {
+    id: "reasoning",
+    label: "Math and reasoning",
+    when: "Solving mathematical, algorithmic, logic, data analysis, and architectural problems.",
+    kind: "chat",
+    tools: group("command", "filesRead"),
+    contextSize: 8192,
+    system: "You are the math and reasoning specialist of Friends. You analyze complex problems methodically step-by-step, verify calculations, and provide sound proofs and derivations.",
+  },
+  {
+    id: "tool_caller",
+    label: "Tool caller",
+    when: "Executing multi-tool workflows, calling APIs, and passing precise parameters.",
+    kind: "chat",
+    tools: ["*"],
+    contextSize: 8192,
+    system: "You are the tool-calling specialist of Friends. You invoke system, file, and app tools with exact parameters, handle tool returns gracefully, and chain operations reliably.",
+  },
+  {
+    id: "social",
+    label: "Social and Reddit writer",
+    when: "Drafting Reddit posts, comments, community updates, and social media content in the right voice.",
+    kind: "chat",
+    tools: group("web", "vault"),
+    contextSize: 8192,
+    system: "You are the social and community specialist of Friends. You write authentic, engaging, rule-compliant posts and comments for Reddit and social platforms in the user's voice, obeying community guidelines.",
+  },
+  {
+    id: "email",
+    label: "Email writer",
+    when: "Drafting, reviewing, and answering professional or personal emails and correspondence.",
+    kind: "chat",
+    tools: group("vault", "filesRead"),
+    contextSize: 8192,
+    system: "You are the email specialist of Friends. You draft clear, professional, empathetic emails and replies with appropriate etiquette, correct formatting, and no unnecessary verbiage.",
+  },
+  {
+    id: "organizer",
+    label: "File organizer",
+    when: "Sorting downloads, categorizing files, tidying folders, and managing disk workspaces.",
+    kind: "chat",
+    tools: group("filesRead", "filesWrite"),
+    contextSize: 8192,
+    system: "You are the file organizer specialist of Friends. You inspect file metadata, classify documents logically, and tidy directories systematically without losing any data.",
+  },
+  {
     id: "embeddings",
     label: "Embeddings (memory and notes search)",
     when: "Turning text into numbers, so notes and memories can be searched by meaning. Not used for chatting.",
@@ -74,9 +164,36 @@ const DEFAULT_ROLES = [
   },
 ];
 const BUILTIN = new Set(DEFAULT_ROLES.map((r) => r.id));
-const MAX_CUSTOM = 10;
+const MAX_CUSTOM = 15;
 
 const clip = (v, n) => String(v ?? "").trim().slice(0, n);
+
+// Detect the model family from model name to adapt prompt conventions and formatting
+function detectFamily(modelName = "") {
+  const n = String(modelName || "").toLowerCase();
+  if (/qwen/i.test(n)) return "qwen";
+  if (/llama/i.test(n)) return "llama";
+  if (/gemma/i.test(n)) return "gemma";
+  if (/phi/i.test(n)) return "phi";
+  if (/mistral|mixtral/i.test(n)) return "mistral";
+  if (/deepseek/i.test(n)) return "deepseek";
+  return "generic";
+}
+
+// Model-family-specific prompt wrapper and parameters
+function familyTemplate(family, { system = "", tools = [] } = {}) {
+  const lines = [system];
+  if (tools.length) {
+    if (family === "qwen") {
+      lines.push("\nWhen calling tools, output proper tool call blocks.");
+    } else if (family === "llama") {
+      lines.push("\nRespond with tool calls when required according to tool parameters.");
+    } else if (family === "mistral") {
+      lines.push("\nEnsure all function arguments strictly adhere to their JSON schemas.");
+    }
+  }
+  return lines.join("\n");
+}
 
 // settings.specialists.roles is a list of what you changed: { id, model, system, tools, contextSize, enabled, label?, when? }
 function sanitize(list) {
@@ -102,5 +219,4 @@ function sanitize(list) {
   return out;
 }
 
-
-module.exports = { TOOL_GROUPS, DEFAULT_ROLES, BUILTIN, MAX_CUSTOM, sanitize };
+module.exports = { TOOL_GROUPS, DEFAULT_ROLES, BUILTIN, MAX_CUSTOM, sanitize, detectFamily, familyTemplate };

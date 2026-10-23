@@ -8,6 +8,7 @@ const specialists = require("../specialists");
 const characters = require("../characters");
 const cloud = require("./cloud");
 const risk = require("./risk");
+const redact = require("../redact");
 
 const clip = (value, max) => {
   const text = String(value ?? "");
@@ -16,22 +17,53 @@ const clip = (value, max) => {
 
 // The reply as an object, even when the model wrapped it in a code fence or said a word before it
 function parseJson(text) {
-  let body = String(text || "").trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
-  try {
-    return JSON.parse(body);
-  } catch {}
-  const first = body.indexOf("{");
-  const last = body.lastIndexOf("}");
-  if (first >= 0 && last > first) {
-    body = body.slice(first, last + 1);
-    try {
-      return JSON.parse(body);
-    } catch {}
-    // A trailing comma is the usual slip
-    try {
-      return JSON.parse(body.replace(/,\s*([}\]])/g, "$1"));
-    } catch {}
+  let s = String(text || "").trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+  const firstBrace = s.indexOf("{");
+  const firstBracket = s.indexOf("[");
+  let start = -1;
+  let end = -1;
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    start = firstBrace;
+    end = s.lastIndexOf("}");
+  } else if (firstBracket !== -1) {
+    start = firstBracket;
+    end = s.lastIndexOf("]");
   }
+  if (start >= 0 && end > start) {
+    s = s.slice(start, end + 1);
+  }
+
+  // 1. Try clean parse
+  try {
+    return JSON.parse(s);
+  } catch {}
+
+  // 2. Trailing comma repair
+  let r = s.replace(/,\s*([}\]])/g, "$1");
+  try {
+    return JSON.parse(r);
+  } catch {}
+
+  // 3. Unquoted keys { key: "val" }
+  r = r.replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+  try {
+    return JSON.parse(r);
+  } catch {}
+
+  // 4. Single quotes to double quotes
+  r = r.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"');
+  try {
+    return JSON.parse(r);
+  } catch {}
+
+  // 5. Unescaped control characters inside string literals
+  r = r.replace(/"((?:[^"\\]|\\.)*)"/g, (match) =>
+    match.replace(/[\r\n\t]/g, (c) => (c === "\n" ? "\\n" : c === "\r" ? "\\r" : "\\t"))
+  );
+  try {
+    return JSON.parse(r);
+  } catch {}
+
   throw new Error("The manager's answer wasn't something I could read as a plan. Try again.");
 }
 
@@ -40,19 +72,27 @@ function parseJson(text) {
 async function ask({ system, prompt, tier = "plan", json = false, temperature = 0.3 }, ctx = {}) {
   const settings = settingsModule.get();
   const mission = ctx.mission;
-  const useCloud = !mission?.private && !settings.privacy?.localOnly;
+  const choice = mission?.managerChoice || settings.missions?.managerChoice || "auto";
+  const isPrivate = mission?.private || settings.privacy?.localOnly === true;
+  const useCloud = (choice === "gemini" || (choice === "auto" && !isPrivate)) && !isPrivate;
+
   const m = useCloud ? await cloud.manager(settings) : null;
   if (m) {
     const brain = tier === "plan" ? m.plan : m.fast;
     ctx.onCloudStart?.();
-    const text = await cloud.call(() => brain.api.generateText({ key: brain.key, model: brain.model, system, prompt, temperature, json, thinking: tier === "plan", signal: ctx.signal }), { mission, signal: ctx.signal, onWait: ctx.onWait, model: brain.model });
+    const redactOpts = settings.privacy?.redact;
+    const cleanSystem = redact.active(redactOpts) ? redact.redactText(system, redactOpts) : system;
+    const cleanPrompt = redact.active(redactOpts) ? redact.redactText(prompt, redactOpts) : prompt;
+    const text = await cloud.call(() => brain.api.generateText({ key: brain.key, model: brain.model, system: cleanSystem, prompt: cleanPrompt, temperature, json, thinking: tier === "plan", signal: ctx.signal }), { mission, signal: ctx.signal, onWait: ctx.onWait, model: brain.model });
     if (mission) ctx.onCall?.({ kind: "cloud", model: brain.model, tier });
     return text;
   }
-  // No cloud (Private mode, or no Gemini): the general local model is the manager
-  const local = specialists.brainFor("general", settings);
+
+  // No cloud (Private mode, Local manager mode, or no Gemini): local model is the manager
+  // Check for planner specialist first, then reasoning, then general
+  const local = specialists.brainFor("planner", settings) || specialists.brainFor("reasoning", settings) || specialists.brainFor("general", settings);
   if (!local) {
-    throw Object.assign(new Error(mission?.private || settings.privacy?.localOnly ? "Private mode is on, and there is no local model for the manager. Add one in Settings → AI & privacy." : "There is no AI to plan with. Add Gemini or a local model in Settings → AI & privacy."), { code: "NO_MANAGER" });
+    throw Object.assign(new Error(isPrivate ? "Private mode is on, and there is no local model for the manager. Add one in Settings → AI & privacy." : "There is no AI to plan with. Add Gemini or a local model in Settings → AI & privacy."), { code: "NO_MANAGER" });
   }
   const text = await models.use(local, { role: "manager", why: "The manager (local)", mission: mission?.id }, (brain) => brain.api.generateText({ key: "", model: brain.model, system, prompt, temperature, json, signal: ctx.signal }));
   if (mission) {
@@ -79,6 +119,7 @@ function world(settings, { tools = [], google = false, telegram = false } = {}) 
     google,
     telegram,
     private: settings.privacy?.localOnly === true,
+    compactContext: ((specialists.brainFor("planner", settings) || specialists.brainFor("general", settings))?.contextSize || 8192) <= 4096,
   };
 }
 
@@ -121,7 +162,9 @@ async function plan(mission, w, ctx) {
     roleLines(w.roles),
     "",
     "HOW TO PLAN",
-    "- 3 to 10 steps in order. Each step is one clear piece of work with one result. Put steps that use the same specialist next to each other. Write a step so a small model can do it: say exactly what to do, with what, and what to hand back.",
+    w.compactContext
+      ? "- Compact context: plan 3 to 5 small, focused steps in order. Keep inputs, outputs and actions brief."
+      : "- 3 to 10 steps in order. Each step is one clear piece of work with one result. Put steps that use the same specialist next to each other. Write a step so a small model can do it: say exactly what to do, with what, and what to hand back.",
     "- Each step has: id (s1, s2…), title, role, tools (names from the list above), inputs (what it gets; refer to earlier steps by id), output (what it must produce, so it can be checked), dependsOn (ids), check (true when a wrong result would waste the later steps), actions.",
     "- `actions` lists EVERY side effect of the step, exactly. The user approves only what is listed here: anything else stops the mission and asks. Reading, searching and thinking need no action.",
     "  Action types and their fields:",
@@ -152,7 +195,21 @@ async function plan(mission, w, ctx) {
     .filter(Boolean)
     .join(" ");
   const text = await ask({ system, prompt: `${context}\n\nThe goal:\n${mission.goal}${answers}`, tier: "plan", json: true, temperature: 0.3 }, ctx);
-  return parseJson(text);
+  const parsed = parseJson(text);
+
+  // Second-pass validation & self-check for small-model safeguards
+  if (Array.isArray(parsed.steps)) {
+    const knownIds = new Set();
+    parsed.steps.forEach((s, idx) => {
+      s.id = s.id || `s${idx + 1}`;
+      knownIds.add(s.id);
+      s.dependsOn = (Array.isArray(s.dependsOn) ? s.dependsOn : []).filter((dep) => knownIds.has(dep) && dep !== s.id);
+      s.actions = Array.isArray(s.actions) ? s.actions : [];
+      s.tools = Array.isArray(s.tools) ? s.tools : [];
+      s.check = Boolean(s.check);
+    });
+  }
+  return parsed;
 }
 
 // ---------- 3. Checking a result ----------

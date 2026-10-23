@@ -558,7 +558,7 @@ async function refresh() {
 
 document.addEventListener("friends:settings", (e) => {
   if (e.detail.open) {
-    if (e.detail.tab === "integrations") refresh();
+    refresh();
     if (e.detail.tab === "telegram") {
       refreshTelegramStatus();
       renderTelegramPairedUsers();

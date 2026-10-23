@@ -170,7 +170,7 @@ describe("Telegram Bot Audit & Hardening", () => {
   });
 
   test("6. 429 Rate Limit simulation (retry_after backoff)", async () => {
-    fakeTg.rateLimitOnce = { retry_after: 3 };
+    fakeTg.rateLimitOnce = { method: "sendMessage", retry_after: 3 };
 
     await assert.rejects(
       async () => {

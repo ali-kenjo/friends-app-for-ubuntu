@@ -283,6 +283,15 @@ function exportData(id, { format = "json" } = {}) {
   return { format: "json", data: doc, title: doc.title };
 }
 
+function exportBoard(id, format = "markdown") {
+  const doc = get(id);
+  if (!doc) throw new Error("Whiteboard not found");
+  if (format === "markdown" || format === "text") {
+    return documentToText(doc);
+  }
+  return JSON.stringify(doc, null, 2);
+}
+
 function enforceLimits() {
   try {
     const dir = getStorageDir();
@@ -319,5 +328,6 @@ module.exports = {
   getHistory,
   restoreVersion,
   exportData,
+  exportBoard,
   enforceLimits,
 };

@@ -47,6 +47,8 @@ if (lang !== "en") {
 
 const translator = createTranslator(lang, catalog);
 export const { t, tp, nf, formatDate, formatTime, formatDateTime } = translator;
+export const say = translator.t;
+export const sayN = translator.tp;
 export const compare = new Intl.Collator(translator.locale).compare;
 
 const root = document.documentElement;

@@ -14,6 +14,7 @@ const PATHS = {
   sidebar: '<rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
   keyboard: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+  whiteboard: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M7 17v4m10-4v4m-12 0h14M8 12h8"/>',
   // actions
   plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
   close: '<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',

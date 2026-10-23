@@ -9,6 +9,7 @@
 
 const keys = require("../keys");
 const logger = require("../logger");
+const settingsModule = require("../settings");
 const { str, num, oneOf, fn } = require("./schema");
 
 const DEFAULT_AUTH_BASE = "https://www.reddit.com";
@@ -62,6 +63,9 @@ function detectPromptInjectionSignals(text) {
 
 // ---------- Token Refresh & Authentication ----------
 async function getAccessToken(cfg = {}) {
+  if (settingsModule.get()?.privacy?.localOnly === true) {
+    throw new Error("Reddit OAuth network access is blocked in Private mode.");
+  }
   const now = Date.now();
   if (cachedToken && cachedToken.token && cachedToken.expiresAt > now + 60000) {
     return cachedToken.token;
@@ -108,6 +112,9 @@ async function getAccessToken(cfg = {}) {
 
 // ---------- Rate Limited Reddit HTTP Request ----------
 async function redditRequest(cfg, path, options = {}) {
+  if (settingsModule.get()?.privacy?.localOnly === true) {
+    throw new Error("Reddit network requests are blocked in Private mode.");
+  }
   // Enforce minimum gap between calls
   const now = Date.now();
   const elapsed = now - lastRequestTime;

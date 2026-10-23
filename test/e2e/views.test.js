@@ -25,7 +25,7 @@ describe("Talk, Missions and Today", { skip: !hasChrome && "no Chrome found" }, 
   });
 
   test("the sidebar has three places, and Talk is where you start", async () => {
-    assert.deepStrictEqual(await page.$$eval(".nav .nav-item", (items) => items.map((i) => i.id)), ["nav-home", "nav-missions", "today-open"]);
+    assert.deepStrictEqual(await page.$$eval(".nav .nav-item", (items) => items.map((i) => i.id)), ["nav-home", "nav-missions", "today-open", "nav-whiteboard"]);
     assert.strictEqual(await shown(), "home");
     assert.strictEqual(await page.$eval("#nav-home", (el) => el.getAttribute("aria-current")), "page");
     assert.strictEqual(await visible("#main"), true);

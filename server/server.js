@@ -38,6 +38,7 @@ const localNotes = require("./local-notes");
 const telegram = require("./telegram");
 const notifications = require("./notifications");
 const redditWatcher = require("./reddit-watcher");
+const models = require("./models");
 const { say, noteBrowser } = require("./say");
 const companion = require("./companion");
 const missions = require("./missions");
@@ -356,46 +357,53 @@ async function chat(req, res) {
     const contents = toContents(conversation.messages, summary.windowStart(conversation, window), characters.others(current));
     // The greeting's note from the app goes last, as if said, but it's never saved
     if (greeting) contents.push({ role: "user", parts: [{ text: appNote ? prompt.appNote(current, appNote) : prompt.greeting(current, { chatId: conversation.messages.length ? conversation.id : null, onAir }) }] });
-    await brain.api.streamChat({
-      key: brain.key,
-      model: brain.model,
-      contents,
-      system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc, withhold }),
-      temperature: prompt.temperature(current),
-      // Thinking at length makes a reply start 10+ seconds later; only "Deep" does
-      fast: voice || current.aiControl?.reasoningEffort !== "deep",
-      tools: offered,
-      isFreeTool: tools.isRobotTool,
-      signal,
-      onText: (piece) => {
-        if (!started()) throw lost();
-        reply += piece;
-        send({ type: "text", text: piece });
-      },
-      runTool: (name, args) => {
-        if (!started()) throw lost();
-        return tools.run(name, args, {
-          settings: current,
-          googleAccessToken: activeToken,
-          onRobot: (event) => send({ type: "robot", ...event }),
-          onWhiteboard: (event) => send({ type: "whiteboard", ...event }),
-          // tools.js decides which actions need asking (see its settings checks)
-          confirm: (summary, details) => {
-            const id = crypto.randomUUID();
-            send({ type: "confirm", id, summary, details });
-            return waitForConfirmation(id, (fn) => closeHandlers.push(fn));
-          },
-          onActivity: (textLine) => {
-            activity.push(textLine);
-            send({ type: "activity", text: textLine });
-          },
-          onDraft: (draft) => {
-            drafts.push(draft);
-            send({ type: "draft", draft });
-          },
-        });
-      },
-    });
+    const invoke = async (b) => {
+      await b.api.streamChat({
+        key: b.key,
+        model: b.model,
+        contents,
+        system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc, withhold }),
+        temperature: prompt.temperature(current),
+        // Thinking at length makes a reply start 10+ seconds later; only "Deep" does
+        fast: voice || current.aiControl?.reasoningEffort !== "deep",
+        tools: offered,
+        isFreeTool: tools.isRobotTool,
+        signal,
+        onText: (piece) => {
+          if (!started()) throw lost();
+          reply += piece;
+          send({ type: "text", text: piece });
+        },
+        runTool: (name, args) => {
+          if (!started()) throw lost();
+          return tools.run(name, args, {
+            settings: current,
+            googleAccessToken: activeToken,
+            onRobot: (event) => send({ type: "robot", ...event }),
+            onWhiteboard: (event) => send({ type: "whiteboard", ...event }),
+            // tools.js decides which actions need asking (see its settings checks)
+            confirm: (summary, details) => {
+              const id = crypto.randomUUID();
+              send({ type: "confirm", id, summary, details });
+              return waitForConfirmation(id, (fn) => closeHandlers.push(fn));
+            },
+            onActivity: (textLine) => {
+              activity.push(textLine);
+              send({ type: "activity", text: textLine });
+            },
+            onDraft: (draft) => {
+              drafts.push(draft);
+              send({ type: "draft", draft });
+            },
+          });
+        },
+      });
+    };
+    if (brain.kind === "local") {
+      await models.use(brain, { role: "chat", priority: "chat", why: "You are chatting", signal }, invoke);
+    } else {
+      await invoke(brain);
+    }
   };
 
   try {
@@ -904,14 +912,32 @@ const routes = [
   ["GET", /^\/api\/missions$/, () => missions.overview()],
   ["POST", /^\/api\/missions$/, async (req) => {
     const b = await readJson(req);
-    return missions.create(b.goal, { source: b.source === "chat" ? "chat" : "app", private: b.private === true, automation: b.automation || null });
+    return missions.create(b.goal, {
+      source: b.source === "chat" ? "chat" : "app",
+      private: b.private === true,
+      automation: b.automation || null,
+      managerChoice: b.managerChoice || "auto",
+      modelOverrides: b.modelOverrides || {},
+      dryRun: b.dryRun === true,
+      leastPrivilege: b.leastPrivilege || null,
+      approvalPolicy: b.approvalPolicy || null,
+      notificationRouting: b.notificationRouting || null,
+      reportFormat: b.reportFormat || "vault",
+    });
   }],
+  ["POST", /^\/api\/missions\/stop-all$/, () => missions.stopAll()],
   ["GET", /^\/api\/missions\/([\w-]+)$/, (req, id) => missions.get(id)],
   ["DELETE", /^\/api\/missions\/([\w-]+)$/, (req, id) => missions.remove(id)],
   ["POST", /^\/api\/missions\/([\w-]+)\/answers$/, async (req, id) => missions.answer(id, (await readJson(req)).answers)],
   ["PUT", /^\/api\/missions\/([\w-]+)\/plan$/, async (req, id) => missions.editPlan(id, await readJson(req))],
   ["POST", /^\/api\/missions\/([\w-]+)\/approve$/, (req, id) => missions.approve(id)],
   ["POST", /^\/api\/missions\/([\w-]+)\/stop$/, (req, id) => missions.stop(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/pause$/, (req, id) => missions.pause(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/duplicate$/, (req, id) => missions.duplicate(id)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/archive$/, async (req, id) => missions.archive(id, (await readJson(req)).archived !== false)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/steps\/([\w-]+)\/retry$/, (req, id, url, stepId) => missions.retryStep(id, stepId)],
+  ["POST", /^\/api\/missions\/([\w-]+)\/steps\/([\w-]+)\/skip$/, (req, id, url, stepId) => missions.skipStep(id, stepId)],
+  ["PUT", /^\/api\/missions\/([\w-]+)\/steps\/([\w-]+)$/, async (req, id, url, stepId) => missions.editStepInRun(id, stepId, await readJson(req))],
   ["POST", /^\/api\/missions\/([\w-]+)\/resume$/, async (req, id) => missions.resume(id, { extend: (await readJson(req)).extend === true })],
   ["POST", /^\/api\/missions\/([\w-]+)\/decision$/, async (req, id) => {
     const b = await readJson(req);
@@ -919,7 +945,25 @@ const routes = [
   }],
   ["POST", /^\/api\/missions\/([\w-]+)\/automate$/, async (req, id) => missions.automate(id, await readJson(req))],
   ["GET", /^\/api\/missions\/([\w-]+)\/audit$/, (req, id) => ({ entries: missions.audit(id) })],
+  ["GET", /^\/api\/missions\/([\w-]+)\/audit\/verify$/, (req, id) => missions.verifyAudit(id)],
+  ["GET", /^\/api\/missions\/([\w-]+)\/audit\/export\.json$/, (req, id) => ({ json: missions.exportAuditJson(id) })],
+  ["GET", /^\/api\/missions\/([\w-]+)\/audit\/export\.csv$/, (req, id) => ({ csv: missions.exportAuditCsv(id) })],
   ["GET", /^\/api\/missions\/([\w-]+)\/report$/, (req, id) => ({ markdown: missions.report(id) })],
+
+  // Mission templates
+  ["GET", /^\/api\/mission-templates$/, () => ({ templates: missions.templates.list() })],
+  ["GET", /^\/api\/mission-templates\/([\w-]+)$/, (req, id) => {
+    const t = missions.templates.get(id);
+    if (!t) throw new Error("Template not found");
+    return t;
+  }],
+  ["POST", /^\/api\/mission-templates$/, async (req) => missions.templates.saveTemplate(await readJson(req))],
+  ["DELETE", /^\/api\/mission-templates\/([\w-]+)$/, (req, id) => ({ ok: missions.templates.removeTemplate(id) })],
+  ["GET", /^\/api\/mission-templates\/([\w-]+)\/export$/, (req, id) => ({ json: missions.templates.exportTemplate(id) })],
+  ["POST", /^\/api\/mission-templates\/import$/, async (req) => {
+    const b = await readJson(req);
+    return missions.templates.importTemplate(b.json || JSON.stringify(b));
+  }],
   // The specialists: local models with a job each, and how they fit the graphics card (Settings → AI → Specialists)
   ["GET", /^\/api\/specialists$/, () => specialistsApi.overview()],
   ["POST", /^\/api\/specialists$/, async (req) => specialistsApi.addRole(await readJson(req))],
@@ -927,6 +971,7 @@ const routes = [
   ["PUT", /^\/api\/specialists\/([\w-]+)$/, async (req, id) => specialistsApi.saveRole(id, await readJson(req))],
   ["DELETE", /^\/api\/specialists\/([\w-]+)$/, (req, id) => specialistsApi.removeRole(id)],
   ["POST", /^\/api\/specialists\/([\w-]+)\/test$/, (req, id) => specialistsApi.test(id)],
+  ["POST", /^\/api\/specialists\/([\w-]+)\/benchmark$/, (req, id) => specialistsApi.benchmark(id)],
   ["DELETE", /^\/api\/specialist-models\/(.+)$/, (req, name) => specialistsApi.deleteModel(decodeURIComponent(name))],
   ["GET", /^\/api\/automations$/, () => ({ automations: missions.overview().automations })],
   ["POST", /^\/api\/automations$/, async (req) => {

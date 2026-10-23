@@ -22,6 +22,9 @@ function leaving(settings = settingsModule.get()) {
     for (const b of brains.publicState().brains.filter((b) => b.enabled && b.kind === "cloud")) out.push({ id: `ai-${b.id}`, kind: "ai", name: b.name, detail: b.model });
     for (const { def } of connectors.active(settings)) if (def.online) out.push({ id: `app-${def.id}`, kind: "app", name: def.name, detail: "" });
     if (settings.life?.briefingNews) out.push({ id: "news", kind: "feature", name: "news", detail: "" });
+    if (settings.reddit?.enabled !== false && (settings.reddit?.watchers || []).some((w) => w.enabled !== false)) {
+      out.push({ id: "reddit-watchers", kind: "feature", name: "reddit_watchers", detail: "" });
+    }
   }
   if (settings.telegram?.enabled) out.push({ id: "telegram", kind: "feature", name: "telegram", detail: "" });
   if (!priv && settings.updates?.check !== false) out.push({ id: "updates", kind: "feature", name: "updates", detail: "" });

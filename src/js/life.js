@@ -118,7 +118,10 @@ function taskItem(task) {
   const check = Object.assign(document.createElement("input"), { type: "checkbox", checked: task.done, className: "life-check" });
   check.setAttribute("aria-label", t("Done: {title}", { title: task.title }));
   check.addEventListener("change", () => {
-    if (check.checked) celebrate(check, { kind: "task" });
+    if (check.checked) {
+      celebrate(check, { kind: "task" });
+      document.dispatchEvent(new CustomEvent("friends:robot-event", { detail: { type: "task_done" } }));
+    }
     act(() => api.life.updateTask(task.id, { done: check.checked }));
   });
   const text = el("span", "life-text");
@@ -219,7 +222,10 @@ function habitCheck(h) {
   const done7 = Array.isArray(h.last7) ? h.last7.filter(Boolean).length : h.today ? 1 : 0;
   b.append(progressRing(done7, 7, { size: 22, stroke: 2.6 }), el("span", "habit-emoji", h.emoji), el("span", "habit-name", h.name), streakEl(h.streak));
   b.addEventListener("click", () => {
-    if (!h.today) celebrate(b, { kind: "habit" });
+    if (!h.today) {
+      celebrate(b, { kind: "habit" });
+      document.dispatchEvent(new CustomEvent("friends:robot-event", { detail: { type: "habit_streak" } }));
+    }
     act(() => api.life.logHabit(h.id, { done: !h.today }));
   });
   return b;
@@ -616,6 +622,7 @@ function systemNotification(title, body, onClick) {
 }
 
 function onReminder(r) {
+  document.dispatchEvent(new CustomEvent("friends:robot-event", { detail: { type: "reminder", text: r.text } }));
   const s = getSettings();
   toast({
     icon: "bell",

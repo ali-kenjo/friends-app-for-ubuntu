@@ -304,6 +304,39 @@ async function sendMessage(chatId, text, options = {}) {
   return lastResult;
 }
 
+// Outbound media helpers: photo & document
+async function sendPhoto(chatId, photo, caption = "", options = {}) {
+  const body = {
+    chat_id: chatId,
+    photo,
+  };
+  if (caption) body.caption = String(caption).slice(0, 1024);
+  if (options.buttons) {
+    body.reply_markup = {
+      inline_keyboard: options.buttons.map((row) =>
+        row.map((b) => ({ text: b.text, callback_data: b.data }))
+      ),
+    };
+  }
+  return apiCall("sendPhoto", body);
+}
+
+async function sendDocument(chatId, document, caption = "", options = {}) {
+  const body = {
+    chat_id: chatId,
+    document,
+  };
+  if (caption) body.caption = String(caption).slice(0, 1024);
+  if (options.buttons) {
+    body.reply_markup = {
+      inline_keyboard: options.buttons.map((row) =>
+        row.map((b) => ({ text: b.text, callback_data: b.data }))
+      ),
+    };
+  }
+  return apiCall("sendDocument", body);
+}
+
 // Stream reply helper: edits existing message throttled to >= 1200ms
 function createStreamReply(chatId) {
   let messageId = null;
@@ -666,6 +699,11 @@ async function handleCommand(chatId, text, msg = {}) {
           return sendMessage(chatId, say("No active whiteboard found."));
         }
         const textSummary = wb.exportBoard(active.id, "markdown");
+        const wantsSnapshot = text.includes("snapshot") || text.includes("photo") || text.includes("image");
+        const photoUrl = active.snapshot || active.pages[0]?.items?.find((i) => i.type === "image")?.url;
+        if (wantsSnapshot && photoUrl) {
+          return sendPhoto(chatId, photoUrl, `${say("Active Whiteboard: {title}", { title: active.title })}\n\n${textSummary.slice(0, 1000)}`);
+        }
         return sendMessage(chatId, `${say("Active Whiteboard: {title}", { title: active.title })}\n\n${textSummary.slice(0, 3000)}`);
       } catch (err) {
         return sendMessage(chatId, say("Couldn't read whiteboard: {reason}", { reason: err.message }));
@@ -1126,6 +1164,8 @@ module.exports = {
   stop,
   sync,
   sendMessage,
+  sendPhoto,
+  sendDocument,
   sendAlert,
   createStreamReply,
   splitMessage,

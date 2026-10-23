@@ -9,6 +9,7 @@ import { announce } from "../a11y.js";
 import { confirmDialog } from "../dialogs.js";
 import { statusOf, isActive, riskLabel, riskHelp, roleLabel, when, duration } from "./labels.js";
 import { progressRing } from "../illustrations.js";
+import { createDocument, createSticky, createText, STICKY_COLORS } from "../whiteboard/model.mjs";
 
 const ICON = (name, size = 16) => iconEl(name, { size });
 const MODE_NOTE = () => t("Private: only models on this computer, nothing goes to the cloud.");
@@ -59,7 +60,85 @@ function stepDetails(m, s, ctx) {
     renderMarkdown(out, s.output);
     body.append(h("p", { class: "step-line" }, h("strong", { text: t("Result") })), out);
   }
+  if (!editable && ["running", "paused", "failed"].includes(m.status)) {
+    const stepActions = h("div", { class: "actions-row mt-2" });
+    if (s.status === "failed" || s.status === "skipped") {
+      stepActions.append(
+        h("button", { type: "button", class: "btn small", onclick: () => ctx.run(() => api.missions.retryStep(m.id, s.id)) }, ICON("refresh", 14), t("Retry this step"))
+      );
+    } else if (s.status === "pending") {
+      stepActions.append(
+        h("button", { type: "button", class: "btn small", onclick: () => ctx.run(() => api.missions.skipStep(m.id, s.id)) }, ICON("close", 14), t("Skip this step"))
+      );
+    }
+    if (stepActions.children.length) body.append(stepActions);
+  }
   return body;
+}
+
+export async function drawPlanOnWhiteboard(m) {
+  if (!m.plan?.steps?.length) return;
+  const doc = createDocument({
+    title: m.title || "Mission Plan",
+    scope: "mission",
+    scopeId: m.id,
+  });
+  const page = doc.pages[0];
+  page.items = [];
+
+  page.items.push(
+    createText({
+      text: m.title || "Mission Plan",
+      x: 80,
+      y: 60,
+      fontSize: 26,
+      fontFamily: "marker",
+      color: "#0f172a",
+    })
+  );
+
+  const colors = STICKY_COLORS;
+  m.plan.steps.forEach((s, i) => {
+    const col = i % 4;
+    const row = Math.floor(i / 4);
+    const x = 80 + col * 260;
+    const y = 130 + row * 240;
+    page.items.push(
+      createSticky({
+        title: `${i + 1}. ${s.title}`,
+        text: `${roleLabel(s.role)}\n[${s.status || "pending"}]${s.inputs ? `\n\n${s.inputs}` : ""}`,
+        x,
+        y,
+        width: 220,
+        height: 180,
+        color: colors[i % colors.length],
+      })
+    );
+  });
+
+  try {
+    const res = await fetch("/api/whiteboards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: m.title || "Mission Plan",
+        scope: "mission",
+        scopeId: m.id,
+      }),
+    });
+    if (res.ok) {
+      const created = await res.json();
+      doc.id = created.id;
+      await fetch(`/api/whiteboards/${encodeURIComponent(created.id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(doc),
+      });
+      window.location.hash = "#whiteboard";
+    }
+  } catch (err) {
+    console.error("Couldn't export plan to whiteboard:", err);
+  }
 }
 
 function planCard(m, ctx) {
@@ -104,7 +183,25 @@ function planCard(m, ctx) {
   };
   const limitBox = h("div", { class: "limits" }, h("h3", { class: "section-title" }, t("Limits")), h("div", { class: "limit-row" }, field("maxMinutes", t("Minutes at most")), field("maxSteps", t("Steps at most")), field("maxCloudCalls", t("Cloud calls at most"))));
 
-  const card = h("section", { class: "card plan" }, h("h3", { class: "section-title" }, t("The plan")), plan.summary ? h("p", { class: "plan-summary", text: plan.summary }) : null, list, covers, limitBox);
+  const card = h(
+    "section",
+    { class: "card plan" },
+    h(
+      "div",
+      { class: "plan-header-row flex items-center justify-between gap-2 mb-2" },
+      h("h3", { class: "section-title" }, t("The plan")),
+      h(
+        "div",
+        { class: "actions-row" },
+        h("button", { type: "button", class: "btn small", onclick: () => drawPlanOnWhiteboard(m), title: t("Draw this plan on the whiteboard") }, ICON("whiteboard", 15), t("Draw on whiteboard")),
+        h("button", { type: "button", class: "btn small", onclick: async () => { const dup = await api.missions.duplicate(m.id); window.location.hash = `#missions/${dup.id}`; }, title: t("Duplicate this mission") }, ICON("copy", 15), t("Duplicate"))
+      )
+    ),
+    plan.summary ? h("p", { class: "plan-summary", text: plan.summary }) : null,
+    list,
+    covers,
+    limitBox
+  );
   if (m.automation || m.automationId) card.append(h("p", { class: "row-desc repeat-note" }, ICON("repeat", 15), " ", m.automationId ? t("This mission repeats. Approving it again isn't needed: each run uses this plan.") : t("Approving this plan also sets up the repeat you chose.")));
   if (m.private) card.append(h("p", { class: "row-desc" }, ICON("lock", 15), " ", MODE_NOTE()));
   return card;
@@ -209,12 +306,29 @@ function reportCard(m) {
 
 function auditCard(m) {
   const body = h("div", { class: "audit-body" });
-  const details = h("details", { class: "card audit" }, h("summary", {}, t("Audit log: every tool call and model it used")), body);
+  const verifyBadge = h("span", { class: "chip audit-verify-badge", text: t("Verifying integrity…") });
+  const exportJsonBtn = h("a", { class: "btn small", href: `/api/missions/${encodeURIComponent(m.id)}/audit/export.json`, download: `mission-${m.id}-audit.json` }, ICON("download", 14), t("Export JSON"));
+  const exportCsvBtn = h("a", { class: "btn small", href: `/api/missions/${encodeURIComponent(m.id)}/audit/export.csv`, download: `mission-${m.id}-audit.csv` }, ICON("download", 14), t("Export CSV"));
+  const toolbar = h("div", { class: "audit-toolbar flex items-center justify-between gap-2 mb-3 mt-2" }, verifyBadge, h("div", { class: "actions-row" }, exportJsonBtn, exportCsvBtn));
+
+  const details = h("details", { class: "card audit" }, h("summary", {}, t("Audit log: every tool call and model it used")), toolbar, body);
   details.addEventListener("toggle", async () => {
     if (!details.open || body.dataset.loaded) return;
     body.dataset.loaded = "1";
     body.textContent = t("Loading…");
     try {
+      api.missions.verifyAudit(m.id).then((res) => {
+        if (res.valid) {
+          verifyBadge.textContent = t("✓ Verified (SHA-256 intact, {n} entries)", { n: res.count });
+          verifyBadge.className = "chip chip-success";
+        } else {
+          verifyBadge.textContent = t("✗ Integrity check failed: {reason}", { reason: res.reason });
+          verifyBadge.className = "chip chip-danger";
+        }
+      }).catch(() => {
+        verifyBadge.hidden = true;
+      });
+
       const { entries } = await api.missions.audit(m.id);
       const rows = entries.filter((e) => ["tool", "route", "model-used", "approved", "approval-asked", "review", "manager", "step-error", "done", "failed", "stopped", "wait"].includes(e.type));
       body.replaceChildren(
@@ -315,7 +429,12 @@ export function renderDetail(m, ctx) {
   if (m.status === "clarifying") root.append(questionsCard(m, ctx));
   if (m.status === "planning") root.append(h("section", { class: "card" }, h("p", { class: "planning" }, h("span", { class: "spinner", "aria-hidden": "true" }), t("Making a plan…"))));
   if (m.plan && m.status !== "clarifying") {
-    if (["running", "paused"].includes(m.status)) root.append(progressCard(m));
+    if (["running", "paused"].includes(m.status)) {
+      root.append(progressCard(m));
+      if (m.status === "running") {
+        document.dispatchEvent(new CustomEvent("friends:robot-event", { detail: { type: "mission_progress", progress: m.progress } }));
+      }
+    }
     // Once it's over, the report comes first and the plan folds away
     if (m.status === "done") {
       root.append(reportCard(m));

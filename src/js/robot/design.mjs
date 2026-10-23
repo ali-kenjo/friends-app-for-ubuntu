@@ -286,7 +286,7 @@ export const OUTFIT = {
     item("lei", "Flower lei", "link", ["#f48fb1", "#ffd54f"], ["Flowers", "Leaves"]),
     item("lanyard", "VIP pass", "link", ["#3b6fd6", "#f4efe6"], ["Strap", "Card"]),
     item("pearls", "Pearl necklace", "link", ["#f8f5ee", "#f2c14e"], ["Pearls", "Clasp"]),
-    item("chain", "Gold chain", "link", ["#f2c14e", "#d9b25a"], ["Links", "Shine"]),
+    item("chain", "Gold chain", "link", ["#f2c14e", "#d9b25a"], ["Chain links", "Shine"]),
     item("cape_clasp", "Cloak clasp", "link", ["#5b4bb7", "#f2c14e"], ["Cloak", "Brooch"]),
   ],
   torso: [

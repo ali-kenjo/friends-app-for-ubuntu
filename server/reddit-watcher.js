@@ -82,7 +82,9 @@ async function checkWatcher(watcher, redditCfg) {
 }
 
 async function pollOnce() {
-  const redditCfg = settings.get().reddit || {};
+  const s = settings.get();
+  if (s.privacy?.localOnly === true) return [];
+  const redditCfg = s.reddit || {};
   if (redditCfg.enabled === false) return [];
 
   const watchers = getWatchers();

@@ -184,7 +184,7 @@
         <!-- First run: nothing answers yet (src/js/onboarding.js) -->
         <section class="onboarding" id="onboarding" aria-labelledby="onboarding-title" hidden>
           <h2 id="onboarding-title">Let's get you chatting</h2>
-          <p class="onboarding-lead">Friends needs an AI to answer you. Pick one below. You can change it, or add more, at any time in Settings.</p>
+          <p class="onboarding-lead">Friends needs an AI to answer you. Pick one below to chat, draw on the shared whiteboard, and run background missions. You can change it, or add more, at any time in Settings.</p>
 
           <div class="onboarding-options">
             <div class="onboarding-option" id="onb-local">
@@ -252,6 +252,19 @@
           <div class="intro-actions">
             <button type="button" class="btn btn-primary" id="sounds-intro-enable">Turn on soft sounds</button>
             <button type="button" class="link-btn" id="sounds-intro-dismiss">Keep it quiet</button>
+          </div>
+        </section>
+
+        <!-- What's new in 0.7 card (src/js/onboarding.js) -->
+        <section class="intro-card" id="whats-new-intro" aria-labelledby="whats-new-intro-title" hidden>
+          <span class="intro-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+          <div class="intro-text">
+            <h2 id="whats-new-intro-title">What's new in Friends 0.7</h2>
+            <p>Cozy theme packs and procedural room sounds, an interactive shared whiteboard, hardened background Missions with specialist AI roles, official Reddit discussions, and a paired Telegram bot companion.</p>
+          </div>
+          <div class="intro-actions">
+            <button type="button" class="btn btn-primary" id="whats-new-intro-explore">Explore what's new</button>
+            <button type="button" class="link-btn" id="whats-new-intro-dismiss">Got it</button>
           </div>
         </section>
 
@@ -1958,6 +1971,21 @@
           <div class="robot-look-card">
             <div class="robot-look-summary" id="robot-look-summary" aria-live="polite"></div>
             <button type="button" class="btn btn-primary" id="robot-studio-open" data-open-studio="">Open Robot Studio…</button>
+          </div>
+
+          <div class="row">
+            <div>
+              <div class="row-label">Robot Studio tabs</div>
+              <div class="row-desc">Customize colors, shapes, face expressions, outfits, 3D room, and saved looks in the 3D Studio</div>
+            </div>
+            <div class="robot-studio-shortcuts" style="display:flex; flex-wrap:wrap; gap:6px;">
+              <button type="button" class="btn small" data-open-studio="colors">Colors</button>
+              <button type="button" class="btn small" data-open-studio="shape">Shape</button>
+              <button type="button" class="btn small" data-open-studio="face">Face</button>
+              <button type="button" class="btn small" data-open-studio="outfit">Outfit</button>
+              <button type="button" class="btn small" data-open-studio="room">Room</button>
+              <button type="button" class="btn small" data-open-studio="looks">Looks</button>
+            </div>
           </div>
 
           <label class="row">

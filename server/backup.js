@@ -19,11 +19,11 @@ const FORMAT = "friends-backup";
 const NAME = /^friends-[0-9TZ-]+-(auto|manual|before-restore|import)\.json\.gz$/;
 // Never in a backup: API keys, the desktop window's browser cache, the speech
 // models (~1 GB, downloaded again by the setup), the backups, half-written files
-const SKIP = [/^secrets\.json$/, /^desktop(\/|$)/, /^voice(\/|$)/, /^backups(\/|$)/, /\.tmp$/, /(^|\/)\.health-probe$/];
+const SKIP = [/^secrets\.json$/, /^desktop(\/|$)/, /^voice(\/|$)/, /^backups(\/|$)/, /\.tmp$/, /(^|\/)\.health-probe$/, /(^|\/)\.env/, /\.key$/];
 // Only with files: true
-const LARGE = [/^attachments\//, /^robot\//];
+const LARGE = [/^attachments\//, /^robot\/.*\.glb$/];
 // What a path inside a backup may look like (nothing outside the data folder)
-const SAFE_PATH = /^[\w][\w.-]*(\/[\w][\w.-]*){0,3}$/;
+const SAFE_PATH = /^[\w][\w.-]*(\/[\w][\w.-]*){0,6}$/;
 const MAX_FILE = 40 * 1024 * 1024;
 const KEEP_BEFORE_RESTORE = 5;
 
@@ -226,4 +226,4 @@ function schedule(getSettings, { firstDelay = 60 * 1000, every = 60 * 60 * 1000 
   timer.unref?.();
 }
 
-module.exports = { dir, create, list, read, remove, restore, restoreSaved, exportBuffer, snapshot, unpack, prune, tick, due, schedule, onRestore, NAME };
+module.exports = { dir, create, list, read, remove, restore, restoreSaved, exportBuffer, snapshot, pack, unpack, prune, tick, due, schedule, onRestore, NAME };

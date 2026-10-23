@@ -21,7 +21,12 @@ function renderPrivateNote() {
 }
 
 // ----- What could leave this computer -----
-const FEATURES = { news: t("Headlines in your daily briefing"), telegram: t("Your Telegram bot (messages go through Telegram)"), updates: t("The daily check for a newer Friends (it sends nothing about you)") };
+const FEATURES = {
+  news: t("Headlines in your daily briefing"),
+  telegram: t("Your Telegram bot (messages go through Telegram)"),
+  updates: t("The daily check for a newer Friends (it sends nothing about you)"),
+  reddit_watchers: t("Reddit watchers (checks configured subreddits periodically)"),
+};
 
 function renderLeaving(summary) {
   const list = $("leaving-list");

@@ -11,6 +11,7 @@
 // tool call is; covered() says whether the approved plan lists it. Anything else that is external, destructive
 // or system pauses the mission and asks. Pure functions (the file checks are the only asynchronous part), so
 // they're tested alone (test/missions-risk.test.js).
+const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
@@ -110,6 +111,22 @@ function pathWords(command) {
     .filter((w) => /^(~|\/|\.\.\/|\$HOME)/.test(w) || w === "..");
 }
 
+function safeRealpath(p) {
+  try {
+    return fs.realpathSync(p);
+  } catch {
+    let cur = path.resolve(p);
+    while (cur && cur !== path.dirname(cur)) {
+      cur = path.dirname(cur);
+      try {
+        const r = fs.realpathSync(cur);
+        return path.join(r, path.relative(cur, path.resolve(p)));
+      } catch {}
+    }
+    return path.resolve(p);
+  }
+}
+
 // Says what a command is. { always, reason } when it always asks; { installs } when it installs project packages.
 // folders: the real paths a command may mention (the mission's folder and your allowed folders).
 function classifyCommand(command, { workdir, folders = [] } = {}) {
@@ -118,18 +135,35 @@ function classifyCommand(command, { workdir, folders = [] } = {}) {
   for (const [re, reason] of ALWAYS_ASK) if (re.test(text)) return { always: true, reason };
   const base = workdir ? path.resolve(workdir) : null;
   const roots = [base, ...folders.map((f) => path.resolve(expand(f)))].filter(Boolean);
+  const safeRoots = roots.map(safeRealpath);
+
+  // Check symbolic link creation pointing outside allowed roots
+  if (/\bln\s+(-[a-zA-Z]*s[a-zA-Z]*|--symbolic)\b/.test(text)) {
+    const lnArgs = text.split(/\s+/).filter((w) => w && !w.startsWith("-") && w !== "ln");
+    if (lnArgs.length > 0) {
+      const target = lnArgs[0].replace(/^\$\{?HOME\}?/, base || home).replace(/^~(?=\/|$)/, base || home);
+      const resTarget = path.isAbsolute(target) ? path.resolve(target) : (base ? path.resolve(base, target) : path.resolve(target));
+      const realTarget = safeRealpath(resTarget);
+      if (!safeRoots.some((r) => inside(realTarget, r))) {
+        return { always: true, reason: "it creates a symlink pointing outside the project or allowed folders" };
+      }
+    }
+  }
+
   for (const word of pathWords(text)) {
     if (word === ".." || word.startsWith("../")) {
       if (!base) return { always: true, reason: "it reaches outside the project folder" };
       const resolved = path.resolve(base, word);
-      if (!roots.some((r) => inside(resolved, r))) return { always: true, reason: "it reaches outside the project folder" };
+      const realResolved = safeRealpath(resolved);
+      if (!safeRoots.some((r) => inside(realResolved, r))) return { always: true, reason: "it reaches outside the project folder" };
       continue;
     }
     // In a mission's command ~ and $HOME are the mission's own folder (the shell is started with HOME set to it)
     const resolved = path.resolve(word.replace(/^\$\{?HOME\}?/, base || home).replace(/^~(?=\/|$)/, base || home));
     // Standard tools and temporary files are fine to name: /usr/bin/env, /dev/null, /tmp
     if (/^\/(usr\/(bin|local\/bin)|bin|dev\/null|dev\/stdout|dev\/stderr|tmp)(\/|$)/.test(resolved)) continue;
-    if (!roots.some((r) => inside(resolved, r))) return { always: true, reason: `it touches ${word}, outside the project and your allowed folders` };
+    const realResolved = safeRealpath(resolved);
+    if (!safeRoots.some((r) => inside(realResolved, r))) return { always: true, reason: `it touches ${word}, outside the project and your allowed folders` };
   }
   for (const re of INSTALLERS) {
     const m = text.match(re);

@@ -73,8 +73,8 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     await click("#robot-studio-open");
     await page.waitForFunction(() => !document.getElementById("robot-studio").hidden);
     // (outline icons, not emoji)
-    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab] svg", (icons) => icons.length), 6);
-    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab]", (tabs) => tabs.map((t) => t.textContent.trim())), ["Colors", "Shape", "Face", "Outfit", "Room", "Looks"]);
+    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab] svg", (icons) => icons.length), 8);
+    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab]", (tabs) => tabs.map((t) => t.textContent.trim())), ["Colors", "Shape", "Face", "Outfit", "Room", "Room Builder", "Behaviors", "Looks"]);
     assert.strictEqual(await page.evaluate(() => document.getElementById("robot-studio").contains(document.activeElement)), true);
     assert.strictEqual(await page.evaluate(() => document.getElementById("settings-modal").inert), true);
     // The robot is drawn in the Studio's stage
@@ -109,7 +109,7 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     await page.evaluate(() => document.querySelector('#rs-panel-room .rs-tile[data-id=space]').click());
     await savedWhere((s) => s.robot.room.place === "space" && s.robot.room.props.planet === true && s.robot.room.floor === "grid", "space");
     await page.waitForFunction(() => window.friendsRobot.engine.rooms.place?.id === "space", { timeout: 8000 });
-    assert.strictEqual(await page.$$eval("#rs-panel-room .rs-toggle", (rows) => rows.length), 3, "planet, moon, window frame");
+    assert.strictEqual(await page.$$eval("#rs-panel-room .rs-toggle", (rows) => rows.length), 15, "15 procedural space props");
     await page.evaluate(() => document.querySelector('#rs-panel-room .rs-tile[data-id=podcast]').click());
     await savedWhere((s) => s.robot.room.place === "podcast" && s.robot.room.sign === "ON AIR", "the podcast studio");
     // The words on the sign
@@ -141,7 +141,7 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     assert.strictEqual(await page.$$eval("#rs-panel-looks .rs-look-wrap", (e) => e.length), 1);
     // A ready-made look replaces the robot and the room…
     await page.evaluate(() => document.querySelector('#rs-panel-looks .rs-look[data-id="builtin:wizard"]').click());
-    await savedWhere((s) => s.robot.room.place === "space" && s.robot.design.outfit.hat.item === "wizard" && s.robot.design.colors.head === "#c9b8f0", "the wizard look");
+    await savedWhere((s) => s.robot.room.place === "observatory" && s.robot.design.outfit.hat.item === "wizard" && s.robot.design.colors.head === "#c9b8f0", "the wizard look");
     // …and your own comes back
     await page.evaluate(() => document.querySelector('#rs-panel-looks .rs-look-wrap .rs-look').click());
     await savedWhere((s) => s.robot.room.place === "green", "the saved look, applied");

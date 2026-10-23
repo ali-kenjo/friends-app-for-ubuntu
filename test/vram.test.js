@@ -187,15 +187,15 @@ describe("The model manager", () => {
     });
 
     test("your own roles can be added; settings keep only what's valid", () => {
-      const made = api.addRole({ label: "Translator", when: "Translating", system: "You translate.", model: "tiny:latest" });
-      assert.strictEqual(made.id, "translator");
-      assert.ok(specialists.list().some((r) => r.id === "translator" && !r.builtin));
-      assert.throws(() => api.addRole({ label: "Translator" }), /already/);
+      const made = api.addRole({ label: "Proofreader", when: "Proofreading", system: "You proofread.", model: "tiny:latest" });
+      assert.strictEqual(made.id, "proofreader");
+      assert.ok(specialists.list().some((r) => r.id === "proofreader" && !r.builtin));
+      assert.throws(() => api.addRole({ label: "Proofreader" }), /already/);
       assert.throws(() => api.addRole({}), /name/);
       setSettings((s) => ({ ...s, specialists: { ...s.specialists, roles: [...s.specialists.roles, { id: "manager", model: "x" }, { id: "../etc", model: "y" }] } }));
       assert.ok(!specialists.list().some((r) => r.id === "manager"), "the manager isn't a specialist");
-      api.removeRole("translator");
-      assert.ok(!specialists.list().some((r) => r.id === "translator"));
+      api.removeRole("proofreader");
+      assert.ok(!specialists.list().some((r) => r.id === "proofreader"));
     });
   });
 
@@ -204,7 +204,7 @@ describe("The model manager", () => {
       setSettings((s) => ({ ...s, specialists: { ...s.specialists, roles: [{ id: "coding", model: "huge:latest" }, { id: "writing", model: "missing:latest" }] } }));
       const o = await api.overview();
       assert.strictEqual(o.running, true);
-      assert.deepStrictEqual(o.roles.map((r) => r.id), ["general", "coding", "writing", "research", "vision", "embeddings"]);
+      assert.deepStrictEqual(o.roles.map((r) => r.id), ["general", "coding", "writing", "research", "vision", "planner", "checker", "summarizer", "translator", "extraction", "reasoning", "tool_caller", "social", "email", "organizer", "embeddings"]);
       const by = Object.fromEntries(o.roles.map((r) => [r.id, r]));
       assert.strictEqual(by.general.effectiveModel, "tiny:latest");
       assert.strictEqual(by.general.installed, true);

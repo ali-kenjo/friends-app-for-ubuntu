@@ -179,16 +179,34 @@ export const api = {
     overview: () => call("GET", "/api/missions"),
     get: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}`),
     create: (goal, options = {}) => call("POST", "/api/missions", { goal, ...options }),
+    stopAll: () => call("POST", "/api/missions/stop-all"),
     answer: (id, answers) => call("POST", `/api/missions/${encodeURIComponent(id)}/answers`, { answers }),
     editPlan: (id, ops) => call("PUT", `/api/missions/${encodeURIComponent(id)}/plan`, ops),
     approve: (id) => call("POST", `/api/missions/${encodeURIComponent(id)}/approve`),
     stop: (id) => call("POST", `/api/missions/${encodeURIComponent(id)}/stop`),
+    pause: (id) => call("POST", `/api/missions/${encodeURIComponent(id)}/pause`),
     resume: (id, extend = false) => call("POST", `/api/missions/${encodeURIComponent(id)}/resume`, { extend }),
+    retryStep: (id, stepId) => call("POST", `/api/missions/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}/retry`),
+    skipStep: (id, stepId) => call("POST", `/api/missions/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}/skip`),
+    editStep: (id, stepId, updates) => call("PUT", `/api/missions/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}`, updates),
+    duplicate: (id) => call("POST", `/api/missions/${encodeURIComponent(id)}/duplicate`),
+    archive: (id, archived = true) => call("POST", `/api/missions/${encodeURIComponent(id)}/archive`, { archived }),
     decide: (id, requestId, allow) => call("POST", `/api/missions/${encodeURIComponent(id)}/decision`, { requestId, allow }),
     automate: (id, body) => call("POST", `/api/missions/${encodeURIComponent(id)}/automate`, body),
     audit: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}/audit`),
+    verifyAudit: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}/audit/verify`),
+    exportAuditJson: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}/audit/export.json`),
+    exportAuditCsv: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}/audit/export.csv`),
     report: (id) => call("GET", `/api/missions/${encodeURIComponent(id)}/report`),
     remove: (id) => call("DELETE", `/api/missions/${encodeURIComponent(id)}`),
+  },
+  missionTemplates: {
+    list: () => call("GET", "/api/mission-templates"),
+    get: (id) => call("GET", `/api/mission-templates/${encodeURIComponent(id)}`),
+    save: (body) => call("POST", "/api/mission-templates", body),
+    remove: (id) => call("DELETE", `/api/mission-templates/${encodeURIComponent(id)}`),
+    export: (id) => call("GET", `/api/mission-templates/${encodeURIComponent(id)}/export`),
+    import: (json) => call("POST", "/api/mission-templates/import", { json }),
   },
   specialists: {
     overview: () => call("GET", "/api/specialists"),
@@ -197,6 +215,7 @@ export const api = {
     remove: (id) => call("DELETE", `/api/specialists/${encodeURIComponent(id)}`),
     reset: () => call("POST", "/api/specialists/reset"),
     test: (id) => call("POST", `/api/specialists/${encodeURIComponent(id)}/test`),
+    benchmark: (id) => call("POST", `/api/specialists/${encodeURIComponent(id)}/benchmark`),
     removeModel: (name) => call("DELETE", `/api/specialist-models/${encodeURIComponent(name)}`),
   },
   automations: {
@@ -313,10 +332,6 @@ export const api = {
     },
   },
   chat: {
-    // request: { chatId, text, attachments, brainId, voice, robot } or { chatId, retry: true },
-    //          plus from: <message id> to replace that message and what follows
-    // handlers: { onChat({ id, title, userId, replyId }), onText(text), onActivity(text), onConfirm({ id, summary }),
-    //             onRobot({ mood } | { gesture }), onDone({ stopped }), onError(message) }
     send(request, handlers) {
       const requestId = nextRequestId++;
       const controller = new AbortController();
@@ -327,3 +342,5 @@ export const api = {
     stop: (requestId) => running.get(requestId)?.abort(),
   },
 };
+
+export default api;

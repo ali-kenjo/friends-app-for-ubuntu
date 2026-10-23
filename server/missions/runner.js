@@ -31,6 +31,7 @@ const cloud = require("./cloud");
 const risk = require("./risk");
 const toolbelt = require("./toolbelt");
 const automations = require("./automations");
+const redact = require("../redact");
 
 const MAX_ATTEMPTS = 3;
 const MAX_CLARIFY_ROUNDS = 2;
@@ -589,13 +590,16 @@ async function runStep(m, entry, s, belt, c, signal) {
           text = "";
           const brain = rs.brain;
           const decls = belt.declarations().filter((d) => allowed.has(d.name));
-          const contents = [{ role: "user", parts: [...images, { text: prompt }] }];
+          const redactOpts = rs.kind === "cloud" ? settings.privacy?.redact : null;
+          const cleanSystem = redact.active(redactOpts) ? redact.redactText(system, redactOpts) : system;
+          const rawContents = [{ role: "user", parts: [...images, { text: prompt }] }];
+          const cleanContents = redact.active(redactOpts) ? redact.redactContents(rawContents, redactOpts) : rawContents;
           const callModel = (b, control) =>
             b.api.streamChat({
               key: b.key,
               model: b.model,
-              contents,
-              system,
+              contents: cleanContents,
+              system: cleanSystem,
               temperature: 0.3,
               fast: rs.kind === "cloud" && effectiveRole !== "manager",
               tools: decls,
@@ -609,7 +613,10 @@ async function runStep(m, entry, s, belt, c, signal) {
                 if (!started()) throw Object.assign(new Error("Another model answered first."), { name: "AbortError" });
                 // The model lets go of its turn while you decide
                 stepCtx.pause = control?.pause;
-                return belt.execute(name, args, stepCtx).then((r) => (collect(m, name, args, r, belt), r));
+                return belt.execute(name, args, stepCtx).then((r) => {
+                  collect(m, name, args, r, belt);
+                  return redact.active(redactOpts) ? redact.redactDeep(r, redactOpts) : r;
+                });
               },
             });
           m.model = { role: rs.kind === "cloud" ? "manager" : s.role, model: brain.model, kind: rs.kind, why: rs.reason, at: now() };
@@ -761,6 +768,128 @@ function stop(id) {
   return view(m);
 }
 
+function stopAll() {
+  const stopped = [];
+  for (const m of active()) {
+    try {
+      stop(m.id);
+      stopped.push(m.id);
+    } catch {}
+  }
+  return { ok: true, count: stopped.length, ids: stopped };
+}
+
+function pause(id) {
+  const m = store.get(id);
+  if (m.status !== "running") throw new Error("Only a running mission can be paused.");
+  const entry = live.get(id);
+  if (entry) {
+    entry.controller.abort();
+    clearTimeout(entry.timer);
+  }
+  m.status = "paused";
+  m.pause = { kind: "manual", message: "Paused by you." };
+  line(m, "paused", "Paused by you");
+  store.audit(m.id, { type: "paused", manual: true });
+  save(m);
+  emit(m, "paused");
+  return view(m);
+}
+
+function retryStep(id, stepId) {
+  const m = store.get(id);
+  if (!m.plan) throw new Error("This mission has no plan.");
+  const s = m.plan.steps.find((x) => x.id === stepId);
+  if (!s) throw new Error("Step not found.");
+  s.status = "pending";
+  s.error = "";
+  delete s.output;
+  s.attempts = 0;
+  s.effects = [];
+  line(m, "retry", `Retrying step ${s.id}: ${s.title}`);
+  store.audit(m.id, { type: "step-retry", step: s.id });
+  save(m);
+  if (["paused", "stopped", "failed"].includes(m.status)) {
+    return resume(id);
+  }
+  emit(m, "step-edited", { step: s.id });
+  return view(m);
+}
+
+function skipStep(id, stepId) {
+  const m = store.get(id);
+  if (!m.plan) throw new Error("This mission has no plan.");
+  const s = m.plan.steps.find((x) => x.id === stepId);
+  if (!s) throw new Error("Step not found.");
+  s.status = "skipped";
+  s.error = "Skipped by user.";
+  s.finishedAt = now();
+  line(m, "step", `Skipped step ${s.id}: ${s.title}`);
+  store.audit(m.id, { type: "step-skipped", step: s.id });
+  save(m);
+  if (["paused", "stopped", "failed"].includes(m.status)) {
+    return resume(id);
+  }
+  emit(m, "step-edited", { step: s.id });
+  return view(m);
+}
+
+function editStepInRun(id, stepId, updates = {}) {
+  const m = store.get(id);
+  if (!m.plan) throw new Error("This mission has no plan.");
+  const s = m.plan.steps.find((x) => x.id === stepId);
+  if (!s) throw new Error("Step not found.");
+  if (s.status === "running") throw new Error("Cannot edit a running step. Pause the mission first.");
+  if (updates.title) s.title = clip(updates.title, 120);
+  if (updates.inputs !== undefined) s.inputs = String(updates.inputs).slice(0, 4000);
+  if (updates.output !== undefined) s.output = String(updates.output).slice(0, 4000);
+  if (updates.role) s.role = updates.role;
+  if (Array.isArray(updates.tools)) s.tools = updates.tools;
+  if (Array.isArray(updates.actions)) s.actions = updates.actions;
+  line(m, "step", `Edited step ${s.id}: ${s.title}`);
+  store.audit(m.id, { type: "step-edited", step: s.id, updates });
+  save(m);
+  emit(m, "step-edited", { step: s.id });
+  return view(m);
+}
+
+function duplicate(id) {
+  const m = store.get(id);
+  const copy = create(m.goal, {
+    source: m.source,
+    private: m.private,
+    character: m.character,
+    managerChoice: m.managerChoice,
+    modelOverrides: m.modelOverrides,
+    dryRun: m.dryRun,
+    leastPrivilege: m.leastPrivilege,
+    approvalPolicy: m.approvalPolicy,
+    reportFormat: m.reportFormat,
+  });
+  if (m.plan) {
+    copy.plan = JSON.parse(JSON.stringify(m.plan));
+    copy.plan.steps.forEach((s) => {
+      s.status = "pending";
+      delete s.output;
+      delete s.error;
+      s.attempts = 0;
+      s.effects = [];
+    });
+    copy.status = "awaiting_approval";
+    copy.limits = copy.plan.limits;
+    save(copy);
+  }
+  return view(copy);
+}
+
+function archive(id, archived = true) {
+  const m = store.get(id);
+  m.archived = archived === true;
+  save(m);
+  emit(m, "archived", { archived: m.archived });
+  return view(m);
+}
+
 function scheduleResume(m, until) {
   const entry = live.get(m.id) || startLive(m);
   clearTimeout(entry.timer);
@@ -844,14 +973,28 @@ function recover() {
 }
 
 // ---------- Starting ----------
-function create(goal, { source = "app", private: isPrivate = false, character = null, automationId = null, automation = null } = {}) {
+function create(goal, { source = "app", private: isPrivate = false, character = null, automationId = null, automation = null, managerChoice = "auto", modelOverrides = {}, dryRun = false, leastPrivilege = null, approvalPolicy = null, notificationRouting = null, reportFormat = "vault" } = {}) {
   const text = String(goal || "").trim();
   if (text.length < 4) throw new Error("Say what the goal is, in a sentence or two.");
   const settings = settingsModule.get();
   if (settings.missions?.enabled === false) throw new Error("Missions are switched off in Settings → AI → Missions.");
-  const m = store.create({ goal: text, source, private: isPrivate === true || settings.privacy?.localOnly === true, character, automationId, automation });
+  const m = store.create({
+    goal: text,
+    source,
+    private: isPrivate === true || settings.privacy?.localOnly === true,
+    character,
+    automationId,
+    automation,
+    managerChoice,
+    modelOverrides,
+    dryRun,
+    leastPrivilege,
+    approvalPolicy,
+    notificationRouting,
+    reportFormat,
+  });
   m.title = clip(text, 80);
-  line(m, "created", `Mission started from ${source}`);
+  line(m, "created", `Mission started from ${source}${dryRun ? " (dry run)" : ""}`);
   save(m);
   emit(m, "created");
   prepare(m);
@@ -886,7 +1029,44 @@ function createFromPlan(goal, plan, { source = "schedule", private: isPrivate = 
 const list = () => store.all().map(summary);
 const get = (id) => view(store.get(id));
 const audit = (id) => (store.get(id), store.readAudit(id));
+const verifyAudit = (id) => (store.get(id), store.verifyAudit(id));
+const exportAuditJson = (id) => (store.get(id), store.exportAuditJson(id));
+const exportAuditCsv = (id) => (store.get(id), store.exportAuditCsv(id));
 const report = (id) => (store.get(id), store.readReport(id));
 const active = () => store.all().filter((m) => ["planning", "clarifying", "awaiting_approval", "running", "paused"].includes(m.status));
 
-module.exports = { report, create, createFromPlan, automate, answer, editPlan, approve, decide, stop, resume, remove, recover, list, get, audit, active, onEvent, setHooks, summary, view, events, live, MAX_ATTEMPTS };
+module.exports = {
+  report,
+  create,
+  createFromPlan,
+  automate,
+  answer,
+  editPlan,
+  approve,
+  decide,
+  stop,
+  stopAll,
+  pause,
+  resume,
+  retryStep,
+  skipStep,
+  editStepInRun,
+  duplicate,
+  archive,
+  remove,
+  recover,
+  list,
+  get,
+  audit,
+  verifyAudit,
+  exportAuditJson,
+  exportAuditCsv,
+  active,
+  onEvent,
+  setHooks,
+  summary,
+  view,
+  events,
+  live,
+  MAX_ATTEMPTS,
+};

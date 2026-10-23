@@ -14,6 +14,7 @@ const main = document.getElementById("main");
 const card = document.getElementById("onboarding");
 const intro = document.getElementById("missions-intro");
 const soundsIntro = document.getElementById("sounds-intro");
+const whatsNewIntro = document.getElementById("whats-new-intro");
 const status = document.getElementById("onb-local-status");
 const actions = document.getElementById("onb-local-actions");
 const help = document.getElementById("onb-local-help");
@@ -47,15 +48,19 @@ function sync() {
   syncIntro();
 }
 
-// The card about Missions (and then a gentle one-time offer for soft UI sounds)
+// The card about Missions (and then gentle one-time offers for soft sounds and 0.7 features)
 function syncIntro() {
   const s = getSettings();
   const baseReady = Boolean(s) && brains !== null && hasAI() && card.hidden && s.onboarding?.done === true && !main.classList.contains("has-chat");
   const showMissions = baseReady && s.onboarding?.missions !== true;
   intro.hidden = !showMissions;
+  const showSounds = baseReady && !showMissions && s.onboarding?.sounds === false && !s.sound?.enabled;
   if (soundsIntro) {
-    const showSounds = baseReady && !showMissions && s.onboarding?.sounds === false && !s.sound?.enabled;
     soundsIntro.hidden = !showSounds;
+  }
+  const showWhatsNew = baseReady && !showMissions && !showSounds && s.onboarding?.whatsNew07 !== true;
+  if (whatsNewIntro) {
+    whatsNewIntro.hidden = !showWhatsNew;
   }
 }
 function seenIntro() {
@@ -93,6 +98,21 @@ document.getElementById("sounds-intro-enable")?.addEventListener("click", () => 
 document.getElementById("sounds-intro-dismiss")?.addEventListener("click", () => {
   seenSounds(false);
   document.getElementById("composer-input").focus();
+});
+function seenWhatsNew() {
+  updateSettings((s) => {
+    s.onboarding ||= {};
+    s.onboarding.whatsNew07 = true;
+  });
+  syncIntro();
+}
+document.getElementById("whats-new-intro-explore")?.addEventListener("click", () => {
+  seenWhatsNew();
+  showView("whiteboard");
+});
+document.getElementById("whats-new-intro-dismiss")?.addEventListener("click", () => {
+  seenWhatsNew();
+  document.getElementById("composer-input")?.focus();
 });
 new MutationObserver(syncIntro).observe(main, { attributes: true, attributeFilter: ["class"] });
 

@@ -74,6 +74,13 @@ async function assistant() {
         const s = view.suggestions;
         warn("No everyday model is chosen yet", `Settings → AI → Specialists → Use the suggestions (for your card: ${s.general.model} everyday, ${s.coding.model} for code, ${s.embeddings.model} for notes)`);
       }
+      const suggestionsModule = require("../server/specialist-suggestions");
+      if (suggestionsModule.CHECKED) {
+        const checkedDate = new Date(suggestionsModule.CHECKED);
+        const monthsOld = (Date.now() - checkedDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
+        if (monthsOld > 6) warn(`Specialist model suggestions were checked on ${suggestionsModule.CHECKED} (>6 months old)`, "Check for newly released open-weight model recommendations");
+        else ok(`Specialist model suggestions up to date (verified ${suggestionsModule.CHECKED})`);
+      }
     }
   }
 

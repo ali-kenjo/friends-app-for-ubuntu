@@ -135,7 +135,7 @@ class WhiteboardUI {
   updateHeader() {
     const titleEl = document.getElementById("whiteboard-title-text");
     if (titleEl && this.doc) {
-      titleEl.textContent = this.doc.title || t("Whiteboard");
+      titleEl.textContent = this.doc.title === "Main Whiteboard" ? t("Main Whiteboard") : (this.doc.title || t("Whiteboard"));
     }
     const page = this.canvas?.getActivePage();
     const subEl = document.getElementById("whiteboard-subtitle-text");

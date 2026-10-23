@@ -24,6 +24,10 @@ let fire = () => {}; // runner.createFromPlan, set by init()
 let alert = () => {}; // the notification (desktop + Telegram), set by init()
 const seen = new Map(); // automation id → what its trigger saw last (files seen, whether the threshold was crossed)
 let snapshotCache = { at: 0, value: null };
+let killSwitch = false;
+
+const setKillSwitch = (v) => (killSwitch = Boolean(v));
+const getKillSwitch = () => killSwitch;
 
 function load() {
   if (list) return list;
@@ -232,6 +236,7 @@ async function onBattery() {
 }
 
 async function tick(now = Date.now()) {
+  if (killSwitch) return;
   const saving = await onBattery();
   for (const a of load()) {
     if (!a.enabled) continue;
@@ -310,4 +315,4 @@ function init(fns) {
 const stop = () => clearInterval(timer);
 const reload = () => (list = null);
 
-module.exports = { create, update, remove, all, find, runNow, tick, init, stop, reload, nextAfter, cleanSchedule, cleanTrigger, describe, view };
+module.exports = { create, update, remove, all, find, runNow, tick, init, stop, reload, nextAfter, cleanSchedule, cleanTrigger, describe, view, setKillSwitch, getKillSwitch };

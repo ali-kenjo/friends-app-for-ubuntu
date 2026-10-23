@@ -160,7 +160,7 @@ class FakeTelegramServer {
     }
 
     // Failure simulation: 429 rate limit
-    if (this.rateLimitOnce) {
+    if (this.rateLimitOnce && (!this.rateLimitOnce.method || req.url.includes(this.rateLimitOnce.method))) {
       const retryAfter = this.rateLimitOnce.retry_after || 1;
       this.rateLimitOnce = null;
       res.writeHead(429, { "Content-Type": "application/json" });
