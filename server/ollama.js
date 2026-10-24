@@ -84,7 +84,7 @@ function create({ baseUrl, contextSize = 0, keepAlive = 0, numGpu = undefined, s
       if (body.tools && err.status === 400 && /tool/i.test(err.detail || "")) {
         logger.warn(`${body.model} can't use tools; chatting without them`);
         noTools.add(body.model);
-        const { tools, ...rest } = body;
+        const { tools: _tools, ...rest } = body;
         return post("/api/chat", rest, signal, body.model);
       }
       throw err;

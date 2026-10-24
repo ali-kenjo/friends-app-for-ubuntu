@@ -757,26 +757,19 @@ export function documentToText(doc) {
 
   doc.pages.forEach((page, pIdx) => {
     lines.push(`\n## Page ${pIdx + 1}: ${page.name}`);
-    let textItems = 0;
-
     for (const it of page.items) {
       if (it.type === ITEM_TYPES.TEXT && it.text) {
         lines.push(`- [Text] ${it.text}`);
-        textItems++;
       } else if (it.type === ITEM_TYPES.STICKY) {
         lines.push(`- [Sticky note${it.title ? ` "${it.title}"` : ""}] ${it.text}`);
-        textItems++;
       } else if (it.type === ITEM_TYPES.CHECKLIST) {
         lines.push(`- [Checklist "${it.title}"]`);
         it.items.forEach((c) => lines.push(`  - [${c.checked ? "x" : " "}] ${c.text}`));
-        textItems++;
       } else if (it.type === ITEM_TYPES.TABLE) {
         lines.push(`- [Table] Headers: ${it.headers.join(" | ")}`);
         it.rows.forEach((r) => lines.push(`  | ${r.join(" | ")} |`));
-        textItems++;
       } else if (it.type === ITEM_TYPES.DIAGRAM && it.code) {
         lines.push(`- [Diagram (${it.syntax})]:\n\`\`\`${it.syntax}\n${it.code}\n\`\`\``);
-        textItems++;
       } else if (it.type === ITEM_TYPES.SHAPE) {
         lines.push(`- [Shape: ${it.shapeType}] at (${Math.round(it.x)}, ${Math.round(it.y)})`);
       }

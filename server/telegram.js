@@ -3,8 +3,6 @@
 // Long-polling only (zero open ports, no webhooks), pairing codes, roles,
 // message splitting, Markdown/HTML escaping, media handling, and audit-proven resilience.
 
-const fs = require("fs");
-const path = require("path");
 const crypto = require("crypto");
 const settingsModule = require("./settings");
 const keys = require("./keys");
@@ -646,6 +644,7 @@ async function handleCommand(chatId, text, msg = {}) {
 
   // All other commands require at least chat permission
   if (!canUserChat(fromId)) {
+    if (isFlooding(fromId)) return;
     const isGroup = msg.chat?.type === "group" || msg.chat?.type === "supergroup";
     if (!isGroup) {
       return sendMessage(chatId, say("To use this bot, pair it in the app: send /pair <code>."));
@@ -835,6 +834,7 @@ async function handleMessage(msg) {
     if (isGroup) {
       return; // Silent drop in groups
     }
+    if (isFlooding(fromId)) return;
     logger.warn(`Rejected unauthorized Telegram message from ${fromId}`);
     return sendMessage(chatId, say("To use this bot, pair it in the app: send /pair <code>."));
   }

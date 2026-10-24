@@ -8,7 +8,6 @@
 // of machine; FRIENDS_FAKE_HARDWARE='{"memory":{"totalMb":8192}}' changes parts of the real profile.
 const fs = require("fs");
 const os = require("os");
-const path = require("path");
 const { execFile } = require("child_process");
 
 const MB = 1024 * 1024;

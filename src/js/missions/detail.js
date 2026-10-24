@@ -2,10 +2,9 @@
 // it may be asking you, its report, and its audit log. Drawn again whenever the mission changes (index.js).
 import { api } from "../api.js";
 import { h } from "../h.js";
-import { t, tp, nf, formatTime } from "../i18n.js";
-import { icon, iconEl } from "../icons.js";
+import { t, tp, formatTime } from "../i18n.js";
+import { iconEl } from "../icons.js";
 import { renderMarkdown } from "../render.js";
-import { announce } from "../a11y.js";
 import { confirmDialog } from "../dialogs.js";
 import { statusOf, isActive, riskLabel, riskHelp, roleLabel, when, duration } from "./labels.js";
 import { progressRing } from "../illustrations.js";
@@ -393,7 +392,6 @@ function repeatCard(m, ctx) {
 // ctx: { run(fn) → runs an API call, shows errors, redraws; draft/setDraft for answers; goBack() }
 export function renderDetail(m, ctx) {
   const root = h("div", { class: "mission-detail" });
-  const s = statusOf(m);
   const stoppable = isActive(m);
   const head = h(
     "div",

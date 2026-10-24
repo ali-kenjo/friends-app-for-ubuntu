@@ -3,7 +3,7 @@
 // The switches (Private mode, what is hidden from cloud AIs, deleting old chats) are plain settings (data-setting).
 import { api } from "./api.js";
 import { getSettings, onSettings, reloadSettings, flushSettings } from "./store.js";
-import { t, tp, nf } from "./i18n.js";
+import { t, tp } from "./i18n.js";
 import { h } from "./h.js";
 import { confirmDialog } from "./dialogs.js";
 import { announce } from "./a11y.js";

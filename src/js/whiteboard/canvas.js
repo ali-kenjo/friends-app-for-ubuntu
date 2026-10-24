@@ -2,7 +2,6 @@
 // Dual-buffer pressure-sensitive interactive canvas with zoom/pan,
 // shape geometry, multilingual text shaping, and progressive stroke timing.
 import {
-  createItem,
   createStroke,
   createShape,
   createText,
@@ -12,9 +11,7 @@ import {
   createDiagram,
   getBoundingBox,
   hitTest,
-  hitTestBox,
   moveItem,
-  scaleItem,
   removeItem,
   createUndoStack,
   pushUndoAction,

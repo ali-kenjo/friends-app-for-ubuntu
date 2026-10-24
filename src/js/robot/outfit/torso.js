@@ -1,7 +1,7 @@
 // Clothes for the body: shells that follow its outline (and sleeves that follow its arms).
 // Patterns are drawn on a canvas in the two colors and mapped around the body.
 import * as THREE from "three";
-import { sliceProfile, patternTexture, turned } from "./kit.js";
+import { sliceProfile, patternTexture } from "./kit.js";
 
 const SKIN = 0.012; // how far a garment stands off the body
 
@@ -223,7 +223,6 @@ const tuxedo = (c) => {
   const f = fabric(c, { roughness: 0.45 });
   const shirt = c.paint(2, { roughness: 0.8 });
   const g = new THREE.Group();
-  const h = c.dims.body.h;
   g.add(placed(c, c.make(shell(c, 0.4, 0.96, { front: 0.52, off: SKIN - 0.002 }), shirt)));
   g.add(placed(c, c.make(shell(c, 0.1, 0.97, { gap: 0.48 }), f.material)));
   return { object: g, extra: sleeves(c, () => sleeve(c, f.material, shirt, c.dims.arm.length + 0.095)), recolor: f.redraw };
@@ -233,7 +232,6 @@ const kimono = (c) => {
   const f = fabric(c, { roughness: 0.7 });
   const obi = c.paint(2, { roughness: 0.55 });
   const g = new THREE.Group();
-  const h = c.dims.body.h;
   g.add(placed(c, c.make(shell(c, 0.06, 0.96), f.material)));
   g.add(placed(c, c.make(shell(c, 0.34, 0.54, { off: SKIN + 0.006 }), obi)));
   return { object: g, extra: sleeves(c, () => sleeve(c, f.material, obi, c.dims.arm.length + 0.08, 0.072)), recolor: f.redraw };
@@ -243,7 +241,6 @@ const lab_coat = (c) => {
   const f = fabric(c, { roughness: 0.8 });
   const inner = c.paint(2, { roughness: 0.75 });
   const g = new THREE.Group();
-  const h = c.dims.body.h;
   g.add(placed(c, c.make(shell(c, 0.25, 0.95, { front: 0.5, off: SKIN - 0.002 }), inner)));
   g.add(placed(c, c.make(shell(c, 0.05, 0.96, { gap: 0.45 }), f.material)));
   return { object: g, extra: sleeves(c, () => sleeve(c, f.material, inner, c.dims.arm.length + 0.095)), recolor: f.redraw };

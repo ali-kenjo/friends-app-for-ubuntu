@@ -1,7 +1,7 @@
 // Space: a deep sky with nebulae, a planet (with rings), a little moon, an optional window frame, and a
 // glowing grid for a floor. The stars themselves are the air (world.js).
 import * as THREE from "three";
-import { canvasTexture, matte, glossy, css, rng, mix, shade, glowSprite } from "./kit.js";
+import { canvasTexture, glossy, css, rng, mix, shade, glowSprite } from "./kit.js";
 
 // A planet's surface: bands and blotches around the middle color
 function planetTexture(hex, seed) {

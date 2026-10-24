@@ -14,12 +14,6 @@ const ROOM_COLORS = ["#0b0b0d", "#26272c", "#3a4ea8", "#5aa6f2", "#7a5cf0", "#c0
 const BLUSH_COLORS = ["#ff6f91", "#f472b6", "#ff8a3d", "#c084fc", "#5eead4"];
 const percent = (v) => `${Math.round(v * 100)}%`;
 
-const pair = (obj, path) => {
-  const keys = path.split(".");
-  const last = keys.pop();
-  return [keys.reduce((o, k) => o[k], obj), last];
-};
-
 // ctx: { edit(fn(robotSettings)), set(path, value) for the design, setRoom(path, value) }
 export function colorsPanel(ctx) {
   const el = h("div", { class: "rs-panel-body" });

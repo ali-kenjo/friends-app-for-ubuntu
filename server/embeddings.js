@@ -6,7 +6,6 @@ const fs = require("fs");
 const fsp = fs.promises;
 const path = require("path");
 const { dataDir, writeJson } = require("./config");
-const logger = require("./logger");
 const settingsModule = require("./settings");
 const specialists = require("./specialists");
 const models = require("./models");

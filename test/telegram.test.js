@@ -81,8 +81,12 @@ describe("Telegram", () => {
   });
 
   beforeEach(() => {
+    queue.length = 0;
     sent.length = 0;
     answered.length = 0;
+    if (store && runner) {
+      for (const m of store.all()) if (["running", "paused", "planning"].includes(m.status)) runner.stop(m.id);
+    }
     ai.reset();
     ai.behave.questions = [];
     ai.behave.localStream = null;

@@ -60,6 +60,16 @@ for (const file of fs.readdirSync(path.join(root, "src", "js")).filter((f) => f.
   }
 }
 
+// Run ESLint on server/ and src/js/
+try {
+  const eslintBin = path.join(root, "node_modules", "eslint", "bin", "eslint.js");
+  if (fs.existsSync(eslintBin)) {
+    execFileSync(process.execPath, [eslintBin, "server/", "src/js/"], { cwd: root, stdio: "pipe" });
+  }
+} catch (err) {
+  problems.push(`ESLint:\n${String(err.stdout || err.stderr || err.message).trim()}`);
+}
+
 if (problems.length) {
   console.error(problems.map((p) => `✗ ${p}`).join("\n"));
   process.exit(1);

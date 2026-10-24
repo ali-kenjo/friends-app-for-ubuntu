@@ -1,5 +1,5 @@
 // ---------- Workspace Client UI & Integrations ----------
-import { getAccessToken, isConnected, googleSignIn, logout, getCurrentUser, initAuth, resetAuth, getSetup, loadKeptSignIn, getKept } from "./auth.js";
+import { isConnected, googleSignIn, logout, initAuth, resetAuth, getSetup, loadKeptSignIn, getKept } from "./auth.js";
 import { api } from "./api.js";
 import { openSettings, closeSettings } from "./settings.js";
 import { getSettings } from "./store.js";

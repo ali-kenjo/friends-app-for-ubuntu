@@ -144,7 +144,6 @@ async function redditRequest(cfg, path, options = {}) {
   });
 
   // Track rate limit response headers
-  const used = res.headers.get("X-Ratelimit-Used");
   const remaining = res.headers.get("X-Ratelimit-Remaining");
   const reset = res.headers.get("X-Ratelimit-Reset");
   if (remaining !== null) rateLimitRemaining = parseFloat(remaining);
@@ -234,7 +233,7 @@ async function checkRuleCompliance(cfg, subreddit, draft = {}) {
     const rName = r.short_name || "";
     const rDesc = r.description || "";
     // e.g. self-promotion checks
-    if (/promot|affiliate|spam/i.test(rName) && /(http|www|\.com)/i.test(body)) {
+    if (/promot|affiliate|spam/i.test(`${rName} ${rDesc}`) && /(http|www|\.com)/i.test(body)) {
       issues.push(`Community rule "${rName}": Ensure links comply with anti-promotional rules.`);
     }
   }
@@ -484,7 +483,7 @@ module.exports = {
   async test(cfg) {
     // Quick test: verify inbox or read rules of r/announcements
     await getAccessToken(cfg);
-    const data = await redditRequest(cfg, "/r/test/about/rules");
+    await redditRequest(cfg, "/r/test/about/rules");
     return `Reddit connected successfully as /u/${cfg.username || "user"}. API operational.`;
   },
   // Export helpers for testing and watchers

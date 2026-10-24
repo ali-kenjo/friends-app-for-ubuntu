@@ -14,7 +14,6 @@
 const crypto = require("crypto");
 const { EventEmitter } = require("events");
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
 const { execFile } = require("child_process");
 const settingsModule = require("../settings");

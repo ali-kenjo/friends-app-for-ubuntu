@@ -6,7 +6,7 @@ import { api } from "./api.js";
 import { t, tp } from "./i18n.js";
 import { confirmDialog } from "./dialogs.js";
 import { skeleton } from "./ui.js";
-import { getSettings, updateSettings, onSettings } from "./store.js";
+import { updateSettings, onSettings } from "./store.js";
 
 const grid = document.getElementById("app-grid");
 const mcpList = document.getElementById("mcp-list");
@@ -367,7 +367,7 @@ async function renderTelegramPairedUsers() {
   if (!container) return;
 
   try {
-    const health = await api.telegram.health?.().catch(() => null);
+    await api.telegram.health?.().catch(() => null);
     const s = await api.settings.get();
     const paired = s?.telegram?.pairedUsers || [];
 

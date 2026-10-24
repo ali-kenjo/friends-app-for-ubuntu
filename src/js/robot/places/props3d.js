@@ -2,7 +2,7 @@
 // Lazily constructs procedural 3D props (animated and interactive), companions,
 // seasonal/festival decorations, and custom Room Builder items. Zero external downloads.
 import * as THREE from "three";
-import { canvasTexture, matte, glossy, glowSprite, shade, css } from "./kit.js";
+import { matte, glossy, glowSprite, shade } from "./kit.js";
 import { CATALOG_BY_ID } from "../room-catalog.mjs";
 import { activeSeason } from "../room.mjs";
 import { buildWhiteboard3D } from "./whiteboard3d.js";

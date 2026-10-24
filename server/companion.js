@@ -8,7 +8,6 @@ const chats = require("./chats");
 const router = require("./router");
 const tools = require("./tools");
 const prompt = require("./prompt");
-const characters = require("./characters");
 const logger = require("./logger");
 const redact = require("./redact");
 

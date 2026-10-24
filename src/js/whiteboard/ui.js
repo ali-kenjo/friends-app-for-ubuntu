@@ -5,7 +5,6 @@ import { WhiteboardCanvas } from "./canvas.js";
 import { createDocument, createPage, documentToText } from "./model.mjs";
 import { t } from "../i18n.js";
 import { announce } from "../a11y.js";
-import { currentView } from "../views.js";
 
 class WhiteboardUI {
   constructor() {

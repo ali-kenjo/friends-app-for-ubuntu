@@ -1,7 +1,7 @@
 // Floating in the sky: a bright gradient, a sun, big soft clouds drifting by (and a bank of them under
 // the robot's feet), and, if you like, a rainbow.
 import * as THREE from "three";
-import { canvasTexture, css, rng, mix, shade, glowSprite, cloudTexture, picture } from "./kit.js";
+import { css, rng, mix, glowSprite, cloudTexture, picture } from "./kit.js";
 
 const RAINBOW = ["#ff5d5d", "#ff9f43", "#ffd93d", "#6bdc7a", "#4aa3ff", "#5b6cff", "#a15cff"];
 

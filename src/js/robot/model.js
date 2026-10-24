@@ -14,7 +14,7 @@
 // Fin_L) is on the viewer's right.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { dimsOf, superellipsoid, faceScreen, lathe, bodyGeometry, buildTop, buildArm, buildHover } from "./parts.js";
+import { dimsOf, superellipsoid, faceScreen, bodyGeometry, buildTop, buildArm, buildHover } from "./parts.js";
 import { dress } from "./outfit/index.js";
 import { patternTexture } from "./outfit/kit.js";
 

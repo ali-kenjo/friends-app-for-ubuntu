@@ -34,7 +34,6 @@ export function garden({ colors, glow, props, keep, group: room }) {
   const rand = rng(33);
   const skyBottom = colors.wall;
   const skyTop = mix(colors.wall, "#3a3f9f", 0.78);
-  const haze = mix(skyBottom, "#ffffff", 0.2);
   const grass = colors.floor;
 
   if (props.sun) {

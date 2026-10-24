@@ -3,9 +3,6 @@
 // mission and asks you), keeps files inside the allowed folders and the mission's own folder, sends deletions to
 // the trash, runs commands in the mission's folder with a time limit and a scrubbed environment, and writes every
 // call to the mission's audit log.
-const { spawn } = require("child_process");
-const fs = require("fs");
-const os = require("os");
 const path = require("path");
 const tools = require("../tools");
 const files = require("../files");
@@ -13,7 +10,6 @@ const risk = require("./risk");
 const store = require("./store");
 const system = require("./system");
 const sandbox = require("./sandbox");
-const logger = require("../logger");
 
 const str = (description) => ({ type: "STRING", description });
 const num = (description) => ({ type: "NUMBER", description });

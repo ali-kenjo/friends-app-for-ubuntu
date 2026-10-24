@@ -1,6 +1,6 @@
 // Mission Templates Gallery, Custom Templates, and Import/Export
 import api from "../api.js";
-import { t, say } from "../i18n.js";
+import { say } from "../i18n.js";
 
 export function renderGallery({ onSelectTemplate, onImport }) {
   const container = document.createElement("div");

@@ -1,7 +1,7 @@
 // Things on the face, in front of the screen: glasses, a monocle, an eye patch, a mustache.
 // They find the eyes through eyeSpec(), so they fit whatever eyes the robot has.
 import * as THREE from "three";
-import { eyeSpec, roundedRect, plate, starGeometry, heartGeometry } from "./kit.js";
+import { eyeSpec, roundedRect, plate } from "./kit.js";
 
 // A pair of lenses: draws one shape per eye plus a bridge and short arms toward the ears
 function pair(c, { frame, lens, shapeFor, radius, bridge = true }) {
@@ -45,7 +45,6 @@ const ring = (outer, inner) => {
   return shape;
 };
 
-const lensShape = (shape) => shape;
 
 const round = (c) => {
   const e = eyeSpec(c);

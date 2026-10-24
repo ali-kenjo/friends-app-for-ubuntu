@@ -2,7 +2,6 @@
 // Declarations and execution handlers for whiteboard_* tools
 const whiteboard = require("./whiteboard");
 const {
-  createDocument,
   createPage,
   createItem,
   documentToText,

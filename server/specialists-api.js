@@ -5,7 +5,6 @@ const specialists = require("./specialists");
 const suggestions = require("./specialist-suggestions");
 const vram = require("./vram");
 const models = require("./models");
-const brains = require("./brains");
 const hardware = require("./hardware");
 
 const BASE_ROLES = ["general", "coding", "embeddings"]; // the ones that get a model of their own in the suggestions; the rest share the everyday model
@@ -170,7 +169,7 @@ async function benchmark(id) {
 
   if (role.kind === "embedding") {
     const t0 = Date.now();
-    const vectors = await require("./embeddings").embed(["Benchmark sample text 1", "Benchmark sample text 2"], settings);
+    await require("./embeddings").embed(["Benchmark sample text 1", "Benchmark sample text 2"], settings);
     const ms = Math.max(1, Date.now() - t0);
     const res = { model: brain.model, speedTps: +(2000 / ms).toFixed(1), jsonPass: true, toolPass: true, latencyMs: ms };
     saveBenchmarkResult(brain.model, res);

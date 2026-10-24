@@ -3,11 +3,8 @@
 // Hardened against malformed, malicious, or adversarial inputs.
 
 import {
-  ITEM_TYPES,
   SHAPE_TYPES,
-  PEN_STYLES,
   STICKY_COLORS,
-  createStroke,
   createShape,
   createText,
   createSticky,

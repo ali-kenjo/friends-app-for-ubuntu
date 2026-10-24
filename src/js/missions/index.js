@@ -6,7 +6,7 @@
 import { api } from "../api.js";
 import { h } from "../h.js";
 import { t, tp, nf } from "../i18n.js";
-import { icon, iconEl } from "../icons.js";
+import { iconEl } from "../icons.js";
 import { onServerEvent } from "../events.js";
 import { showView, currentView } from "../views.js";
 import { getSettings, onSettings } from "../store.js";
