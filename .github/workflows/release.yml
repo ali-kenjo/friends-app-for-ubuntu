@@ -38,6 +38,13 @@ jobs:
           version=$(node -p "require('./package.json').version")
           test "v$version" = "${GITHUB_REF_NAME}" || { echo "Tag ${GITHUB_REF_NAME} but package.json says $version"; exit 1; }
 
+      - name: Sandbox for Missions (bubblewrap)
+        # The Missions tests run commands in the same sandbox the app uses
+        run: |
+          sudo apt-get update && sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          bwrap --ro-bind / / true
+
       - name: Checks and tests
         run: npm run check && npm test
 

@@ -41,6 +41,13 @@ jobs:
           # The desktop app's Electron binary (~100 MB) isn't needed to test
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
 
+      - name: Sandbox for Missions (bubblewrap)
+        # The Missions tests run commands in the same sandbox the app uses
+        run: |
+          sudo apt-get update && sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          bwrap --ro-bind / / true
+
       - name: Syntax & Structure Verification
         run: npm run check
 
