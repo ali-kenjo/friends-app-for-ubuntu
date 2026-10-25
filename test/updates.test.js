@@ -31,7 +31,7 @@ describe("Versions", () => {
   test("it knows how Friends was installed", () => {
     assert.strictEqual(updates.installKind({ APPIMAGE: "/home/me/Friends.AppImage" }, "/tmp/x"), "appimage");
     assert.strictEqual(updates.installKind({}, "/opt/friends/resources/app"), "deb");
-    assert.strictEqual(updates.installKind({ FRIENDS_IN_DOCKER: "1" }, "/app"), "docker");
+    assert.strictEqual(updates.installKind({}, "/home/me/friends"), "source");
   });
 });
 

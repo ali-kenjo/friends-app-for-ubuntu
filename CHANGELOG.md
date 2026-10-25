@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.8.0] - 2026-10-25
+
+### The Robot page: the robot, and the whiteboard, sources and notes you work on together
+- **A place of its own, first among the places** (sidebar "Robot", Alt+4, `#robot`): the board takes the whole page, in the look of the app (paper in a light app, midnight in a dark one); the robot floats over it in a window; the tools are a pill at the bottom; the options of what you select are on the right (Design, Arrange, About: draw.io's format panel, with typed position and size, align and distribute, copy the look, wrap in a frame); a bar floats next to the selection. Ctrl+P finds anything (tools, layouts, roles, saving), Ctrl+O goes to a board or makes one.
+- **Everything is a window you place yourself** (`src/js/whiteboard/float.js`): the robot's window, the board beside your chat and the board in voice mode are dragged by their title bar, pulled bigger or smaller by any edge or corner, docked left, right or bottom by pushing them against an edge (a shadow shows where), folded to the title bar, or made to fill the space. The Move and resize menu in each title bar names every place, the arrow keys move the window (Alt and the arrows resize it, Home puts it back), and it remembers where you left it. On a narrow screen a window becomes a sheet along the bottom.
+- **The robot is movable in voice mode**: the move button in the top bar lets you drag the robot anywhere, make it bigger or smaller with the wheel, a pinch or +/−, and put it back; a board docked beside it makes it step over by itself (unless you placed it).
+- **Roles: a teacher, a tutor, a study buddy, a coach, a language partner, an interviewer, a co-host, a creative partner, an analyst, a writer, a project planner, a storyteller, or your own** (`src/js/robot/roles.mjs`, Settings → Robot → Roles). A role is how the robot works with you, whatever its character (Atlas, Mira…): what it does, how it uses the board, quick actions that fit it, and how to explain (for a child … an expert), how fast and how hard to push. It reaches the AI's instructions in chat and in Gemini Live (told at once when you change it while talking). Chosen from the robot's window, a pill in the chat and in voice mode, the palette, or Settings.
+- **Sources, like a notebook's** (`server/whiteboard-sources.js`): texts you paste, files (text, Markdown, CSV, web pages), notes from your vault, the robot's own notes, chats and pages of the board; each can be switched on or off; the robot is told the ones that are on, numbered S1, S2…, says where an answer comes from like [S1] (a click opens the source), and reads more of a long one with a tool. They are quoted line by line (material, never orders), kept from a cloud AI when you keep your things from it, and go with a board when it is copied or deleted.
+- **What the robot makes for you**: summary, study guide, questions and answers, timeline, mind map, quiz, flashcards, briefing; six new layouts (lesson plan, flashcards, quiz, glossary, summary, FAQ).
+- **A shape library like draw.io's** (74 shapes in 7 groups, searchable, dragged out or clicked), **arrows around a selected box** that grow the next box joined by an arrow that stays attached (or drag one to another box), an **Outline** of everything on the page, and **[[links]] between boards** with the boards that link to this one.
+- **The robot is the star**: its own place in the sidebar with a live dot (thinking, listening), a "who it is right now" card at the top of Settings → Robot, its role in the chat's top bar and in voice mode.
+- Before this: one board that you and the robot draw on at the same time, 28 tools of its own, the robot always knowing (page, dock, voice, recordings), and the seven parts of Settings → Robot.
+
+### Removed
+- Docker support: the Dockerfile, `docker-compose.yml`, the CI Docker build, the Docker install steps, the "Docker Model Runner" entry among the local AI servers, and Docker detection (update advice, hardware probe).
+
+### Fixed
+- The copy of the board that hung on the wall of the robot's 3D room is gone: there is one board, in a window you place (beside the robot in voice mode). Its settings (board on the wall, kind of board, hide an empty board) went with it.
+- Robot reactions (missions, reminders, notifications, tasks, streaks, time of day, welcome back) and the robot's sound switches and volume did nothing; the AI's `useProp`, `goTo` and `lookAt` moves never reached the robot; the pointing gesture pointed the wrong way.
+- Voice (Gemini Live) offered memory tools while "keep my memory from cloud AIs" was on, and was not covered by "Hide from cloud AIs"; now it is, for what it is told and what its tools bring back.
+- A backup now includes what you drew a moment ago, and restoring one reloads the boards (they were kept in memory and would have been written over the restored files). Pictures on boards are in backups made with files.
+- Automated tests no longer write to your real data folder (a whiteboard test used to).
+- A saved setting that is not one of a select's choices made the settings page throw an error (it tried to set a read-only property).
+- Light shapes on a dark board (and the other way round) had unreadable words: they are now read against their own fill.
+- The shapes of the old placement settings (where, size, see-through, toolbar) are gone: the windows are placed by hand, so those choices had nothing left to do.
+
+### Security
+- **A content security policy for the page**: scripts only from the helper (the inline import map by its hash) and Google's sign-in; no objects, no `<base>`, forms only to the helper, no framing.
+- **AI replies can no longer load or send anything**: pictures, video, audio, styles, forms and styles that fetch (`url(...)`) are removed from what the AI writes, and from drafts.
+- **Text from outside is text**: Telegram names and group titles, Reddit names and post titles in the notification log, spoken captions and error messages were put into the page as HTML; they are text now.
+- The session token is no longer accepted in an address (`?token=`), only as the cookie or a header; it already travelled in the `#fragment`.
+- Notification titles can't be read as options by `notify-send`.
+- Whiteboard pictures: only `data:image` and the helper's own pictures, checked by their first bytes, served sandboxed.
+
+### Accessibility and languages
+- Whiteboard, panels, dialogs and Settings → Robot pass the axe check in English and Arabic, light and dark; swatches have color names; the page tabs are a proper tab list.
+- German and Arabic for every new text; the "Atlas" in subtitles is the active character's name.
+
 ## [0.7.1] - 2026-10-23
 
 Friends 0.7.1 is a security hardening release and feature freeze. No new features were added; existing features (robot, whiteboard, voice, themes, and Daily life) were untouched.

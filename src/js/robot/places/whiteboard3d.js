@@ -3,6 +3,10 @@
 // arm kinematics attachment points, laser pointer spotlight, and erasing sweeps.
 import * as THREE from "three";
 import { matte, glossy } from "./kit.js";
+import { renderPageTo } from "../../whiteboard/render.mjs";
+
+// The look of the writing surface for each kind of board
+const STYLE_THEME = { whiteboard: "classic", chalkboard: "chalkboard", glass: "glass", cork: "cork", easel: "classic", flipchart: "classic", screen: "neon" };
 
 export const WHITEBOARD_STYLES = [
   "whiteboard",
@@ -22,38 +26,13 @@ function createOffscreenCanvas(w = 1024, h = 640) {
     c.height = h;
     return c;
   }
-  // Node test mock
-  return {
-    width: w,
-    height: h,
-    getContext: () => ({
-      save: () => {},
-      restore: () => {},
-      clearRect: () => {},
-      fillRect: () => {},
-      strokeRect: () => {},
-      beginPath: () => {},
-      closePath: () => {},
-      moveTo: () => {},
-      lineTo: () => {},
-      stroke: () => {},
-      fill: () => {},
-      arc: () => {},
-      ellipse: () => {},
-      rect: () => {},
-      fillText: () => {},
-      measureText: () => ({ width: 60 }),
-      setLineDash: () => {},
-      createRadialGradient: () => ({ addColorStop: () => {} }),
-      createLinearGradient: () => ({ addColorStop: () => {} }),
-      fillStyle: "#ffffff",
-      strokeStyle: "#000000",
-      lineWidth: 1,
-      font: "16px sans-serif",
-      textAlign: "left",
-      textBaseline: "top",
-    }),
-  };
+  // Node test mock: a context that takes any drawing call
+  const noop = () => {};
+  const ctx = new Proxy({ measureText: (text) => ({ width: String(text).length * 8 }), createLinearGradient: () => ({ addColorStop: noop }), createRadialGradient: () => ({ addColorStop: noop }) }, {
+    get: (t, k) => (k in t ? t[k] : noop),
+    set: (t, k, v) => ((t[k] = v), true),
+  });
+  return { width: w, height: h, getContext: () => ctx };
 }
 
 export function buildWhiteboard3D({
@@ -218,220 +197,17 @@ export function buildWhiteboard3D({
 
   let spotTimer = 0;
 
-  // 4. Render Vector Document items to 2D Canvas
-  function renderDocument(doc) {
+  // 4. The board as it is, drawn by the same code as the board on screen (src/js/whiteboard/render.mjs)
+  // opts: { pageIndex, reveal (Map: things being written), images (ImageCache), pattern }
+  function renderDocument(doc, opts = {}) {
     if (!ctx) return;
-    const page = doc?.pages?.[doc?.activePageIndex || 0] || doc?.pages?.[0];
-
-    // Background fill & pattern
-    ctx.save();
-    ctx.clearRect(0, 0, canvasW, canvasH);
-
-    if (normStyle === "chalkboard") {
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(0, 0, canvasW, canvasH);
-      // Subtle chalk grid
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-      ctx.lineWidth = 1;
-      const step = 32;
-      for (let x = 0; x < canvasW; x += step) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvasH);
-        ctx.stroke();
-      }
-      for (let y = 0; y < canvasH; y += step) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvasW, y);
-        ctx.stroke();
-      }
-    } else if (normStyle === "cork") {
-      ctx.fillStyle = "#d97706";
-      ctx.fillRect(0, 0, canvasW, canvasH);
-    } else if (normStyle === "screen") {
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, 0, canvasW, canvasH);
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
-      ctx.lineWidth = 1;
-      for (let x = 0; x < canvasW; x += 40) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvasH);
-        ctx.stroke();
-      }
-      for (let y = 0; y < canvasH; y += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvasW, y);
-        ctx.stroke();
-      }
-    } else {
-      // Whiteboard / Glass / Easel / Flipchart default
-      ctx.fillStyle = normStyle === "glass" ? "rgba(241, 245, 249, 0.6)" : "#ffffff";
-      ctx.fillRect(0, 0, canvasW, canvasH);
-      // Faint dot grid
-      ctx.fillStyle = "#e2e8f0";
-      for (let x = 24; x < canvasW; x += 28) {
-        for (let y = 24; y < canvasH; y += 28) {
-          ctx.beginPath();
-          ctx.arc(x, y, 1.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
+    const pages = doc?.pages || [];
+    const page = pages[Number.isInteger(opts.pageIndex) ? opts.pageIndex : doc?.activePageIndex || 0] || pages[0] || { items: [] };
+    try {
+      renderPageTo(canvas, page, { region: { x: 0, y: 0, width: 1600, height: 1000 }, theme: STYLE_THEME[normStyle] || "classic", pattern: opts.pattern || "grid", gridSize: 28, reveal: opts.reveal, images: opts.images });
+    } catch {
+      /* a board that can't be drawn this frame stays as it was */
     }
-
-    if (!page || !Array.isArray(page.items)) {
-      ctx.restore();
-      if (texture) texture.needsUpdate = true;
-      return;
-    }
-
-    // Scale canvas coords from model virtual resolution (1600x1000) to 1024x640
-    const sx = canvasW / 1600;
-    const sy = canvasH / 1000;
-
-    for (const item of page.items) {
-      if (!item) continue;
-      const type = item.type || item.kind;
-
-      if (type === "stroke" && Array.isArray(item.points) && item.points.length > 0) {
-        ctx.save();
-        ctx.strokeStyle = normStyle === "chalkboard" ? "#f8fafc" : item.color || "#1e293b";
-        ctx.lineWidth = Math.max(1.5, (item.size || 3) * sx);
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.beginPath();
-        const p0 = item.points[0];
-        ctx.moveTo(p0.x * sx, p0.y * sy);
-        for (let i = 1; i < item.points.length; i++) {
-          const pt = item.points[i];
-          ctx.lineTo(pt.x * sx, pt.y * sy);
-        }
-        ctx.stroke();
-        ctx.restore();
-      } else if (type === "shape") {
-        ctx.save();
-        const x = (item.x || 0) * sx;
-        const y = (item.y || 0) * sy;
-        const w = (item.width || 120) * sx;
-        const h = (item.height || 80) * sy;
-        const stroke = normStyle === "chalkboard" ? "#e2e8f0" : item.strokeColor || item.stroke || "#3b82f6";
-        const fill = item.fillColor || item.fill;
-
-        ctx.strokeStyle = stroke;
-        ctx.lineWidth = Math.max(1, (item.strokeWidth ?? 2) * sx);
-
-        if (item.shapeType === "circle" || item.shapeType === "ellipse") {
-          ctx.beginPath();
-          ctx.ellipse(x + w / 2, y + h / 2, Math.abs(w / 2), Math.abs(h / 2), 0, 0, Math.PI * 2);
-          if (fill && fill !== "none" && fill !== "transparent") {
-            ctx.fillStyle = fill;
-            ctx.fill();
-          }
-          if (item.strokeWidth !== 0 && stroke !== "none") ctx.stroke();
-        } else if (item.shapeType === "triangle") {
-          ctx.beginPath();
-          ctx.moveTo(x + w / 2, y);
-          ctx.lineTo(x + w, y + h);
-          ctx.lineTo(x, y + h);
-          ctx.closePath();
-          if (fill && fill !== "none") {
-            ctx.fillStyle = fill;
-            ctx.fill();
-          }
-          ctx.stroke();
-        } else {
-          // Default rect
-          if (fill && fill !== "none" && fill !== "transparent") {
-            ctx.fillStyle = fill;
-            ctx.fillRect(x, y, w, h);
-          }
-          if (item.strokeWidth !== 0 && stroke !== "none") {
-            ctx.strokeRect(x, y, w, h);
-          }
-        }
-
-        if (item.label) {
-          ctx.fillStyle = normStyle === "chalkboard" ? "#ffffff" : "#1e293b";
-          ctx.font = `bold ${Math.max(11, 14 * sx)}px sans-serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(item.label, x + w / 2, y + h / 2);
-        }
-        ctx.restore();
-      } else if (type === "text") {
-        ctx.save();
-        const x = (item.x || 0) * sx;
-        const y = (item.y || 0) * sy;
-        const fSize = Math.max(12, (item.fontSize || 22) * sx);
-        ctx.fillStyle = normStyle === "chalkboard" ? "#fef08a" : item.color || "#1e293b";
-        ctx.font = `${item.handwriting ? "italic " : ""}${fSize}px sans-serif`;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.fillText(item.text || "", x, y);
-        ctx.restore();
-      } else if (type === "sticky") {
-        ctx.save();
-        const x = (item.x || 0) * sx;
-        const y = (item.y || 0) * sy;
-        const w = (item.width || 160) * sx;
-        const h = (item.height || 160) * sy;
-        ctx.fillStyle = item.color || "#fef3c7";
-        ctx.shadowColor = "rgba(0,0,0,0.15)";
-        ctx.shadowBlur = 6;
-        ctx.fillRect(x, y, w, h);
-        ctx.shadowColor = "transparent";
-
-        ctx.fillStyle = "#1e293b";
-        ctx.font = `${13 * sx}px sans-serif`;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.fillText(item.text || "", x + 8, y + 10);
-        ctx.restore();
-      } else if (type === "checklist") {
-        ctx.save();
-        const x = (item.x || 0) * sx;
-        const y = (item.y || 0) * sy;
-        const w = (item.width || 220) * sx;
-        const h = (item.height || 140) * sy;
-        ctx.fillStyle = normStyle === "chalkboard" ? "rgba(255,255,255,0.08)" : "#f8fafc";
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = normStyle === "chalkboard" ? "#64748b" : "#cbd5e1";
-        ctx.strokeRect(x, y, w, h);
-
-        ctx.fillStyle = normStyle === "chalkboard" ? "#ffffff" : "#0f172a";
-        ctx.font = `bold ${13 * sx}px sans-serif`;
-        ctx.fillText(item.title || "Checklist", x + 10, y + 8);
-
-        ctx.font = `${12 * sx}px sans-serif`;
-        let curY = y + 28;
-        for (const chk of item.items || []) {
-          ctx.fillText(`[${chk.checked ? "✓" : " "}] ${chk.text || ""}`, x + 12, curY);
-          curY += 20 * sy;
-        }
-        ctx.restore();
-      } else if (type === "diagram") {
-        ctx.save();
-        const x = (item.x || 0) * sx;
-        const y = (item.y || 0) * sy;
-        const w = (item.width || 340) * sx;
-        const h = (item.height || 220) * sy;
-        ctx.fillStyle = normStyle === "screen" ? "#1e1b4b" : "rgba(224, 231, 255, 0.4)";
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = "#6366f1";
-        ctx.strokeRect(x, y, w, h);
-
-        ctx.fillStyle = normStyle === "chalkboard" ? "#a5b4fc" : "#4338ca";
-        ctx.font = `bold ${12 * sx}px sans-serif`;
-        ctx.fillText(`📊 Diagram (${item.syntax || "mermaid"})`, x + 8, y + 8);
-        ctx.font = `${11 * sx}px monospace`;
-        ctx.fillText((item.code || "").slice(0, 48), x + 8, y + 28);
-        ctx.restore();
-      }
-    }
-
-    ctx.restore();
     if (texture) texture.needsUpdate = true;
   }
 

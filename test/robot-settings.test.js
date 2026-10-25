@@ -28,6 +28,9 @@ describe("Robot settings are kept, checked and repaired", () => {
     assert.strictEqual(r.roam, true);
     assert.strictEqual(r.world, true);
     assert.deepStrictEqual(r.aiGestures, { voice: true, chat: false });
+    assert.deepStrictEqual(r.aiAllowed, { mood: true, gesture: true, prop: true, move: true, look: true });
+    assert.strictEqual(r.interactive, true);
+    assert.strictEqual(r.nameTag, false);
     assert.strictEqual(r.smartMoods, false);
     assert.strictEqual(r.quality, "auto");
     assert.deepStrictEqual(r.filming, { delay: 3, cameraFriendly: true, largeCaptions: false, largerFace: false });
@@ -38,7 +41,8 @@ describe("Robot settings are kept, checked and repaired", () => {
       robot: {
         chatDock: false, customRooms: [], cameraMoves: [], shot: "close",
         position: "left", seat: "right", followFace: true, eyesFollowCursor: false, cinematic: true, roam: false, world: false, aiGestures: { voice: false, chat: true },
-        smartMoods: true, quality: "high",
+        smartMoods: true, quality: "high", voicePlace: { x: 0.2, y: -0.1, scale: 1.4 },
+        aiAllowed: { mood: false, gesture: true, prop: false, move: true, look: true }, interactive: false, nameTag: true,
         sound: { enabled: true, volume: 80, pitch: 1.2, blips: false, servos: true, emotes: true, ambience: false, recordMix: true },
         reactions: { mission: false, reminder: true, notifications: false, taskDone: true, habitStreak: false, timeOfDay: true, userReturn: false },
         filming: { delay: 10, cameraFriendly: false, largeCaptions: true, largerFace: true },
@@ -109,5 +113,39 @@ describe("Robot settings are kept, checked and repaired", () => {
     const fresh = settings.sanitize(JSON.parse(fs.readFileSync(path.join(tempDir, "settings.json"), "utf8")));
     assert.deepStrictEqual(fresh.robot, settings.DEFAULTS.robot);
     assert.strictEqual(fresh.theme.accent, "#34d399");
+  });
+  test("every whiteboard choice is kept when valid, and a bad one falls back", () => {
+    const wb = settings.DEFAULTS.whiteboard;
+    const good = {
+      enabled: true, aiDrawing: false, awareness: "onRequest", reactToEdits: "comment", initiative: "proactive", followRobot: false, showRobotCursor: false,
+      voiceOpen: "manual", voiceAutoHide: 30, writingStyle: "chalk", dockTheme: "midnight", robotWindow: false, inspector: false,
+      markerColor: "#112233", markerSize: 8, gridSize: 40, showInFilming: false, showInRecordings: false,
+    };
+    const saved = settings.set({ whiteboard: good }).whiteboard;
+    for (const [k, v] of Object.entries(good)) {
+      assert.deepStrictEqual(saved[k], v, k);
+    }
+    const bad = settings.set({
+      whiteboard: { dockTheme: "plaid", markerColor: "red; x", markerSize: 9999, gridSize: 3, voiceAutoHide: 7777 },
+    }).whiteboard;
+    assert.strictEqual(bad.dockTheme, wb.dockTheme);
+    assert.strictEqual(bad.markerColor, wb.markerColor);
+    assert.strictEqual(bad.markerSize, 32);
+    assert.strictEqual(bad.gridSize, 12);
+    assert.strictEqual(bad.voiceAutoHide, 300, "any time becomes the nearest one on offer");
+    settings.set({ whiteboard: wb });
+  });
+
+  test("the AI's body moves are offered and run only where the user allows them", () => {
+    const tools = require("../server/tools");
+    const base = settings.get();
+    const on = { ...base, robot: { ...base.robot, aiGestures: { voice: true, chat: true } } };
+    const names = (s) => tools.declarations(s, { voice: true, robot: true }).map((t) => t.name).filter((n) => n.startsWith("robot_"));
+    assert.deepStrictEqual(names(on).sort(), ["robot_gesture", "robot_go_to", "robot_look_at", "robot_mood", "robot_use_prop"]);
+    const some = { ...on, robot: { ...on.robot, aiAllowed: { mood: false, gesture: true, prop: false, move: true, look: true } } };
+    assert.deepStrictEqual(names(some).sort(), ["robot_gesture", "robot_go_to", "robot_look_at"]);
+    assert.strictEqual(tools.robotAllowed(some, "robot_mood"), false);
+    assert.strictEqual(tools.robotAllowed(some, "robot_gesture"), true);
+    assert.strictEqual(tools.robotAllowed(some, "robot_go_to"), true);
   });
 });

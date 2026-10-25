@@ -3,7 +3,7 @@
 // colors (highlight.js), math ($…$, $$…$$, \(…\), \[…\]) with KaTeX, and
 // ```mermaid blocks drawn as diagrams once the reply is complete.
 import { marked } from "/vendor/marked/marked.esm.js";
-import DOMPurify from "/vendor/dompurify/purify.es.mjs";
+import { cleanHtml } from "./sanitize.js";
 import katex from "/vendor/katex/katex.mjs";
 import { t } from "./i18n.js";
 
@@ -45,14 +45,6 @@ marked.use({
   ],
 });
 
-// Links in replies open in a new tab, so the chat stays open
-DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-  if (node.tagName === "A") {
-    node.setAttribute("target", "_blank");
-    node.setAttribute("rel", "noopener noreferrer");
-  }
-});
-
 // Syntax colors load on first use; blocks drawn before that are colored when it arrives
 let hljs = null;
 import("/vendor/highlight/highlight.min.js").then((m) => {
@@ -90,7 +82,7 @@ function decorateCode(el) {
 
 // Images are dropped: remote images could be used to track you.
 export function renderMarkdown(el, text) {
-  el.innerHTML = DOMPurify.sanitize(marked.parse(text), { FORBID_TAGS: ["img"] });
+  el.innerHTML = cleanHtml(marked.parse(text));
   decorateCode(el);
   autoDirection(el);
 }

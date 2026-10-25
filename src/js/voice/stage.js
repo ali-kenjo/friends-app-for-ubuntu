@@ -19,12 +19,14 @@ export const FRAMES = { "16:9": { w: 1920, h: 1080 }, "9:16": { w: 1080, h: 1920
 //   earClosed(): its voice (or the echo of it) may still be in the mic
 //   recording(): a video is being recorded
 //   captionsOnCanvas(): captions go into the picture
+//   drawBoard(ctx, w, h): the whiteboard goes into the picture (only asked while recording or choosing a format)
 //   onSync(on): the robot appeared or went away (the screen's buttons follow)
 //   onRobotChange(on): tell the AI whether it has its robot body
 export const hooks = {
   earClosed: () => false,
   recording: () => false,
   captionsOnCanvas: () => false,
+  drawBoard() {},
   onSync() {},
   onRobotChange() {},
 };
@@ -94,6 +96,7 @@ export const frameShown = () => activeFrame;
 export function resizeCanvas() {
   const frame = FRAMES[activeFrame];
   voiceMode.classList.toggle("framed", Boolean(frame) || hooks.recording());
+  voiceMode.dataset.frame = activeFrame || "";
   if (frame) {
     canvas.width = frame.w;
     canvas.height = frame.h;
@@ -127,6 +130,7 @@ function compositeRobot(glCanvas) {
   const { w, h } = view;
   if (!w || !h) return;
   ctx.drawImage(glCanvas, 0, 0, w, h);
+  hooks.drawBoard(ctx, w, h);
   if (hooks.captionsOnCanvas()) captions.draw(ctx, w, h);
 }
 
@@ -168,6 +172,7 @@ function draw(now) {
   if (style.voiceBands) readVoiceLevels(status.state);
   style.draw(ctx, now / 1000, w, h, { levels, loudness, voiceLevels, state: status.state, muted: isMuted() });
 
+  hooks.drawBoard(ctx, w, h);
   if (hooks.captionsOnCanvas()) captions.draw(ctx, w, h);
 }
 

@@ -227,3 +227,35 @@
   flex-shrink: 1;
   min-width: 0;
 }
+
+/* The character's name under the robot (Settings → Robot → Overview → Name tag) */
+.robot-name-tag {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 6px;
+  margin-inline: auto;
+  inline-size: fit-content;
+  max-inline-size: 90%;
+  padding: 2px 12px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-main) 70%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 3;
+}
+.robot-name-tag[hidden] { display: none; }
+
+/* Robot settings: the overview card and quick actions */
+.robot-status-card { margin-block: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-input); padding: 0 var(--space-3); }
+.robot-status-card .row { border-bottom: 1px solid var(--hairline); }
+.robot-status-card .row:last-child { border-bottom: 0; }
+.robot-quick { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-3); }
+.pane[data-pane="robot"] .robot-preview-wrap { position: sticky; inset-block-start: 0; z-index: 2; background: var(--bg-main); padding-block-end: var(--space-2); }
+@media (max-height: 760px), (max-width: 700px) { .pane[data-pane="robot"] .robot-preview-wrap { position: static; } }

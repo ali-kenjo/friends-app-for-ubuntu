@@ -4,7 +4,20 @@ const assert = require("node:assert");
 describe("Theme packs and WCAG AA contrast", () => {
   test("loads pure theme-packs.mjs module", async () => {
     const mod = await import("../src/js/theme-packs.mjs");
-    assert.deepStrictEqual(mod.THEME_PACK_IDS, ["cozy", "sunrise", "forest", "lavender", "ocean", "classic"]);
+    assert.deepStrictEqual(mod.THEME_PACK_IDS, [
+      "cozy",
+      "sunrise",
+      "forest",
+      "lavender",
+      "ocean",
+      "classic",
+      "midnight",
+      "nordic",
+      "matcha",
+      "espresso",
+      "cyberpunk",
+      "sunset",
+    ]);
     assert.ok(mod.CHAT_STYLE_IDS.length >= 5, "at least 5 chat styles (minimal, bubbles + 3 new ones)");
   });
 

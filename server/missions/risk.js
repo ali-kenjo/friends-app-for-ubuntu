@@ -58,6 +58,20 @@ const TOOLS = {
   github_create_issue: { risk: "external", type: "tool" }, notion_create_page: { risk: "external", type: "tool" }, notion_append: { risk: "external", type: "tool" },
   todoist_add_task: { risk: "external", type: "tool" }, todoist_complete: { risk: "external", type: "tool" }, home_control: { risk: "external", type: "tool" },
   reddit_draft_post: { risk: "external", type: "tool" }, reddit_draft_comment: { risk: "external", type: "tool" },
+  // the shared whiteboard: looking, and drawing (the board keeps earlier versions, and a mission can't touch what you made)
+  whiteboard_read_board: { risk: "read" }, whiteboard_snapshot: { risk: "read" }, whiteboard_point_at: { risk: "read" }, whiteboard_set_view: { risk: "read" }, whiteboard_show: { risk: "read" },
+  whiteboard_write_text: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_draw_shape: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_draw_diagram: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_add_sticky: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_add_checklist: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_add_table: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_add_image: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_draw_freehand: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_highlight: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_template: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_connect: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_update_item: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_move_item: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_delete_item: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_check_item: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_arrange: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_erase_region: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_clear: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_new_page: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_switch_page: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_open_board: { risk: "write", type: "data_write", kind: "whiteboard" }, whiteboard_undo: { risk: "write", type: "data_write", kind: "whiteboard" },
+  whiteboard_run_script: { risk: "write", type: "data_write", kind: "whiteboard" },
   // your computer
   run_command: { risk: "system", type: "command" },
 };

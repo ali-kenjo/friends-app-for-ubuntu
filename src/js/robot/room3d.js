@@ -116,6 +116,7 @@ export class RoomScene {
     const place = info.place;
     this.place = place;
     this.info = info;
+    this.level = look.level;
     const glow = room.colors.glow ? new THREE.Color(room.colors.glow) : look.light.clone();
     const colors = { wall: new THREE.Color(room.colors.wall), floor: new THREE.Color(room.colors.floor), glow, detail: new THREE.Color(room.colors.detail) };
     this.colors = colors;

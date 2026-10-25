@@ -371,6 +371,43 @@ describe("Gemini Live bridge", () => {
     page.ws.close();
   });
 
+  test("what you keep from cloud AIs stays out of the whiteboard it is told about, and out of what its tools bring back", async () => {
+    const whiteboard = require("../server/whiteboard");
+    const secret = "sk-abcdefghijklmnopqrstuvwxyz123456";
+    settings.set({ ...settings.get(), whiteboard: { ...settings.get().whiteboard, enabled: true, voiceAllowed: true, awareness: "always" }, privacy: { ...settings.get().privacy, redact: { keys: true, cards: false, emails: false, phones: false } } });
+    const board = whiteboard.current();
+    whiteboard.apply(board.id, [{ op: "add", item: { type: "sticky", text: `My key is ${secret}`, x: 100, y: 100 } }], { actor: "user" });
+
+    const open = async () => {
+      const page = openPage(port);
+      await once(page.ws, "open");
+      const upstream = gemini.connection();
+      page.send({ type: "start", chatId: null });
+      const conn = await upstream;
+      return { page, conn, setup: (await conn.next((m) => m.setup)).setup };
+    };
+
+    const first = await open();
+    const told = first.setup.systemInstruction.parts[0].text;
+    assert.match(told, /The board right now/, "it is told what is on the board");
+    assert.match(told, /My key is \[key\]/);
+    assert.ok(!told.includes(secret), "the key itself never leaves");
+    first.conn.send({ setupComplete: {} });
+    await first.page.next("ready");
+    first.conn.send({ toolCall: { functionCalls: [{ id: "read-1", name: "whiteboard_read_board", args: {} }] } });
+    const answer = await first.conn.next((m) => m.toolResponse);
+    const seen = JSON.stringify(answer.toolResponse.functionResponses[0].response);
+    assert.match(seen, /\[key\]/);
+    assert.ok(!seen.includes(secret), "nor does it come back through a tool");
+    first.page.ws.close();
+
+    // With that switched off it is told as it is: it is the person's own choice
+    settings.set({ ...settings.get(), privacy: { ...settings.get().privacy, redact: { keys: false, cards: false, emails: false, phones: false } } });
+    const second = await open();
+    assert.ok(second.setup.systemInstruction.parts[0].text.includes(secret));
+    second.page.ws.close();
+  });
+
   test("a key that can't be used gives a clear error", async () => {
     const page = openPage(port);
     await once(page.ws, "open");

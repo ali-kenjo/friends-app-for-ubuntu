@@ -20,10 +20,12 @@ function announce() {
 }
 
 // tab: a section name; section: the id of something in it to scroll to (a <details> there opens)
-export function openSettings(tab, { section } = {}) {
+export function openSettings(tab, { section, sub } = {}) {
   if (tab) switchTab(tab);
   settingsModal.hidden = false;
   announce();
+  // A part of a section ("roles" in Robot)
+  if (sub) (document.querySelector(`.subtab[data-subtab="${sub}"]`) || document.querySelector(`.subtab[data-subtab="rb-${sub}"]`))?.click();
   if (section) jumpTo(document.getElementById(section));
 }
 

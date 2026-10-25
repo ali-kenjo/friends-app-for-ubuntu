@@ -232,12 +232,19 @@ body {
   justify-self: start;
 }
 
-.topbar > .character-switch {
+.topbar > .topbar-who {
+  grid-column: 2;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(100%, 40rem);
+}
+
+.topbar-who > .character-switch {
   position: static;
   transform: none;
-  grid-column: 2;
   max-width: min(100%, 22rem);
-  justify-self: center;
 }
 
 .topbar > .find-open {
@@ -1128,7 +1135,7 @@ body {
     padding-inline: var(--space-4);
   }
 
-  .topbar > .character-switch {
+  .topbar-who > .character-switch {
     max-width: 100%;
   }
 

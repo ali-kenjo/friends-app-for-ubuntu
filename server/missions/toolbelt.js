@@ -45,7 +45,7 @@ function declarations(settings, { google = false, telegram = false, mission = nu
     aiNotes: { ...settings.aiNotes, enabled: true },
     companion: { ...settings.companion, recall: true, followUps: false },
   };
-  const list = tools.declarations(open, { voice: false, robot: false, workspace: google, onAir: false, live: false }).filter((d) => d.name !== "start_mission");
+  const list = tools.declarations(open, { voice: false, robot: false, workspace: google, onAir: false, live: false, source: "mission" }).filter((d) => d.name !== "start_mission");
   const names = new Set(list.map((d) => d.name));
   const extra = [OWN.run_command, OWN.system_status, OWN.notify_user];
   if (telegram) extra.push(OWN.send_telegram);
@@ -175,6 +175,8 @@ function create(opts) {
 
     const ctx = {
       settings: toolSettings("grid"),
+      source: "mission",
+      batch: `mission-${mission.id}`,
       googleAccessToken: opts.google || null,
       confirm: async () => true, // the plan (or your answer just now) is the confirmation
       onActivity: (line) => step?.activity?.(line),

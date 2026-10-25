@@ -23,6 +23,8 @@ import { voiceErrorText } from "../personality.js";
 import { liveWanted, getLocalBrainId } from "../composer.js";
 import { toggleDrawer, resetDrawer } from "../voice-drawer.js";
 import { robot } from "../robot/index.js";
+import "./robot-place.js";
+import { voicePanel } from "../whiteboard/panel.js";
 import { createFilming } from "../filming.js";
 import { characterName } from "../characters.js";
 import { t } from "../i18n.js";
@@ -237,6 +239,7 @@ const controls = initControls({
 stageHooks.earClosed = () => Boolean(engine?.earClosed());
 stageHooks.recording = () => recording.active;
 stageHooks.captionsOnCanvas = () => recording.captionsOnCanvas;
+stageHooks.drawBoard = (ctx, w, h) => recording.boardOnCanvas && voicePanel?.drawTo(ctx, w, h);
 stageHooks.onSync = (on) => controls.onRobotSync(on);
 stageHooks.onRobotChange = (on) => engine?.setRobot(on);
 
@@ -249,6 +252,8 @@ recording.beforeStart(() => {
 });
 
 onOnAir((on) => engine?.setOnAir(on));
+// The robot became a teacher, a coach… while you talk
+document.addEventListener("friends:role", () => engine?.setRole?.());
 
 // Another character takes over: a new voice and personality, so the
 // conversation restarts (same chat) and they say hello

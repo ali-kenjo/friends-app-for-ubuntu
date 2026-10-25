@@ -28,10 +28,14 @@ const chats = require("./chats");
 const settings = require("./settings");
 const tools = require("./tools");
 const prompt = require("./prompt");
+const redact = require("./redact");
 const gemini = require("./gemini");
 const summary = require("./summary");
 const characters = require("./characters");
+const roleData = require("../src/js/robot/roles.mjs");
 const voiceStyle = require("./voice-style");
+const whiteboard = require("./whiteboard");
+const whiteboardTools = require("./whiteboard-tools");
 
 const UPSTREAM = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 const MIC_TYPE = "audio/pcm;rate=16000";
@@ -89,6 +93,9 @@ class LiveSession {
     this.confirmations = new Map(); // id → answer(allowed)
     this.cancelled = new Set(); // tool call ids Gemini gave up on
     this.toolChain = Promise.resolve();
+    this.boardNote = { timer: null, last: 0, tries: 0 }; // telling it quietly that you changed the whiteboard
+    this.onBoardOps = (event) => this.boardChanged(event);
+    whiteboard.events.on("ops", this.onBoardOps);
 
     client.on("message", (data, isBinary) => this.fromPage(data, isBinary));
     client.on("close", () => this.close());
@@ -123,12 +130,28 @@ class LiveSession {
     else if (msg.type === "confirm") this.confirmations.get(msg.id)?.(msg.allow === true);
     else if (msg.type === "robot") this.setRobot(msg.on === true);
     else if (msg.type === "on-air") this.setOnAir(msg.on === true);
+    else if (msg.type === "role") this.sendRoleNote();
     else if (msg.type === "doc") this.setDoc(msg.doc || { name: msg.name, content: msg.content });
     else if (msg.type === "echo") this.turn.echo = true;
     // Something the app tells the AI (a reminder went off): it says it, and it isn't saved as yours
     else if (msg.type === "note" && typeof msg.text === "string" && msg.text.trim() && this.ready) {
       this.toGemini({ realtimeInput: { text: prompt.appNote(this.settings || settings.get(), msg.text.trim().slice(0, 1000)) } });
     }
+  }
+
+  // The person changed what the robot is to them (a teacher, a coach…) while talking: the AI is told what that means now.
+  // (A session built later starts from the new role by itself.)
+  sendRoleNote() {
+    if (!this.ready) return;
+    const current = settings.get();
+    this.settings = current;
+    this.system = null;
+    const user = prompt.userName(current);
+    const section = roleData.promptSection(current.roles, user).filter(Boolean).join("\n").slice(0, 3500);
+    const text = section
+      ? `${user} just changed what you are to them. From now on, until they change it again:\n${this.scrub(section)}`
+      : `${user} took your special role away: you are simply their companion again.`;
+    this.toGemini({ realtimeInput: { text: prompt.appNote(current, text) } });
   }
 
   // Active grounding document for voice discussion / acting
@@ -249,7 +272,9 @@ class LiveSession {
     // answered; the others would pause mid-sentence (see gemini.liveAsyncTools).
     // There, the robot follows the captions instead.
     const robotTools = this.robot && gemini.liveAsyncTools(model);
-    this.offered = tools.declarations(current, { voice: true, robot: robotTools, nonBlocking: true, onAir: this.onAir, live: true });
+    // Live is Gemini, a cloud AI: what the person keeps from cloud AIs (Settings → Privacy) stays out of it too
+    this.withhold = current.privacy?.shareMemoryWithCloud === false;
+    this.offered = tools.declarations(current, { voice: true, robot: robotTools, nonBlocking: true, onAir: this.onAir, live: true, withhold: this.withhold, source: "voice" });
     this.robotTools = this.offered.some((t) => tools.isRobotTool(t.name));
     if (!this.system || this.systemRobot !== this.robotTools) {
       this.systemRobot = this.robotTools;
@@ -269,8 +294,12 @@ class LiveSession {
         chatId: this.chatId,
         doc: this.doc,
         style: this.currentStyle(),
+        withhold: this.withhold,
       });
     }
+    // The whiteboard as it is at this moment (new on every connection; changes after that arrive as quiet notes)
+    const board = this.offered.some((t) => t.name.startsWith("whiteboard_")) ? whiteboardTools.awareness(current, { source: "voice", user: prompt.userName(current), withhold: this.withhold, maxChars: 3000 }) : null;
+    const boardBlock = board ? `${board.text ? `\n\n## The board right now (as of this connection)\n${board.text}` : ""}${board.sources ? `\n\n${board.sources}` : ""}` : "";
     const toolList = [];
     if (current.aiControl?.searchGrounding !== false) toolList.push({ googleSearch: {} });
     if (this.offered.length) toolList.push({ functionDeclarations: this.offered });
@@ -284,7 +313,7 @@ class LiveSession {
         // The active character's voice (a session keeps the voice it started with)
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: (this.voiceName ||= characters.voiceOf(characters.active(current)).name) } } },
       },
-      systemInstruction: { parts: [{ text: this.system }] },
+      systemInstruction: { parts: [{ text: this.scrub(this.system + boardBlock) }] },
       tools: toolList,
       // Patience before answering, so a pause to think doesn't end your turn: how much
       // depends on the conversation style (voice-style.js). Every ms is added to each answer's delay.
@@ -445,6 +474,7 @@ class LiveSession {
     const functionResponses = calls.map((call) => {
       let response;
       try {
+        if (!tools.robotAllowed(this.settings || settings.get(), call.name)) throw new Error("The user doesn't let you use that part of your body. Leave it be.");
         this.toPage({ type: "robot", ...tools.robotEvent(call.name, call.args || {}) });
         response = { ok: true, scheduling: "SILENT" };
       } catch (err) {
@@ -464,7 +494,7 @@ class LiveSession {
         if (this.cancelled.has(call.id)) continue;
         const result = await tools.run(call.name, call.args || {}, this.toolContext());
         if (this.cancelled.has(call.id) || this.closed) continue;
-        const response = { name: call.name, response: result };
+        const response = { name: call.name, response: this.scrub(result) };
         if (call.id) response.id = call.id;
         functionResponses.push(response);
       }
@@ -477,6 +507,9 @@ class LiveSession {
   toolContext() {
     return {
       settings: this.settings || settings.get(),
+      source: "voice",
+      batch: `live-${this.turns}`,
+      withhold: this.withhold === true,
       googleAccessToken: this.googleAccessToken,
       confirm: (summaryText, details) => this.confirm(summaryText, details),
       onActivity: (line) => {
@@ -504,6 +537,63 @@ class LiveSession {
       };
       const timer = setTimeout(() => finish(false), 5 * 60 * 1000);
       this.confirmations.set(id, finish);
+    });
+  }
+
+  // Live is a cloud AI: what Settings → AI & privacy hides from cloud AIs is swapped out of what it is told and of what
+  // its tools bring back (a key typed on the whiteboard, a card number in a note)
+  scrub(value) {
+    const options = (this.settings || settings.get()).privacy?.redact;
+    return redact.active(options) ? redact.redactDeep(value, options) : value;
+  }
+
+  // ---------- The whiteboard ----------
+  // You changed the shared board while talking: after you pause, the AI is told quietly (it may stay silent about it).
+  // What it did itself isn't news to it.
+  boardChanged(event) {
+    if (this.closed || event.actor === "ai" || !this.ready) return;
+    const cur = this.settings || settings.get();
+    const wb = cur.whiteboard || {};
+    if (wb.awareness === "off" || wb.awareness === "onRequest" || !whiteboardTools.permitted(cur, { source: "voice" }) || this.withhold) return;
+    try {
+      if (whiteboard.current().id !== event.boardId) return;
+    } catch {
+      return;
+    }
+    this.boardNote.tries = 0;
+    clearTimeout(this.boardNote.timer);
+    this.boardNote.timer = setTimeout(() => this.sendBoardNote(), 2500);
+    this.boardNote.timer.unref?.();
+  }
+
+  sendBoardNote() {
+    if (this.closed || !this.ready) return;
+    const cur = this.settings || settings.get();
+    const gap = cur.whiteboard?.reactToEdits === "comment" ? 8000 : 20000;
+    // Not while it is talking, while you are speaking, or just after the last note: try again shortly
+    if (this.turn.model || this.turn.user || this.toolsRunning || Date.now() - this.boardNote.last < gap) {
+      if (++this.boardNote.tries <= 4) {
+        this.boardNote.timer = setTimeout(() => this.sendBoardNote(), 3500);
+        this.boardNote.timer.unref?.();
+      }
+      return;
+    }
+    let doc;
+    try {
+      doc = whiteboard.current();
+    } catch {
+      return;
+    }
+    const user = prompt.userName(cur);
+    const d = whiteboard.describeFor(doc.id, { user, maxChars: 1500, markSeen: true });
+    if (!d.changes) return;
+    this.boardNote.last = Date.now();
+    const lines = d.text.split("\n").filter((l) => l.startsWith("Changes since") || /\b(is looking|has selected)\b/.test(l));
+    const chatty = cur.whiteboard?.reactToEdits === "comment";
+    this.toGemini({
+      realtimeInput: {
+        text: this.scrub(`(App note, not from ${user}: ${user} just changed the shared whiteboard. ${lines.join(" ")} This is for your information. ${chatty ? "You may add one short, natural remark if it adds something." : "Do not say anything about it out loud unless it is clearly relevant to what you are talking about or they ask."} If you have nothing to say, say nothing at all.)`),
+      },
     });
   }
 
@@ -568,6 +658,8 @@ class LiveSession {
     if (this.closed) return;
     this.closed = true;
     clearTimeout(this.micTimer);
+    clearTimeout(this.boardNote.timer);
+    whiteboard.events.off("ops", this.onBoardOps);
     this.finishTurn();
     for (const answer of [...this.confirmations.values()]) answer(false);
     const upstream = this.upstream;

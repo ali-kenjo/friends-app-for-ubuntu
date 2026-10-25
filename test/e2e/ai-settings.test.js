@@ -80,8 +80,9 @@ describe("AI & privacy in the page", { skip: !CHROME && "no Chrome found" }, () 
 
   test("four sections, one showing at a time, moved between with the arrow keys; the search opens the right one", async () => {
     await open("ais");
-    assert.deepStrictEqual(await page.$$eval(".subtab", (els) => els.map((e) => e.textContent.trim())), ["Your AIs", "Answers", "Privacy", "This computer"]);
-    assert.deepStrictEqual(await page.$$eval(".subpane", (els) => els.map((e) => e.offsetParent !== null)), [true, false, false, false]);
+    // (Settings → Robot has sections of its own: this is the AI & privacy page's)
+    assert.deepStrictEqual(await page.$$eval("#pane-ai-control .subtab", (els) => els.map((e) => e.textContent.trim())), ["Your AIs", "Answers", "Privacy", "This computer"]);
+    assert.deepStrictEqual(await page.$$eval("#pane-ai-control .subpane", (els) => els.map((e) => e.offsetParent !== null)), [true, false, false, false]);
     await page.focus("#subtab-ais");
     await page.keyboard.press("ArrowRight");
     assert.strictEqual(await page.evaluate(() => document.activeElement.id), "subtab-answers");

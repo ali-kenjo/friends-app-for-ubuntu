@@ -31,12 +31,21 @@ import "./auth.js";
 import "./workspace.js";
 import "./data.js";
 import "./robot/settings-pane.js";
+import "./robot/roles-pane.js";
+import "./robot/nametag.js";
 import "./voice-settings.js";
 import "./whiteboard/ui.js";
+import "./whiteboard/panel.js";
+import "./whiteboard/bridge.js";
+import "./whiteboard/role-pill.js";
+import { initSubtitlesUI } from "./subtitles.js";
 import { initSession } from "./session.js";
 
 // Exchange launch token for session cookie if present
 await initSession();
+
+// Initialize subtitles & captions UI
+initSubtitlesUI();
 
 // The address (#today, #missions, #voice, #chat/<id>) says where to start
 startViews();

@@ -40,9 +40,13 @@ export class Director {
     this.floor = [0, 0, 0, 0];
   }
 
+  // The settings call them mission, reminder, taskDone, habitStreak, timeOfDay, userReturn; here they are the plural
+  // names the reactions below ask for. (They used to differ, so most of the switches did nothing.)
   setReactions(cfg) {
     if (!cfg || typeof cfg !== "object") return;
-    Object.assign(this.reactions, cfg);
+    const names = { mission: "missions", reminder: "reminders", notifications: "notifications", taskDone: "tasks", habitStreak: "streaks", timeOfDay: "hourly", userReturn: "welcomeBack" };
+    for (const [from, to] of Object.entries(names)) if (from in cfg) this.reactions[to] = cfg[from] !== false;
+    for (const to of Object.values(names)) if (to in cfg && !(Object.keys(names).includes(to))) this.reactions[to] = cfg[to] !== false;
   }
 
   // ---------- Voice mode ----------
@@ -139,10 +143,25 @@ export class Director {
   // ---------- The AI moving its body (robot_mood, robot_gesture, robot_use_prop, robot_go_to, robot_look_at) ----------
   toolEvent({ mood, gesture, useProp, goTo, lookAt } = {}) {
     if (mood) this.a.setMood(mood, { source: "tool", strength: 1 });
-    if (gesture) this.gesture(gesture, PRIORITY.tool);
+    // At the whiteboard: writing and wiping are an arm movement that follows where it is working, not a one-off gesture
+    if (gesture === "board_write" || gesture === "board_erase") {
+      const at = lookAt && typeof lookAt === "object" ? lookAt : {};
+      this.a.workBoard({ x: at.x, y: at.y, mode: gesture === "board_erase" ? "erase" : "write", duration: gesture === "board_erase" ? 1.8 : 1.4 });
+      gesture = null;
+      lookAt = null;
+    } else if (gesture) this.gesture(gesture, PRIORITY.tool);
     if (goTo && typeof goTo === "object") this.a.goTo(goTo);
     if (lookAt && typeof lookAt === "object") this.a.lookAt(lookAt);
     if (useProp && typeof useProp === "object") this.a.useProp({ ...useProp, source: "tool" });
+  }
+
+  // The robot writing on the board right now (called every frame while it does): its arm follows the pen
+  boardWork(x, y, mode = "write") {
+    this.a.workBoard({ x, y, mode, duration: 0.5 });
+  }
+
+  boardSide(side) {
+    this.a.boardSide = side >= 0 ? 1 : -1;
   }
 
   // ---------- Event reactions (configurable per category) ----------

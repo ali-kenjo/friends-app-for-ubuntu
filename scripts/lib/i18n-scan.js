@@ -130,6 +130,23 @@ function serverStrings() {
   const { design, room } = require(path.join(root, "server", "robot-look"));
   const looks = require(path.join(root, "src", "js", "robot", "looks.mjs"));
   for (const label of [...design.labels(), ...room.labels(), ...looks.labels()]) out.add(label);
+  // What the robot is to you, the shape library, the layouts and what it can make: plain data the page shows through t(name)
+  const wb = path.join(root, "src", "js", "whiteboard");
+  const roles = require(path.join(root, "src", "js", "robot", "roles.mjs"));
+  for (const r of Object.values(roles.ROLES)) {
+    for (const k of ["name", "tagline"]) out.add(r[k]);
+    for (const [label, prompt] of r.chips) (out.add(label), out.add(prompt));
+  }
+  const library = require(path.join(wb, "library.mjs"));
+  for (const g of library.LIBRARY) {
+    out.add(g.name);
+    for (const e of g.entries) if (hasLetters(e.name)) out.add(e.name);
+  }
+  const templates = require(path.join(wb, "templates.mjs"));
+  for (const k of [...Object.values(templates.TEMPLATE_TITLES), ...Object.values(templates.TEMPLATE_INFO)]) out.add(k);
+  const studio = require(path.join(wb, "studio.mjs"));
+  for (const x of studio.STUDIO) for (const k of ["label", "hint", "prompt"]) out.add(x[k]);
+  for (const q of studio.SOURCE_QUESTIONS) out.add(q);
   return out;
 }
 

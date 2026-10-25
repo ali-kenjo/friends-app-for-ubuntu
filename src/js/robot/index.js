@@ -115,7 +115,14 @@ function applySettings(s) {
   animator.setBehaviors(d.behaviors);
   animator.setFaceConfig(d.face);
   director.setReactions(r.reactions);
-  robotSound.configure(r.sound);
+  // The settings' sound switches, as the sound engine names them (and its volume is 0 to 1, the settings' 0 to 100)
+  robotSound.configure({
+    enabled: r.sound.enabled,
+    volume: r.sound.volume / 100,
+    pitch: r.sound.pitch,
+    recordMix: r.sound.recordMix,
+    categories: { blips: r.sound.blips, servos: r.sound.servos, hums: r.sound.ambience, ambience: r.sound.ambience, giggles: r.sound.emotes, sighs: r.sound.emotes, chimes: r.sound.emotes, whiteboard: s.whiteboard?.sound !== false },
+  });
   // The 2D faces (chat avatars) match the robot: its shell, its light and its eyes
   const root = document.documentElement;
   const light = d.colors.light || s.theme.accent;
@@ -138,6 +145,7 @@ function applySettings(s) {
     roam: r.roam !== false,
     world: r.world !== false,
     eyesFollowCursor: r.eyesFollowCursor !== false,
+    interactive: r.interactive !== false,
     cameraFriendly: filming.on && filming.cameraFriendly,
     largerFace: filming.on && filming.largerFace,
     theme: { bg: themeBackground(), glow: document.documentElement.dataset.theme === "light" ? 0.06 : 0.08 },

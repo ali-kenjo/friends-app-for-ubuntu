@@ -14,7 +14,7 @@ A personal AI companion for Linux that also gets things done. You talk to a robo
 - **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
 - **Flagship Voice Mode & On-Camera Co-Host**: Real-time voice conversations with a 3D robot body, filming mode, customizable **acting dynamics** (*Best Friends Banter*, *Podcast Co-Host*, *Comedy Partner*, *Sarcastic Critic*, *Curious Interviewer*, *Custom*), scene briefs, and **live document grounding** (talk through scripts, articles, or vault notes during conversations).
 - **3D Robot Studio & Offline Room Builder**: Fully customizable 3D companion with 30 moods, 40 gestures, alive idle behaviors, physical touch zones, and procedural WebAudio robot sounds. Build your own rooms with a 150+ item procedural catalog, slot snapping, architecture styles, camera shots (`orbit`, `dolly`, `cinematic`), and Photo Mode export.
-- **Shared Vector Whiteboard & Robot Drawing**: Shared visual whiteboard with live 3D room reflection across 7 board styles. Robot draws, sketches, writes math formulas, sticky notes, checklists, and Mermaid diagrams with animated arm kinematics and laser pointer spotlight. Multi-view UI (full page, dockable side panel, pop-out window), revision snapshots, and export to PNG, SVG, PDF, or Notes Vault.
+- **A Robot Page: the Robot, a Whiteboard, Sources and a Role, Together**: one board that you and the robot draw on at the same time, and the robot always knows what is on it and what you are doing. The robot floats over it in a window you place and size yourself; so does the board beside your chat and in voice mode (drag it, pull its edges, dock it, or use its Move and resize menu), and in voice mode you can move the robot itself. The robot can be a **teacher** who explains step by step on the board and quizzes you, a tutor, a study buddy, a coach, a language partner, an interviewer, a co-host, a creative partner, an analyst, a writer, a planner, a storyteller, or a role you describe. Give it **sources** (texts, files, notes, chats) and it answers from them and says where it found it ([S1]); one click makes a summary, a study guide, a quiz, flashcards, a timeline or a mind map. It has a shape library, 20 layouts, 29 tools of its own, `[[links]]` between boards, an outline, Ctrl+P to find anything, asks before changing what you made, and never lets a mission touch it. See it on its own page, beside the chat, in voice mode, with the robot's arm following its pen, and in recordings. Settings → Robot has the options.
 - **Unified Notification Router**: Single dispatcher routing system alerts (reminders, focus, mission plans/progress/done/trouble, briefing, watch alerts, Reddit matches) across Desktop, In-App center, and Telegram companion. Event matrix, quiet hours/DND with urgent bypass, digest bundling, and outbound delivery log.
 - **Hardened Telegram Companion Bot (Labs)**: Talk to Friends, approve mission plans, and receive live alerts from anywhere via your own private Telegram bot using secure long-polling with zero open ports or webhooks. Mandatory 6-digit code pairing (`/pair <code>`), role management (`admin`, `chat`, `notify_only`), safe message splitting, and privacy withholding in group chats.
 - **Everyday Life & Offline Calendar**: Tasks, reminders, habits, a journal, offline calendar (with `.ics` export/import), and focus/Pomodoro sessions.
@@ -63,26 +63,11 @@ Or download the `.deb` or the **AppImage** from the [Releases](../../releases) p
 
 - The `.deb` sets up Chromium's sandbox properly (a setuid helper), which is why it needs `sudo`; `npm run desktop` has no root, so it runs without the sandbox. Use the installed app for everyday use.
 - **Updating the installed app means building and installing a new `.deb`**: `npm run update` does all of it. An installed app doesn't change when you change the source.
-- **Friends tells you when a newer release exists, and never installs one.** Once a day it asks GitHub's public releases page (nothing about you is sent; not in Private mode; switch it off in Settings → Data & backups → Updates). You get one small notice per version, and the Updates card shows what's new and how to update for the way you installed it (the `.deb`, the AppImage, Docker or from source).
+- **Friends tells you when a newer release exists, and never installs one.** Once a day it asks GitHub's public releases page (nothing about you is sent; not in Private mode; switch it off in Settings → Data & backups → Updates). You get one small notice per version, and the Updates card shows what's new and how to update for the way you installed it (the `.deb`, the AppImage or from source).
 - **It keeps running in the tray** when you close the window, so reminders still come (Settings → Daily life; quit from the tray icon or with Ctrl+Q). It can start when you log in, quietly in the tray.
 - On a Wayland session it runs natively (X11 otherwise). The window remembers its size and position; a second launch focuses the first window.
 - The window only shows the app itself. The microphone and camera are granted to that page only, links open in your browser, and Google sign-in gets its own popup.
 - Google sign-in (Gmail, Calendar, Drive, YouTube, Tasks) is optional, needs a free Firebase project of your own, and is never loaded in Private mode. With **Stay signed in** (below) you sign in once instead of every time the app opens. Set it up in **Settings → Connected apps → Set up Google sign-in**: the steps are listed there, and you paste the web app's `firebaseConfig` from the Firebase console (it's kept in `~/.config/friends/firebase-applet-config.json`). Add `127.0.0.1` and `localhost` under Authentication → Settings → Authorized domains. (A `firebase-applet-config.json` next to the app, as in `firebase-applet-config.example.json`, still works.)
-
-### 4. Docker
-
-```bash
-docker compose up -d
-```
-
-or
-
-```bash
-docker build -t friends .
-docker run -d -p 127.0.0.1:3000:3000 -v friends_data:/home/node/.config/friends --name friends-app friends
-```
-
-Open `http://localhost:3000`. Chats persist in the `friends_data` volume. (If you publish it on another host port, e.g. `-p 127.0.0.1:8080:3000`, also set `ALLOWED_HOSTS=localhost:8080`.) The port is only published on this computer; to reach it from other devices, publish `3000:3000` and set `ALLOWED_HOSTS` to the address you use. To use Ollama running on the host: run Ollama with `OLLAMA_HOST=0.0.0.0` and add the AI with the address `http://host.docker.internal:11434` (the compose file already provides that name).
 
 To also set up local voice during the install: `./scripts/install.sh --voice` (or later: `npm run voice:setup`).
 
@@ -108,12 +93,12 @@ Friends follows the 12-Factor App methodology and is fully configurable via envi
 | Variable | Description | Default |
 |---|---|---|
 | `PORT` | HTTP port the helper listens on | `3000` |
-| `HOST` | Network interface to bind (`127.0.0.1` for local safety, `0.0.0.0` for containers/servers) | `127.0.0.1` (`0.0.0.0` in Docker) |
+| `HOST` | Network interface to bind (`127.0.0.1` for local safety, `0.0.0.0` for servers) | `127.0.0.1` |
 | `ALLOWED_HOSTS` | Comma-separated list of accepted `Host` headers, or `*` to allow all (useful behind proxies) | `localhost:3000, 127.0.0.1:3000` |
 | `FRIENDS_DATA_DIR` | Custom directory path for persistent files (chats, settings, memory, attachments) | `~/.config/friends` |
 | `LOG_LEVEL` | Log verbosity level (`debug`, `info`, `warn`, `error`) | `info` |
-| `KEYRING_BACKEND` | Storage backend for API keys (`auto`, `system`, `file`) | `auto` (`file` in Docker) |
-| `GEMINI_API_KEY` | Optional default API key fallback for automated/headless/container environments | _None_ |
+| `KEYRING_BACKEND` | Storage backend for API keys (`auto`, `system`, `file`) | `auto` |
+| `GEMINI_API_KEY` | Optional default API key fallback for automated/headless environments | _None_ |
 
 A ready-to-use template is available in `.env.example`.
 
@@ -121,7 +106,7 @@ A ready-to-use template is available in `.env.example`.
 
 ## Observability & Health Checks
 
-For production orchestration (Docker, Kubernetes, AWS ECS, GCP Cloud Run), Friends provides dedicated healthcheck probes:
+For production orchestration (Kubernetes, AWS ECS, GCP Cloud Run), Friends provides dedicated healthcheck probes:
 
 - **`GET /api/health`** (or **`GET /healthz`**)
 
@@ -166,7 +151,7 @@ npm run test:desktop   # starts the real Electron window briefly and checks the 
 FRIENDS_TEST_VOICE=1 FRIENDS_VOICE_DIR=~/.config/friends/voice npm test   # adds the real-voice test
 ```
 
-Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): checks, unit and browser tests on Node.js 22, 24 and 26 (the one the Docker image uses), a dependency audit, and a Docker build. `npm outdated` lists packages with newer versions.
+Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): checks, unit and browser tests on Node.js 22, 24 and 26 a dependency audit. `npm outdated` lists packages with newer versions.
 
 **Releasing:** bump `version` in `package.json`, add its section to `CHANGELOG.md`, then `git tag v<version> && git push origin v<version>`. The release workflow builds the `.deb`, checks it, and publishes it on GitHub with a checksum.
 
@@ -178,7 +163,7 @@ Continuous Integration runs on GitHub Actions (`.github/workflows/ci.yml`): chec
 
 Settings → **AI & privacy** has four sections:
 
-- **Your AIs**: add as many AIs as you like, local or cloud, in a few seconds. Paste an API key or a server address and Friends works out which service it is (`sk-ant-…` is Claude, `gsk_…` is Groq, `AIza…` is Gemini, `http://localhost:1234` is LM Studio), or pick one from the list: on this computer **Ollama, LM Studio, llama.cpp, Jan, vLLM, KoboldCpp, text-generation-webui, GPT4All, Docker Model Runner, SGLang** or any server by address; in the cloud **Gemini, ChatGPT, Claude, OpenRouter, Groq, Mistral, DeepSeek, Grok, Together, Fireworks, Perplexity, Cerebras, SambaNova, NVIDIA, Hugging Face, Kimi, Qwen, GLM, Cohere, DeepInfra, Nebius, Scaleway, Hyperbolic** or *any other service* with the OpenAI-style API (a company gateway, Azure's v1 endpoint, a proxy). Friends connects, lists the models (without the ones that can't chat), and you tick one or many; servers running on this computer are found by themselves. Each AI can have its own temperature, longest reply, top-p, daily limit, extra instructions, tools on or off and "can see pictures"; the arrows set the order they are tried in, the star the default, and each row says how much it was used today.
+- **Your AIs**: add as many AIs as you like, local or cloud, in a few seconds. Paste an API key or a server address and Friends works out which service it is (`sk-ant-…` is Claude, `gsk_…` is Groq, `AIza…` is Gemini, `http://localhost:1234` is LM Studio), or pick one from the list: on this computer **Ollama, LM Studio, llama.cpp, Jan, vLLM, KoboldCpp, text-generation-webui, GPT4All, SGLang** or any server by address; in the cloud **Gemini, ChatGPT, Claude, OpenRouter, Groq, Mistral, DeepSeek, Grok, Together, Fireworks, Perplexity, Cerebras, SambaNova, NVIDIA, Hugging Face, Kimi, Qwen, GLM, Cohere, DeepInfra, Nebius, Scaleway, Hyperbolic** or *any other service* with the OpenAI-style API (a company gateway, Azure's v1 endpoint, a proxy). Friends connects, lists the models (without the ones that can't chat), and you tick one or many; servers running on this computer are found by themselves. Each AI can have its own temperature, longest reply, top-p, daily limit, extra instructions, tools on or off and "can see pictures"; the arrows set the order they are tried in, the star the default, and each row says how much it was used today.
 - **Answers**: which AI answers (one, Auto, Dynamic, Fastest, local only, cloud only) and its rules, whether to try the next AI of the same kind when one fails, the AI for small jobs (follow-ups, summaries), the **language of the answers** (the one you write in, or always one of 17), how it thinks, how much of the chat it sees, and limits for every AI: the longest reply, how long to wait, how often to try again.
 - **Privacy**: Private mode; a live list of **what could leave this computer** right now; what is **hidden from cloud AIs** (keys and passwords, card numbers, email addresses, phone numbers: swapped for a placeholder before a message goes, also in what a tool reads out); whether your memories, notes and what it remembers of past chats are shared with cloud AIs; deleting old chats after a number of days; clearing chats, memories, notes and what it remembers; and the folders and file permissions.
 - **This computer**: what Friends found out by itself (see below), models that suit it, and how hard it may work: a profile (automatic, light, balanced, performance), whether to use the graphics card, and whether to save battery.
@@ -219,7 +204,6 @@ What works with a local AI: chat with streaming replies, memory and notes, file 
 - **Google tools** (Drive, Calendar, Gmail) are offered to a local AI only after you sign in with Google. PDFs can't be read by most local models.
 - **Memory and speed** — a larger context needs more (video) memory; on a small graphics card lower it, or the model runs partly on the CPU and slows down. Bigger models are slower on weak hardware; the first request loads the model, which can take a minute. For servers other than Ollama, set the context size in the server itself.
 - **Fast first reply** — when a local model becomes the one that answers, Friends loads it into memory right away (and the speech models when voice mode opens), so the first message doesn't wait for it.
-- Local voice isn't part of the Docker image (it needs Python); use the browser version or the desktop app for it. In Docker, reach a server on the host through `http://host.docker.internal:11434/v1`.
 
 ## Choosing the AI: local, cloud, or both
 
@@ -279,7 +263,7 @@ The sidebar has three places, and nothing else competes with them:
 - **Missions**: goals the assistant carries out in the background (see [Missions](#missions)).
 - **Today**: your day in one calm place (below).
 
-Everything else lives in **Settings** (a full view): *You and your companion* (Appearance, Characters, Memory, Robot), *AI* (AI & privacy), *Extras* (Connected apps, Telegram, Notes vault, Daily life) and *Your data* (Data & backups). The addresses `#today`, `#missions`, `#missions/<id>`, `#voice`, `#chat/<id>` and `#settings` still open what they say (the tray and notifications use them), and **Alt+1**, **Alt+2** and **Alt+3** switch places.
+Everything else lives in **Settings** (a full view): *You and your companion* (Appearance, Characters, Memory, Robot), *AI* (AI & privacy), *Extras* (Connected apps, Telegram, Notes vault, Daily life) and *Your data* (Data & backups). The addresses `#today`, `#missions`, `#missions/<id>`, `#voice`, `#chat/<id>` and `#settings` still open what they say (the tray and notifications use them), and **Alt+1** to **Alt+4** switch places (Talk, Missions, Today, Robot).
 
 ## Missions (Labs)
 
@@ -514,4 +498,4 @@ Root                  the whole robot, standing on the ground (optional)
   - `settings.json` — Preferences and configuration.
   - `robot/model.glb` — your own robot model, if you uploaded one (with `model.json`).
   - `brains.json` — AI model definitions.
-  - API Keys: Stored securely in your desktop keyring (GNOME Keyring / KWallet) on Linux desktop, falling back to `~/.config/friends/secrets.json` (plain text, readable only by you) or `GEMINI_API_KEY` when no keyring is available (e.g. Docker or Google AI Studio).
+  - API Keys: Stored securely in your desktop keyring (GNOME Keyring / KWallet) on Linux desktop, falling back to `~/.config/friends/secrets.json` (plain text, readable only by you) or `GEMINI_API_KEY` when no keyring is available (e.g. Google AI Studio).

@@ -36,6 +36,13 @@ describe("Local API Key and Session Authentication", () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
+  test("the token in the address doesn't sign anyone in (addresses end up in logs and in the next page's Referer)", async () => {
+    const res = await fetch(`${baseUrl}/api/settings?token=${token}`);
+    assert.strictEqual(res.status, 401);
+    const withHeader = await fetch(`${baseUrl}/api/settings`, { headers: { Authorization: `Bearer ${token}` } });
+    assert.strictEqual(withHeader.status, 200, "the header still works");
+  });
+
   test("generates a 32-byte (64 hex characters) token in dataDir with mode 0600", () => {
     assert.strictEqual(typeof token, "string");
     assert.strictEqual(token.length, 64);

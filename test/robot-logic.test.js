@@ -620,3 +620,93 @@ describe("Roaming and touch", () => {
     assert.ok([a.gestures.current?.name, ...a.gestures.queue.map((g) => g.name)].includes("celebrate"));
   });
 });
+
+describe("Reactions: the switches in Settings really switch them", () => {
+  const make = () => {
+    const a = new animator.Animator({ random: seeded() });
+    return { a, d: new director.Director(a) };
+  };
+  // setting name → [the event it covers]
+  const SWITCHES = { mission: "mission_started", reminder: "reminder", notifications: "notification", taskDone: "task_done", habitStreak: "habit_streak", timeOfDay: "time_of_day", userReturn: "user_return" };
+
+  test("each switch, off, stops its reaction, and on lets it happen", () => {
+    for (const [name, event] of Object.entries(SWITCHES)) {
+      const off = make();
+      off.d.setReactions({ [name]: false });
+      assert.strictEqual(off.d.reactEvent(event, { hour: 23 }), false, `${name} off`);
+      const on = make();
+      on.d.setReactions({ [name]: false });
+      on.d.setReactions({ [name]: true });
+      assert.notStrictEqual(on.d.reactEvent(event, { hour: 23 }), false, `${name} on`);
+    }
+  });
+
+  test("switching one off doesn't touch the others", () => {
+    const { d } = make();
+    d.setReactions({ reminder: false });
+    assert.strictEqual(d.reactEvent("reminder"), false);
+    assert.notStrictEqual(d.reactEvent("task_done"), false);
+    assert.notStrictEqual(d.reactEvent("mission_finished"), false);
+  });
+
+  test("a mission that ends stops looking busy even when its reactions are off", () => {
+    const { a, d } = make();
+    d.reactEvent("mission_started");
+    assert.strictEqual(d.mission, true);
+    d.setReactions({ mission: false });
+    d.reactEvent("mission_finished");
+    assert.strictEqual(d.mission, false);
+  });
+
+  test("garbage in the settings is ignored", () => {
+    const { d } = make();
+    assert.doesNotThrow(() => d.setReactions(null));
+    assert.doesNotThrow(() => d.setReactions("x"));
+    assert.doesNotThrow(() => d.setReactions({ nonsense: false }));
+    assert.notStrictEqual(d.reactEvent("reminder"), false);
+  });
+});
+
+describe("The robot at the whiteboard", () => {
+  const make = () => {
+    const a = new animator.Animator({ random: seeded() });
+    return { a, d: new director.Director(a) };
+  };
+
+  test("writing keeps the arm at the spot, within the board, until it stops", () => {
+    const { a, d } = make();
+    const b = a.workBoard({ x: 5, y: -9, mode: "write", duration: 1 });
+    assert.deepStrictEqual([b.x, b.y, b.mode], [1, -1, "write"], "kept inside the board");
+    const since = a.board.since;
+    a.t += 0.4;
+    d.boardWork(0.2, 0.3);
+    assert.strictEqual(a.board.since, since, "carrying on isn't a new start");
+    a.stopBoardWork();
+    assert.ok(a.board.until <= a.t + 0.35 + 1e-9);
+  });
+
+  test("wiping and pointing are told apart, anything else is writing", () => {
+    const { a } = make();
+    assert.strictEqual(a.workBoard({ mode: "erase" }).mode, "erase");
+    assert.strictEqual(a.workBoard({ mode: "point" }).mode, "point");
+    assert.strictEqual(a.workBoard({ mode: "dance" }).mode, "write");
+  });
+
+  test("the side of the board decides which arm reaches", () => {
+    const { a, d } = make();
+    d.boardSide(-1);
+    assert.strictEqual(a.workBoard({ x: 0, y: 0 }).side, -1);
+    d.boardSide(1);
+    assert.strictEqual(a.workBoard({ x: 0, y: 0 }).side, 1);
+    assert.strictEqual(a.workBoard({ x: 0, y: 0, side: -1 }).side, -1);
+  });
+
+  test("what the AI says about writing and wiping becomes arm work, not a gesture", () => {
+    const { a, d } = make();
+    d.toolEvent({ gesture: "board_write", lookAt: { x: 0.3, y: 0.1 } });
+    assert.strictEqual(a.board.mode, "write");
+    d.toolEvent({ gesture: "board_erase" });
+    assert.strictEqual(a.board.mode, "erase");
+    assert.strictEqual(a.gestures.current?.name, undefined);
+  });
+});

@@ -93,6 +93,7 @@ export class ClassicEngine {
 
   setRobot() {}
   setOnAir() {}
+  setRole() {} // read from the settings with every turn
   setStyle() {} // the listener reads the style when it needs it
   setDoc(doc) {
     this.doc = doc;

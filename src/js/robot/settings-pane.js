@@ -7,6 +7,8 @@ import { t, nf } from "../i18n.js";
 import * as D from "./design.mjs";
 import * as R from "./room.mjs";
 import "./studio/studio.js";
+import { board } from "../whiteboard/store.js";
+import { characterName } from "../characters.js";
 
 // The face tracker's messages are made in robot/facetrack.js (a module that doesn't know the interface
 // language); they're translated here, where they're shown (the text is listed in i18n/elsewhere.js)
@@ -231,4 +233,51 @@ resetButton.addEventListener("click", async () => {
   } catch (err) {
     modelStatus.textContent = err.message;
   }
+});
+
+// ---------- Overview: how it is doing, and a few things to try ----------
+const statusGl = document.getElementById("robot-status-gl");
+const statusCharacter = document.getElementById("robot-status-character");
+const statusBoard = document.getElementById("robot-status-board");
+let lastFps = "";
+
+function showStatus() {
+  if (!statusGl) return;
+  statusGl.textContent = robot.unavailable ? t("The 3D robot can't run here: {reason}", { reason: t(robot.unavailable) }) : robot.engine ? `${t("Running")}${lastFps ? ` · ${lastFps}` : ""}` : t("Starts when it is first shown");
+  statusCharacter.textContent = characterName();
+  const doc = board.doc;
+  const items = doc ? doc.pages.reduce((n, p) => n + p.items.length, 0) : 0;
+  const bits = [doc ? `${doc.title === "Main Whiteboard" ? t("Main Whiteboard") : doc.title}: ${items} ${t("items")}, ${doc.pages.length} ${t("pages")}` : t("Loading…")];
+  if (board.writing) bits.push(t("The robot is writing…"));
+  statusBoard.textContent = bits.join(" · ");
+}
+
+document.addEventListener("friends:robot-stats", (e) => {
+  lastFps = `${e.detail.fps} FPS`;
+});
+for (const ev of ["doc", "change", "reveal"]) board.on(ev, showStatus);
+document.addEventListener("friends:settings", (e) => e.detail.open && e.detail.tab === "robot" && showStatus());
+document.addEventListener("friends:robot-ready", showStatus);
+document.addEventListener("friends:robot-unavailable", showStatus);
+document.addEventListener("friends:subtab", showStatus);
+
+const openBoard = () => {
+  document.getElementById("settings-close")?.click();
+  location.hash = "#whiteboard";
+};
+document.getElementById("robot-open-board")?.addEventListener("click", openBoard);
+document.getElementById("robot-open-board-2")?.addEventListener("click", openBoard);
+document.getElementById("robot-quick-wave")?.addEventListener("click", () => robot.director.toolEvent({ gesture: "wave" }));
+document.getElementById("robot-quick-dance")?.addEventListener("click", () => robot.director.toolEvent({ gesture: "dance_groove", mood: "excited" }));
+document.getElementById("robot-quick-write")?.addEventListener("click", () => {
+  robot.director.boardSide(-1);
+  robot.director.toolEvent({ gesture: "board_write", lookAt: { x: 0.2, y: 0.3 } });
+});
+document.getElementById("robot-quick-photo")?.addEventListener("click", () => {
+  const url = robot.capturePhoto({ transparent: false });
+  if (!url) return (statusGl.textContent = t("Open this section with the robot showing to take a picture."));
+  const a = Object.assign(document.createElement("a"), { href: url, download: `${characterName() || "robot"}.png` });
+  document.body.append(a);
+  a.click();
+  a.remove();
 });

@@ -371,3 +371,218 @@
   stroke-width: 2.2;
   fill: none;
 }
+
+/* ---------- Subtitle customizations & preview ---------- */
+[data-subtitles-enabled="false"] .voice-caption {
+  display: none !important;
+}
+
+.voice-caption {
+  font-family: var(--sub-font, inherit);
+  font-size: var(--sub-size, var(--fs-xl));
+  font-weight: var(--sub-weight, 600);
+  line-height: var(--sub-line-height, 1.4);
+  transition: all var(--dur-fast);
+}
+
+[data-subtitles-placement="top_center"] .voice-caption {
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 680px;
+}
+[data-subtitles-placement="bottom_left"] .voice-caption {
+  text-align: left;
+  margin-inline-start: 5%;
+}
+[data-subtitles-placement="bottom_right"] .voice-caption {
+  text-align: right;
+  margin-inline-end: 5%;
+}
+[data-subtitles-placement="centered_floating"] .voice-caption {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 680px;
+}
+
+[data-subtitles-align="left"] .voice-caption { text-align: left; }
+[data-subtitles-align="center"] .voice-caption { text-align: center; }
+[data-subtitles-align="right"] .voice-caption { text-align: right; }
+
+.voice-caption .caption-tag.companion {
+  color: var(--sub-color-robot, #ffffff);
+}
+.voice-caption .caption-tag.user {
+  color: var(--sub-color-user, #ffecd6);
+}
+.voice-caption .caption-text {
+  color: var(--sub-color-robot, #ffffff);
+}
+
+[data-subtitles-bg="dark_pill"] .voice-caption {
+  background: rgba(0, 0, 0, var(--sub-bg-opacity, 0.65));
+  padding: 8px 16px;
+  border-radius: var(--radius-pill, 999px);
+  backdrop-filter: blur(8px);
+  display: inline-block;
+}
+[data-subtitles-bg="glass"] .voice-caption {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 8px 18px;
+  border-radius: var(--radius-lg, 16px);
+  backdrop-filter: blur(16px);
+  display: inline-block;
+}
+[data-subtitles-bg="solid_black"] .voice-caption {
+  background: #000000;
+  padding: 8px 16px;
+  border-radius: 6px;
+  display: inline-block;
+}
+[data-subtitles-bg="accent_tint"] .voice-caption {
+  background: color-mix(in srgb, var(--accent) 30%, rgba(0, 0, 0, var(--sub-bg-opacity, 0.75)));
+  padding: 8px 16px;
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  display: inline-block;
+}
+
+[data-subtitles-outline="subtle"] .voice-caption {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+[data-subtitles-outline="strong"] .voice-caption {
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+[data-subtitles-outline="glow"] .voice-caption {
+  text-shadow: 0 0 10px var(--accent, #38bdf8), 0 0 20px var(--accent, #38bdf8);
+}
+
+.voice-caption .w.pop {
+  animation: pop-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.robot-dock-caption {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  inset-inline-end: 0;
+  max-width: 240px;
+  background: rgba(18, 22, 28, 0.88);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: var(--radius-lg, 14px);
+  padding: 8px 12px;
+  font-family: var(--sub-font, inherit);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sub-color-robot, #ffffff);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: calc(var(--z-popover) + 1);
+}
+.robot-dock-caption.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.robot-dock-caption[hidden] {
+  display: none !important;
+}
+.robot-dock-caption .dock-caption-tag {
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-inline-end: 4px;
+}
+.robot-dock-caption .dock-caption-tag.robot { color: var(--accent); }
+.robot-dock-caption .dock-caption-tag.user { color: var(--sub-color-user, #f5a94a); }
+
+.subtitles-preview-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin: var(--space-3) 0 var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.subtitles-preview-box {
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-3);
+  transition: all var(--dur-fast);
+}
+.preview-caption-line {
+  margin: 3px 0;
+  transition: all var(--dur-fast);
+}
+.preview-caption-line .caption-tag {
+  font-weight: 700;
+  font-size: 0.85em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-inline-end: 6px;
+}
+.preview-caption-line .caption-tag.user {
+  background: rgba(255, 236, 214, 0.15);
+  color: var(--sub-color-user, #ffecd6);
+}
+.preview-caption-line .caption-tag.companion {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--sub-color-robot, #ffffff);
+}
+.preview-caption-line.user .caption-text {
+  color: var(--sub-color-user, #ffecd6);
+}
+.preview-caption-line.robot .caption-text {
+  color: var(--sub-color-robot, #ffffff);
+}
+.subtitles-preview-box.align-left { text-align: left; }
+.subtitles-preview-box.align-center { text-align: center; }
+.subtitles-preview-box.align-right { text-align: right; }
+.subtitles-preview-box.bg-dark_pill {
+  background: rgba(0, 0, 0, var(--sub-bg-opacity, 0.65));
+  border-radius: var(--radius-pill);
+}
+.subtitles-preview-box.bg-glass {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(12px);
+}
+.subtitles-preview-box.bg-solid_black {
+  background: #000000;
+  border-radius: 6px;
+}
+.subtitles-preview-box.bg-accent_tint {
+  background: color-mix(in srgb, var(--accent) 30%, rgba(0, 0, 0, var(--sub-bg-opacity, 0.75)));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: var(--radius-md);
+}
+.subtitles-preview-box.bg-none {
+  background: transparent;
+}
+.subtitles-preview-box.outline-subtle {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.subtitles-preview-box.outline-strong {
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+.subtitles-preview-box.outline-glow {
+  text-shadow: 0 0 10px var(--accent, #38bdf8), 0 0 20px var(--accent, #38bdf8);
+}

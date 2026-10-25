@@ -240,6 +240,11 @@ export class LiveVoice {
     this.on.onSpeaking?.(speaking);
   }
 
+  // How long the speech that is already queued will take to play, in ms (the whiteboard writes in step with it)
+  audioLead() {
+    return Math.max(0, (this.playEnd - this.ctx.currentTime) * 1000);
+  }
+
   // Its voice, or the room's echo of it, may still be in the mic
   aiAudible() {
     return this.ctx.currentTime < this.playEnd + this.tail();
@@ -247,7 +252,7 @@ export class LiveVoice {
 
   // Events from the helper → handlers: onTranscript(role, text), onInterrupted(),
   // onTurnComplete(), onChat({id, title}), onActivity(text), onDraft(draft),
-  // onConfirm({summary, details}) → Promise<boolean>, onRobot({mood} | {gesture}),
+  // onConfirm({summary, details}) → Promise<boolean>, onRobot({mood} | {gesture} | {lookAt}…), onWhiteboard({type, …}),
   // onReconnecting(), onResumed(), onError(message), onClosed()
   handle(event) {
     switch (event.type) {
@@ -280,7 +285,11 @@ export class LiveVoice {
         break;
       case "robot":
         if (this.dropAudio) return; // part of the answer you cut off
-        this.later("robot", () => this.on.onRobot?.({ mood: event.mood, gesture: event.gesture }));
+        this.later("robot", () => this.on.onRobot?.({ mood: event.mood, gesture: event.gesture, useProp: event.useProp, goTo: event.goTo, lookAt: event.lookAt }));
+        break;
+      case "whiteboard":
+        // A pointing cue waits for the speech before it, like a robot move; drawing itself is on the board at once
+        this.later("whiteboard", () => this.on.onWhiteboard?.(event));
         break;
       case "confirm":
         Promise.resolve(this.on.onConfirm?.(event)).then((allow) => this.send({ type: "confirm", id: event.id, allow: allow === true }));

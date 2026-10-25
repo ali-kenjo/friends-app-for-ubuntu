@@ -6,7 +6,7 @@ import { api } from "./api.js";
 import { t, tp } from "./i18n.js";
 import { confirmDialog } from "./dialogs.js";
 import { skeleton } from "./ui.js";
-import { updateSettings, onSettings } from "./store.js";
+import { getSettings, updateSettings, onSettings } from "./store.js";
 
 const grid = document.getElementById("app-grid");
 const mcpList = document.getElementById("mcp-list");
@@ -385,7 +385,13 @@ async function renderTelegramPairedUsers() {
       li.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg-subtle, rgba(0,0,0,0.03)); border-radius: 6px; font-size: 0.9em;";
 
       const info = document.createElement("div");
-      info.innerHTML = `<strong>${u.firstName || u.username || "User"}</strong> ${u.username ? `(@${u.username})` : ""} <span style="font-family: monospace; font-size: 0.85em; opacity: 0.7;">ID: ${u.id}</span>`;
+      // What Telegram says a person is called is theirs to choose: it is text here, never markup
+      const nameEl = document.createElement("strong");
+      nameEl.textContent = u.firstName || u.username || "User";
+      const idEl = document.createElement("span");
+      idEl.style.cssText = "font-family: monospace; font-size: 0.85em; opacity: 0.7;";
+      idEl.textContent = `ID: ${u.id}`;
+      info.append(nameEl, ` ${u.username ? `(@${u.username})` : ""} `, idEl);
 
       const actions = document.createElement("div");
       actions.style.cssText = "display: flex; align-items: center; gap: 8px;";
@@ -483,7 +489,12 @@ function renderTelegramGroups(s) {
 
     const header = document.createElement("div");
     header.style.cssText = "display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;";
-    header.innerHTML = `<strong>${g.title || t("Group")}</strong> <span style="font-family: monospace; font-size: 0.85em; opacity: 0.7;">ID: ${g.id}</span>`;
+    const titleEl = document.createElement("strong");
+    titleEl.textContent = g.title || t("Group");
+    const groupId = document.createElement("span");
+    groupId.style.cssText = "font-family: monospace; font-size: 0.85em; opacity: 0.7;";
+    groupId.textContent = `ID: ${g.id}`;
+    header.append(titleEl, " ", groupId);
 
     const label = document.createElement("label");
     label.className = "life-toggle";
@@ -609,12 +620,20 @@ async function renderNotificationLog() {
       logContainer.innerHTML = `<span class="hint">${t("No delivery logs yet.")}</span>`;
       return;
     }
-    logContainer.innerHTML = list.slice(0, 30).map((e) => {
-      const time = new Date(e.timestamp).toLocaleTimeString();
-      return `<div style="padding: 3px 0; border-bottom: 1px dashed rgba(128,128,128,0.2);">
-        <span style="opacity: 0.6;">[${time}]</span> <strong>${e.event}</strong>: ${e.title} → <em>${e.channel}</em> (${e.success ? "ok" : "failed"})
-      </div>`;
-    }).join("");
+    // The titles come from messages and posts other people wrote: text only
+    logContainer.replaceChildren(...list.slice(0, 30).map((e) => {
+      const row = document.createElement("div");
+      row.style.cssText = "padding: 3px 0; border-bottom: 1px dashed rgba(128,128,128,0.2);";
+      const when = document.createElement("span");
+      when.style.opacity = "0.6";
+      when.textContent = `[${new Date(e.timestamp).toLocaleTimeString()}]`;
+      const event = document.createElement("strong");
+      event.textContent = String(e.event ?? "");
+      const channel = document.createElement("em");
+      channel.textContent = String(e.channel ?? "");
+      row.append(when, " ", event, `: ${e.title ?? ""} → `, channel, ` (${e.success ? "ok" : "failed"})`);
+      return row;
+    }));
   } catch (err) {
     console.debug("Failed to read notification log:", err);
   }
@@ -624,6 +643,246 @@ document.getElementById("notif-refresh-log-btn")?.addEventListener("click", rend
 document.getElementById("notif-test-btn")?.addEventListener("click", async () => {
   await api.notifications.sendTest({ title: "Test Notification", body: "Friends notification router test alert." });
   setTimeout(renderNotificationLog, 500);
+});
+
+// ==================== Reddit Companion & Community Watchers ====================
+async function refreshRedditStatus() {
+  const pill = document.getElementById("reddit-status-pill");
+  if (!pill) return;
+  try {
+    const st = await api.reddit.status();
+    if (st.running) {
+      pill.textContent = st.username ? `@${st.username}` : t("Active");
+      pill.className = "app-status on";
+    } else if (st.enabled && st.lastError) {
+      pill.textContent = t("Error");
+      pill.className = "app-status warn";
+      pill.title = st.lastError;
+    } else if (st.enabled) {
+      pill.textContent = t("Starting…");
+      pill.className = "app-status warn";
+    } else {
+      pill.textContent = t("Off");
+      pill.className = "app-status off";
+    }
+  } catch {
+    pill.textContent = t("Off");
+    pill.className = "app-status off";
+  }
+}
+
+async function renderRedditUsers() {
+  const container = document.getElementById("reddit-users-list");
+  const emptyHint = document.getElementById("reddit-no-users");
+  if (!container) return;
+
+  try {
+    const res = await api.reddit.getUsers();
+    const users = Array.isArray(res) ? res : (res?.users || []);
+
+    if (!users.length) {
+      container.innerHTML = "";
+      if (emptyHint) emptyHint.hidden = false;
+      return;
+    }
+
+    if (emptyHint) emptyHint.hidden = true;
+    container.innerHTML = "";
+
+    for (const u of users) {
+      const li = document.createElement("li");
+      li.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg-subtle, rgba(0,0,0,0.03)); border-radius: 6px; font-size: 0.9em;";
+
+      const info = document.createElement("div");
+      const redditName = document.createElement("strong");
+      redditName.textContent = `u/${u.username}`;
+      info.append(redditName);
+
+      const actions = document.createElement("div");
+      actions.style.cssText = "display: flex; align-items: center; gap: 8px;";
+
+      const select = document.createElement("select");
+      select.className = "field";
+      select.style.padding = "2px 6px";
+      select.innerHTML = `
+        <option value="admin" ${u.role === "admin" ? "selected" : ""}>${t("Admin (Full)")}</option>
+        <option value="chat" ${u.role === "chat" ? "selected" : ""}>${t("Chat only")}</option>
+        <option value="notify_only" ${u.role === "notify_only" ? "selected" : ""}>${t("Alerts only")}</option>
+      `;
+      select.addEventListener("change", async () => {
+        await api.reddit.addUser(u.username, select.value);
+        renderRedditUsers();
+      });
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn small";
+      removeBtn.textContent = t("Remove");
+      removeBtn.addEventListener("click", async () => {
+        await api.reddit.removeUser(u.username);
+        renderRedditUsers();
+      });
+
+      actions.append(select, removeBtn);
+      li.append(info, actions);
+      container.append(li);
+    }
+  } catch (err) {
+    console.debug("Failed to render Reddit users:", err);
+  }
+}
+
+async function renderRedditWatchers() {
+  const container = document.getElementById("reddit-watchers-list");
+  const emptyHint = document.getElementById("reddit-no-watchers");
+  if (!container) return;
+
+  try {
+    const s = getSettings();
+    const watchers = s?.reddit?.watchers || [];
+
+    if (!watchers.length) {
+      container.innerHTML = "";
+      if (emptyHint) emptyHint.hidden = false;
+      return;
+    }
+
+    if (emptyHint) emptyHint.hidden = true;
+    container.innerHTML = "";
+
+    for (const w of watchers) {
+      const li = document.createElement("li");
+      li.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--bg-subtle, rgba(0,0,0,0.03)); border-radius: 6px; font-size: 0.9em;";
+
+      const info = document.createElement("div");
+      const sub = document.createElement("strong");
+      sub.textContent = `r/${w.subreddit}`;
+      info.append(sub, " ");
+      for (const k of w.keywords || []) {
+        const badge = document.createElement("span");
+        badge.style.cssText = "display:inline-block; padding: 1px 6px; background: var(--surface-2, rgba(0,0,0,0.07)); border-radius: 4px; font-size: 0.85em; margin-left: 4px;";
+        badge.textContent = String(k);
+        info.append(badge);
+      }
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn small";
+      removeBtn.textContent = t("Remove");
+      removeBtn.addEventListener("click", async () => {
+        await api.reddit.removeWatcher(w.id);
+        renderRedditWatchers();
+      });
+
+      li.append(info, removeBtn);
+      container.append(li);
+    }
+  } catch (err) {
+    console.debug("Failed to render Reddit watchers:", err);
+  }
+}
+
+// Bind Reddit Settings Form Controls
+document.getElementById("reddit-cred-save")?.addEventListener("click", async () => {
+  const feedback = document.getElementById("reddit-test-status");
+  const clientId = document.getElementById("reddit-client-id-input")?.value?.trim() || "";
+  const username = document.getElementById("reddit-username-input")?.value?.trim() || "";
+  const clientSecret = document.getElementById("reddit-client-secret-input")?.value?.trim() || "";
+  const refreshToken = document.getElementById("reddit-refresh-token-input")?.value?.trim() || "";
+
+  if (feedback) {
+    feedback.textContent = "";
+    feedback.className = "test-feedback";
+  }
+
+  try {
+    await api.reddit.saveCredentials({ clientId, username, clientSecret, refreshToken });
+    const secInput = document.getElementById("reddit-client-secret-input");
+    const tokInput = document.getElementById("reddit-refresh-token-input");
+    if (secInput) secInput.value = "";
+    if (tokInput) tokInput.value = "";
+
+    if (feedback) {
+      feedback.textContent = t("Credentials saved securely.");
+      feedback.className = "test-feedback ok";
+    }
+    await refreshRedditStatus();
+  } catch (err) {
+    if (feedback) {
+      feedback.textContent = err.message || t("Failed to save credentials.");
+      feedback.className = "test-feedback error";
+    }
+  }
+});
+
+document.getElementById("reddit-test-btn")?.addEventListener("click", async () => {
+  const feedback = document.getElementById("reddit-test-status");
+  if (feedback) {
+    feedback.textContent = t("Testing Reddit connection…");
+    feedback.className = "test-feedback";
+  }
+  try {
+    const res = await api.reddit.test();
+    if (res.ok) {
+      if (feedback) {
+        feedback.textContent = t("Connected to Reddit as @{name}!", { name: res.username || "bot" });
+        feedback.className = "test-feedback ok";
+      }
+    } else {
+      if (feedback) {
+        feedback.textContent = res.error || t("Failed to connect.");
+        feedback.className = "test-feedback error";
+      }
+    }
+    await refreshRedditStatus();
+  } catch (err) {
+    if (feedback) {
+      feedback.textContent = err.message || t("Failed to connect.");
+      feedback.className = "test-feedback error";
+    }
+  }
+});
+
+document.getElementById("reddit-add-user-btn")?.addEventListener("click", async () => {
+  const userInput = document.getElementById("reddit-new-user-input");
+  const roleSelect = document.getElementById("reddit-new-user-role");
+  const username = userInput?.value?.trim().replace(/^u\//, "");
+  const role = roleSelect?.value || "chat";
+  if (!username) return;
+
+  try {
+    await api.reddit.addUser(username, role);
+    if (userInput) userInput.value = "";
+    await renderRedditUsers();
+  } catch (err) {
+    console.warn("Failed to add Reddit user:", err);
+  }
+});
+
+document.getElementById("reddit-add-watcher-btn")?.addEventListener("click", async () => {
+  const subInput = document.getElementById("reddit-watcher-sub-input");
+  const kwInput = document.getElementById("reddit-watcher-kw-input");
+  const subreddit = subInput?.value?.trim().replace(/^r\//, "");
+  if (!subreddit) return;
+
+  const keywords = (kwInput?.value || "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  try {
+    await api.reddit.saveWatcher({
+      id: `w_${Date.now()}`,
+      subreddit,
+      keywords,
+      enabled: true,
+    });
+    if (subInput) subInput.value = "";
+    if (kwInput) kwInput.value = "";
+    await renderRedditWatchers();
+  } catch (err) {
+    console.warn("Failed to save Reddit watcher:", err);
+  }
 });
 
 onSettings((s) => {
@@ -638,11 +897,14 @@ onSettings((s) => {
   renderTelegram071Notice(s);
   renderTelegramGroups(s);
   renderNotificationMatrix();
+  refreshRedditStatus();
+  renderRedditWatchers();
 });
 
 // ----- Drawing it all -----
 async function refresh() {
   refreshTelegramStatus();
+  refreshRedditStatus();
   try {
     const { apps, mcp } = await api.connectors.list();
     grid.replaceChildren(...apps.map(card));
@@ -658,6 +920,11 @@ document.addEventListener("friends:settings", (e) => {
     if (e.detail.tab === "telegram") {
       refreshTelegramStatus();
       renderTelegramPairedUsers();
+    }
+    if (e.detail.tab === "reddit") {
+      refreshRedditStatus();
+      renderRedditUsers();
+      renderRedditWatchers();
     }
     if (e.detail.tab === "notifications") {
       renderNotificationMatrix();

@@ -69,6 +69,11 @@
           <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="12" rx="4"/><path d="M9 21h6"/><path d="M12 17v4"/><line x1="9.5" y1="10" x2="9.5" y2="12"/><line x1="14.5" y1="10" x2="14.5" y2="12"/></svg>
           <span>Talk</span>
         </button>
+        <button type="button" class="nav-item nav-robot" id="nav-whiteboard" data-view="whiteboard" title="Your robot, and the whiteboard, sources and notes you work on together">
+          <svg class="face-mini nav-robot-face" viewBox="0 0 24 24" aria-hidden="true"><rect class="face-shell" x="1" y="3" width="22" height="18" rx="7"/><rect class="face-screen" x="3.6" y="5.6" width="16.8" height="12.8" rx="5"/><rect class="face-eye" x="7.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><rect class="face-eye" x="13.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><path class="face-mouth" d="M10.2 15.4q1.8 1.2 3.6 0"/></svg>
+          <span>Robot</span>
+          <span class="nav-live" id="nav-robot-state" aria-hidden="true"></span>
+        </button>
         <button type="button" class="nav-item" id="nav-missions" data-view="missions" title="Give it a goal and it gets done in the background">
           <svg viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 5h11l-2 3.5L16 12H5"/></svg>
           <span>Missions</span>
@@ -78,10 +83,6 @@
           <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/></svg>
           <span>Today</span>
           <span class="nav-badge" id="today-badge" hidden></span>
-        </button>
-        <button type="button" class="nav-item" id="nav-whiteboard" data-view="whiteboard" title="Whiteboard for drawing, notes, math and diagrams">
-          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M7 20h10"/><path d="M12 17v3"/><path d="M7 13l2-2 3 3 5-5"/></svg>
-          <span>Whiteboard</span>
         </button>
       </nav>
 
@@ -127,10 +128,18 @@
           <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
         </button>
         <!-- Who you're talking to (src/js/characters.js) -->
-        <div class="character-switch" id="character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
+        <div class="topbar-who" id="topbar-who">
+          <div class="character-switch" id="character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
+          <!-- What the robot is to you right now: a teacher, a coach… (src/js/whiteboard/role-pill.js) -->
+          <button type="button" class="role-pill" id="role-pill" aria-haspopup="dialog" aria-expanded="false" title="What the robot is to you right now"></button>
+        </div>
         <!-- Find in this chat (Ctrl+F) -->
         <button class="icon-btn find-open" id="find-open" title="Find in this chat (Ctrl+F)">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/></svg>
+        </button>
+        <!-- Toggle Whiteboard alongside Chat & Robot -->
+        <button class="icon-btn" id="home-wb-toggle-btn" title="Show or hide the board next to the chat" aria-label="Show or hide the board next to the chat">
+          <svg viewBox="0 0 24 24"><path d="M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
         </button>
       </header>
       <div class="find-bar" id="find-bar" role="search" hidden>
@@ -154,14 +163,21 @@
 
       <!-- The robot next to your chats (src/js/robot/dock.js) -->
       <div class="robot-dock" id="robot-dock" hidden>
+        <div class="robot-dock-caption" id="robot-dock-caption" hidden></div>
         <div class="robot-dock-stage" id="robot-dock-stage" role="button" tabindex="0" aria-label="The AI's robot: click to say hi" title="Say hi"></div>
         <button type="button" class="robot-dock-toggle" id="robot-dock-toggle" aria-label="Fold the robot away" title="Fold the robot away">
           <svg viewBox="0 0 24 24"><polyline points="7 10 12 15 17 10"/></svg>
+        </button>
+        <button type="button" class="robot-dock-wb-btn" id="robot-dock-wb-btn" aria-label="Open the board next to the robot" title="Open the board next to the robot">
+          <svg viewBox="0 0 24 24"><path d="M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
         </button>
       </div>
       <button type="button" class="robot-dock-open" id="robot-dock-open" aria-label="Show the robot" title="Show the robot" hidden>
         <svg class="face-mini" viewBox="0 0 24 24" aria-hidden="true"><rect class="face-shell" x="1" y="3" width="22" height="18" rx="7"/><rect class="face-screen" x="3.6" y="5.6" width="16.8" height="12.8" rx="5"/><rect class="face-eye" x="7.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><rect class="face-eye" x="13.6" y="8.6" width="2.8" height="5.4" rx="1.4"/><path class="face-mouth" d="M10.2 15.4q1.8 1.2 3.6 0"/></svg>
       </button>
+
+      <!-- The whiteboard next to your chat: a layer its window floats in (src/js/whiteboard/panel.js) -->
+      <div class="wb-dock-layer" id="whiteboard-dock-panel"></div>
 
       <div class="center">
         <button type="button" class="jump-latest" id="jump-latest" title="Jump to the latest message" hidden>
@@ -518,7 +534,7 @@
       </div>
     </section>
 
-    <!-- Whiteboard View (src/js/whiteboard/ui.js) -->
+    <!-- The robot page: the robot and the whiteboard, together (src/js/whiteboard/ui.js builds everything in it) -->
     <section class="view" id="view-whiteboard" data-view="whiteboard" role="main" aria-labelledby="whiteboard-title-text" hidden>
       <header class="topbar view-bar">
         <button type="button" class="sidebar-show icon-btn" id="whiteboard-sidebar-show" title="Show sidebar" aria-label="Show sidebar">
@@ -526,167 +542,12 @@
         </button>
         <div class="view-titles">
           <h1 class="view-title" id="whiteboard-title-text" tabindex="-1">Whiteboard</h1>
-          <p class="view-sub" id="whiteboard-subtitle-text">Main Whiteboard</p>
+          <p class="view-sub" id="whiteboard-subtitle-text"></p>
         </div>
-        <div class="view-actions">
-          <button type="button" class="btn small" id="wb-btn-boards" title="Switch or create whiteboard">Boards</button>
-          <button type="button" class="btn small" id="wb-btn-history" title="Revision history snapshots">History</button>
-          <button type="button" class="btn small" id="wb-btn-export" title="Export board as PNG, SVG, PDF or Markdown" aria-haspopup="true">Export ▾</button>
-          <div class="wb-dropdown-menu" id="wb-export-menu" hidden>
-            <button type="button" class="wb-menu-item" id="wb-export-png">Export PNG image</button>
-            <button type="button" class="wb-menu-item" id="wb-export-svg">Export vector SVG</button>
-            <button type="button" class="wb-menu-item" id="wb-export-pdf">Print / Save as PDF</button>
-            <button type="button" class="wb-menu-item" id="wb-export-md">Save to Notes Vault (.md)</button>
-          </div>
-          <button type="button" class="icon-btn small" id="wb-btn-dock" title="Dock in chat view">
-            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="15" y1="4" x2="15" y2="20"/></svg>
-          </button>
-          <button type="button" class="icon-btn small" id="wb-btn-popout" title="Pop out into separate window">
-            <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </button>
-        </div>
+        <div class="view-actions wb-actions" id="wb-actions"></div>
       </header>
-
-      <div class="whiteboard-layout">
-        <!-- Floating Canvas Toolbar -->
-        <div class="whiteboard-toolbar" id="whiteboard-toolbar" role="toolbar" aria-label="Whiteboard tools">
-          <div class="wb-tool-group">
-            <button type="button" class="wb-btn" data-wb-tool="select" title="Select and move items (V)">
-              <svg viewBox="0 0 24 24"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="pan" title="Pan canvas (Space + Drag / H)">
-              <svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v4"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-16 0v-2"/></svg>
-            </button>
-          </div>
-
-          <div class="wb-divider"></div>
-
-          <div class="wb-tool-group">
-            <button type="button" class="wb-btn active" data-wb-tool="pen" title="Drawing pen / marker (P)">
-              <svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="11" cy="11" r="2"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="highlighter" title="Translucent highlighter (H)">
-              <svg viewBox="0 0 24 24"><path d="M9 11l-6 6v3h3l6-6"/><path d="M22 7l-5-5-10 10 5 5 10-10z"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="eraser" title="Eraser (E)">
-              <svg viewBox="0 0 24 24"><path d="M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L20 20Z"/><line x1="6" y1="13" x2="15" y2="22"/></svg>
-            </button>
-          </div>
-
-          <div class="wb-divider"></div>
-
-          <!-- Color swatches -->
-          <div class="wb-tool-group" role="radiogroup" aria-label="Stroke color">
-            <button type="button" class="wb-color-swatch active" data-wb-color="#1e293b" style="background:#1e293b" title="Black/Slate" aria-label="Black"></button>
-            <button type="button" class="wb-color-swatch" data-wb-color="#2563eb" style="background:#2563eb" title="Blue" aria-label="Blue"></button>
-            <button type="button" class="wb-color-swatch" data-wb-color="#dc2626" style="background:#dc2626" title="Red" aria-label="Red"></button>
-            <button type="button" class="wb-color-swatch" data-wb-color="#16a34a" style="background:#16a34a" title="Green" aria-label="Green"></button>
-            <button type="button" class="wb-color-swatch" data-wb-color="#d97706" style="background:#d97706" title="Amber" aria-label="Amber"></button>
-            <button type="button" class="wb-color-swatch" data-wb-color="#9333ea" style="background:#9333ea" title="Purple" aria-label="Purple"></button>
-          </div>
-
-          <div class="wb-divider"></div>
-
-          <!-- Size buttons -->
-          <div class="wb-tool-group">
-            <button type="button" class="wb-size-btn wb-size-thin" data-wb-size="2" title="Thin stroke"><span class="wb-size-dot"></span></button>
-            <button type="button" class="wb-size-btn wb-size-medium active" data-wb-size="4" title="Normal stroke"><span class="wb-size-dot"></span></button>
-            <button type="button" class="wb-size-btn wb-size-thick" data-wb-size="8" title="Thick stroke"><span class="wb-size-dot"></span></button>
-          </div>
-
-          <div class="wb-divider"></div>
-
-          <!-- Rich Items -->
-          <div class="wb-tool-group">
-            <button type="button" class="wb-btn" data-wb-shape="rect" title="Rectangle (R)">
-              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-shape="circle" title="Circle (O)">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="text" title="Text / Formula (T)">
-              <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="sticky" title="Sticky Note (N)">
-              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="checklist" title="Checklist (K)">
-              <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="table" title="Table">
-              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="diagram" title="Mermaid Diagram">
-              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="8.5" y="14" width="7" height="7"/><path d="M6.5 10v2a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2"/></svg>
-            </button>
-            <button type="button" class="wb-btn" data-wb-tool="laser" title="Laser pointer (L)">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
-            </button>
-          </div>
-
-          <div class="wb-divider"></div>
-
-          <!-- Actions -->
-          <div class="wb-tool-group">
-            <button type="button" class="wb-btn" id="wb-tool-undo" title="Undo (Ctrl+Z)">
-              <svg viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-            </button>
-            <button type="button" class="wb-btn" id="wb-tool-redo" title="Redo (Ctrl+Y)">
-              <svg viewBox="0 0 24 24"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg>
-            </button>
-            <button type="button" class="wb-btn" id="wb-tool-grid" title="Switch grid pattern">
-              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1"/><circle cx="16" cy="8" r="1"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/></svg>
-            </button>
-            <button type="button" class="wb-btn" id="wb-tool-clear" title="Clear page">
-              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Canvas Viewport -->
-        <div class="whiteboard-viewport" id="whiteboard-viewport-container"></div>
-
-        <!-- Zoom Floating Widget -->
-        <div class="whiteboard-zoom-widget">
-          <button type="button" class="wb-btn small" id="wb-zoom-out" title="Zoom out">-</button>
-          <span id="wb-zoom-level">100%</span>
-          <button type="button" class="wb-btn small" id="wb-zoom-in" title="Zoom in">+</button>
-          <button type="button" class="wb-btn small" id="wb-zoom-reset" title="Reset zoom">1:1</button>
-          <button type="button" class="wb-btn small" id="wb-zoom-fit" title="Fit to content">Fit</button>
-        </div>
-
-        <!-- Pages Strip -->
-        <footer class="whiteboard-pages-bar">
-          <div class="wb-pages-list" id="wb-pages-list"></div>
-          <button type="button" class="btn small" id="wb-add-page-btn">+ Page</button>
-        </footer>
-      </div>
+      <div class="rw" id="wb-workspace"></div>
     </section>
-
-    <!-- Boards Switcher Modal -->
-    <div class="modal-backdrop" id="wb-boards-modal" data-modal hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wb-boards-title">
-        <header class="modal-head">
-          <h2 id="wb-boards-title">Whiteboards</h2>
-          <div class="modal-actions">
-            <button type="button" class="btn small btn-primary" id="wb-boards-new">New board</button>
-            <button type="button" class="icon-btn small" id="wb-boards-close" aria-label="Close">✕</button>
-          </div>
-        </header>
-        <div class="wb-modal-body" id="wb-boards-list"></div>
-      </div>
-    </div>
-
-    <!-- Snapshots History Modal -->
-    <div class="modal-backdrop" id="wb-history-modal" data-modal hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wb-history-title">
-        <header class="modal-head">
-          <h2 id="wb-history-title">Revision History</h2>
-          <button type="button" class="icon-btn small" id="wb-history-close" aria-label="Close">✕</button>
-        </header>
-        <div class="wb-modal-body" id="wb-history-list"></div>
-      </div>
-    </div>
 
   </div>
 
@@ -719,9 +580,9 @@
             <svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg>
             <span>Robot</span>
           </button>
-          <button class="tab" data-tab="whiteboard" role="tab" id="tab-whiteboard" aria-controls="pane-whiteboard" aria-selected="false" tabindex="-1">
-            <svg viewBox="0 0 24 24"><path d="M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 17l-3 4"/><path d="M17 17l3 4"/></svg>
-            <span>Whiteboard</span>
+          <button class="tab" data-tab="subtitles" role="tab" id="tab-subtitles" aria-controls="pane-subtitles" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 15h3M14 15h3M7 11h10"/></svg>
+            <span>Subtitles</span>
           </button>
           <div class="nav-group" role="presentation">AI</div>
           <button class="tab" data-tab="ai-control" role="tab" id="tab-ai-control" aria-controls="pane-ai-control" aria-selected="false" tabindex="-1">
@@ -745,6 +606,11 @@
           <button class="tab" data-tab="telegram" role="tab" id="tab-telegram" aria-controls="pane-telegram" aria-selected="false" tabindex="-1">
             <svg viewBox="0 0 24 24"><path d="M21 4 3 11l6 2 2 6 3-4 5 3z"/><path d="M9 13l8-6"/></svg>
             <span>Telegram</span>
+            <span class="badge-labs">Labs</span>
+          </button>
+          <button class="tab" data-tab="reddit" role="tab" id="tab-reddit" aria-controls="pane-reddit" aria-selected="false" tabindex="-1">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="9" cy="11" r="1"/><circle cx="15" cy="11" r="1"/><path d="M9.5 15c.8.6 1.7.9 2.5.9s1.7-.3 2.5-.9"/><path d="M14 6l3-2M17 4a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
+            <span>Reddit</span>
             <span class="badge-labs">Labs</span>
           </button>
           <button class="tab" data-tab="notifications" role="tab" id="tab-notifications" aria-controls="pane-notifications" aria-selected="false" tabindex="-1">
@@ -826,6 +692,36 @@
               <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
               <span class="choice-title">Classic</span>
               <span class="row-desc">Quiet warm stone and crisp paper</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="midnight" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Midnight OLED</span>
+              <span class="row-desc">Deep inky black, starfields and electric cyan</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="nordic" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Nordic Frost</span>
+              <span class="row-desc">Crisp arctic slate, snow and aurora teal</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="matcha" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Matcha Zen</span>
+              <span class="row-desc">Calming Japanese green tea, bamboo and stone</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="espresso" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Espresso Roast</span>
+              <span class="row-desc">Dark coffee beans, roasted caramel and warm cream</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="cyberpunk" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Neon Synthwave</span>
+              <span class="row-desc">Retro neon violet, dark synth and glowing magenta</span>
+            </button>
+            <button type="button" class="pack-choice" data-pack="sunset" role="radio" aria-checked="false">
+              <span class="pack-dots" aria-hidden="true"><span class="pack-dot"></span><span class="pack-dot"></span><span class="pack-dot"></span></span>
+              <span class="choice-title">Sunset Twilight</span>
+              <span class="row-desc">Golden hour mauve, twilight shadows and radiant coral</span>
             </button>
           </div>
           <div class="row-label" id="appearance-label">Colors</div>
@@ -1939,7 +1835,7 @@
         <!-- Robot: the AI's 3D body (src/js/robot/) -->
         <section class="pane" data-pane="robot" id="pane-robot" role="tabpanel" aria-labelledby="tab-robot">
           <h3>Robot</h3>
-          <p class="hint">A small robot that is the AI's body: pick "Robot" in voice mode's style bar, and it also sits next to your text chats.</p>
+          <p class="hint">The robot is the AI's body and your workspace. On the Robot page it floats over a whiteboard you share, with sources it learns from and a role you choose (a teacher, a coach, a co-host…). It also greets you on Home, sits next to your text chats, and in voice mode (pick "Robot" in the style bar) you can move it anywhere.</p>
 
           <div class="robot-preview-wrap">
             <div class="robot-preview" id="robot-preview" role="img" aria-label="Live preview of the robot"></div>
@@ -1949,36 +1845,45 @@
                 <span>Try a mood</span>
                 <select class="field" id="robot-try-mood" aria-label="Try a mood">
                   <option value="">Choose…</option>
-                  <option value="neutral">Neutral</option><option value="happy">Happy</option><option value="excited">Excited</option>
-                  <option value="laughing">Laughing</option><option value="curious">Curious</option><option value="thinking">Thinking</option>
-                  <option value="focused">Focused</option><option value="surprised">Surprised</option><option value="confused">Confused</option>
-                  <option value="skeptical">Skeptical</option><option value="sad">Sad</option><option value="affectionate">Affectionate</option>
-                  <option value="proud">Proud</option><option value="sleepy">Sleepy</option>
+                  <option value="neutral">Neutral</option><option value="happy">Happy</option><option value="excited">Excited</option><option value="laughing">Laughing</option><option value="curious">Curious</option><option value="thinking">Thinking</option><option value="focused">Focused</option><option value="surprised">Surprised</option><option value="confused">Confused</option><option value="skeptical">Skeptical</option><option value="sad">Sad</option><option value="affectionate">Affectionate</option><option value="proud">Proud</option><option value="sleepy">Sleepy</option><option value="love">In love</option><option value="embarrassed">Embarrassed</option><option value="mischievous">Mischievous</option><option value="bored">Bored</option><option value="determined">Determined</option><option value="dreamy">Dreamy</option><option value="grumpy">Grumpy</option><option value="startled">Startled</option><option value="relieved">Relieved</option><option value="smug">Smug</option><option value="worried">Worried</option><option value="laughing_hard">Laughing hard</option><option value="winking">Winking</option><option value="inspired">Inspired</option><option value="playful">Playful</option><option value="shy_smile">Shy smile</option>
                 </select>
               </label>
               <label class="robot-try-field">
                 <span>Try a move</span>
                 <select class="field" id="robot-try-gesture" aria-label="Try a move">
                   <option value="">Choose…</option>
-                  <option value="wave">Wave</option><option value="nod">Nod</option><option value="head_shake">Head shake</option>
-                  <option value="tilt">Tilt</option><option value="shrug">Shrug</option><option value="bounce">Bounce</option>
-                  <option value="celebrate">Celebrate spin</option><option value="look_around">Look around</option><option value="lean_in">Lean in</option>
-                  <option value="point_left">Point left</option><option value="point_right">Point right</option>
-                  <option value="double_take">Double-take</option><option value="shy">Shy</option>
+                  <optgroup label="Greeting"><option value="wave">Wave</option><option value="big_wave">Big wave</option><option value="royal_wave">Royal wave</option><option value="bow">Bow</option><option value="salute">Salute</option><option value="high_five">High five</option><option value="hug">Hug</option><option value="blow_kiss">Blow a kiss</option><option value="wink">Wink</option><option value="peek">Peek</option><option value="hide">Hide</option></optgroup>
+                  <optgroup label="Reacting"><option value="nod">Nod</option><option value="head_shake">Head shake</option><option value="tilt">Tilt</option><option value="shrug">Shrug</option><option value="big_shrug">Big shrug</option><option value="double_take">Double-take</option><option value="facepalm">Facepalm</option><option value="shy">Shy</option><option value="scratch_head">Scratch head</option><option value="chin_on_hand">Chin on hand</option><option value="dizzy">Dizzy</option><option value="shiver">Shiver</option><option value="sneeze">Sneeze</option><option value="hiccup">Hiccup</option><option value="yawn">Yawn</option><option value="stretch">Stretch</option><option value="whistle">Whistle</option></optgroup>
+                  <optgroup label="Celebrating"><option value="celebrate">Celebrate spin</option><option value="bounce">Bounce</option><option value="clap">Clap</option><option value="thumbs_up">Thumbs up</option><option value="fist_pump">Fist pump</option><option value="flex">Flex</option><option value="drum_roll">Drum roll</option><option value="dance_groove">Dance: groove</option><option value="dance_spin">Dance: spin</option><option value="dance_robot">Dance: robot</option></optgroup>
+                  <optgroup label="Looking and pointing"><option value="look_around">Look around</option><option value="lean_in">Lean in</option><option value="point_left">Point left</option><option value="point_right">Point right</option></optgroup>
+                  <optgroup label="At the whiteboard"><option value="board_write">Write on the board</option><option value="board_erase">Wipe the board</option></optgroup>
                 </select>
               </label>
             </div>
           </div>
 
+          <div class="subtabs" id="robot-subtabs" role="tablist" aria-label="Robot sections">
+            <button type="button" class="subtab active" role="tab" id="subtab-rb-overview" data-subtab="rb-overview" aria-controls="subpane-rb-overview" aria-selected="true">Overview</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-roles" data-subtab="rb-roles" aria-controls="subpane-rb-roles" aria-selected="false" tabindex="-1">Roles</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-board" data-subtab="rb-board" aria-controls="subpane-rb-board" aria-selected="false" tabindex="-1">Whiteboard</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-behaviour" data-subtab="rb-behaviour" aria-controls="subpane-rb-behaviour" aria-selected="false" tabindex="-1">Behaviour</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-scene" data-subtab="rb-scene" aria-controls="subpane-rb-scene" aria-selected="false" tabindex="-1">Scene and camera</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-sound" data-subtab="rb-sound" aria-controls="subpane-rb-sound" aria-selected="false" tabindex="-1">Sound and reactions</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-film" data-subtab="rb-film" aria-controls="subpane-rb-film" aria-selected="false" tabindex="-1">Filming</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-perf" data-subtab="rb-perf" aria-controls="subpane-rb-perf" aria-selected="false" tabindex="-1">Performance and model</button>
+          </div>
+
+          <!-- Overview -->
+          <div class="subpane active" id="subpane-rb-overview" data-subpane="rb-overview" role="tabpanel" aria-labelledby="subtab-rb-overview">
+          <div class="robot-now-card" id="robot-now-card" aria-live="polite"></div>
           <div class="robot-look-card">
             <div class="robot-look-summary" id="robot-look-summary" aria-live="polite"></div>
             <button type="button" class="btn btn-primary" id="robot-studio-open" data-open-studio="">Open Robot Studio…</button>
           </div>
-
           <div class="row">
             <div>
               <div class="row-label">Robot Studio tabs</div>
-              <div class="row-desc">Customize colors, shapes, face expressions, outfits, 3D room, and saved looks in the 3D Studio</div>
+              <div class="row-desc">Colors, shape, face, outfit, 3D room, how it behaves, and saved looks</div>
             </div>
             <div class="robot-studio-shortcuts" style="display:flex; flex-wrap:wrap; gap:6px;">
               <button type="button" class="btn small" data-open-studio="colors">Colors</button>
@@ -1986,25 +1891,409 @@
               <button type="button" class="btn small" data-open-studio="face">Face</button>
               <button type="button" class="btn small" data-open-studio="outfit">Outfit</button>
               <button type="button" class="btn small" data-open-studio="room">Room</button>
+              <button type="button" class="btn small" data-open-studio="behaviors">Behavior</button>
               <button type="button" class="btn small" data-open-studio="looks">Looks</button>
             </div>
           </div>
-
           <label class="row">
             <div><div class="row-label">Robot on Home and in text chat</div><div class="row-desc">The live robot greets you on Home, and sits in a corner while you chat (on wide windows)</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.chatDock">
           </label>
+          <label class="row">
+            <div><div class="row-label">Name tag</div><div class="row-desc">Shows the character's name under the robot</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.nameTag">
+          </label>
 
+          <div class="robot-status-card" id="robot-status-card" role="group" aria-label="Robot status">
+            <div class="row"><div><div class="row-label">Graphics</div><div class="row-desc" id="robot-status-gl">Checking…</div></div></div>
+            <div class="row"><div><div class="row-label">Talking with</div><div class="row-desc" id="robot-status-character">…</div></div></div>
+            <div class="row"><div><div class="row-label">The whiteboard</div><div class="row-desc" id="robot-status-board">…</div></div>
+              <button type="button" class="btn small" id="robot-open-board">Open it</button></div>
+          </div>
+          <div class="robot-quick" role="group" aria-label="Try the robot">
+            <button type="button" class="btn small" id="robot-quick-wave">Wave</button>
+            <button type="button" class="btn small" id="robot-quick-dance">Dance</button>
+            <button type="button" class="btn small" id="robot-quick-write">Write on the board</button>
+            <button type="button" class="btn small" id="robot-quick-photo">Take a picture</button>
+          </div>
+          </div>
+
+          <!-- Roles -->
+          <div class="subpane" id="subpane-rb-roles" data-subpane="rb-roles" role="tabpanel" aria-labelledby="subtab-rb-roles">
+          <p class="hint">A role is how the robot works with you right now: a teacher who explains step by step on the board, a coach, a co-host, a creative partner, or something you describe yourself. The character (Atlas, Mira…) stays who it is; any of them can take any role. You can switch it any time from the robot's window, from voice mode, or by asking.</p>
+          <div id="roles-root"></div>
+          <div class="subhead"><div>
+            <div class="subhead-title">How it works with you</div>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Explain for</div><div class="row-desc">Who it explains things to</div></div>
+            <select class="field" data-setting="roles.audience" aria-label="Explain for">
+              <option value="child">A child</option>
+              <option value="teen">A teenager</option>
+              <option value="adult">An adult</option>
+              <option value="expert">An expert</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Pace</div><div class="row-desc">How fast it goes</div></div>
+            <select class="field" data-setting="roles.pace" aria-label="Pace">
+              <option value="slow">Slow</option>
+              <option value="normal">Normal</option>
+              <option value="fast">Fast</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">How hard to push</div><div class="row-desc">Gentle, balanced or tough</div></div>
+            <select class="field" data-setting="roles.challenge" aria-label="How hard to push">
+              <option value="gentle">Gentle</option>
+              <option value="balanced">Balanced</option>
+              <option value="tough">Tough</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Use of the whiteboard</div><div class="row-desc">How much it draws in this role</div></div>
+            <select class="field" data-setting="roles.boardUse" aria-label="Use of the whiteboard">
+              <option value="auto">As the role suggests</option>
+              <option value="lots">A lot</option>
+              <option value="little">Only when asked</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Focus</div><div class="row-desc">What you are working on, for example “fractions” or “Spanish for travel”</div></div>
+            <input type="text" class="field" data-setting="roles.topic" maxlength="160" aria-label="Focus">
+          </div>
+          </div>
+
+          <!-- Whiteboard -->
+          <div class="subpane" id="subpane-rb-board" data-subpane="rb-board" role="tabpanel" aria-labelledby="subtab-rb-board">
+          <p class="hint">The whiteboard is shared: you and the robot draw on the same board at the same time, and the robot always knows what is on it and what you are doing.</p>
+          <div class="subhead"><div>
+            <div class="subhead-title">Working together</div>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Whiteboard</div><div class="row-desc">Turns the whiteboard on or off everywhere</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.enabled">
+          </label>
+          <label class="row">
+            <div><div class="row-label">The AI may draw and write</div><div class="row-desc">Off: it can still look at the board and point, but not change it</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.aiDrawing">
+          </label>
+          <div class="row">
+            <div><div class="row-label" id="wb-collab-label">Who may draw</div><div class="row-desc">Shared, or only one of you</div></div>
+            <div class="seg" role="radiogroup" aria-labelledby="wb-collab-label" data-choice="whiteboard.collaborationMode">
+              <button type="button" role="radio" data-value="both">Both of us</button>
+              <button type="button" role="radio" data-value="robot_only">Only the robot</button>
+              <button type="button" role="radio" data-value="user_only">Only me</button>
+            </div>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Ask before changing my things</div><div class="row-desc">The robot asks first when it wants to change, move or erase something you made. Missions never touch what you made.</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.askBeforeDrawOverUser">
+          </label>
+          <label class="row">
+            <div><div class="row-label">In voice mode</div><div class="row-desc">The AI may use the whiteboard while you talk</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.voiceAllowed">
+          </label>
+          <label class="row">
+            <div><div class="row-label">In text chat</div><div class="row-desc">The AI may use the whiteboard in chats (and on Telegram)</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.chatAllowed">
+          </label>
+          <label class="row">
+            <div><div class="row-label">In missions</div><div class="row-desc">Background missions may draw their plans and results (never over your things)</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.missionAllowed">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">What the robot sees and does</div>
+            <p class="hint">It is told about the board in words: what is where, who made it, what you are doing and what changed.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label" id="wb-aware-label">It sees my board</div><div class="row-desc">Always (with every message), only when it looks, or never</div></div>
+            <div class="seg" role="radiogroup" aria-labelledby="wb-aware-label" data-choice="whiteboard.awareness">
+              <button type="button" role="radio" data-value="always">Always</button>
+              <button type="button" role="radio" data-value="onRequest">When it looks</button>
+              <button type="button" role="radio" data-value="off">Never</button>
+            </div>
+          </div>
+          <div class="row">
+            <div><div class="row-label" id="wb-react-label">Comments on what I draw</div><div class="row-desc">Only when I ask, never, or now and then a short remark</div></div>
+            <div class="seg" role="radiogroup" aria-labelledby="wb-react-label" data-choice="whiteboard.reactToEdits">
+              <button type="button" role="radio" data-value="ask">When asked</button>
+              <button type="button" role="radio" data-value="never">Never</button>
+              <button type="button" role="radio" data-value="comment">Now and then</button>
+            </div>
+          </div>
+          <div class="row">
+            <div><div class="row-label" id="wb-init-label">How much it uses the board</div><div class="row-desc">Only when asked, when it helps, or freely while it explains</div></div>
+            <div class="seg" role="radiogroup" aria-labelledby="wb-init-label" data-choice="whiteboard.initiative">
+              <button type="button" role="radio" data-value="reactive">When asked</button>
+              <button type="button" role="radio" data-value="helpful">When it helps</button>
+              <button type="button" role="radio" data-value="proactive">Often</button>
+            </div>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">How it draws</div>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Writing style</div><div class="row-desc">The robot's handwriting</div></div>
+            <select class="field" data-setting="whiteboard.writingStyle" aria-label="Writing style">
+              <option value="marker">Marker</option>
+              <option value="chalk">Chalk</option>
+              <option value="print">Print</option>
+              <option value="cursive">Cursive</option>
+              <option value="plain">Plain</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Writing speed</div><div class="row-desc">How fast you watch it write</div></div>
+            <select class="field" data-setting="whiteboard.writingSpeed" aria-label="Writing speed">
+              <option value="slow">Slow</option>
+              <option value="normal">Normal</option>
+              <option value="fast">Fast</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Watch it write</div><div class="row-desc">Things appear as they are being written, not all at once</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.animate">
+          </label>
+          <label class="row">
+            <div><div class="row-label">The robot reaches to the board</div><div class="row-desc">In the 3D robot: its arm follows its pen and it looks at what it writes</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.robotArm">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Show its pointer</div><div class="row-desc">A laser dot where it points, and a glow on what it just changed</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.showRobotCursor">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Pointer</div><div class="row-desc">How the robot's pointer looks</div></div>
+            <select class="field" data-setting="whiteboard.robotPointer" aria-label="Pointer">
+              <option value="laser">Laser dot</option>
+              <option value="ring">Ring</option>
+              <option value="arrow">Arrow</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Who made what</div><div class="row-desc">A small tag on what the robot or a mission made</div></div>
+            <select class="field" data-setting="whiteboard.showAuthors" aria-label="Who made what">
+              <option value="hover">When I point at it</option>
+              <option value="always">Always</option>
+              <option value="off">Never</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">My view follows the robot</div><div class="row-desc">When the robot switches page or points off-screen, the board follows</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.followRobot">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Drawing sounds</div><div class="row-desc">Marker, chalk and eraser sounds (the robot's sounds must be on too)</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.sound">
+          </label>
+
+          <div class="row"><div><div class="row-label">Robot's marker color</div><div class="row-desc">The color it writes in when it has no better idea</div></div><input type="color" class="field color" data-setting="whiteboard.markerColor" aria-label="Robot's marker color"></div>
+          <div class="row">
+            <div><div class="row-label">Robot's marker width</div><div class="row-desc">How thick its freehand lines are</div></div>
+            <input type="range" min="1" max="12" class="field range" data-setting="whiteboard.markerSize" data-type="number" aria-label="Robot's marker width">
+          </div>
+          <div class="subhead"><div>
+            <div class="subhead-title">On the Robot page</div>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">The robot's window</div><div class="row-desc">The robot floats over the board, where you can ask it things and pick what it is to you</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.robotWindow">
+          </label>
+          <label class="row">
+            <div><div class="row-label">The options panel</div><div class="row-desc">Colors, sizes, position and arranging, on the right of the board</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.inspector">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">The board</div>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Board look</div><div class="row-desc">Follows the app (paper or midnight), or a whiteboard, chalkboard, blueprint…</div></div>
+            <select class="field" data-setting="whiteboard.dockTheme" aria-label="Board look">
+              <option value="auto">Follow the app</option>
+              <option value="paper">Paper</option>
+              <option value="midnight">Midnight</option>
+              <option value="classic">Whiteboard</option>
+              <option value="chalkboard">Chalkboard</option>
+              <option value="blueprint">Blueprint</option>
+              <option value="cork">Cork</option>
+              <option value="glass">Glass</option>
+              <option value="neon">Neon</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Paper</div><div class="row-desc">The pattern behind what you draw</div></div>
+            <select class="field" data-setting="whiteboard.bgPattern" aria-label="Paper">
+              <option value="grid">Grid</option>
+              <option value="dots">Dots</option>
+              <option value="ruled">Lined paper</option>
+              <option value="graph">Graph paper</option>
+              <option value="isometric">Isometric</option>
+              <option value="music">Music staves</option>
+              <option value="plain">Plain</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Grid size</div><div class="row-desc">The spacing of the pattern (and of snapping)</div></div>
+            <input type="range" min="12" max="64" class="field range" data-setting="whiteboard.gridSize" data-type="number" aria-label="Grid size">
+          </div>
+          <label class="row">
+            <div><div class="row-label">Snap to the grid</div><div class="row-desc">Things you move or draw jump to the grid</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.snapToGrid">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Alignment guides</div><div class="row-desc">Lines show when you line things up with others</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.smartGuides">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Readable ink</div><div class="row-desc">Dark ink turns light on a dark board (and the other way round)</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.smartInk">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Beside your chat</div>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Open by itself when the robot draws</div><div class="row-desc">The board slides in next to the chat</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.autoOpenOnDraw">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Open when the app starts</div><div class="row-desc">Keeps the board beside your chat</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.dockDefaultOpen">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Move it, make it bigger or smaller</div><div class="row-desc">Drag the board's title bar, pull its edges, or use its Move and resize menu. It remembers where you leave it.</div></div>
+            <button type="button" class="btn small" id="wb-reset-windows">Put the windows back</button>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">In voice mode</div>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Move the robot and the board</div><div class="row-desc">In voice mode, press the move button in the top bar to drag the robot anywhere and make it bigger or smaller; the board is moved by its title bar.</div></div>
+            <button type="button" class="btn small" id="wb-reset-robot-place">Put the robot in the middle</button>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Opening</div><div class="row-desc">Whether it opens when the robot starts drawing</div></div>
+            <select class="field" data-setting="whiteboard.voiceOpen" aria-label="Opening">
+              <option value="auto">By itself</option>
+              <option value="manual">Only when I open it</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Fold away when quiet</div><div class="row-desc">After this long without anyone drawing</div></div>
+            <select class="field" data-setting="whiteboard.voiceAutoHide" data-type="number" aria-label="Fold away when quiet">
+              <option value="0">Never</option>
+              <option value="30">30 seconds</option>
+              <option value="60">1 minute</option>
+              <option value="120">2 minutes</option>
+              <option value="300">5 minutes</option>
+            </select>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Filming and recording</div>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Show it in filming mode</div><div class="row-desc">The board stays in view while you film the screen</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.showInFilming">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Show it in recordings</div><div class="row-desc">The board is part of voice mode videos</div></div>
+            <input type="checkbox" class="toggle" data-setting="whiteboard.showInRecordings">
+          </label>
+
+          <div class="row"><div><div class="row-label">The board itself</div><div class="row-desc">Other boards, earlier versions and saving a copy are on the whiteboard page</div></div><button type="button" class="btn small" id="robot-open-board-2">Open the whiteboard</button></div>
+          </div>
+
+          <!-- Behaviour -->
+          <div class="subpane" id="subpane-rb-behaviour" data-subpane="rb-behaviour" role="tabpanel" aria-labelledby="subtab-rb-behaviour">
+          <div class="subhead"><div>
+            <div class="subhead-title">The AI moves it</div>
+            <p class="hint">Without these, the robot still reads the mood from the words.</p>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">In voice mode</div><div class="row-desc">The AI can choose moods and gestures itself</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiGestures.voice">
+          </label>
+          <label class="row">
+            <div><div class="row-label">In text chat</div><div class="row-desc">Each move adds a moment before the reply appears</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiGestures.chat">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Smarter moods</div><div class="row-desc">Gemini reads the mood of each turn: one small extra request per turn (uses quota)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.smartMoods">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">What the AI may do with its body</div>
+          </div></div>
+          <label class="row">
+            <div><div class="row-label">Show moods</div><div class="row-desc">Feelings on its face</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.mood">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Make gestures</div><div class="row-desc">Waving, nodding, dancing…</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.gesture">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Use things in the room</div><div class="row-desc">The lamp, the radio, the plant…</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.prop">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Walk around</div><div class="row-desc">Move to a spot in the room</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.move">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Look around</div><div class="row-desc">Turn its eyes and head</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.look">
+          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">You and the robot</div>
+            <p class="hint">It turns to you when you talk, and looks out of the screen when it talks to your audience.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label" id="robot-seat-label">Where do you sit?</div><div class="row-desc">As you look at the screen</div></div>
+            <div class="seg" role="radiogroup" aria-labelledby="robot-seat-label" data-choice="robot.seat">
+              <button type="button" role="radio" data-value="left">Left</button>
+              <button type="button" role="radio" data-value="front">In front</button>
+              <button type="button" role="radio" data-value="right">Right</button>
+            </div>
+          </div>
+
+          <label class="row">
+            <div><div class="row-label">Follow my face</div><div class="row-desc" id="robot-face-status">Its eyes follow you through the webcam. Everything stays on this computer.</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.followFace">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Eyes follow the pointer</div><div class="row-desc">When the pointer is near the robot, its eyes follow it</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.eyesFollowCursor">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Touch and drag</div><div class="row-desc">Tap, hold and drag the robot, and tap things in its room</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.interactive">
+          </label>
+
+          <div class="row"><div><div class="row-label">Personality and idle life</div><div class="row-desc">Energy, curiosity, playfulness… and what it does when it's quiet, in the Robot Studio</div></div><button type="button" class="btn small" data-open-studio="behaviors">Open behavior</button></div>
+          </div>
+
+          <!-- Scene and camera -->
+          <div class="subpane" id="subpane-rb-scene" data-subpane="rb-scene" role="tabpanel" aria-labelledby="subtab-rb-scene">
           <div class="subhead"><div>
             <div class="subhead-title">Scene and camera</div>
             <p class="hint">How voice mode shows it, on screen and in recordings.</p>
           </div></div>
+
           <div class="row">
             <div><div class="row-label">Where it is</div><div class="row-desc" id="robot-bg-hint">The room it is in. More in the Robot Studio: colors, lights, props and your own picture.</div></div>
             <select class="field" id="robot-place" aria-label="Where it is"></select>
           </div>
           <div class="row">
-            <div class="row-label" id="robot-shot-label">Camera shot</div>
+            <div><div class="row-label" id="robot-shot-label">Camera shot</div><div class="row-desc">How close the camera is</div></div>
             <div class="seg" role="radiogroup" aria-labelledby="robot-shot-label" data-choice="robot.shot">
               <button type="button" role="radio" data-value="close">Close-up</button>
               <button type="button" role="radio" data-value="medium">Medium</button>
@@ -2032,59 +2321,13 @@
             <input type="checkbox" class="toggle" data-setting="robot.cinematic">
           </label>
 
-          <div class="subhead"><div>
-            <div class="subhead-title">You and the robot</div>
-            <p class="hint">It turns to you when you talk, and looks out of the screen when it talks to your audience.</p>
-          </div></div>
-          <div class="row">
-            <div><div class="row-label" id="robot-seat-label">Where do you sit?</div><div class="row-desc">As you look at the screen</div></div>
-            <div class="seg" role="radiogroup" aria-labelledby="robot-seat-label" data-choice="robot.seat">
-              <button type="button" role="radio" data-value="left">Left</button>
-              <button type="button" role="radio" data-value="front">In front</button>
-              <button type="button" role="radio" data-value="right">Right</button>
-            </div>
-          </div>
-          <label class="row">
-            <div><div class="row-label">Follow my face</div><div class="row-desc" id="robot-face-status">Its eyes follow you through the webcam. Everything stays on this computer.</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.followFace">
-          </label>
-
-          <div class="subhead"><div>
-            <div class="subhead-title">The AI moves it</div>
-            <p class="hint">Without these, the robot still reads the mood from the words.</p>
-          </div></div>
-          <label class="row">
-            <div><div class="row-label">In voice mode</div><div class="row-desc">The AI can choose moods and gestures itself</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.aiGestures.voice">
-          </label>
-          <label class="row">
-            <div><div class="row-label">In text chat</div><div class="row-desc">Each move adds a moment before the reply appears</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.aiGestures.chat">
-          </label>
-          <label class="row">
-            <div><div class="row-label">Smarter moods</div><div class="row-desc">Gemini reads the mood of each turn: one small extra request per turn (uses quota)</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.smartMoods">
-          </label>
-
-          <div class="subhead"><div>
-            <div class="subhead-title">Quality & performance</div>
-          </div></div>
-          <div class="row">
-            <div><div class="row-label">Quality</div><div class="row-desc" id="robot-quality-status">Auto starts high and steps down if it gets slow</div></div>
-            <select class="field" data-setting="robot.quality" aria-label="Quality">
-              <option value="auto">Auto</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-          <div class="row">
-            <div><div class="row-label">Performance & FPS</div><div class="row-desc" id="robot-fps-status">Measuring performance…</div></div>
           </div>
 
+          <!-- Sound and reactions -->
+          <div class="subpane" id="subpane-rb-sound" data-subpane="rb-sound" role="tabpanel" aria-labelledby="subtab-rb-sound">
           <div class="subhead"><div>
             <div class="subhead-title">Synthesized sound</div>
-            <p class="hint">WebAudio synthesizer for blips, hums, servos and prop ambience.</p>
+            <p class="hint">Blips, hums, servos and prop sounds made on the spot. Nothing is downloaded.</p>
           </div></div>
           <label class="row">
             <div><div class="row-label">Robot sound effects</div><div class="row-desc">Synthesizes blips, hums and servos procedurally</div></div>
@@ -2092,30 +2335,68 @@
           </label>
           <div class="row">
             <div><div class="row-label">Volume</div><div class="row-desc">Sound effects volume</div></div>
-            <input type="range" min="0" max="100" class="field range" data-setting="robot.sound.volume" data-type="number" aria-label="Robot sound volume">
+            <input type="range" min="0" max="100" class="field range" data-setting="robot.sound.volume" data-type="number" aria-label="Volume">
           </div>
+
+          <div class="row"><div><div class="row-label">Pitch</div><div class="row-desc">Higher or lower voice of the sounds</div></div><input type="range" min="0.6" max="1.5" step="0.05" class="field range" data-setting="robot.sound.pitch" data-type="number" aria-label="Pitch"></div>
+          <label class="row">
+            <div><div class="row-label">Beeps and blips</div><div class="row-desc">Small acknowledgements</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.sound.blips">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Motors and servos</div><div class="row-desc">The whirr of its arms and head</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.sound.servos">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Giggles, sighs and chimes</div><div class="row-desc">Its feelings and reminders</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.sound.emotes">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Room ambience</div><div class="row-desc">A humming radio, a crackling fire…</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.sound.ambience">
+          </label>
           <label class="row">
             <div><div class="row-label">Mix into recordings</div><div class="row-desc">Include synthesized robot sounds in voice mode recordings</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.sound.recordMix" id="voice-rec-robot-sound">
+            <input type="checkbox" class="toggle" data-setting="robot.sound.recordMix">
           </label>
 
           <div class="subhead"><div>
             <div class="subhead-title">Event reactions</div>
-            <p class="hint">How the robot reacts to life events and notifications.</p>
+            <p class="hint">How the robot reacts to what happens in your day.</p>
           </div></div>
           <label class="row">
-            <div><div class="row-label">Mission events</div><div class="row-desc">Celebrates when a mission progresses or completes</div></div>
+            <div><div class="row-label">Missions</div><div class="row-desc">Gets to work, cheers or worries as a mission goes</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.reactions.mission">
           </label>
           <label class="row">
-            <div><div class="row-label">Reminders & habits</div><div class="row-desc">Reacts when reminders fire or habit streaks are kept</div></div>
+            <div><div class="row-label">Reminders and habits</div><div class="row-desc">Reacts when reminders go off</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.reactions.reminder">
           </label>
           <label class="row">
-            <div><div class="row-label">When you return</div><div class="row-desc">Wakes up gently when you return after being away</div></div>
+            <div><div class="row-label">Messages</div><div class="row-desc">Looks at its phone when a Telegram or Reddit message comes in</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.reactions.notifications">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Tasks done</div><div class="row-desc">Cheers when you tick off a task</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.reactions.taskDone">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Habit streaks</div><div class="row-desc">Celebrates streaks</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.reactions.habitStreak">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Time of day</div><div class="row-desc">Yawns late at night, stretches in the morning</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.reactions.timeOfDay">
+          </label>
+          <label class="row">
+            <div><div class="row-label">When you return</div><div class="row-desc">Wakes up gently when you come back after being away</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.reactions.userReturn">
           </label>
 
+          </div>
+
+          <!-- Filming -->
+          <div class="subpane" id="subpane-rb-film" data-subpane="rb-film" role="tabpanel" aria-labelledby="subtab-rb-film">
           <div class="subhead"><div>
             <div class="subhead-title">Filming mode</div>
             <p class="hint">For filming the screen with a camera or phone: in voice mode, press F or the camera button.</p>
@@ -2142,10 +2423,31 @@
             <input type="checkbox" class="toggle" data-setting="robot.filming.largerFace">
           </label>
 
+          </div>
+
+          <!-- Performance and model -->
+          <div class="subpane" id="subpane-rb-perf" data-subpane="rb-perf" role="tabpanel" aria-labelledby="subtab-rb-perf">
+          <div class="subhead"><div>
+            <div class="subhead-title">Quality and performance</div>
+          </div></div>
+
+          <div class="row">
+            <div><div class="row-label">Quality</div><div class="row-desc" id="robot-quality-status">Auto starts high and steps down if it gets slow</div></div>
+            <select class="field" data-setting="robot.quality" aria-label="Quality">
+              <option value="auto">Auto</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Performance and FPS</div><div class="row-desc" id="robot-fps-status">Measuring performance…</div></div>
+          </div>
           <div class="subhead"><div>
             <div class="subhead-title">Your own model</div>
             <p class="hint">A robot you made in Blender, as one .glb file (up to 30 MB). The README explains the part names it needs.</p>
           </div></div>
+
           <div class="robot-model">
             <div class="robot-model-status" id="robot-model-status" aria-live="polite">Built-in robot</div>
             <div class="robot-model-actions">
@@ -2154,102 +2456,179 @@
               <input type="file" id="robot-model-file" accept=".glb,model/gltf-binary" hidden>
             </div>
           </div>
+          </div>
         </section>
 
-        <!-- Whiteboard -->
-        <section class="pane" data-pane="whiteboard" id="pane-whiteboard" role="tabpanel" aria-labelledby="tab-whiteboard">
-          <h3>Whiteboard</h3>
-          <p class="hint">A shared visual board for the companion and you to draw, sketch, explain math and take notes together.</p>
+        <!-- Subtitles & Captions -->
+        <section class="pane" data-pane="subtitles" id="pane-subtitles" role="tabpanel" aria-labelledby="tab-subtitles">
+          <h3>Subtitles &amp; Captions</h3>
+          <p class="hint">Comprehensive styling, timing, and visibility controls for subtitles in voice conversations, chat bubbles, and recordings.</p>
 
           <label class="row">
-            <div><div class="row-label">Enable Whiteboard</div><div class="row-desc">Allows the companion to create diagrams, notes, and drawings</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.enabled">
+            <div><div class="row-label">Enable Subtitles &amp; Captions</div><div class="row-desc">Master switch to display spoken speech text anywhere in the app</div></div>
+            <input type="checkbox" class="toggle" id="subtitles-enabled-toggle" data-setting="subtitles.enabled" checked>
           </label>
 
+          <!-- Interactive Live Preview Card -->
           <div class="subhead"><div>
-            <div class="subhead-title">3D Room board</div>
-            <p class="hint">How the whiteboard appears when placed inside the 3D room.</p>
+            <div class="subhead-title">Live Preview</div>
+            <p class="hint">Updates instantaneously as you tweak the settings below.</p>
           </div></div>
-          <div class="row">
-            <div><div class="row-label">Board appearance</div><div class="row-desc">Texture and frame style in the 3D room</div></div>
-            <select class="field" data-setting="whiteboard.roomBoardStyle" aria-label="Board appearance">
-              <option value="whiteboard">Whiteboard</option>
-              <option value="chalkboard">Chalkboard</option>
-              <option value="glass">Glass board</option>
-              <option value="cork">Cork pinboard</option>
-              <option value="easel">Artist easel</option>
-              <option value="flipchart">Paper flipchart</option>
-              <option value="screen">Digital screen</option>
-            </select>
-          </div>
-          <label class="row">
-            <div><div class="row-label">Drawing sound effects</div><div class="row-desc">Synthesized marker squeaks, chalk scrapes, and eraser sweeps</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.sound">
-          </label>
-          <label class="row">
-            <div><div class="row-label">Auto-hide when empty</div><div class="row-desc">Only display the 3D board prop in the room when it has content</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.autoHideEmpty">
-          </label>
-
-          <div class="subhead"><div>
-            <div class="subhead-title">Robot drawing style</div>
-            <p class="hint">How the robot writes and draws on the board.</p>
-          </div></div>
-          <div class="row">
-            <div><div class="row-label">Writing style</div><div class="row-desc">Stroke appearance and handwriting aesthetic</div></div>
-            <select class="field" data-setting="whiteboard.writingStyle" aria-label="Writing style">
-              <option value="marker">Marker pen</option>
-              <option value="chalk">Chalk</option>
-              <option value="print">Neat print</option>
-              <option value="cursive">Cursive handwriting</option>
-              <option value="plain">Technical plain</option>
-            </select>
-          </div>
-          <div class="row">
-            <div><div class="row-label">Writing speed</div><div class="row-desc">Stroke pacing during live drawing animations</div></div>
-            <select class="field" data-setting="whiteboard.writingSpeed" aria-label="Writing speed">
-              <option value="slow">Slow &amp; deliberate</option>
-              <option value="normal">Normal</option>
-              <option value="fast">Fast sketch</option>
-            </select>
-          </div>
-          <div class="row">
-            <div><div class="row-label">Default marker color</div><div class="row-desc">The robot's primary ink color</div></div>
-            <input type="color" class="field color" data-setting="whiteboard.markerColor" aria-label="Default marker color">
-          </div>
-          <div class="row">
-            <div><div class="row-label">Marker stroke width</div><div class="row-desc">Default pen tip thickness in pixels</div></div>
-            <input type="range" min="1" max="12" class="field range" data-setting="whiteboard.markerSize" data-type="number" aria-label="Marker stroke width">
+          <div class="subtitles-preview-card" id="subtitles-preview-card">
+            <div class="subtitles-preview-stage">
+              <div class="subtitles-preview-box" id="subtitles-preview-box"></div>
+            </div>
           </div>
 
           <div class="subhead"><div>
-            <div class="subhead-title">Modes &amp; Permissions</div>
-            <p class="hint">Where the companion is allowed to use the whiteboard.</p>
+            <div class="subhead-title">Surfaces &amp; Speaker Filtering</div>
+            <p class="hint">Choose where captions appear and whose speech is shown.</p>
           </div></div>
           <label class="row">
-            <div><div class="row-label">Voice mode</div><div class="row-desc">Robot can draw while speaking to explain concepts visually</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.voiceAllowed">
+            <div><div class="row-label">Voice mode</div><div class="row-desc">Display live subtitles during voice conversations</div></div>
+            <input type="checkbox" class="toggle" data-sub-setting="showInVoice" data-setting="subtitles.showInVoice" checked>
           </label>
           <label class="row">
-            <div><div class="row-label">Chat mode</div><div class="row-desc">Robot can attach drawings and diagrams to chat answers</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.chatAllowed">
+            <div><div class="row-label">Robot dock &amp; text chat</div><div class="row-desc">Display floating speech bubbles above the robot while chatting</div></div>
+            <input type="checkbox" class="toggle" data-sub-setting="showInDock" data-setting="subtitles.showInDock" checked>
           </label>
           <label class="row">
-            <div><div class="row-label">Background missions</div><div class="row-desc">Allow autonomous missions to generate diagrams and mind maps</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.missionAllowed">
+            <div><div class="row-label">Video recordings</div><div class="row-desc">Burn captions into exported filming session videos</div></div>
+            <input type="checkbox" class="toggle" data-sub-setting="showInRecordings" data-setting="subtitles.showInRecordings" checked>
           </label>
+          <div class="row">
+            <div><div class="row-label">Speaker visibility</div><div class="row-desc">Show speech for both speakers, only the robot, or only you</div></div>
+            <select class="field" data-sub-setting="speakerVisibility" data-setting="subtitles.speakerVisibility" aria-label="Speaker visibility">
+              <option value="both">Both speakers (User &amp; Robot)</option>
+              <option value="robot_only">Robot only</option>
+              <option value="user_only">User only</option>
+            </select>
+          </div>
           <label class="row">
-            <div><div class="row-label">Show in filming mode</div><div class="row-desc">Keep board visible when filming content on camera</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.showInFilming">
+            <div><div class="row-label">Show speaker badge</div><div class="row-desc">Prefix captions with a small badge identifying who is talking</div></div>
+            <input type="checkbox" class="toggle" data-sub-setting="showSpeakerBadge" data-setting="subtitles.showSpeakerBadge" checked>
           </label>
-          <label class="row">
-            <div><div class="row-label">Show in recordings</div><div class="row-desc">Capture whiteboard drawings in video recordings</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.showInRecordings">
-          </label>
-          <label class="row">
-            <div><div class="row-label">Confirm before erasing your work</div><div class="row-desc">Ask before the robot modifies or clears items you drew</div></div>
-            <input type="checkbox" class="toggle" data-setting="whiteboard.askBeforeDrawOverUser">
-          </label>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Placement &amp; Alignment</div>
+            <p class="hint">Where on screen captions sit, and text alignment.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Screen placement</div><div class="row-desc">Position on the viewport during voice and video</div></div>
+            <select class="field" data-sub-setting="placement" data-setting="subtitles.placement" aria-label="Screen placement">
+              <option value="bottom_center">Bottom center</option>
+              <option value="bottom_left">Bottom left</option>
+              <option value="bottom_right">Bottom right</option>
+              <option value="top_center">Top center</option>
+              <option value="over_robot">Over the robot</option>
+              <option value="centered_floating">Centered floating</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Text alignment</div><div class="row-desc">Alignment of lines inside the subtitle container</div></div>
+            <select class="field" data-sub-setting="alignment" data-setting="subtitles.alignment" aria-label="Text alignment">
+              <option value="center">Centered</option>
+              <option value="left">Left aligned</option>
+              <option value="right">Right aligned</option>
+            </select>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Typography</div>
+            <p class="hint">Fonts, text sizing, and weight for maximum legibility.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Font family</div><div class="row-desc">Typography style for subtitle text</div></div>
+            <select class="field" data-sub-setting="fontFamily" data-setting="subtitles.fontFamily" aria-label="Font family">
+              <option value="figtree">Figtree (Clean Modern)</option>
+              <option value="bricolage">Bricolage Grotesque (Friendly)</option>
+              <option value="sans">System Sans-Serif</option>
+              <option value="serif">Editorial Serif</option>
+              <option value="mono">Monospace Terminal</option>
+              <option value="dyslexic">OpenDyslexic / High Readability</option>
+              <option value="default">Default App Font</option>
+            </select>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Font size: <span id="subtitles-size-value">20px</span></div>
+              <div class="row-desc">Text size in pixels</div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; min-width:0;">
+              <input type="range" min="14" max="36" value="20" class="field range" id="subtitles-size-input" data-sub-setting="fontSize" data-setting="subtitles.fontSize" aria-label="Font size">
+              <button type="button" class="btn small" data-sub-preset-size="16">Small</button>
+              <button type="button" class="btn small" data-sub-preset-size="20">Medium</button>
+              <button type="button" class="btn small" data-sub-preset-size="26">Large</button>
+            </div>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Font weight</div><div class="row-desc">Thickness of subtitle letterforms</div></div>
+            <select class="field" data-sub-setting="fontWeight" data-setting="subtitles.fontWeight" aria-label="Font weight">
+              <option value="400">Regular (400)</option>
+              <option value="500">Medium (500)</option>
+              <option value="600" selected>Semi-Bold (600)</option>
+              <option value="700">Bold (700)</option>
+              <option value="800">Extra-Bold (800)</option>
+            </select>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Colors &amp; Background</div>
+            <p class="hint">Contrast, text colors for each speaker, and backdrop styling.</p>
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Robot text color</div><div class="row-desc">Color for words spoken by the companion</div></div>
+            <input type="color" class="field color" id="subtitles-color-robot" data-sub-setting="textColorRobot" data-setting="subtitles.textColorRobot" value="#ffffff" aria-label="Robot text color">
+          </div>
+          <div class="row">
+            <div><div class="row-label">User text color</div><div class="row-desc">Color for words spoken by you</div></div>
+            <input type="color" class="field color" id="subtitles-color-user" data-sub-setting="textColorUser" data-setting="subtitles.textColorUser" value="#ffecd6" aria-label="User text color">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Background style</div><div class="row-desc">Container pill or backdrop aesthetic</div></div>
+            <select class="field" data-sub-setting="bgStyle" data-setting="subtitles.bgStyle" aria-label="Background style">
+              <option value="dark_pill">Dark translucent pill</option>
+              <option value="glass">Frosted glass</option>
+              <option value="solid_black">Solid high-contrast black</option>
+              <option value="accent_tint">Accent color tint</option>
+              <option value="none">No background (text only with outline)</option>
+            </select>
+          </div>
+          <div class="row">
+            <div>
+              <div class="row-label">Background opacity: <span id="subtitles-opacity-value">65%</span></div>
+              <div class="row-desc">Transparency of the background backdrop</div>
+            </div>
+            <input type="range" min="0" max="100" value="65" class="field range" id="subtitles-opacity-input" data-sub-setting="bgOpacity" data-setting="subtitles.bgOpacity" aria-label="Background opacity">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Text outline</div><div class="row-desc">Drop shadow and outline for legibility over bright backgrounds</div></div>
+            <select class="field" data-sub-setting="textOutline" data-setting="subtitles.textOutline" aria-label="Text outline">
+              <option value="subtle">Subtle drop shadow</option>
+              <option value="heavy">Heavy black outline</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Timing &amp; Animation</div>
+            <p class="hint">How long captions linger and transition effects.</p>
+          </div></div>
+          <div class="row">
+            <div>
+              <div class="row-label">Duration on screen: <span id="subtitles-duration-value">4s</span></div>
+              <div class="row-desc">How long subtitle lines remain visible after speech finishes</div>
+            </div>
+            <input type="range" min="1" max="10" value="4" class="field range" id="subtitles-duration-input" data-sub-setting="durationSeconds" data-setting="subtitles.durationSeconds" aria-label="Duration on screen">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Word animation</div><div class="row-desc">Visual entrance transition for words and sentences</div></div>
+            <select class="field" data-sub-setting="wordAnimation" data-setting="subtitles.wordAnimation" aria-label="Word animation">
+              <option value="fade">Smooth fade-in</option>
+              <option value="pop">Gentle pop</option>
+              <option value="none">Instant (none)</option>
+            </select>
+          </div>
         </section>
 
         <!-- Connected Apps & Workspace -->
@@ -2655,6 +3034,162 @@
           </div>
         </section>
 
+        <!-- Reddit Companion & Watchers -->
+        <section class="pane" data-pane="reddit" id="pane-reddit" role="tabpanel" aria-labelledby="tab-reddit">
+          <h3>Reddit <span class="badge-labs">Labs</span></h3>
+          <div class="subhead"><div>
+            <div class="subhead-title">Reddit companion server &amp; watchers <span class="badge-labs">Labs</span></div>
+            <p class="hint">Communicate with Friends via Reddit Private Messages and Mentions, receive proactive notifications, and monitor subreddits.</p>
+          </div></div>
+
+          <div class="app-card" id="reddit-card">
+            <div class="app-head">
+              <div class="app-title">
+                <strong>Reddit companion bot</strong>
+                <span class="app-status off" id="reddit-status-pill">Off</span>
+              </div>
+              <input type="checkbox" class="toggle" id="reddit-enabled-toggle" data-setting="reddit.companionEnabled" aria-label="Reddit companion on">
+            </div>
+            <p class="row-desc">A bidirectional companion over Reddit. Message your bot account in private messages or mention it in threads. Ask questions, launch background missions with /mission, review today's schedule with /today, and receive reminders.</p>
+            
+            <details class="app-setup" id="reddit-setup" open>
+              <summary class="row-label">Connection &amp; Credentials</summary>
+              <p class="row-desc">Create a personal script app at <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noopener">reddit.com/prefs/apps</a>. Provide your App ID (Client ID), Secret, Bot Username, and Refresh Token. Credentials are kept safely in your OS keyring.</p>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                <label class="form-field" style="margin: 0;">
+                  <span class="row-label">Client ID (App ID)</span>
+                  <input class="field" type="text" id="reddit-client-id-input" data-setting="reddit.clientId" placeholder="e.g. 14-char app ID" autocomplete="off" spellcheck="false">
+                </label>
+                <label class="form-field" style="margin: 0;">
+                  <span class="row-label">Bot Username</span>
+                  <input class="field" type="text" id="reddit-username-input" data-setting="reddit.username" placeholder="e.g. my_companion_bot" autocomplete="off" spellcheck="false">
+                </label>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                <label class="form-field" style="margin: 0;">
+                  <span class="row-label">Client Secret</span>
+                  <input class="field" type="password" id="reddit-client-secret-input" placeholder="••••••••••••" autocomplete="new-password">
+                </label>
+                <label class="form-field" style="margin: 0;">
+                  <span class="row-label">OAuth Refresh Token</span>
+                  <input class="field" type="password" id="reddit-refresh-token-input" placeholder="••••••••••••" autocomplete="new-password">
+                </label>
+              </div>
+
+              <div class="form-test-bar" style="margin-top: 14px;">
+                <button type="button" class="btn small btn-primary" id="reddit-cred-save">Save Credentials</button>
+                <button type="button" class="btn small" id="reddit-test-btn">Test Connection</button>
+                <span class="test-feedback" id="reddit-test-status"></span>
+              </div>
+            </details>
+          </div>
+
+          <!-- Authorized Users & Roles -->
+          <div class="app-card" style="margin-top: 16px;">
+            <div class="app-head">
+              <div class="app-title">
+                <strong>Authorized Reddit Users</strong>
+              </div>
+            </div>
+            <p class="row-desc">Only authorized usernames can communicate with your companion or run commands. Unknown Reddit accounts are silently ignored for spam and prompt-injection safety.</p>
+
+            <div style="display: flex; gap: 8px; margin-top: 12px; align-items: flex-end;">
+              <label class="form-field" style="margin: 0; flex: 1;">
+                <span class="row-label">Reddit Username</span>
+                <input class="field" type="text" id="reddit-new-user-input" placeholder="e.g. your_reddit_username" autocomplete="off" spellcheck="false">
+              </label>
+              <label class="form-field" style="margin: 0; width: 140px;">
+                <span class="row-label">Permission Role</span>
+                <select class="field" id="reddit-new-user-role">
+                  <option value="admin">Admin (Full)</option>
+                  <option value="chat" selected>Chat only</option>
+                  <option value="notify_only">Alerts only</option>
+                </select>
+              </label>
+              <button type="button" class="btn small btn-primary" id="reddit-add-user-btn" style="height: 36px;">Add User</button>
+            </div>
+
+            <div id="reddit-users-container" style="margin-top: 14px;">
+              <span class="hint" id="reddit-no-users" hidden>No authorized users yet. Add your Reddit account username above.</span>
+              <ul id="reddit-users-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;"></ul>
+            </div>
+          </div>
+
+          <!-- Inbound & Outbound Channels -->
+          <div class="app-card" style="margin-top: 16px;">
+            <div class="app-head">
+              <div class="app-title">
+                <strong>Channels &amp; Outbound Notifications</strong>
+              </div>
+            </div>
+            <p class="row-desc">Configure which message types the bot monitors, and what events trigger outbound Reddit PM alerts.</p>
+
+            <div style="margin-top: 10px;">
+              <label class="life-toggle">
+                <input type="checkbox" data-setting="reddit.respondPM" checked> Respond to Private Messages (PMs)
+              </label>
+              <label class="life-toggle">
+                <input type="checkbox" data-setting="reddit.respondMentions" checked> Respond to username mentions (/u/botname)
+              </label>
+              <label class="life-toggle">
+                <input type="checkbox" data-setting="reddit.respondComments"> Respond to comment replies on submitted posts
+              </label>
+            </div>
+
+            <div class="row" style="margin-top: 12px;">
+              <div><div class="row-label">Inbox poll interval</div><div class="row-desc">How often the companion checks for unread messages</div></div>
+              <select class="field" data-setting="reddit.pollIntervalSeconds" data-type="number" aria-label="Inbox poll interval">
+                <option value="15">Every 15 seconds (Fast)</option>
+                <option value="30" selected>Every 30 seconds (Standard)</option>
+                <option value="60">Every 1 minute (Conservative)</option>
+                <option value="120">Every 2 minutes (Minimal)</option>
+              </select>
+            </div>
+
+            <div class="subhead-title" style="margin-top: 14px; font-size: 13px;">Outbound Alerts to Authorized Inboxes</div>
+            <div style="margin-top: 8px;">
+              <label class="life-toggle">
+                <input type="checkbox" data-setting="reddit.notifyReminders" checked> Push reminder alarms to Reddit PMs
+              </label>
+              <label class="life-toggle">
+                <input type="checkbox" data-setting="reddit.notifyMissions" checked> Push background mission completions to Reddit PMs
+              </label>
+              <label class="life-toggle">
+                <input type="checkbox" data-setting="reddit.notifyBriefing"> Deliver morning daily briefing to Reddit PMs
+              </label>
+            </div>
+          </div>
+
+          <!-- Community Watchers -->
+          <div class="app-card" style="margin-top: 16px;">
+            <div class="app-head">
+              <div class="app-title">
+                <strong>Subreddit &amp; Keyword Watchers</strong>
+              </div>
+            </div>
+            <p class="row-desc">Monitor public subreddits for keywords (e.g. project mentions, tech news) and route matches to your notifications.</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 100px; gap: 8px; margin-top: 12px; align-items: flex-end;">
+              <label class="form-field" style="margin: 0;">
+                <span class="row-label">Subreddit</span>
+                <input class="field" type="text" id="reddit-watcher-sub-input" placeholder="e.g. localmultiplayer" autocomplete="off" spellcheck="false">
+              </label>
+              <label class="form-field" style="margin: 0;">
+                <span class="row-label">Keywords (comma-separated)</span>
+                <input class="field" type="text" id="reddit-watcher-kw-input" placeholder="e.g. AI, friends, open source" autocomplete="off" spellcheck="false">
+              </label>
+              <button type="button" class="btn small btn-primary" id="reddit-add-watcher-btn" style="height: 36px;">Add Watcher</button>
+            </div>
+
+            <div id="reddit-watchers-container" style="margin-top: 14px;">
+              <span class="hint" id="reddit-no-watchers">No watchers configured yet.</span>
+              <ul id="reddit-watchers-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;"></ul>
+            </div>
+          </div>
+        </section>
+
         <!-- Notification Router -->
         <section class="pane" data-pane="notifications" id="pane-notifications" role="tabpanel" aria-labelledby="tab-notifications">
           <h3>Notifications</h3>
@@ -3029,6 +3564,7 @@
         <button type="button" class="voice-theme-btn" data-theme="robot" aria-pressed="false" title="Robot: a 3D robot that is the AI's body"><svg viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="11" rx="4"/><line x1="9.5" y1="12.5" x2="9.5" y2="14.5"/><line x1="14.5" y1="12.5" x2="14.5" y2="14.5"/><path d="M7.5 8 6 4.5M16.5 8 18 4.5"/></svg><span>Robot</span></button>
       </div>
       <div class="character-switch voice-character-switch" id="voice-character-switch" role="radiogroup" aria-label="Who you're talking to"></div>
+      <button type="button" class="voice-speed-pill voice-role" id="voice-role" aria-haspopup="dialog" aria-expanded="false" title="What the robot is to you right now"></button>
       <button type="button" class="voice-onair" id="voice-onair" aria-pressed="false" title="Co-host mode: it knows it's on camera and keeps private things out of it" aria-label="On air: co-host mode, private things stay out of it">ON AIR</button>
       <span class="voice-rec-badge" id="voice-rec-badge"><span class="voice-rec-dot"></span>REC <span id="voice-rec-time">0:00</span></span>
       <button type="button" class="voice-speed-pill" id="voice-engine" title="How the conversation runs: Live (Google), Studio or Instant">
@@ -3041,6 +3577,9 @@
       </button>
       <button type="button" class="voice-top-btn voice-robot-only" id="voice-scene" title="Robot scene: background and camera" aria-label="Robot scene: background and camera" aria-expanded="false" aria-controls="voice-scene-pop">
         <svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></svg>
+      </button>
+      <button type="button" class="voice-top-btn voice-robot-only" id="voice-place" title="Move the robot: drag it where you want it, and make it bigger or smaller" aria-label="Move the robot" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
       </button>
       <button type="button" class="voice-top-btn" id="voice-filming" title="Filming mode (F): for filming the screen with a camera or phone" aria-label="Filming mode">
         <svg viewBox="0 0 24 24"><path d="M4 10h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="m4 10-.6-3.2 15.7-2.9.6 3.2z"/><path d="m8.2 5.9 2 3.2M13 5l2 3.3"/></svg>
@@ -3056,6 +3595,10 @@
       <div class="voice-record-row">
         <label for="voice-scene-place-select">Where it is</label>
         <select class="field" id="voice-scene-place-select"></select>
+      </div>
+      <div class="voice-record-row">
+        <span>Position</span>
+        <span class="voice-row-buttons"><button type="button" class="btn small" id="voice-scene-move">Move it…</button><button type="button" class="btn small" id="voice-scene-reset">Put it back</button></span>
       </div>
       <div class="voice-record-row">
         <span>Look and room</span>
@@ -3115,6 +3658,9 @@
       <button class="voice-ctrl" id="voice-drafts-btn" title="Drafts, transcript & document grounding" aria-label="Drafts, transcript & document grounding" aria-controls="voice-drawer" aria-expanded="false">
         <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 19 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
         <span class="voice-ctrl-badge" id="voice-drafts-badge" hidden></span>
+      </button>
+      <button class="voice-ctrl wb-voice-btn" id="voice-board-btn" title="Whiteboard: draw together while you talk" aria-label="Whiteboard" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M7 17v4m10-4v4m-12 0h14M8 12h8"/></svg>
       </button>
       <button class="voice-ctrl" id="voice-keyboard-btn" title="Type instead of talking" aria-label="Type instead of talking">
         <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/></svg>
@@ -3193,7 +3739,7 @@
       </div>
       <label class="voice-record-row"><span>Include my voice</span><input type="checkbox" class="toggle" id="voice-rec-mic" checked></label>
       <label class="voice-record-row"><span>Captions in the video</span><input type="checkbox" class="toggle" id="voice-rec-captions" checked></label>
-      <p class="voice-record-hint">The video shows only the visualizer (and captions), never the buttons. Headphones keep the AI's voice out of your mic.</p>
+      <p class="voice-record-hint">The video shows only the picture (with the whiteboard, if it's open, and captions), never the buttons. Headphones keep the AI's voice out of your mic.</p>
       <button type="button" class="btn btn-primary" id="voice-rec-start">Start recording</button>
     </div>
 

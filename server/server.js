@@ -38,14 +38,17 @@ const localNotes = require("./local-notes");
 const telegram = require("./telegram");
 const notifications = require("./notifications");
 const redditWatcher = require("./reddit-watcher");
+const redditCompanion = require("./reddit-companion");
 const models = require("./models");
 const { say, noteBrowser } = require("./say");
 const companion = require("./companion");
 const missions = require("./missions");
-const keys = require("./keys");
 const specialistsApi = require("./specialists-api");
 const google = require("./google");
 const whiteboard = require("./whiteboard");
+const whiteboardSources = require("./whiteboard-sources");
+const whiteboardLinks = require("./whiteboard-links");
+const whiteboardTools = require("./whiteboard-tools");
 const auth = require("./auth");
 const { execFile } = require("child_process");
 
@@ -96,7 +99,7 @@ const TYPES = {
 let allowedHosts = [];
 
 // Only localhost by default. ALLOWED_HOSTS adds more (comma-separated);
-// "*" turns the Host/Origin checks off, e.g. behind a cloud proxy or in Docker.
+// "*" turns the Host/Origin checks off, e.g. behind a cloud proxy.
 function computeAllowedHosts(port, host) {
   const base = [
     `localhost:${port}`,
@@ -132,6 +135,30 @@ function securityHeaders(extra = {}) {
   return headers;
 }
 
+// What the page may run. Scripts only from this helper (and the inline import map, by its hash): words that get
+// into the page by mistake can't start a script, load one from somewhere else or send a form out. Google's sign-in
+// (Settings → Connected apps) loads its own scripts, so those two hosts are named; nothing else is.
+const scriptHashes = new Map(); // the page's text → its inline scripts' hashes
+function inlineScriptHashes(html) {
+  let hashes = scriptHashes.get(html);
+  if (!hashes) {
+    hashes = [...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => `'sha256-${crypto.createHash("sha256").update(m[1]).digest("base64")}'`);
+    scriptHashes.clear();
+    scriptHashes.set(html, hashes);
+  }
+  return hashes;
+}
+
+function pageSecurityPolicy(html) {
+  return [
+    `script-src 'self' 'wasm-unsafe-eval' ${inlineScriptHashes(html).join(" ")} https://www.gstatic.com https://apis.google.com`.replace(/\s+/g, " "),
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    ...(allowedHosts.includes("*") ? [] : ["frame-ancestors 'none'"]),
+  ].join("; ");
+}
+
 function sendJson(res, status, data) {
   res.writeHead(status, securityHeaders({
     "Content-Type": "application/json; charset=utf-8",
@@ -148,6 +175,12 @@ async function readBody(req, limit) {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
+}
+
+// A route that finds nothing says so with a 404. (Not `status`: an AI service's own refusals carry that, and would
+// otherwise reach the page as if this helper had turned it away.)
+function notFound(message) {
+  throw Object.assign(new Error(message), { http: 404 });
 }
 
 async function readJson(req) {
@@ -187,9 +220,11 @@ function serveStatic(req, res, pathname) {
 
   fs.readFile(file, (err, data) => {
     if (err) return sendJson(res, 404, { error: "Not found" });
+    const page = path.extname(file) === ".html";
     res.writeHead(200, securityHeaders({
       "Content-Type": TYPES[path.extname(file)] || "application/octet-stream",
       "Cache-Control": "no-cache",
+      ...(page ? { "Content-Security-Policy": pageSecurityPolicy(data.toString("utf8")) } : {}),
     }));
     res.end(req.method === "HEAD" ? undefined : data);
   });
@@ -355,8 +390,11 @@ async function chat(req, res) {
     // Google tools are left out for a local AI until you're signed in with Google
     // A cloud AI doesn't get the memories and notes when Settings → Privacy says so
     const withhold = brain.kind === "cloud" && current.privacy.shareMemoryWithCloud === false;
-    const all = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.kind !== "local" || Boolean(activeToken), onAir, withhold });
+    const source = voice === true ? "voice" : "chat";
+    const all = tools.declarations(current, { voice, robot: robotOnScreen === true, workspace: brain.kind !== "local" || Boolean(activeToken), onAir, withhold, source });
     const offered = brain.kind === "local" ? tools.forLocal(all, current) : all;
+    // The whiteboard as it is right now: part of the instructions of every reply, so the AI is never working from an old picture
+    const board = offered.some((t) => t.name.startsWith("whiteboard_")) ? whiteboardTools.awareness(current, { source, user: prompt.userName(current), withhold, maxChars: brain.kind === "local" ? 1800 : 3500 }) : null;
     const contents = toContents(conversation.messages, summary.windowStart(conversation, window), characters.others(current));
     // The greeting's note from the app goes last, as if said, but it's never saved
     if (greeting) contents.push({ role: "user", parts: [{ text: appNote ? prompt.appNote(current, appNote) : prompt.greeting(current, { chatId: conversation.messages.length ? conversation.id : null, onAir }) }] });
@@ -365,7 +403,7 @@ async function chat(req, res) {
         key: b.key,
         model: b.model,
         contents,
-        system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc, withhold }),
+        system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc, withhold, board }),
         temperature: prompt.temperature(current),
         // Thinking at length makes a reply start 10+ seconds later; only "Deep" does
         fast: voice || current.aiControl?.reasoningEffort !== "deep",
@@ -381,6 +419,9 @@ async function chat(req, res) {
           if (!started()) throw lost();
           return tools.run(name, args, {
             settings: current,
+            source,
+            batch: replyId,
+            withhold,
             googleAccessToken: activeToken,
             onRobot: (event) => send({ type: "robot", ...event }),
             onWhiteboard: (event) => send({ type: "whiteboard", ...event }),
@@ -425,6 +466,14 @@ async function chat(req, res) {
       },
     });
     answeredBy = step;
+    // An AI that can't call tools may draw with a ```whiteboard block; it's drawn once the reply is complete
+    if (reply.includes("```") && /```(?:whiteboard|wb)\b/i.test(reply)) {
+      try {
+        await whiteboardTools.applyBlocks(reply, { settings: current, source: voice === true ? "voice" : "chat", batch: replyId, onWhiteboard: (event) => send({ type: "whiteboard", ...event }) });
+      } catch (err) {
+        logger.debug("Whiteboard block skipped:", err.message);
+      }
+    }
     send({ type: "done" });
   } catch (err) {
     if (err.name !== "AbortError" && !controller.signal.aborted) send({ type: "error", error: err.message });
@@ -663,12 +712,20 @@ function push(type, data) {
   for (const res of eventClients) res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+// The whiteboard: every change either of you makes reaches every open page at once (src/js/whiteboard/store.js)
+whiteboard.events.on("ops", (e) => push("whiteboard", { kind: "ops", ...e }));
+whiteboard.events.on("board", (e) => push("whiteboard", { kind: "board", ...e }));
+whiteboardSources.events.on("sources", (e) => push("whiteboard", { kind: "sources", ...e }));
+whiteboard.events.on("presence", (e) => {
+  if (e.who === "ai") push("whiteboard", { kind: "presence", ...e });
+});
+
 function broadcast(type, data, { title, body, action } = {}) {
   push(type, data);
   if (!settings.get().life.notify) return;
   if (nativeNotify) return nativeNotify({ title, body, action });
   if (!eventClients.size && process.platform === "linux") {
-    execFile("notify-send", ["--app-name=Friends", "-i", "friends", title, body], () => {});
+    execFile("notify-send", ["--app-name=Friends", "-i", "friends", "--", title, body], () => {});
   }
 }
 
@@ -693,10 +750,18 @@ function setNativeNotify(fn) {
 }
 
 // ---------- Backups (Settings → Data) ----------
+// A backup is of what is saved: a board that changed a moment ago is saved first
+backup.beforeSnapshot(() => whiteboard.flush());
 // A restore changes files that some modules keep in memory
 backup.onRestore(() => {
   settings.reload();
   brains.reload();
+  // Boards are kept in memory while they are being worked on: start again from the files, and tell the open pages
+  whiteboard.reset();
+  try {
+    const doc = whiteboard.current();
+    whiteboard.events.emit("board", { type: "replaced", id: doc.id, rev: doc.rev });
+  } catch {}
   episodes.forget();
   mcp.stopAll();
   mcp.startAll();
@@ -763,17 +828,54 @@ const routes = [
   ["DELETE", /^\/api\/notes\/([\w-]+)$/, (req, id) => notes.remove(id)],
   ["DELETE", /^\/api\/notes$/, () => notes.clear()],
 
-  // Whiteboards
+  // Whiteboards (server/whiteboard.js): a board is changed by operations, so you and the AI can both draw at once
   ["GET", /^\/api\/whiteboards$/, (req, id, url) => whiteboard.list({ scope: url.searchParams.get("scope") || "", scopeId: url.searchParams.get("scopeId") || "", search: url.searchParams.get("q") || "" })],
-  ["POST", /^\/api\/whiteboards$/, async (req) => whiteboard.create(await readJson(req))],
+  ["POST", /^\/api\/whiteboards$/, async (req) => whiteboard.create({ ...(await readJson(req)), author: "user" })],
+  ["GET", /^\/api\/whiteboards\/available-sources$/, () => whiteboardSources.candidates()],
   ["GET", /^\/api\/whiteboards\/active$/, (req, id, url) => whiteboard.getActive(url.searchParams.get("scope") || "general", url.searchParams.get("scopeId") || "")],
-  ["GET", /^\/api\/whiteboards\/([\w-]+)$/, (req, id) => whiteboard.get(id) || { error: "Not found" }],
+  ["GET", /^\/api\/whiteboards\/current$/, () => whiteboard.current()],
+  ["PUT", /^\/api\/whiteboards\/current$/, async (req) => whiteboard.setCurrent(String((await readJson(req)).id || ""))],
+  ["GET", /^\/api\/whiteboards\/([\w-]+)$/, (req, id) => whiteboard.get(id) || notFound("Whiteboard not found")],
   ["PUT", /^\/api\/whiteboards\/([\w-]+)$/, async (req, id) => whiteboard.save(id, await readJson(req))],
   ["PATCH", /^\/api\/whiteboards\/([\w-]+)$/, async (req, id) => whiteboard.patch(id, await readJson(req))],
   ["DELETE", /^\/api\/whiteboards\/([\w-]+)$/, (req, id) => ({ ok: whiteboard.remove(id) })],
-  ["POST", /^\/api\/whiteboards\/([\w-]+)\/duplicate$/, (req, id) => whiteboard.duplicate(id)],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/duplicate$/, (req, id) => {
+    const copy = whiteboard.duplicate(id);
+    if (copy?.id) whiteboardSources.copy(id, copy.id);
+    return copy;
+  }],
+  // What the robot learns from on a board: texts, notes, files and chats (server/whiteboard-sources.js)
+  ["GET", /^\/api\/whiteboards\/([\w-]+)\/links$/, (req, id) => whiteboardLinks.linksFor(id) || notFound("Whiteboard not found")],
+  ["GET", /^\/api\/whiteboards\/([\w-]+)\/sources$/, (req, id) => whiteboardSources.list(id)],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/sources$/, async (req, id) => whiteboardSources.addFrom(id, await readJson(req))],
+  ["GET", /^\/api\/whiteboards\/([\w-]+)\/sources\/([\w-]+)$/, (req, id, url, sid) => whiteboardSources.get(id, sid)],
+  ["PATCH", /^\/api\/whiteboards\/([\w-]+)\/sources\/([\w-]+)$/, async (req, id, url, sid) => whiteboardSources.update(id, sid, await readJson(req))],
+  ["DELETE", /^\/api\/whiteboards\/([\w-]+)\/sources\/([\w-]+)$/, (req, id, url, sid) => whiteboardSources.remove(id, sid)],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/ops$/, async (req, id) => {
+    const b = await readJson(req);
+    // Whatever the page sends is the user's doing; only the helper's own tools act as the AI
+    return whiteboard.apply(id, Array.isArray(b.ops) ? b.ops : [], { actor: "user", cid: typeof b.cid === "string" ? b.cid.slice(0, 40) : "" });
+  }],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/presence$/, async (req, id) => {
+    const b = await readJson(req);
+    const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : undefined);
+    const data = {};
+    if (Number.isInteger(b.page)) data.page = b.page;
+    if (b.pointer && num(b.pointer.x) !== undefined && num(b.pointer.y) !== undefined) data.pointer = { x: num(b.pointer.x), y: num(b.pointer.y) };
+    if (Array.isArray(b.selection)) data.selection = b.selection;
+    if (typeof b.tool === "string") data.tool = b.tool.slice(0, 20);
+    if (b.drawing === true) data.drawingAt = Date.now();
+    return { ok: Boolean(whiteboard.setPresence(id, "user", data)) };
+  }],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/undo-ai$/, (req, id) => whiteboard.undoLast(id, { actor: "ai", by: "user" })],
+  ["GET", /^\/api\/whiteboards\/([\w-]+)\/since\/(\d+)$/, (req, id, url, rev) => whiteboard.since(id, Number(rev))],
+  ["GET", /^\/api\/whiteboards\/([\w-]+)\/describe$/, (req, id) => whiteboard.describeFor(id, { user: prompt.userName(settings.get()), markSeen: false })],
   ["GET", /^\/api\/whiteboards\/([\w-]+)\/history$/, (req, id) => ({ history: whiteboard.getHistory(id) })],
-  ["POST", /^\/api\/whiteboards\/([\w-]+)\/restore$/, async (req, id) => whiteboard.restoreVersion(id, (await readJson(req)).timestamp)],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/restore$/, async (req, id) => {
+    const b = await readJson(req);
+    return whiteboard.restoreVersion(id, b.versionId ?? b.timestamp);
+  }],
+  ["POST", /^\/api\/whiteboards\/([\w-]+)\/history\/([\w.-]+)\/restore$/, (req, id, url, version) => whiteboard.restoreVersion(id, version)],
   ["POST", /^\/api\/whiteboards\/([\w-]+)\/export$/, async (req, id) => whiteboard.exportData(id, await readJson(req))],
 
   ["POST", /^\/api\/confirm\/([\w-]+)$/, async (req, id) => {
@@ -858,6 +960,23 @@ const routes = [
   }],
   ["DELETE", /^\/api\/telegram\/users\/([\w-]+)$/, (req, id) => ({ ok: telegram.revokePairedUser(id) })],
 
+  // Reddit companion & connector
+  ["GET", /^\/api\/reddit\/status$/, () => redditCompanion.status()],
+  ["GET", /^\/api\/reddit\/health$/, () => redditCompanion.health()],
+  ["POST", /^\/api\/reddit\/test$/, () => redditCompanion.testConnection()],
+  ["PUT", /^\/api\/reddit\/credentials$/, async (req) => redditCompanion.saveCredentials(await readJson(req))],
+  ["GET", /^\/api\/reddit\/users$/, () => ({ users: redditCompanion.getAllowedUsers() })],
+  ["POST", /^\/api\/reddit\/users$/, async (req) => {
+    const b = await readJson(req);
+    return redditCompanion.addAllowedUser(b.username, b.role);
+  }],
+  ["DELETE", /^\/api\/reddit\/users\/([\w-]+)$/, (req, username) => redditCompanion.removeAllowedUser(username)],
+  ["POST", /^\/api\/reddit\/poll$/, async () => {
+    await redditCompanion.pollOnce();
+    const matches = await redditWatcher.pollOnce().catch(() => []);
+    return { ok: true, status: redditCompanion.status(), matchesCount: matches.length };
+  }],
+
   // Notifications router
   ["GET", /^\/api\/notifications\/log$/, () => ({ log: notifications.getLog() })],
   ["POST", /^\/api\/notifications\/test$/, async (req) => {
@@ -869,19 +988,7 @@ const routes = [
     });
   }],
 
-  // Reddit Watchers & Status
-  ["GET", /^\/api\/reddit\/status$/, () => {
-    const r = settings.get().reddit || {};
-    return {
-      enabled: r.enabled !== false,
-      hasSecret: Boolean(keys.getSecret("connector-reddit-clientSecret") || keys.getSecret("reddit-client-secret")),
-      hasRefreshToken: Boolean(keys.getSecret("connector-reddit-refreshToken") || keys.getSecret("reddit-refresh-token")),
-      clientId: r.clientId || "",
-      username: r.username || "",
-      safeMode: r.safeMode !== false,
-      watchersCount: (r.watchers || []).length,
-    };
-  }],
+  // Reddit watchers (the status and the poll are above: they cover the companion and the watchers both)
   ["POST", /^\/api\/reddit\/watchers$/, async (req) => {
     const b = await readJson(req);
     const s = settings.get();
@@ -905,10 +1012,6 @@ const routes = [
     const updated = (r.watchers || []).filter((w) => w.id !== id);
     settings.set({ ...s, reddit: { ...r, watchers: updated } });
     return { ok: true };
-  }],
-  ["POST", /^\/api\/reddit\/poll$/, async () => {
-    const matches = await redditWatcher.pollOnce();
-    return { ok: true, matchesCount: matches.length };
   }],
 
   // Missions: goals carried out in the background (server/missions/)
@@ -1099,6 +1202,22 @@ async function handle(req, res) {
   }
   if (pathname === "/api/voice/speak" && req.method === "POST") return speak(req, res);
   if (pathname === "/api/specialists/pull" && req.method === "POST") return pullModel(req, res);
+  const boardPic = pathname.match(/^\/api\/whiteboards\/assets\/([\w-]+)\/([\w.-]+)$/);
+  if (boardPic && (req.method === "GET" || req.method === "HEAD")) {
+    const asset = whiteboard.readAsset(boardPic[1], boardPic[2]);
+    if (!asset) return sendJson(res, 404, { error: "Not found" });
+    res.writeHead(200, securityHeaders({ "Content-Type": asset.mime, "Cache-Control": "private, max-age=31536000, immutable", "Content-Security-Policy": "sandbox; default-src 'none'; img-src 'self'" }));
+    if (req.method === "HEAD") return res.end();
+    return fs.createReadStream(asset.file).pipe(res);
+  }
+  const boardUpload = pathname.match(/^\/api\/whiteboards\/([\w-]+)\/assets$/);
+  if (boardUpload && req.method === "POST") {
+    try {
+      return sendJson(res, 200, whiteboard.saveAsset(boardUpload[1], await readBody(req, 6 * 1024 * 1024 + 1)));
+    } catch (err) {
+      return sendJson(res, 400, { error: err.message });
+    }
+  }
   const file = pathname.match(/^\/api\/attachments\/([\w-]+)$/);
   if (file && req.method === "GET") return download(req, res, file[1]);
   if (pathname === "/api/robot/model" && (req.method === "GET" || req.method === "HEAD")) return sendModel(req, res);
@@ -1121,9 +1240,9 @@ async function handle(req, res) {
       const match = pathname.match(pattern);
       if (match && req.method === method) {
         try {
-          return sendJson(res, 200, await fn(req, match[1], url));
+          return sendJson(res, 200, await fn(req, match[1], url, match[2]));
         } catch (err) {
-          return sendJson(res, 400, { error: err.message });
+          return sendJson(res, err.http || 400, { error: err.message });
         }
       }
     }
@@ -1154,11 +1273,20 @@ function start(port = PORT, host = HOST, opts = {}) {
   });
   telegram.start();
 
+  redditCompanion.setHandlers({
+    chat: (text, opts) => companion.reply(text, { ...opts, googleToken }),
+    missions: {
+      start: (goal, opts) => missions.start(goal, opts),
+      stopAll: () => missions.stopAll?.(),
+    },
+  });
+  redditCompanion.start();
+
   // Unified Notification Router channels
   notifications.registerChannel("desktop", {
     send: async (item) => {
       if (nativeNotify) nativeNotify({ title: item.title, body: item.body, action: item.action });
-      else if (!eventClients.size && process.platform === "linux") execFile("notify-send", ["--app-name=Friends", "-i", "friends", item.title, item.body], () => {});
+      else if (!eventClients.size && process.platform === "linux") execFile("notify-send", ["--app-name=Friends", "-i", "friends", "--", item.title, item.body], () => {});
       return { ok: true };
     },
   });
@@ -1177,6 +1305,15 @@ function start(port = PORT, host = HOST, opts = {}) {
       return { ok: false, reason: "Telegram not ready" };
     },
   });
+  notifications.registerChannel("reddit", {
+    send: async (item) => {
+      if (redditCompanion.ready()) {
+        await redditCompanion.sendAlert(`${item.title}\n${item.body}`);
+        return { ok: true };
+      }
+      return { ok: false, reason: "Reddit companion not ready" };
+    },
+  });
 
   // Reddit Watchers daemon
   redditWatcher.start(15);
@@ -1187,12 +1324,12 @@ function start(port = PORT, host = HOST, opts = {}) {
     notify: ({ title, body, action }) => {
       notifications.dispatch("watch_alert", { title, body, action });
       if (nativeNotify) nativeNotify({ title, body, action });
-      else if (!eventClients.size && process.platform === "linux") execFile("notify-send", ["--app-name=Friends", "-i", "friends", title, body], () => {});
+      else if (!eventClients.size && process.platform === "linux") execFile("notify-send", ["--app-name=Friends", "-i", "friends", "--", title, body], () => {});
     },
     telegram: { send: (text) => telegram.sendAlert(text), ready: () => telegram.ready(), event: (e) => telegram.onMissionEvent(e), alert: (text) => telegram.sendAlert(text) },
     googleToken,
   });
-  process.once("exit", () => (mcp.stopAll(), telegram.stop(), redditWatcher.stop()));
+  process.once("exit", () => (mcp.stopAll(), telegram.stop(), redditWatcher.stop(), redditCompanion.stop()));
   const connections = new Set();
   let isShuttingDown = false;
 
@@ -1252,6 +1389,8 @@ function start(port = PORT, host = HOST, opts = {}) {
     logger.info(`Received ${signal}. Shutting down gracefully...`);
     mcp.stopAll();
     telegram.stop();
+    redditCompanion.stop();
+    redditWatcher.stop();
 
     server.close(() => {
       logger.info("Closed HTTP server. Exiting process.");

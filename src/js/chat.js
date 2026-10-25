@@ -407,7 +407,7 @@ function ask(request, userMsg = null) {
   // The robot next to the chat thinks (voice mode has its own robot states)
   if (!request.voice) {
     robot.director.waiting();
-    request.robot = dockShowing();
+    request.robot = request.robot === true || dockShowing();
   }
 
   const mine = session;
@@ -506,6 +506,10 @@ function ask(request, userMsg = null) {
     // The AI moved its robot body (robot_mood / robot_gesture)
     onRobot(event) {
       if (!stale()) robot.director.toolEvent(event);
+    },
+    // The AI pointed at the board, zoomed it, opened it: the whiteboard shows it (changes to the board itself arrive on their own)
+    onWhiteboard(event) {
+      if (!stale()) document.dispatchEvent(new CustomEvent("friends:whiteboard", { detail: event }));
     },
     onConfirm({ id, summary, details }) {
       if (stale()) return;
@@ -919,6 +923,15 @@ export function askFromVoice(text, { onChunk = null, onDraft = null, robot: robo
   main.classList.add("has-chat");
   const userMsg = addUserMessage(text, [], { isNew: true });
   return ask({ chatId: currentChatId, text, voice: true, robot: robotShown, onAir, doc, brainId: getSelectedBrainId(), onChunk, onDraft }, userMsg);
+}
+
+// The whiteboard's "ask the robot": a message in the open chat, answered while you stay on the board
+// (the reply streams to onChunk; the robot's tools, including the whiteboard's, are offered when the robot is shown)
+export function askFromBoard(text, { onChunk = null, robot: robotShown = true } = {}) {
+  if (active) stopActive();
+  main.classList.add("has-chat");
+  const userMsg = addUserMessage(text, [], { isNew: true });
+  return ask({ chatId: currentChatId, text, voice: false, robot: robotShown, brainId: getSelectedBrainId(), onChunk }, userMsg);
 }
 
 // Voice mode opened (or the app has something to say, like a reminder: note):

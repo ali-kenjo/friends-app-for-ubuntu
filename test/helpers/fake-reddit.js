@@ -110,6 +110,9 @@ class FakeRedditServer {
   clear() {
     this.submittedPosts = [];
     this.submittedComments = [];
+    this.composedPMs = [];
+    this.mentions = [];
+    this.readMessageIds = [];
     this.simulate429Once = false;
     this.rateLimitRemaining = 100;
   }
@@ -256,14 +259,53 @@ class FakeRedditServer {
         ]);
       }
 
-      // 7. Inbox: /message/inbox.json or /message/unread.json
-      if (pathname === "/message/inbox.json" || pathname === "/message/unread.json") {
+      // Current User: /api/v1/me
+      if (pathname === "/api/v1/me") {
+        return json({
+          name: "test_friends_user",
+          id: "t2_test123",
+          created_utc: 1600000000,
+        });
+      }
+
+      // 7. Inbox: /message/inbox or /message/unread
+      if (pathname.startsWith("/message/inbox") || pathname.startsWith("/message/unread")) {
         return json({
           kind: "Listing",
           data: {
             children: this.inboxMessages.map((m) => ({ kind: "t4", data: m })),
           },
         });
+      }
+
+      // Mentions: /message/mentions
+      if (pathname.startsWith("/message/mentions")) {
+        return json({
+          kind: "Listing",
+          data: {
+            children: this.mentions.map((m) => ({ kind: "t1", data: m })),
+          },
+        });
+      }
+
+      // Compose PM: POST /api/compose
+      if (pathname === "/api/compose" && req.method === "POST") {
+        const params = new URLSearchParams(body);
+        const pm = {
+          to: params.get("to"),
+          subject: params.get("subject"),
+          text: params.get("text"),
+          sentAt: Date.now(),
+        };
+        this.composedPMs.push(pm);
+        return json({ json: { errors: [] } });
+      }
+
+      // Read message: POST /api/read_message
+      if (pathname === "/api/read_message" && req.method === "POST") {
+        const params = new URLSearchParams(body);
+        this.readMessageIds.push(...(params.get("id") || "").split(","));
+        return json({ json: { errors: [] } });
       }
 
       // 8. Submit Post: POST /api/submit

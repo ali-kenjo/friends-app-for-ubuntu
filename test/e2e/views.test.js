@@ -18,14 +18,17 @@ describe("Talk, Missions and Today", { skip: !hasChrome && "no Chrome found" }, 
     h = await launch();
     page = h.page;
     await h.addLocalBrain();
+    // Missions are off until you turn them on (0.7.1): these tests are about the place, so it is on
+    const s = await h.api("GET", "/api/settings");
+    await h.api("PUT", "/api/settings", { ...s, missions: { ...s.missions, enabled: true } });
     await h.setLook({ width: 1280 });
   });
   after(async () => {
     await h?.close();
   });
 
-  test("the sidebar has three places, and Talk is where you start", async () => {
-    assert.deepStrictEqual(await page.$$eval(".nav .nav-item", (items) => items.map((i) => i.id)), ["nav-home", "nav-missions", "today-open", "nav-whiteboard"]);
+  test("the sidebar has four places, and Talk is where you start", async () => {
+    assert.deepStrictEqual(await page.$$eval(".nav .nav-item", (items) => items.map((i) => i.id)), ["nav-home", "nav-whiteboard", "nav-missions", "today-open"]);
     assert.strictEqual(await shown(), "home");
     assert.strictEqual(await page.$eval("#nav-home", (el) => el.getAttribute("aria-current")), "page");
     assert.strictEqual(await visible("#main"), true);
@@ -88,7 +91,7 @@ describe("Talk, Missions and Today", { skip: !hasChrome && "no Chrome found" }, 
     await page.evaluate(() => document.getElementById("new-chat").click());
   });
 
-  test("Alt+1, Alt+2 and Alt+3 go to Talk, Missions and Today", async () => {
+  test("Alt+1 to Alt+4 go to Talk, Missions, Today and the Robot", async () => {
     await page.keyboard.down("Alt");
     await page.keyboard.press("Digit2");
     await page.keyboard.up("Alt");
@@ -97,6 +100,10 @@ describe("Talk, Missions and Today", { skip: !hasChrome && "no Chrome found" }, 
     await page.keyboard.press("Digit3");
     await page.keyboard.up("Alt");
     assert.strictEqual(await shown(), "today");
+    await page.keyboard.down("Alt");
+    await page.keyboard.press("Digit4");
+    await page.keyboard.up("Alt");
+    assert.strictEqual(await shown(), "whiteboard");
     await page.keyboard.down("Alt");
     await page.keyboard.press("Digit1");
     await page.keyboard.up("Alt");

@@ -1,6 +1,6 @@
 // What Friends knows about the computer it runs on: probed with a fake machine for every kind it should recognise
 // (a gaming laptop, an AMD desktop, an Intel-only ultrabook, a Raspberry Pi, a Mac with Apple silicon, an Intel Mac,
-// Windows, a limited Docker container, WSL), and the sizes of local model each can take.
+// Windows, a memory-limited process, WSL), and the sizes of local model each can take.
 const { test, describe } = require("node:test");
 const assert = require("node:assert");
 const hardware = require("../server/hardware");
@@ -162,9 +162,8 @@ describe("Recognising the machine", () => {
     assert.strictEqual(p.fit.engine, "cuda");
   });
 
-  test("a Docker container with a memory limit counts only what it may use", async () => {
-    const p = await hardware.probe(machine({ totalGb: 64, freeGb: 40, files: { "/.dockerenv": "", "/sys/fs/cgroup/memory.max": String(4 * GB) + "\n", "/proc/meminfo": "MemAvailable: 39000000 kB\n" } }));
-    assert.strictEqual(p.container, "docker");
+  test("a process with a memory limit counts only what it may use", async () => {
+    const p = await hardware.probe(machine({ totalGb: 64, freeGb: 40, files: { "/sys/fs/cgroup/memory.max": String(4 * GB) + "\n", "/proc/meminfo": "MemAvailable: 39000000 kB\n" } }));
     assert.strictEqual(p.memory.totalMb, 4096);
     assert.ok(p.memory.availableMb <= 4096);
     assert.ok(p.fit.notes.includes("memory-limited"));

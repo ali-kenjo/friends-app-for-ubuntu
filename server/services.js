@@ -52,7 +52,6 @@ const LOCAL = [
   { id: "koboldcpp", label: "KoboldCpp", port: 5001, url: "http://127.0.0.1:5001/v1", protocol: "openai", download: "https://github.com/LostRuins/koboldcpp", start: "Start KoboldCpp with a model", about: "One file that runs models, with an OpenAI-style API" },
   { id: "textgen", label: "text-generation-webui or TabbyAPI", port: 5000, url: "http://127.0.0.1:5000/v1", protocol: "openai", download: "https://github.com/oobabooga/text-generation-webui", start: "Start it with --api", about: "A web interface and API for many model formats" },
   { id: "gpt4all", label: "GPT4All", port: 4891, url: "http://127.0.0.1:4891/v1", protocol: "openai", download: "https://www.nomic.ai/gpt4all", start: "Open GPT4All, Settings, and switch on the local API server", about: "A desktop app for private chat with local models" },
-  { id: "dockermr", label: "Docker Model Runner", port: 12434, url: "http://127.0.0.1:12434/engines/v1", protocol: "openai", download: "https://docs.docker.com/ai/model-runner/", start: "Turn on host-side TCP support in Docker Desktop", about: "Models run by Docker" },
   { id: "other", label: "Another server", port: 0, url: "", protocol: "openai", custom: true, download: "", start: "", about: "Any server with an OpenAI-style API on this computer or your network: give its address" },
   { id: "sglang", label: "SGLang", port: 30000, url: "http://127.0.0.1:30000/v1", protocol: "openai", download: "https://docs.sglang.ai", start: "python -m sglang.launch_server --model-path <model>", about: "A fast server for a GPU computer" },
 ];

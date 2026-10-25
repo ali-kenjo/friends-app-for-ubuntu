@@ -36,6 +36,25 @@ describe("Backups", () => {
     assert.ok(backup.snapshot({ files: true }).files.some((f) => f.path === "attachments/abc"));
   });
 
+  test("a whiteboard is in every backup; the pictures on it only with files, and they come back", () => {
+    write("whiteboards/b1.json", JSON.stringify({ id: "b1", title: "Board" }));
+    write("whiteboards/b1.history/v1.json", "{}");
+    write("whiteboards/b1.assets/pic.png", "png");
+    try {
+      const plain = backup.snapshot().files.map((f) => f.path);
+      assert.ok(plain.includes("whiteboards/b1.json") && plain.includes("whiteboards/b1.history/v1.json"));
+      assert.ok(!plain.includes("whiteboards/b1.assets/pic.png"));
+      const full = backup.snapshot({ files: true });
+      assert.ok(full.files.some((f) => f.path === "whiteboards/b1.assets/pic.png"));
+      fs.rmSync(path.join(tempDir, "whiteboards"), { recursive: true });
+      backup.restore(backup.pack(full), { mode: "replace" });
+      assert.strictEqual(fs.readFileSync(path.join(tempDir, "whiteboards/b1.assets/pic.png"), "utf8"), "png");
+      assert.ok(exists("whiteboards/b1.json"));
+    } finally {
+      fs.rmSync(path.join(tempDir, "whiteboards"), { recursive: true, force: true });
+    }
+  });
+
   test("create saves a gzipped file and list shows it", () => {
     const made = backup.create("manual");
     assert.match(made.name, backup.NAME);

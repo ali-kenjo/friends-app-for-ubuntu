@@ -3,7 +3,7 @@
 // outlines, ideas): shown as cards you can read, copy and download, in the
 // chat and in voice mode's side panel.
 import { marked } from "/vendor/marked/marked.esm.js";
-import DOMPurify from "/vendor/dompurify/purify.es.mjs";
+import { cleanHtml } from "./sanitize.js";
 import { t } from "./i18n.js";
 
 const KINDS = { script: t("Script"), post: t("Post"), caption: t("Caption"), outline: t("Outline"), ideas: t("Ideas"), email: t("Email"), other: t("Draft") };
@@ -30,7 +30,7 @@ export function draftCard(draft) {
   card.querySelector(".draft-kind").textContent = KINDS[draft.kind] || KINDS.other;
   card.querySelector(".draft-title").textContent = draft.title;
   // Written by the AI: sanitized, and without images (they could track you)
-  card.querySelector(".draft-body").innerHTML = DOMPurify.sanitize(marked.parse(draft.content), { FORBID_TAGS: ["img"] });
+  card.querySelector(".draft-body").innerHTML = cleanHtml(marked.parse(draft.content));
   card.querySelector(".draft-actions").addEventListener("click", async (e) => {
     const button = e.target.closest("[data-action]");
     if (!button) return;

@@ -718,17 +718,13 @@ async function handleCommand(chatId, text, msg = {}) {
 
     case "/whiteboard": {
       try {
+        // The board both of you are working on (the same one the app and the AI use), as text; never its pictures or links
         const wb = require("./whiteboard");
-        const active = wb.getActive("main");
+        const active = wb.current();
         if (!active || !active.pages || !active.pages[0]) {
           return sendMessage(chatId, say("No active whiteboard found."));
         }
         const textSummary = wb.exportBoard(active.id, "markdown");
-        const wantsSnapshot = text.includes("snapshot") || text.includes("photo") || text.includes("image");
-        const photoUrl = active.snapshot || active.pages[0]?.items?.find((i) => i.type === "image")?.url;
-        if (wantsSnapshot && photoUrl) {
-          return sendPhoto(chatId, photoUrl, `${say("Active Whiteboard: {title}", { title: active.title })}\n\n${textSummary.slice(0, 1000)}`);
-        }
         return sendMessage(chatId, `${say("Active Whiteboard: {title}", { title: active.title })}\n\n${textSummary.slice(0, 3000)}`);
       } catch (err) {
         return sendMessage(chatId, say("Couldn't read whiteboard: {reason}", { reason: err.message }));

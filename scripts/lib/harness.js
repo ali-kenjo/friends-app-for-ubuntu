@@ -86,7 +86,8 @@ async function launch({ pointer = "fine", webgl = false } = {}) {
   });
 
   const { start } = require(path.join(root, "server", "server"));
-  const server = start(0, "127.0.0.1");
+  // No sign-in for the test browser, whether or not node:test started this (scripts like a11y.js run on their own)
+  const server = start(0, "127.0.0.1", { requireAuth: false });
   await new Promise((r) => (server.listening ? r() : server.on("listening", r)));
   const base = `http://127.0.0.1:${server.address().port}`;
   const api = (method, url, body) => fetch(base + url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined }).then((r) => r.json());

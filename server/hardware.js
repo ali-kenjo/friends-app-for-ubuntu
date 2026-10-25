@@ -3,7 +3,7 @@
 // From that it works out a "budget" (how much memory a local AI model may use and still run well), a tier name, and
 // sensible defaults (context size, how long to keep a model loaded). Nothing here leaves the computer.
 //
-// Works on Linux (including Raspberry Pi, WSL and Docker), macOS (Apple Silicon and Intel) and Windows. Every probe is
+// Works on Linux (including Raspberry Pi and WSL), macOS (Apple Silicon and Intel) and Windows. Every probe is
 // optional: a missing tool or a failing command only means less is known. Tests give probe() a fake `sys` for each kind
 // of machine; FRIENDS_FAKE_HARDWARE='{"memory":{"totalMb":8192}}' changes parts of the real profile.
 const fs = require("fs");
@@ -288,12 +288,10 @@ async function distro(sys) {
   return sys.platform;
 }
 
-// "laptop", "desktop", "server", "single-board" or "unknown"; and whether it is inside Docker or WSL
+// "laptop", "desktop", "server", "single-board" or "unknown"; and whether it is inside WSL
 async function formFactor(sys, { battery, windows }) {
-  const env = sys.env || {};
   let container = "none";
-  if (sys.exists("/.dockerenv") || sys.exists("/run/.containerenv") || env.FRIENDS_IN_DOCKER) container = "docker";
-  else if (sys.platform === "linux" && /microsoft|wsl/i.test(sys.readFile("/proc/version") || "")) container = "wsl";
+  if (sys.platform === "linux" && /microsoft|wsl/i.test(sys.readFile("/proc/version") || "")) container = "wsl";
 
   let kind = "unknown";
   if (sys.platform === "linux") {
@@ -304,7 +302,6 @@ async function formFactor(sys, { battery, windows }) {
     else if ([17, 23, 25, 28].includes(chassis)) kind = "server";
     else if ([3, 4, 5, 6, 7, 13, 15, 16, 24, 35, 36].includes(chassis)) kind = "desktop";
     else if (battery.present) kind = "laptop";
-    else if (container === "docker") kind = "unknown";
     else if (chassis) kind = "desktop";
     return { kind, container, board };
   }
@@ -364,7 +361,7 @@ function fit(profile) {
   budgetMb = Math.max(0, round(budgetMb));
   if (battery.onBattery) notes.push("on-battery");
   if (profile.formFactor === "single-board") notes.push("single-board");
-  if (profile.container !== "none" && memory.limitMb) notes.push("memory-limited");
+  if (memory.limitMb) notes.push("memory-limited");
   if (profile.freeDiskMb !== null && profile.freeDiskMb < 8192) notes.push("low-disk");
   const tier = tierOf(budgetMb);
   const speed = engine === "cpu" ? "slow" : engine === "metal" ? "good" : "fast";

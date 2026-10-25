@@ -35,11 +35,10 @@ function compare(a, b) {
   return x.pre < y.pre ? -1 : 1;
 }
 
-// How this copy of Friends was installed, so the advice fits: "appimage", "deb", "docker" or "source"
+// How this copy of Friends was installed, so the advice fits: "appimage", "deb" or "source"
 function installKind(env = process.env, root = path.resolve(__dirname, "..")) {
   if (env.APPIMAGE) return "appimage";
   if (root.startsWith("/opt/friends/")) return "deb";
-  if (env.FRIENDS_IN_DOCKER || fs.existsSync("/.dockerenv")) return "docker";
   return "source";
 }
 

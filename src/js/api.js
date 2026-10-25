@@ -26,6 +26,12 @@ async function call(method, url, body) {
   return data;
 }
 
+// What the AI did with its robot body: a mood, a gesture, or a move/look/prop (they all reach the robot)
+export function robotEvent(event) {
+  const { mood, gesture, useProp, goTo, lookAt } = event;
+  return { mood, gesture, useProp, goTo, lookAt };
+}
+
 // Read the helper's newline-separated JSON events as they arrive
 async function streamChat(request, signal, handlers) {
   let res;
@@ -66,7 +72,8 @@ async function streamChat(request, signal, handlers) {
         else if (event.type === "activity") handlers.onActivity?.(event.text);
         else if (event.type === "draft") handlers.onDraft?.(event.draft);
         else if (event.type === "route") handlers.onRoute?.(event);
-        else if (event.type === "robot") handlers.onRobot?.({ mood: event.mood, gesture: event.gesture });
+        else if (event.type === "robot") handlers.onRobot?.(robotEvent(event));
+        else if (event.type === "whiteboard") handlers.onWhiteboard?.(event);
         else if (event.type === "confirm") handlers.onConfirm?.({ id: event.id, summary: event.summary, details: event.details });
         else if (event.type === "done") return handlers.onDone({ stopped: false });
         else if (event.type === "error") return handlers.onError(event.error);
@@ -180,6 +187,12 @@ export const api = {
   },
   reddit: {
     status: () => call("GET", "/api/reddit/status"),
+    health: () => call("GET", "/api/reddit/health"),
+    test: () => call("POST", "/api/reddit/test"),
+    saveCredentials: (creds) => call("PUT", "/api/reddit/credentials", creds),
+    getUsers: () => call("GET", "/api/reddit/users"),
+    addUser: (username, role) => call("POST", "/api/reddit/users", { username, role }),
+    removeUser: (username) => call("DELETE", `/api/reddit/users/${encodeURIComponent(username)}`),
     saveWatcher: (watcher) => call("POST", "/api/reddit/watchers", watcher),
     removeWatcher: (id) => call("DELETE", `/api/reddit/watchers/${encodeURIComponent(id)}`),
     poll: () => call("POST", "/api/reddit/poll"),

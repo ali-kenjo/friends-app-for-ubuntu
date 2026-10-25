@@ -6,8 +6,9 @@
 // A backup holds the files as they are, so it keeps working when new kinds of
 // data are added: everything in the data folder is included except what's
 // listed in SKIP (keys, caches, the speech models, the backups themselves).
-// Attachments and your own robot model are included only when asked (Export
-// with files), since they can be large and never change once saved.
+// Attachments, your own robot model and the pictures on whiteboards are included
+// only when asked (Export with files), since they can be large and never change
+// once saved.
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
@@ -21,7 +22,7 @@ const NAME = /^friends-[0-9TZ-]+-(auto|manual|before-restore|import)\.json\.gz$/
 // models (~1 GB, downloaded again by the setup), the backups, half-written files
 const SKIP = [/^secrets\.json$/, /^desktop(\/|$)/, /^voice(\/|$)/, /^backups(\/|$)/, /\.tmp$/, /(^|\/)\.health-probe$/, /(^|\/)\.env/, /\.key$/];
 // Only with files: true
-const LARGE = [/^attachments\//, /^robot\/.*\.glb$/];
+const LARGE = [/^attachments\//, /^robot\/.*\.glb$/, /^whiteboards\/[\w-]+\.assets\//];
 // What a path inside a backup may look like (nothing outside the data folder)
 const SAFE_PATH = /^[\w][\w.-]*(\/[\w][\w.-]*){0,6}$/;
 const MAX_FILE = 40 * 1024 * 1024;
@@ -33,6 +34,9 @@ const large = (rel) => LARGE.some((re) => re.test(rel));
 // Modules that keep data in memory (settings, brains…) reload after a restore
 const restoreHooks = new Set();
 const onRestore = (fn) => restoreHooks.add(fn);
+// …and write what they have not saved yet before a backup is made (a whiteboard saves a moment after a change)
+const snapshotHooks = new Set();
+const beforeSnapshot = (fn) => snapshotHooks.add(fn);
 
 function walk(base, rel = "", out = []) {
   let entries = [];
@@ -52,6 +56,13 @@ function walk(base, rel = "", out = []) {
 
 // The data folder as a backup object. files: also attachments and the robot model.
 function snapshot({ files = false } = {}) {
+  for (const fn of snapshotHooks) {
+    try {
+      fn();
+    } catch (err) {
+      logger.warn("Saving before a backup failed:", err.message);
+    }
+  }
   const list = [];
   for (const rel of walk(dataDir)) {
     if (!files && large(rel)) continue;
@@ -226,4 +237,4 @@ function schedule(getSettings, { firstDelay = 60 * 1000, every = 60 * 60 * 1000 
   timer.unref?.();
 }
 
-module.exports = { dir, create, list, read, remove, restore, restoreSaved, exportBuffer, snapshot, pack, unpack, prune, tick, due, schedule, onRestore, NAME };
+module.exports = { dir, create, list, read, remove, restore, restoreSaved, exportBuffer, snapshot, pack, unpack, prune, tick, due, schedule, onRestore, beforeSnapshot, NAME };

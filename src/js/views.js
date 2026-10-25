@@ -1,10 +1,10 @@
-// ---------- The three places: Talk, Missions, Today ----------
-// The main surface has only three destinations. Home (Talk) is the companion: the robot, the
-// conversation and the message box. Missions is everything the assistant does in the background.
-// Today is your day. Everything else lives in Settings.
+// ---------- The places: Talk, Robot, Missions, Today ----------
+// The main surface has four destinations. Home (Talk) is the companion: the robot, the
+// conversation and the message box. Robot is where you work with it: the whiteboard, its sources, its role.
+// Missions is everything the assistant does in the background. Today is your day. Everything else lives in Settings.
 //
 // This module owns which one is showing, the sidebar's highlight, and the address:
-//   #today  #missions  #missions/<id>  #voice  #chat/<id>  #settings  #home (or nothing)
+//   #today  #missions  #missions/<id>  #whiteboard (or #robot)  #voice  #chat/<id>  #settings  #home (or nothing)
 // (The tray and notifications of the desktop app go to these, see electron/desktop.js.)
 // It never imports the parts it opens: it says what's wanted with events, and they listen.
 import { t } from "./i18n.js";
@@ -14,7 +14,7 @@ const VIEWS = {
   home: { el: () => document.getElementById("main"), nav: "nav-home", title: () => t("Talk") },
   missions: { el: () => document.getElementById("view-missions"), nav: "nav-missions", title: () => t("Missions"), heading: "missions-title" },
   today: { el: () => document.getElementById("view-today"), nav: "today-open", title: () => t("Today"), heading: "life-title" },
-  whiteboard: { el: () => document.getElementById("view-whiteboard"), nav: "nav-whiteboard", title: () => t("Whiteboard"), heading: "whiteboard-title-text" },
+  whiteboard: { el: () => document.getElementById("view-whiteboard"), nav: "nav-whiteboard", title: () => t("Robot"), heading: "whiteboard-title-text" },
 };
 
 let current = "home";
@@ -75,6 +75,7 @@ function follow() {
   const chat = hash.match(/^#chat\/([\w-]+)$/);
   const mission = hash.match(/^#missions\/([\w-]+)$/);
   if (hash === "#today") showView("today", { updateHash: false });
+  else if (hash === "#whiteboard" || hash === "#robot") showView("whiteboard", { updateHash: false });
   else if (hash === "#missions" || mission) showView("missions", { updateHash: false, detail: mission?.[1] || "" });
   else if (hash === "#voice") {
     history.replaceState(null, "", location.pathname + location.search);
@@ -102,10 +103,10 @@ document.getElementById("brand")?.addEventListener("click", (e) => {
   e.preventDefault();
   showView("home");
 });
-// Alt+1, Alt+2, Alt+3: Talk, Missions, Today (not while a dialog or voice mode is open)
+// Alt+1, Alt+2, Alt+3, Alt+4: Talk, Missions, Today, Robot (not while a dialog or voice mode is open)
 document.addEventListener("keydown", (e) => {
   if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-  const name = { Digit1: "home", Digit2: "missions", Digit3: "today" }[e.code];
+  const name = { Digit1: "home", Digit2: "missions", Digit3: "today", Digit4: "whiteboard" }[e.code];
   if (!name || document.querySelector(".modal-backdrop:not([hidden]), .search-backdrop:not([hidden]), #voice-mode:not([hidden])")) return;
   e.preventDefault();
   showView(name);

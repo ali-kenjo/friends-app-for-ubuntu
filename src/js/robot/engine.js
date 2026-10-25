@@ -854,12 +854,21 @@ export class RobotEngine {
     }
     const follow = (pose.posX || 0) * 0.55;
     const place = portrait ? "center" : this.hostOption("position");
-    const shift = place === "left" ? 1 / 6 : place === "right" ? -1 / 6 : 0;
+    let shift = place === "left" ? 1 / 6 : place === "right" ? -1 / 6 : 0;
+    // Where you put it yourself (voice mode): a fraction of the picture sideways (right is positive), up and down
+    // (down is positive), and how large it is. The picture moves the other way under the camera's view offset.
+    const placeX = this.hostOption("placeX");
+    const placeY = this.hostOption("placeY");
+    if (!portrait && Number.isFinite(placeX)) shift = -placeX;
+    const shiftY = Number.isFinite(placeY) ? -placeY : 0;
+    const placeScale = this.hostOption("placeScale");
+    if (Number.isFinite(placeScale) && placeScale > 0) dist /= Math.min(2, Math.max(0.5, placeScale));
     const c = this.cam;
     if (!c.ready) {
       c.dist = { x: dist, v: 0 };
       c.center = { x: center, v: 0 };
       c.shift = { x: shift, v: 0 };
+      c.shiftY = { x: shiftY, v: 0 };
       c.yaw = { x: yaw, v: 0 };
       c.pitch = { x: pitch, v: 0 };
       c.follow = { x: follow, v: 0 };
@@ -868,6 +877,7 @@ export class RobotEngine {
       springStep(c.dist, dist, 4, dt);
       springStep(c.center, center, 4, dt);
       springStep(c.shift, shift, 4, dt);
+      springStep(c.shiftY, shiftY, 4, dt);
       springStep(c.yaw, yaw, 3.2, dt);
       springStep(c.pitch, pitch, 3.2, dt);
       springStep(c.follow, follow, 2.4, dt);
@@ -879,7 +889,7 @@ export class RobotEngine {
     this.camera.lookAt(c.follow.x, c.center.x, 0);
     // Moves the picture sideways without turning the camera, so the robot sits on a third
     const { w, h } = this.size;
-    if (Math.abs(c.shift.x) > 1e-4 && w && h) this.camera.setViewOffset(w, h, c.shift.x * w, 0, w, h);
+    if ((Math.abs(c.shift.x) > 1e-4 || Math.abs(c.shiftY.x) > 1e-4) && w && h) this.camera.setViewOffset(w, h, c.shift.x * w, c.shiftY.x * h, w, h);
     else this.camera.clearViewOffset();
   }
 
@@ -1013,7 +1023,7 @@ export class RobotEngine {
   }
 
   onPointerDown(e) {
-    if (this.look.cameraFriendly || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (this.look.cameraFriendly || this.look.interactive === false || (e.pointerType === "mouse" && e.button !== 0)) return;
     const p = this.pointer;
     const { hit, rel, zone } = this.trackPointer(e);
     Object.assign(p, { down: true, onRobot: hit, moved: 0, held: false, draggingRobot: false, sx: e.clientX, sy: e.clientY, rel: rel.x, zone });

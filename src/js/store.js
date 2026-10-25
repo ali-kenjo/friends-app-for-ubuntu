@@ -128,7 +128,11 @@ function syncControls() {
       // A saved value that isn't one of a select's choices (set by hand, or by an older version) is shown, not blanked
       if (el.tagName === "SELECT") {
         el.querySelectorAll("option[data-extra]").forEach((o) => o.remove());
-        if (![...el.options].some((o) => o.value === String(value))) el.append(Object.assign(new Option(String(value), String(value)), { dataset: { extra: "1" } }));
+        if (![...el.options].some((o) => o.value === String(value))) {
+          const extra = new Option(String(value), String(value));
+          extra.dataset.extra = "1";
+          el.append(extra);
+        }
       }
       el.value = String(value);
     }

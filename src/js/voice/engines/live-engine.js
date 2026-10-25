@@ -47,12 +47,14 @@ export class LiveEngine {
     const barge = () => bargeProfile(getSettings()?.voice?.interruptSensitivity, "live");
     const voice = new LiveVoice({ audioCtx: audio.ctx, micSource: audio.micSource, output: audio.bus, handlers: this.handlers(), barge });
     this.voice = voice;
+    window.__friendsAudioLead = () => voice.audioLead();
     await voice.start({ chatId: getCurrentChatId(), brainId: getSelectedBrainId(), googleAccessToken: getAccessToken(), robot: robotOnScreen(), onAir: isOnAir(), doc: this.doc, style: getSettings()?.voice?.style });
     if (!this.stopped) voice.setMuted(isMuted());
   }
 
   stop() {
     this.stopped = true;
+    window.__friendsAudioLead = null;
     clearTimeout(this.thinkingTimer);
     this.voice?.stop();
   }
@@ -81,6 +83,11 @@ export class LiveEngine {
 
   setRobot(on) {
     this.voice?.setRobot(on);
+  }
+
+  // What the robot is to you changed (a teacher, a coach…): Live is told, the next session starts from it
+  setRole() {
+    this.voice?.send({ type: "role" });
   }
 
   setOnAir(on) {
@@ -171,6 +178,7 @@ export class LiveEngine {
       onChat: ({ id }) => adoptChat(id),
       onActivity: (text) => status.note(text, 2500),
       onRobot: (event) => robot.director.toolEvent(event),
+      onWhiteboard: (event) => document.dispatchEvent(new CustomEvent("friends:whiteboard", { detail: event })),
       onDraft: (draft) => {
         addDraft(draft);
         status.note(t("Draft ready: {title}", { title: draft.title }), 3000);

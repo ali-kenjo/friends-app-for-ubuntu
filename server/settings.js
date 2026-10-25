@@ -4,6 +4,8 @@ const path = require("path");
 const { dataDir, writeJson } = require("./config");
 const characters = require("./characters");
 const look = require("./robot-look");
+const roleData = require("../src/js/robot/roles.mjs");
+const geometry = require("../src/js/whiteboard/geometry.mjs");
 const specialistRoles = require("./specialist-roles");
 const keys = require("./keys");
 const TELEGRAM_TOKEN_KEY = "telegram-bot-token";
@@ -86,6 +88,8 @@ const DEFAULTS = {
   // Who the AI is (see characters.js): Atlas, Mira, or your own; one is active.
   // switchLook: switching also changes the robot's look and the accent color.
   characters: { active: "atlas", switchLook: true, list: [] },
+  // What the robot is to you right now: a teacher, a coach, a co-host… (src/js/robot/roles.mjs)
+  roles: JSON.parse(JSON.stringify(roleData.DEFAULT_ROLES)),
   // Being a companion you can talk to for hours
   companion: {
     recall: true, // remembers past conversations (episodes.js) and can look them up
@@ -213,6 +217,7 @@ const DEFAULTS = {
     cameraMoves: [], // saved custom camera moves: { id, name, shot, view, yaw, pitch, zoom }
     shot: "medium", // ROBOT.shots
     position: "center", // ROBOT.positions: where the robot stands in the picture
+    voicePlace: { x: 0, y: 0, scale: 1 }, // where you put it in voice mode (sideways, up and down, size): geometry.mjs
     seat: "front", // ROBOT.seats: where you sit, so it can turn to you
     followFace: false, // eyes follow you through the webcam (all on this computer)
     eyesFollowCursor: true, // eyes subtly track the pointer when hovering near the stage
@@ -220,6 +225,9 @@ const DEFAULTS = {
     roam: true, // in voice mode it moves about the room, and you can poke it and drag the view
     world: true, // the room around it: glossy floor and reflection, drifting light, rings on the floor
     aiGestures: { voice: true, chat: false }, // the AI moves the robot itself (robot_mood / robot_gesture)
+    aiAllowed: { mood: true, gesture: true, prop: true, move: true, look: true }, // which of its body's moves the AI may use
+    interactive: true, // tap, hold and drag the robot, and tap things in its room
+    nameTag: false, // the character's name under the robot
     smartMoods: false, // one small extra Gemini request per turn to read the mood
     quality: "auto", // ROBOT.qualities
     sound: {
@@ -250,12 +258,25 @@ const DEFAULTS = {
   },
   whiteboard: {
     enabled: true,
-    roomBoardStyle: "whiteboard", // whiteboard | chalkboard | glass | cork | easel | flipchart | screen
+    aiDrawing: true, // the AI may draw and write on it (off: it can only look at it, and not even that without "enabled")
+    awareness: "always", // always (it is told about the board and your changes) | onRequest (only when it looks) | off
+    reactToEdits: "ask", // ask (it comments when you ask) | never | comment (a short remark now and then)
+    initiative: "helpful", // reactive (only when asked) | helpful | proactive (sketches while it explains)
+    followRobot: true, // your view follows when the robot changes page or points
+    showRobotCursor: true, // the robot's pointer and what it is doing show on the board
+    robotPointer: "laser", // laser | ring | arrow
+    showAuthors: "hover", // off | hover | always: who made each thing
+    animate: true, // watch it being written
+    robotArm: true, // the 3D robot reaches to the board and looks at it
+    smartInk: true, // dark ink turns light on a dark board and the other way round
+    snapToGrid: false,
+    smartGuides: true,
+    voiceOpen: "auto", // auto (opens when the robot draws) | manual
+    voiceAutoHide: 0, // seconds without anyone touching it before it folds away in voice mode (0 = never)
     writingStyle: "marker", // marker | chalk | print | cursive | plain
     writingSpeed: "normal", // slow | normal | fast
     markerColor: "#2563eb",
     markerSize: 3,
-    autoHideEmpty: true,
     askBeforeDrawOverUser: true,
     showInFilming: true,
     showInRecordings: true,
@@ -263,23 +284,54 @@ const DEFAULTS = {
     voiceAllowed: true,
     chatAllowed: true,
     sound: true,
+    dockTheme: "auto", // auto (paper in a light app, midnight in a dark one) | paper | midnight | classic | chalkboard | blueprint | cork | glass | neon
+    windows: geometry.cleanWindows(), // where the board (beside the chat, in voice mode) and the robot's window sit and how big they are: geometry.mjs
+    robotWindow: true, // the robot's window on the robot page
+    inspector: true, // the panel with the options of what you draw or select
+    collaborationMode: "both", // both | robot_only | user_only
+    autoOpenOnDraw: true,
+    dockDefaultOpen: false,
+    bgPattern: "grid", // grid | dots | lines | isometric | none
+    gridSize: 28,
+  },
+  subtitles: {
+    enabled: true,
+    showInVoice: true,
+    showInDock: true,
+    showInRecordings: true,
+    speakerVisibility: "both", // both | robot_only | user_only
+    showSpeakerBadge: true,
+    placement: "bottom_center", // bottom_center | bottom_left | bottom_right | top_center | over_robot | floating_center
+    alignment: "center", // left | center | right
+    fontFamily: "default", // default | bricolage | figtree | sans | serif | mono | dyslexic
+    fontSize: 20,
+    fontWeight: "600", // 400 | 500 | 600 | 700 | 800
+    lineHeight: "1.4", // 1.2 | 1.4 | 1.6
+    textColorRobot: "#ffffff",
+    textColorUser: "#ffecd6",
+    bgStyle: "dark_pill", // dark_pill | glass | solid_black | accent_tint | none
+    bgOpacity: 65,
+    textOutline: "subtle", // none | subtle | strong | glow
+    durationSeconds: 4,
+    wordAnimation: "fade", // fade | pop | typewriter | none
+    maxLines: 2,
   },
   notifications: {
     enabled: true,
     matrix: {
-      reminder: { desktop: true, inapp: true, telegram: true },
-      focus_complete: { desktop: true, inapp: true, telegram: true },
-      mission_plan: { desktop: true, inapp: true, telegram: true },
-      mission_question: { desktop: true, inapp: true, telegram: true },
-      mission_approval: { desktop: true, inapp: true, telegram: true },
-      mission_progress: { desktop: false, inapp: true, telegram: true },
-      mission_done: { desktop: true, inapp: true, telegram: true },
-      mission_trouble: { desktop: true, inapp: true, telegram: true },
-      watch_alert: { desktop: true, inapp: true, telegram: true },
-      briefing: { desktop: true, inapp: true, telegram: true },
-      habit_nudge: { desktop: true, inapp: true, telegram: false },
-      follow_up: { desktop: false, inapp: true, telegram: false },
-      reddit_match: { desktop: true, inapp: true, telegram: true },
+      reminder: { desktop: true, inapp: true, telegram: true, reddit: true },
+      focus_complete: { desktop: true, inapp: true, telegram: true, reddit: true },
+      mission_plan: { desktop: true, inapp: true, telegram: true, reddit: true },
+      mission_question: { desktop: true, inapp: true, telegram: true, reddit: true },
+      mission_approval: { desktop: true, inapp: true, telegram: true, reddit: true },
+      mission_progress: { desktop: false, inapp: true, telegram: true, reddit: false },
+      mission_done: { desktop: true, inapp: true, telegram: true, reddit: true },
+      mission_trouble: { desktop: true, inapp: true, telegram: true, reddit: true },
+      watch_alert: { desktop: true, inapp: true, telegram: true, reddit: true },
+      briefing: { desktop: true, inapp: true, telegram: true, reddit: false },
+      habit_nudge: { desktop: true, inapp: true, telegram: false, reddit: false },
+      follow_up: { desktop: false, inapp: true, telegram: false, reddit: false },
+      reddit_match: { desktop: true, inapp: true, telegram: true, reddit: true },
     },
     quietHours: {
       enabled: false,
@@ -303,6 +355,7 @@ const DEFAULTS = {
   },
   reddit: {
     enabled: false,
+    companionEnabled: false,
     clientId: "",
     clientSecret: "",
     hasSecret: false,
@@ -313,6 +366,14 @@ const DEFAULTS = {
     cooldownMinutes: 10,
     maxPostsPerDay: 5,
     aiDisclosure: true,
+    pollIntervalSeconds: 30,
+    allowedUsers: [],
+    respondPM: true,
+    respondMentions: true,
+    respondComments: false,
+    notifyReminders: true,
+    notifyMissions: true,
+    notifyBriefing: false,
     watchers: [],
   },
 };
@@ -321,7 +382,20 @@ const DEFAULTS = {
 const REPLY_LANGUAGES = { en: "English", de: "German", ar: "Arabic", fr: "French", es: "Spanish", it: "Italian", pt: "Portuguese", nl: "Dutch", pl: "Polish", tr: "Turkish", ru: "Russian", uk: "Ukrainian", fa: "Persian", hi: "Hindi", zh: "Chinese", ja: "Japanese", ko: "Korean" };
 
 const THEME_ACCENTS = ["#f5a94a", "#eb7a53", "#fb7185", "#34d399", "#a78bfa", "#38bdf8"];
-const THEME_PACKS = ["cozy", "sunrise", "forest", "lavender", "ocean", "classic"];
+const THEME_PACKS = [
+  "cozy",
+  "sunrise",
+  "forest",
+  "lavender",
+  "ocean",
+  "classic",
+  "midnight",
+  "nordic",
+  "matcha",
+  "espresso",
+  "cyberpunk",
+  "sunset",
+];
 const ROUNDNESS = ["sharp", "soft", "pill"];
 const ANIMATIONS = ["off", "subtle", "lively"];
 const BACKGROUNDS = ["plain", "gradient", "aurora", "pattern"];
@@ -355,9 +429,29 @@ const ROBOT = {
 };
 
 const WHITEBOARD = {
-  roomBoardStyles: ["whiteboard", "chalkboard", "glass", "cork", "easel", "flipchart", "screen"],
+  awarenesses: ["always", "onRequest", "off"],
+  reactions: ["ask", "never", "comment"],
+  initiatives: ["reactive", "helpful", "proactive"],
+  pointers: ["laser", "ring", "arrow"],
+  authorsShown: ["off", "hover", "always"],
+  voiceOpens: ["auto", "manual"],
+  voiceAutoHides: [0, 30, 60, 120, 300],
   writingStyles: ["marker", "chalk", "print", "cursive", "plain"],
   writingSpeeds: ["slow", "normal", "fast"],
+  dockThemes: ["auto", "paper", "midnight", "classic", "chalkboard", "blueprint", "cork", "glass", "neon"],
+  collaborationModes: ["both", "robot_only", "user_only"],
+  bgPatterns: ["grid", "dots", "lines", "isometric", "none"],
+};
+
+const SUBTITLES = {
+  speakerVisibilities: ["both", "robot_only", "user_only"],
+  placements: ["bottom_center", "bottom_left", "bottom_right", "top_center", "over_robot", "floating_center"],
+  alignments: ["left", "center", "right"],
+  fontFamilies: ["default", "bricolage", "figtree", "sans", "serif", "mono", "dyslexic"],
+  fontWeights: ["400", "500", "600", "700", "800"],
+  bgStyles: ["dark_pill", "glass", "solid_black", "accent_tint", "none"],
+  textOutlines: ["none", "subtle", "strong", "glow"],
+  wordAnimations: ["fade", "pop", "typewriter", "none"],
 };
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -414,6 +508,7 @@ function sanitize(input) {
   s.device.profile = ["auto", "light", "balanced", "performance"].includes(s.device.profile) ? s.device.profile : "auto";
   s.device.gpu = ["auto", "off"].includes(s.device.gpu) ? s.device.gpu : "auto";
   s.characters = characters.sanitize(s.characters);
+  s.roles = roleData.cleanRoles(s.roles);
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(s.life.briefing.time)) s.life.briefing.time = "08:00";
   s.localNotes.enabled = Boolean(s.localNotes.enabled);
   s.localNotes.folder = typeof s.localNotes.folder === "string" ? s.localNotes.folder.trim().slice(0, 300) : "";
@@ -505,7 +600,11 @@ function sanitize(input) {
   r.cameraMoves = look.cleanCameraMoves(raw.cameraMoves);
   r.shot = oneOf(r.shot, ROBOT.shots, DEFAULTS.robot.shot);
   r.position = oneOf(r.position, ROBOT.positions, DEFAULTS.robot.position);
+  r.voicePlace = geometry.cleanPlace(r.voicePlace);
   r.seat = oneOf(r.seat, ROBOT.seats, DEFAULTS.robot.seat);
+  r.aiAllowed = Object.fromEntries(Object.keys(DEFAULTS.robot.aiAllowed).map((k) => [k, r.aiAllowed?.[k] !== false]));
+  r.interactive = r.interactive !== false;
+  r.nameTag = Boolean(r.nameTag);
   r.quality = oneOf(r.quality, ROBOT.qualities, DEFAULTS.robot.quality);
   r.sound.volume = whole(r.sound.volume ?? DEFAULTS.robot.sound.volume, 0, 100);
   const pitch = Number(r.sound.pitch);
@@ -517,12 +616,25 @@ function sanitize(input) {
   if (!s.whiteboard) s.whiteboard = clone(DEFAULTS.whiteboard);
   const wb = s.whiteboard;
   wb.enabled = Boolean(wb.enabled);
-  wb.roomBoardStyle = WHITEBOARD.roomBoardStyles.includes(wb.roomBoardStyle) ? wb.roomBoardStyle : DEFAULTS.whiteboard.roomBoardStyle;
+  wb.aiDrawing = wb.aiDrawing !== false;
+  wb.awareness = oneOf(wb.awareness, WHITEBOARD.awarenesses, DEFAULTS.whiteboard.awareness);
+  wb.reactToEdits = oneOf(wb.reactToEdits, WHITEBOARD.reactions, DEFAULTS.whiteboard.reactToEdits);
+  wb.initiative = oneOf(wb.initiative, WHITEBOARD.initiatives, DEFAULTS.whiteboard.initiative);
+  wb.followRobot = wb.followRobot !== false;
+  wb.showRobotCursor = wb.showRobotCursor !== false;
+  wb.robotPointer = oneOf(wb.robotPointer, WHITEBOARD.pointers, DEFAULTS.whiteboard.robotPointer);
+  wb.showAuthors = oneOf(wb.showAuthors, WHITEBOARD.authorsShown, DEFAULTS.whiteboard.showAuthors);
+  wb.animate = wb.animate !== false;
+  wb.robotArm = wb.robotArm !== false;
+  wb.smartInk = wb.smartInk !== false;
+  wb.snapToGrid = Boolean(wb.snapToGrid);
+  wb.smartGuides = wb.smartGuides !== false;
+  wb.voiceOpen = oneOf(wb.voiceOpen, WHITEBOARD.voiceOpens, DEFAULTS.whiteboard.voiceOpen);
+  wb.voiceAutoHide = WHITEBOARD.voiceAutoHides.reduce((best, d) => (Math.abs(d - Number(wb.voiceAutoHide || 0)) < Math.abs(best - Number(wb.voiceAutoHide || 0)) ? d : best), 0);
   wb.writingStyle = WHITEBOARD.writingStyles.includes(wb.writingStyle) ? wb.writingStyle : DEFAULTS.whiteboard.writingStyle;
   wb.writingSpeed = WHITEBOARD.writingSpeeds.includes(wb.writingSpeed) ? wb.writingSpeed : DEFAULTS.whiteboard.writingSpeed;
   if (!/^#[0-9a-f]{6}$/i.test(wb.markerColor)) wb.markerColor = DEFAULTS.whiteboard.markerColor;
   wb.markerSize = whole(wb.markerSize ?? DEFAULTS.whiteboard.markerSize, 1, 32);
-  wb.autoHideEmpty = Boolean(wb.autoHideEmpty);
   wb.askBeforeDrawOverUser = wb.askBeforeDrawOverUser !== false;
   wb.showInFilming = wb.showInFilming !== false;
   wb.showInRecordings = wb.showInRecordings !== false;
@@ -530,6 +642,38 @@ function sanitize(input) {
   wb.voiceAllowed = wb.voiceAllowed !== false;
   wb.chatAllowed = wb.chatAllowed !== false;
   wb.sound = wb.sound !== false;
+  wb.dockTheme = WHITEBOARD.dockThemes.includes(wb.dockTheme) ? wb.dockTheme : DEFAULTS.whiteboard.dockTheme;
+  wb.windows = geometry.cleanWindows(wb.windows);
+  wb.robotWindow = wb.robotWindow !== false;
+  wb.inspector = wb.inspector !== false;
+  wb.collaborationMode = WHITEBOARD.collaborationModes.includes(wb.collaborationMode) ? wb.collaborationMode : DEFAULTS.whiteboard.collaborationMode;
+  wb.autoOpenOnDraw = wb.autoOpenOnDraw !== false;
+  wb.dockDefaultOpen = Boolean(wb.dockDefaultOpen);
+  wb.bgPattern = WHITEBOARD.bgPatterns.includes(wb.bgPattern) ? wb.bgPattern : DEFAULTS.whiteboard.bgPattern;
+  wb.gridSize = whole(wb.gridSize ?? DEFAULTS.whiteboard.gridSize, 12, 64);
+
+  if (!s.subtitles) s.subtitles = clone(DEFAULTS.subtitles);
+  const sub = s.subtitles;
+  sub.enabled = sub.enabled !== false;
+  sub.showInVoice = sub.showInVoice !== false;
+  sub.showInDock = sub.showInDock !== false;
+  sub.showInRecordings = sub.showInRecordings !== false;
+  sub.speakerVisibility = SUBTITLES.speakerVisibilities.includes(sub.speakerVisibility) ? sub.speakerVisibility : DEFAULTS.subtitles.speakerVisibility;
+  sub.showSpeakerBadge = sub.showSpeakerBadge !== false;
+  sub.placement = SUBTITLES.placements.includes(sub.placement) ? sub.placement : DEFAULTS.subtitles.placement;
+  sub.alignment = SUBTITLES.alignments.includes(sub.alignment) ? sub.alignment : DEFAULTS.subtitles.alignment;
+  sub.fontFamily = SUBTITLES.fontFamilies.includes(sub.fontFamily) ? sub.fontFamily : DEFAULTS.subtitles.fontFamily;
+  sub.fontSize = whole(sub.fontSize ?? DEFAULTS.subtitles.fontSize, 12, 48);
+  sub.fontWeight = SUBTITLES.fontWeights.includes(sub.fontWeight) ? sub.fontWeight : DEFAULTS.subtitles.fontWeight;
+  sub.lineHeight = ["1.2", "1.4", "1.6"].includes(sub.lineHeight) ? sub.lineHeight : DEFAULTS.subtitles.lineHeight;
+  if (!/^#[0-9a-f]{6}$/i.test(sub.textColorRobot)) sub.textColorRobot = DEFAULTS.subtitles.textColorRobot;
+  if (!/^#[0-9a-f]{6}$/i.test(sub.textColorUser)) sub.textColorUser = DEFAULTS.subtitles.textColorUser;
+  sub.bgStyle = SUBTITLES.bgStyles.includes(sub.bgStyle) ? sub.bgStyle : DEFAULTS.subtitles.bgStyle;
+  sub.bgOpacity = whole(sub.bgOpacity ?? DEFAULTS.subtitles.bgOpacity, 0, 100);
+  sub.textOutline = SUBTITLES.textOutlines.includes(sub.textOutline) ? sub.textOutline : DEFAULTS.subtitles.textOutline;
+  sub.durationSeconds = whole(sub.durationSeconds ?? DEFAULTS.subtitles.durationSeconds, 1, 15);
+  sub.wordAnimation = SUBTITLES.wordAnimations.includes(sub.wordAnimation) ? sub.wordAnimation : DEFAULTS.subtitles.wordAnimation;
+  sub.maxLines = whole(sub.maxLines ?? DEFAULTS.subtitles.maxLines, 0, 5);
 
   if (!s.notifications) s.notifications = clone(DEFAULTS.notifications);
   const notif = s.notifications;
@@ -554,6 +698,7 @@ function sanitize(input) {
   if (!s.reddit) s.reddit = clone(DEFAULTS.reddit);
   const red = s.reddit;
   red.enabled = Boolean(red.enabled);
+  red.companionEnabled = Boolean(red.companionEnabled);
   red.clientId = typeof red.clientId === "string" ? red.clientId.trim().slice(0, 100) : "";
   red.clientSecret = typeof red.clientSecret === "string" ? red.clientSecret.trim().slice(0, 100) : "";
   red.hasSecret = false;
@@ -564,6 +709,20 @@ function sanitize(input) {
   red.cooldownMinutes = clamp(red.cooldownMinutes, 1, 120);
   red.maxPostsPerDay = clamp(red.maxPostsPerDay, 1, 50);
   red.aiDisclosure = red.aiDisclosure !== false;
+  red.pollIntervalSeconds = clamp(red.pollIntervalSeconds || 30, 10, 120);
+  red.allowedUsers = Array.isArray(red.allowedUsers) ? red.allowedUsers.map((u) => {
+    if (typeof u === "string") return { username: u.replace(/^\/?u\//, "").trim().slice(0, 50), role: "chat" };
+    return {
+      username: String(u.username || "").replace(/^\/?u\//, "").trim().slice(0, 50),
+      role: ["admin", "chat", "notify_only"].includes(u.role) ? u.role : "chat",
+    };
+  }).filter((u) => u.username).slice(0, 50) : [];
+  red.respondPM = red.respondPM !== false;
+  red.respondMentions = red.respondMentions !== false;
+  red.respondComments = Boolean(red.respondComments);
+  red.notifyReminders = red.notifyReminders !== false;
+  red.notifyMissions = red.notifyMissions !== false;
+  red.notifyBriefing = Boolean(red.notifyBriefing);
   red.watchers = Array.isArray(red.watchers) ? red.watchers.map((w) => ({
     id: String(w.id || Date.now().toString(36)),
     subreddit: String(w.subreddit || "").trim().replace(/^r\//, "").slice(0, 50),

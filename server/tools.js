@@ -383,6 +383,10 @@ function robotToolsOn(settings, { voice, robot: onScreen }) {
   return onScreen === true && (voice ? allowed.voice : allowed.chat) === true;
 }
 
+// Which part of its body each robot tool moves (Settings → Robot → Behaviour: what the AI may do)
+const ROBOT_KIND = { robot_mood: "mood", robot_gesture: "gesture", robot_use_prop: "prop", robot_go_to: "move", robot_look_at: "look" };
+const robotAllowed = (settings, name) => settings.robot?.aiAllowed?.[ROBOT_KIND[name]] !== false;
+
 // What a robot tool call shows: { mood }, { gesture }, { useProp }, { goTo }, or { lookAt }; throws when invalid
 function robotEvent(name, args = {}) {
   if (name === "robot_mood") {
@@ -430,7 +434,7 @@ function robotEvent(name, args = {}) {
 // read your files, mail, calendar and memories are left out.
 // options.live: Gemini Live (it searches the web by itself, so no web_search).
 // withhold: it goes to a cloud AI and the person keeps their memories and notes from those (Settings → Privacy)
-function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false, live = false, withhold = false } = {}) {
+function declarations(settings, { voice = false, robot: onScreen = false, nonBlocking = false, workspace = true, onAir = false, live = false, withhold = false, source = "chat" } = {}) {
   const p = settings.permissions;
   const list = [];
   const online = settings.privacy?.localOnly !== true; // Private mode keeps everything on this computer
@@ -484,11 +488,9 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
   }
   if (settings.missions?.enabled !== false && !hidden) list.push(MISSION_TOOL);
   if (voice) list.push(DRAFT_TOOL);
-  if (settings.whiteboard?.enabled !== false && settings.whiteboard?.aiDrawing !== false && !hidden) {
-    list.push(...Object.values(whiteboardTools.WHITEBOARD_TOOLS));
-  }
+  if (!hidden) list.push(...whiteboardTools.declarations(settings, { source: voice ? "voice" : source, withhold }));
   if (robotToolsOn(settings, { voice, robot: onScreen })) {
-    for (const tool of Object.values(ROBOT_TOOLS)) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
+    for (const tool of Object.values(ROBOT_TOOLS)) if (robotAllowed(settings, tool.name)) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
   }
   return list;
 }
@@ -506,8 +508,7 @@ const ESSENTIAL = new Set([
   "search_gmail", "get_calendar_events",
   "home_devices", "home_control", "start_mission",
   "robot_mood", "robot_gesture", "robot_use_prop", "robot_go_to", "robot_look_at",
-  "whiteboard_write_text", "whiteboard_draw_shape", "whiteboard_add_sticky",
-  "whiteboard_point_at", "whiteboard_read_board", "whiteboard_clear",
+  ...whiteboardTools.ESSENTIAL_WHITEBOARD_TOOLS,
 ]);
 
 function forLocal(list, settings) {
@@ -774,6 +775,7 @@ async function run(name, args, ctx) {
   // The robot moves at once and quietly: no confirmation, no activity line
   if (isRobotTool(name)) {
     try {
+      if (!robotAllowed(ctx.settings, name)) throw new Error("The user doesn't let you use that part of your body. Leave it be.");
       ctx.onRobot?.(robotEvent(name, args));
       return { ok: true };
     } catch (err) {
@@ -810,7 +812,7 @@ async function run(name, args, ctx) {
 
     // Whiteboard tools
     if (whiteboardTools.isWhiteboardTool(name)) {
-      if (ctx.settings?.whiteboard?.enabled === false) throw new Error("Whiteboard is switched off in Settings.");
+      if (!whiteboardTools.permitted(ctx.settings, { source: ctx.source || "chat" })) throw new Error("The whiteboard is switched off for this in Settings → Robot → Whiteboard.");
       return await whiteboardTools.run(name, args, ctx);
     }
 
@@ -1021,4 +1023,4 @@ async function run(name, args, ctx) {
   }
 }
 
-module.exports = { declarations, forLocal, run, isRobotTool, robotEvent, briefing };
+module.exports = { declarations, forLocal, run, isRobotTool, robotEvent, robotAllowed, briefing };

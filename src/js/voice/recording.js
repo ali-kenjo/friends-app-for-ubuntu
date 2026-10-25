@@ -135,6 +135,10 @@ export const recording = {
   get captionsOnCanvas() {
     return (Boolean(recorder) || !recordPop.hidden) && options.captions && !voiceMode.classList.contains("captions-off");
   },
+  // The board goes into the picture too, while a video is being made or its format is shown
+  get boardOnCanvas() {
+    return Boolean(recorder) || !recordPop.hidden;
+  },
   closePop,
   stop,
   // The session says what to do before a recording starts (an engine that can't be recorded is swapped)

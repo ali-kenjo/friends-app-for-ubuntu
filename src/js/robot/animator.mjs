@@ -14,6 +14,7 @@ import { CHANNELS, NEUTRAL, MOOD_POSES, MOODS, STATES, GESTURE_DEFS, gestureDura
 import { voiceShape, SyllableDetector } from "./bands.mjs";
 
 const TAU = Math.PI * 2;
+const add = (o, k, v) => (o[k] = (o[k] || 0) + v);
 const SILENT = [0, 0, 0, 0];
 
 // Where each gaze mode looks, -1..1 (+x the viewer's right, +y up)
@@ -93,6 +94,8 @@ export class Animator {
     };
     this.wander = { x: 0, z: 0, next: 0, state: "", side: 1 }; // where it is heading in the room
     this.moveTarget = null; // { target, x, z, until } from robot_go_to or idle prop inspection
+    this.board = null; // { x, y, mode, side, since, until }: at the whiteboard, writing or wiping (workBoard)
+    this.boardSide = 1; // which side of it the board is on: +1 the viewer's right, -1 the left
     this.lookTarget = null; // { target, x, y, until } from robot_look_at or prop use
     this.dragState = { active: false, x: 0, z: 0 };
     this.lastPropUse = null;
@@ -240,6 +243,27 @@ export class Animator {
     const ly = y != null && Number.isFinite(Number(y)) ? clamp(Number(y), -1, 1) : base[1];
     this.lookTarget = { target, x: lx, y: ly, until: this.t + clamp(Number(duration) || 5, 1, 25) };
     return this.lookTarget;
+  }
+
+  // At the whiteboard: the arm reaches toward the spot (x, y in -1..1 across and up the board) and moves like
+  // writing or wiping, the head and eyes follow. Calling it again while it lasts carries on without a restart.
+  workBoard({ x = 0, y = 0, mode = "write", side = null, duration = 1.6 } = {}) {
+    this.wakeFromNap();
+    this.lastActivity = this.t;
+    const same = this.board && this.board.mode === mode && this.board.until > this.t;
+    this.board = {
+      x: clamp(Number(x) || 0, -1, 1),
+      y: clamp(Number(y) || 0, -1, 1),
+      mode: mode === "erase" || mode === "point" ? mode : "write",
+      side: side === null ? this.boardSide : side >= 0 ? 1 : -1,
+      since: same ? this.board.since : this.t,
+      until: this.t + clamp(Number(duration) || 1.6, 0.3, 30),
+    };
+    return this.board;
+  }
+
+  stopBoardWork() {
+    if (this.board) this.board.until = Math.min(this.board.until, this.t + 0.35);
   }
 
   // Interact with a room prop (by AI tool, idle behavior, or user request)
@@ -418,6 +442,33 @@ export class Animator {
     else this.gestures.clear(this.now);
   }
 
+  // The reach and the motion of writing, wiping or pointing at the board; fades in and out
+  boardOffsets(o, rm) {
+    const b = this.board;
+    if (!b) return;
+    if (this.t >= b.until) {
+      this.board = null;
+      return;
+    }
+    const k = Math.min(1, (this.t - b.since) / 0.35, (b.until - this.t) / 0.35);
+    if (k <= 0) return;
+    const side = b.side;
+    const arm = side > 0 ? "armL" : "armR";
+    const wob = Math.sin((this.t - b.since) * (b.mode === "erase" ? 8 : b.mode === "point" ? 0 : 12)) * (rm ? 0.3 : 1);
+    const high = (b.y + 1) / 2; // 0 at the bottom of the board, 1 at the top
+    add(o, `${arm}Raise`, (0.9 + 0.7 * high) * k);
+    add(o, `${arm}Fwd`, (b.mode === "point" ? 0.55 : 0.4 + 0.18 * wob) * k);
+    add(o, `${arm}In`, (b.mode === "erase" ? 0.55 * wob : b.mode === "point" ? 0.05 : 0.2 + 0.12 * wob) * k);
+    add(o, "headYaw", 0.3 * side * k);
+    add(o, "headPitch", -0.05 * high * k);
+    add(o, "lookX", (0.55 + 0.25 * Math.abs(b.x)) * side * k);
+    add(o, "lookY", b.y * 0.4 * k);
+    add(o, "bodyYaw", (rm ? 0.03 : 0.09) * side * k);
+    add(o, "mouthCurve", 0.12 * k);
+    add(o, "finL", 0.15 * k);
+    add(o, "finR", 0.15 * k);
+  }
+
   // ---------- One frame ----------
   update(dt) {
     dt = Math.min(Math.max(Number(dt) || 0, 0), 0.1);
@@ -450,6 +501,9 @@ export class Animator {
       m.add(go, g.weight);
       if (def.spin) spin = def.spin(g.t, rm);
     }
+
+    // At the whiteboard: the arm and the eyes are on it
+    this.boardOffsets(o, rm);
 
     // 6: attention; and reacting to you while you talk
     this.gaze(o, state.gaze);

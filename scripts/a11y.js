@@ -40,6 +40,87 @@ async function main() {
   };
   const click = (sel) => page.evaluate((s) => document.querySelector(s)?.click(), sel);
 
+  // The whiteboard: its page, the dialogs on it, the panel beside the chat, and the robot's settings for it
+  const scanWhiteboard = async (lang, theme, pack) => {
+    const whiteboard = require("../server/whiteboard");
+    const board = whiteboard.current();
+    if (!board.pages.some((p) => p.items.length)) {
+      whiteboard.apply(board.id, [
+        { op: "add", item: { type: "sticky", text: "Idea", x: 120, y: 120, color: "pink" } },
+        { op: "add", item: { type: "text", text: "Roadmap", x: 420, y: 110, fontSize: 32 } },
+        { op: "add", item: { type: "checklist", title: "Today", items: ["Write", "Draw", "Ship"], x: 120, y: 380 } },
+      ], { actor: "ai", batch: "a11y" });
+    }
+    await click("#nav-whiteboard");
+    await sleep(1100);
+    await scan("whiteboard", lang, theme, pack);
+    // something selected, so its options and the bar next to it are showing
+    await page.evaluate(() => document.querySelector('[data-wb-tool="select"]')?.click());
+    await page.keyboard.down("Control");
+    await page.keyboard.press("a");
+    await page.keyboard.up("Control");
+    await sleep(300);
+    await scan("whiteboard-selection", lang, theme, pack);
+    await click("#insp-tab-arrange");
+    await sleep(200);
+    await scan("whiteboard-arrange", lang, theme, pack);
+    await click("#insp-tab-design");
+    await page.keyboard.press("Escape");
+    // The panels on the left, one by one
+    for (const [i, name] of ["boards", "outline", "sources", "shapes", "layouts"].entries()) {
+      await page.evaluate((n) => document.querySelectorAll(".rw-rail-btn")[n]?.click(), i);
+      await sleep(700);
+      await scan(`whiteboard-${name}`, lang, theme, pack);
+    }
+    await page.evaluate(() => document.querySelectorAll(".rw-rail-btn")[4]?.click());
+    // What the robot is: the roles on offer
+    await click(".rw-role-btn");
+    await sleep(500);
+    await scan("whiteboard-roles", lang, theme, pack);
+    await page.keyboard.press("Escape");
+    // Find anything
+    await page.keyboard.down("Control");
+    await page.keyboard.press("p");
+    await page.keyboard.up("Control");
+    await sleep(500);
+    await scan("whiteboard-palette", lang, theme, pack);
+    await page.keyboard.press("Escape");
+    // The dialogs
+    for (const [index, name] of [[0, "history"]]) {
+      await page.evaluate(() => document.querySelector('#wb-actions [aria-label="Earlier versions"]')?.click());
+      await sleep(600);
+      await scan(`whiteboard-${name}`, lang, theme, pack);
+      await page.keyboard.press("Escape");
+      await sleep(250);
+      void index;
+    }
+    // Beside the chat: the board in its window
+    await click("#nav-home");
+    await sleep(400);
+    await click("#home-wb-toggle-btn");
+    await sleep(900);
+    await scan("whiteboard-dock", lang, theme, pack);
+    await page.evaluate(() => document.querySelector('.wb-win-chat .fw-head [aria-haspopup="menu"]')?.click());
+    await sleep(300);
+    await scan("whiteboard-dock-menu", lang, theme, pack);
+    await page.keyboard.press("Escape");
+    await click("#home-wb-toggle-btn");
+    await sleep(300);
+    // Settings → Robot, each of its parts
+    await click("#settings-btn");
+    await sleep(300);
+    await page.evaluate(() => document.querySelector('.modal-nav .tab[data-tab="robot"]')?.click());
+    await sleep(300);
+    const parts = await page.evaluate(() => [...document.querySelectorAll('.subtabs [role="tab"]')].map((t) => t.id).filter((id) => /^subtab-rb-/.test(id)));
+    for (const id of parts) {
+      await page.evaluate((i) => document.getElementById(i)?.click(), id);
+      await sleep(300);
+      await scan(`settings-robot-${id.replace("subtab-rb-", "")}`, lang, theme, pack);
+    }
+    await click("#settings-close");
+    await sleep(300);
+  };
+
   for (const lang of LANGS) {
     for (const theme of THEMES) {
       for (const pack of FULL_PACKS) {
@@ -139,9 +220,23 @@ async function main() {
         await sleep(200);
         await click("#settings-close");
 
+        await scanWhiteboard(lang, theme, pack);
+
         await click("#voice-open");
         await sleep(1200);
         await scan("voice", lang, theme, pack);
+        await click("#voice-board-btn");
+        await sleep(900);
+        await scan("voice-board", lang, theme, pack);
+        await click("#voice-board-btn");
+        await click("#voice-role");
+        await sleep(400);
+        await scan("voice-role", lang, theme, pack);
+        await page.keyboard.press("Escape");
+        await click("#voice-place");
+        await sleep(400);
+        await scan("voice-move", lang, theme, pack);
+        await page.keyboard.press("Escape");
         await click("#voice-filming");
         await sleep(400);
         await scan("filming-setup", lang, theme, pack);

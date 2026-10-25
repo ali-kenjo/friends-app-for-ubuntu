@@ -62,7 +62,7 @@ async function loadVaultNotes() {
       docVaultSelect.appendChild(opt);
     }
   } catch (err) {
-    docVaultSelect.innerHTML = `<option value="">(${err.message})</option>`;
+    docVaultSelect.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: `(${err.message})` }));
   }
 }
 

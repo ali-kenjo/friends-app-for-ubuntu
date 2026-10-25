@@ -10,12 +10,26 @@ try {
 } catch {}
 
 const port = Number(process.env.PORT) || 3000;
-// Only this computer can reach Friends. Set HOST=0.0.0.0 (e.g. in Docker) to open it up.
+// Only this computer can reach Friends. Set HOST=0.0.0.0 to open it up.
 const host = process.env.HOST || "127.0.0.1";
 
-const dataDir =
-  process.env.FRIENDS_DATA_DIR ||
-  path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"), "friends");
+// A test never touches your real data: when the test runner starts a process and no folder was chosen,
+// it gets a scratch folder of its own (removed again when it ends). Set FRIENDS_DATA_DIR to choose one.
+function chooseDataDir() {
+  if (process.env.FRIENDS_DATA_DIR) return process.env.FRIENDS_DATA_DIR;
+  if (process.env.NODE_TEST_CONTEXT && !process.env.FRIENDS_REAL_DATA_FOR_TESTS) {
+    const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "friends-test-data-"));
+    process.once("exit", () => {
+      try {
+        fs.rmSync(scratch, { recursive: true, force: true });
+      } catch {}
+    });
+    return scratch;
+  }
+  return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"), "friends");
+}
+
+const dataDir = chooseDataDir();
 
 // Write to a temp file first so a crash can't leave a half-written file.
 // Files are readable only by the owner (mode 0600, dir 0700).

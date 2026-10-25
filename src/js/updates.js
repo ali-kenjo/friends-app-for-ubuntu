@@ -34,7 +34,6 @@ function howTo(state) {
   return {
     appimage: t("Download the new AppImage, make it executable (chmod +x) and use it in place of the old file."),
     deb: t("Download the .deb, then install it with: sudo apt install ./friends_{version}_amd64.deb", { version: v }),
-    docker: t("Rebuild the image and start it again: docker compose up -d --build"),
     source: t("In the project folder, run: npm run update"),
   }[state.install];
 }

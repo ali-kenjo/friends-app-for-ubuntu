@@ -35,7 +35,7 @@ function render(hw) {
   const gpus = hw.gpus.filter((g) => !(g.shared && !g.unified && g.vramMb === 0 && hw.gpus.some((o) => o !== g && !o.shared)));
   $("device-head").textContent = `${FORM[hw.formFactor] || FORM.unknown} · ${hw.board || hw.cpu.model || hw.os.name}`;
   const rows = [
-    ...fact(t("System"), `${hw.os.name} (${hw.os.arch})${hw.container === "docker" ? `, ${t("in a container")}` : hw.container === "wsl" ? `, ${t("in WSL")}` : ""}`),
+    ...fact(t("System"), `${hw.os.name} (${hw.os.arch})${hw.container === "wsl" ? `, ${t("in WSL")}` : ""}`),
     ...fact(t("Processor"), `${hw.cpu.model || t("Unknown")} · ${t("{cores} cores, {threads} threads", { cores: hw.cpu.cores, threads: hw.cpu.threads })}`),
     ...fact(t("Memory"), t("{total} ({free} free)", { total: gb(hw.memory.totalMb), free: gb(hw.memory.availableMb) })),
     ...(gpus.length

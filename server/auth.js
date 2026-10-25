@@ -99,15 +99,8 @@ function validateSession(req) {
     }
   }
 
-  // 3. For WebSocket upgrades or query params: check ?token=
-  try {
-    const url = new URL(req.url, "http://127.0.0.1");
-    const qToken = url.searchParams.get("token");
-    if (qToken && validateToken(qToken)) {
-      return true;
-    }
-  } catch {}
-
+  // (Not in the address: a token in a URL ends up in logs, history and the next page's Referer. The page gets its
+  // cookie by sending the token from the address's #fragment, which never leaves the browser, to /api/session.)
   return false;
 }
 
