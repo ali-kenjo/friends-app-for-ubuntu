@@ -1,8 +1,37 @@
 <p align="center"><img src="build/icon.svg" width="88" alt="Friends: the robot's face"></p>
 
-# Friends
+# Friends (`friends-app-for-ubuntu` v1.0)
 
-A personal AI companion for Linux that also gets things done. You talk to a robot with a face (**Atlas** or **Mira**), and behind it is an assistant: give it a goal, it makes a plan, you approve it once, and it works in the background (researching, writing, organising files, watching your laptop, building small programs) and puts a report in your notes. Gemini plans and checks; small AI models on your own graphics card do the routine work. Everything is local-first, and **Private mode** keeps it all on your computer.
+An open-source, interactive 3D desktop AI robot companion for Ubuntu. Talk in real time over voice or zero-key Text Sandbox, customize its shader style & lighting mood, decorate its 3D workspace (or override any prop with your own `.glb` models), and choreograph autonomous room routines—all local-first and under your control.
+
+## What's New in v1.0 Production Release
+
+- **Provider-Agnostic Voice & AI Bridge (`VoiceProviderAdapter`)**:
+  - **Gemini Live API (`gemini-3.8-live`)** with optional **`gemini-3.8-live-extended-thinking`** toggle and `interaction_status` lifecycle handling.
+  - **OpenAI Realtime API** bidirectional audio + function calling.
+  - **100% Local / OpenAI-Compatible Pipeline**: VAD + Faster-Whisper/Whisper.cpp STT + Ollama (auto-detected on `localhost:11434`), LM Studio, vLLM, or LocalAI + Piper/Kokoro/system TTS.
+  - **Text / Silent Sandbox Mode**: Full interactive chat + live 3D room tool-calling requiring **zero API keys and zero microphone**.
+  - **Live Room-Context Bridge**: Automatically injects structured live room state (props, whiteboard text, notebook notes, flower hydration, toys) into AI context, paired with 9 compound choreography tools (`move_to_asset`, `explain_on_whiteboard`, `clear_whiteboard`, `write_in_notebook`, `play_with_toy`, `water_flowers`, `set_emotion`, `follow_route`, `return_home`).
+- **All-In-One 4-Style Shader Pipeline & 5 Lighting Presets**:
+  - Hot-swap runtime shaders (`Cozy Stylized PBR`, `Realistic PBR`, `Anime Cel-Shaded` with 3-band toon ramps + inverted-hull outlines, and `Minimalist Studio`) without altering physics or navigation.
+  - 5 lighting moods (`Morning Daylight`, `Warm Desk Lamp`, `Sunset Glow`, `Night Cyber Studio`, `Neutral Broadcast`) with dynamic desk-lamp emission and robot-emotion ambient tinting.
+- **Customizable 12-Module Voice Mode Action Dock & Clean Stage (`H` / `F11`)**:
+  - Per-module visibility toggles, drag-and-drop ordering, icon-only/label modes, `Bottom`/`Left`/`Right`/`Floating` dock positions, custom hotkeys, and *Minimal* / *Creator Stage* / *Full Control* presets.
+  - **Clean Stage & OBS Broadcast Mode** with hideable UI, corner hover pill, 5 camera presets (`Wide Room`, `Desk Close-Up`, `Whiteboard Focus`, `Follow Robot`, `Cinema Orbit`), solid studio, Chroma-Key Green/Blue, and Compositor-Transparent Window backdrops, plus Ubuntu tray actions (`Toggle Clean Stage`, `Mute / Unmute Mic`).
+- **Unified 3D Prop System, 8 Interactive Toys & Custom `.glb` Sockets**:
+  - Procedural furniture & interactive desk props (`whiteboard`, `desk_table` with surface-snap sockets, `study_chair`, `vase_flowers` multi-state watering cycle, `books_notebook`, `pens_cup`, `gaming_console`) + **8 interactive toys** (`bouncy_ball`, `rubiks_cube`, `rc_drone`, `retro_handheld`, `holo_projector`, `newtons_cradle`, `stacking_blocks`, `mini_synth`) with procedural WebAudio foley SFX.
+  - Custom `.glb` model override on every asset with metric auto-normalization and socket detection (`socket_hand_grip`, `anchor_robot_stand`, `DynamicCanvas`).
+- **Live 3D Room Editor, Dynamic A\* Navigation & 5-Tab Behavior Studio**:
+  - Translate/Rotate/Scale `TransformControls` gizmos, Undo/Redo stack (`Ctrl+Z`/`Ctrl+Y`), NavMesh/anchor/route visualizers, and 3 room presets (*Cozy Study*, *Creator Studio*, *Minimal Stage*).
+  - Dynamic 2D A\* grid obstacle avoidance, IK hand/head sockets, autonomous quotas/cooldowns/weights, waypoint routes (`loop`, `ping_pong`, `random`), 4 user-speech interrupt policies, and portable `.zip`/`.json` Studio Bundle export/import stored with `0600` secret protection in `~/.config/friends-app-for-ubuntu/`.
+
+## Packaging a v1.0 Ubuntu Release
+
+```bash
+npm run check          # Verify syntax, HTML IDs, and ESLint rules
+npm test               # Run all automated tests
+bash scripts/build-release.sh   # Build dist/friends_1.0.0_amd64.deb and AppImage
+```
 
 <p align="center">
   <img src="docs/design/screenshots/0.6.0/hero-home-dark-1440.png" width="49%" alt="Talk: the robot greets you, and a line under the greeting says a mission is on step 3 of 4">

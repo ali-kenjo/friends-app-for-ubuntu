@@ -49,6 +49,9 @@ const whiteboard = require("./whiteboard");
 const whiteboardSources = require("./whiteboard-sources");
 const whiteboardLinks = require("./whiteboard-links");
 const whiteboardTools = require("./whiteboard-tools");
+const studioBundle = require("./storage/studio-bundle");
+const roomContext = require("./core/ai/room-context");
+const voiceAdapter = require("./core/ai/voice-adapter");
 const auth = require("./auth");
 const { execFile } = require("child_process");
 
@@ -1014,6 +1017,44 @@ const routes = [
     return { ok: true };
   }],
 
+  // v1.0 Studio Providers, Live Room Context & Text Sandbox
+  ["GET", /^\/api\/studio\/providers$/, async () => ({
+    catalog: voiceAdapter.PROVIDER_CATALOG,
+    localEndpoints: await voiceAdapter.detectLocalEndpoints(),
+  })],
+  ["GET", /^\/api\/studio\/ollama\/detect$/, async () => ({ endpoints: await voiceAdapter.detectLocalEndpoints() })],
+  ["GET", /^\/api\/studio\/room-context$/, () => roomContext.get()],
+  ["POST", /^\/api\/studio\/room-context$/, async (req) => roomContext.update(await readJson(req))],
+  ["POST", /^\/api\/studio\/voice\/sandbox$/, async (req) => {
+    const body = await readJson(req);
+    const text = String(body.text || "").trim().slice(0, 4000);
+    if (!text) throw new Error("Message text is required.");
+    const s = settings.get();
+    const adapter = voiceAdapter.createAdapter("text-sandbox", { settings: s });
+    const transcripts = [];
+    const calls = [];
+    const robotEvents = [];
+    adapter.on("transcript", (t) => transcripts.push(t.text));
+    adapter.on("tool_calls", (list) => calls.push(...list));
+    await adapter.start();
+    await adapter.sendText(text);
+    for (const c of calls) {
+      await tools.run(c.name, c.args || {}, {
+        settings: s,
+        source: "voice",
+        onRobot: (ev) => robotEvents.push(ev),
+      });
+    }
+    await adapter.stop();
+    return { reply: transcripts.join(" "), calls, robotEvents, roomContext: roomContext.get() };
+  }],
+  ["GET", /^\/api\/studio\/state$/, () => studioBundle.loadStudioState()],
+  ["PUT", /^\/api\/studio\/state$/, async (req) => studioBundle.saveStudioState(await readJson(req))],
+  ["POST", /^\/api\/studio\/bundle\/import$/, async (req) => {
+    const raw = await readBody(req, 32 * 1024 * 1024);
+    return studioBundle.importStudioBundle(raw);
+  }],
+
   // Missions: goals carried out in the background (server/missions/)
   ["GET", /^\/api\/missions$/, () => missions.overview()],
   ["POST", /^\/api\/missions$/, async (req) => {
@@ -1222,6 +1263,38 @@ async function handle(req, res) {
   if (file && req.method === "GET") return download(req, res, file[1]);
   if (pathname === "/api/robot/model" && (req.method === "GET" || req.method === "HEAD")) return sendModel(req, res);
   if (pathname === "/api/robot/background" && (req.method === "GET" || req.method === "HEAD")) return sendBackground(req, res);
+  if (pathname === "/api/studio/bundle/export" && req.method === "GET") {
+    const fmt = url.searchParams.get("format") === "zip" ? "zip" : "json";
+    const out = studioBundle.exportBundleBuffer(fmt);
+    res.writeHead(200, securityHeaders({
+      "Content-Type": out.mime,
+      "Content-Disposition": `attachment; filename="${out.filename}"`,
+      "Content-Length": out.buffer.length,
+    }));
+    return res.end(out.buffer);
+  }
+  const glbRoute = pathname.match(/^\/api\/studio\/asset-glb\/([\w-]+)$/);
+  if (glbRoute) {
+    const assetId = glbRoute[1];
+    if (req.method === "POST") {
+      try {
+        return sendJson(res, 200, studioBundle.saveAssetGlb(assetId, await readBody(req, 26 * 1024 * 1024)));
+      } catch (err) {
+        return sendJson(res, 400, { error: err.message });
+      }
+    }
+    if (req.method === "GET" || req.method === "HEAD") {
+      const buf = studioBundle.getAssetGlb(assetId);
+      if (!buf) return sendJson(res, 404, { error: "Custom GLB override not found." });
+      res.writeHead(200, securityHeaders({ "Content-Type": "model/gltf-binary", "Content-Length": buf.length, "Cache-Control": "no-store" }));
+      if (req.method === "HEAD") return res.end();
+      return res.end(buf);
+    }
+    if (req.method === "DELETE") {
+      studioBundle.deleteAssetGlb(assetId);
+      return sendJson(res, 200, { ok: true, id: assetId });
+    }
+  }
   if (pathname === "/api/backups/export" && req.method === "GET") {
     const files = url.searchParams.get("files") === "1";
     return sendBackup(res, backup.exportBuffer({ files }), `friends-backup-${new Date().toISOString().slice(0, 10)}.json.gz`);

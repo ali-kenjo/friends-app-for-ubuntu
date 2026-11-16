@@ -80,6 +80,8 @@ function saveState() {
 
 function createWindow({ show = true } = {}) {
   const state = loadState();
+  const s = settings();
+  const transparent = s?.stageMode?.transparentWindow === true;
   win = new BrowserWindow({
     width: 1280,
     height: 860,
@@ -89,7 +91,8 @@ function createWindow({ show = true } = {}) {
     show: false,
     title: "Friends",
     icon: ICON,
-    backgroundColor: "#131314",
+    transparent,
+    backgroundColor: transparent ? "#00000000" : "#131314",
     autoHideMenuBar: true,
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true },
   });
@@ -181,11 +184,19 @@ function notify({ title, body, action }) {
   n.show();
 }
 
+function dispatchTrayAction(action) {
+  if (!win || win.isDestroyed()) return;
+  showWindow();
+  win.webContents.executeJavaScript(`document.dispatchEvent(new CustomEvent('friends:tray-action', { detail: { action: ${JSON.stringify(action)} } }))`).catch(() => {});
+}
+
 function trayMenu() {
   const s = settings();
   return Menu.buildFromTemplate([
     { label: "Open Friends", click: () => showWindow() },
     { label: "Voice conversation", click: () => showWindow({ type: "voice" }) },
+    { label: "Toggle Clean Stage", click: () => dispatchTrayAction("toggle-clean-stage") },
+    { label: "Mute / Unmute Mic", click: () => dispatchTrayAction("mute-mic") },
     { label: "Missions", click: () => showWindow({ type: "missions" }) },
     { label: "Today", click: () => showWindow({ type: "today" }) },
     { type: "separator" },

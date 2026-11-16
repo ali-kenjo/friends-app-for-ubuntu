@@ -40,12 +40,16 @@ import "./whiteboard/bridge.js";
 import "./whiteboard/role-pill.js";
 import { initSubtitlesUI } from "./subtitles.js";
 import { initSession } from "./session.js";
+import { initV1Runtime } from "./core/v1-runtime.mjs";
 
 // Exchange launch token for session cookie if present
 await initSession();
 
 // Initialize subtitles & captions UI
 initSubtitlesUI();
+
+// Initialize v1.0 Studio / Behavior / World / AI Runtime
+initV1Runtime();
 
 // The address (#today, #missions, #voice, #chat/<id>) says where to start
 startViews();

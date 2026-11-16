@@ -30,7 +30,14 @@ async function smartMood(text, heard) {
   }
 }
 
-export const director = new Director(animator, { smartMood });
+export const director = new Director(animator, {
+  smartMood,
+  onToolEvent: (ev) => {
+    if (typeof document === "undefined" || !ev) return;
+    if (ev.choreography) document.dispatchEvent(new CustomEvent("friends:choreography", { detail: ev }));
+    if (ev.emotion || ev.mood) document.dispatchEvent(new CustomEvent("friends:robot-emotion", { detail: { emotion: ev.emotion || ev.mood } }));
+  },
+});
 
 let engine = null;
 let loading = null;

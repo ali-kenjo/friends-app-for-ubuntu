@@ -22,6 +22,8 @@ import { buildRobot, loadRobot, applyPose, applyLook, setMaterialDetail, dispose
 import { userGlowFor } from "./presets.mjs";
 import { defaultDesign, shapeKey } from "./design.mjs";
 import { springStep, clamp } from "./spring.mjs";
+import { appState } from "../core/state-store.mjs";
+import { attachV1Engine, stepV1Frame } from "../core/v1-runtime.mjs";
 
 // What each quality level spends: pixel ratio (capped by the screen's),
 // multisampling, bloom, shadows, face texture size
@@ -304,6 +306,7 @@ export class RobotEngine {
     this.projected = new THREE.Vector3();
 
     this.observer = new ResizeObserver(() => this.resize());
+    attachV1Engine(this);
     this.onVisibility = () => this.update();
     document.addEventListener("visibilitychange", this.onVisibility);
     this.canvas.addEventListener("webglcontextlost", (e) => {
@@ -633,6 +636,7 @@ export class RobotEngine {
     this.face.render(pose, { face: look.design.face, largerFace: look.largerFace, color: look.faceColor || look.accent });
 
     this.frameCamera(dt, pose);
+    stepV1Frame(this, pose, dt, pose.t);
 
     const r = this.renderer;
     r.setRenderTarget(this.sceneTarget);
@@ -689,6 +693,29 @@ export class RobotEngine {
     // Where the robot is on screen, for the vignette and the glow
     this.projected.set(pose.posX || 0, 0.72, pose.posZ || 0).project(this.camera);
     u.uCenter.value.set(this.projected.x * 0.5 + 0.5, this.projected.y * 0.5 + 0.5);
+    const stageBackdrop = appState.get("stageBackdrop") || "full_room";
+    if (this.rooms?.group) this.rooms.group.visible = stageBackdrop === "full_room";
+    if (stageBackdrop === "transparent_window") {
+      u.uTransparent.value = 1;
+      this.stage.setChroma?.(true);
+      return;
+    }
+    u.uTransparent.value = 0;
+    if (stageBackdrop === "chroma_green" || stageBackdrop === "chroma_blue") {
+      u.uMode.value = 0;
+      u.uBg.value.set(stageBackdrop === "chroma_blue" ? 0x0047ff : 0x00ff00);
+      this.stage.setChroma?.(true);
+      return;
+    }
+    if (stageBackdrop === "solid_studio") {
+      u.uMode.value = 1;
+      u.uBg.value.set(0x1b1e28);
+      u.uBgEdge.value.set(0x10131b);
+      u.uGlowAmount.value = 0.04;
+      this.stage.setChroma?.(false);
+      return;
+    }
+    this.stage.setChroma?.(this.rooms.isChroma);
     const b = this.rooms.backdrop;
     const blobs = u.uBlobs.value;
     const colors = u.uBlobColors.value;

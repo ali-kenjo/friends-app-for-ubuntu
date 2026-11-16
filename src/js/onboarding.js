@@ -9,6 +9,7 @@ import { announce } from "./a11y.js";
 import { t, tp } from "./i18n.js";
 import { showView } from "./views.js";
 import { playCelebrationSound } from "./sounds.js";
+import { unifiedRoom } from "./core/world/unified-room-manager.mjs";
 
 const main = document.getElementById("main");
 const card = document.getElementById("onboarding");
@@ -258,3 +259,126 @@ document.addEventListener("friends:brains-changed", (e) => {
   sync();
 });
 onSettings(sync);
+
+// ----- v1.0 3-Step Setup Wizard (AI Backend + Visual Style & Lighting + Starting Room Layout) -----
+(function mountV1Wizard() {
+  if (!card || card.querySelector(".onb-v1-wizard")) return;
+  const wrap = document.createElement("div");
+  wrap.className = "onb-v1-wizard";
+  wrap.style.cssText = "margin-top:14px;padding-top:12px;border-top:1px solid var(--border-subtle,rgba(255,255,255,0.12));display:grid;gap:10px;font-size:13px;";
+
+  const step1 = document.createElement("div");
+  step1.innerHTML = `<div style="font-weight:600;margin-bottom:6px">1. AI Backend (Cloud, Local, or Zero-Key Sandbox)</div>`;
+  const s1Row = document.createElement("div");
+  s1Row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+  for (const [id, label] of [
+    ["gemini-live", "Gemini Live (3.8)"],
+    ["openai-realtime", "OpenAI Realtime"],
+    ["local-pipeline", "Local (Ollama + Whisper)"],
+    ["text-sandbox", "Text / Silent Sandbox (Zero Key)"],
+  ]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-sm";
+    b.textContent = label;
+    b.addEventListener("click", () => {
+      updateSettings((s) => {
+        s.aiVoice ||= {};
+        s.aiVoice.provider = id;
+      });
+      announce(`Selected ${label}`);
+      if (id === "text-sandbox") {
+        updateSettings((s) => {
+          s.onboarding ||= {};
+          s.onboarding.done = true;
+          s.onboarding.sounds = false;
+        });
+        flushSettings();
+        reopened = false;
+        sync();
+      }
+    });
+    s1Row.append(b);
+  }
+  step1.append(s1Row);
+
+  const step2 = document.createElement("div");
+  step2.innerHTML = `<div style="font-weight:600;margin-bottom:6px">2. Visual Shader Style &amp; Lighting</div>`;
+  const s2Row = document.createElement("div");
+  s2Row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+  for (const [id, label] of [
+    ["cozy_stylized", "Cozy Stylized (Default)"],
+    ["realistic_pbr", "Realistic PBR"],
+    ["anime_cel", "Anime Cel-Shaded"],
+    ["minimalist_studio", "Minimalist Studio"],
+  ]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-sm";
+    b.textContent = label;
+    b.addEventListener("click", () => {
+      updateSettings((s) => {
+        s.visualStyle ||= {};
+        s.visualStyle.shaderTheme = id;
+      });
+      announce(`Style: ${label}`);
+    });
+    s2Row.append(b);
+  }
+  const lightSel = document.createElement("select");
+  lightSel.className = "btn btn-sm";
+  lightSel.setAttribute("aria-label", "Lighting preset");
+  for (const [id, label] of [
+    ["warm_desk_lamp", "Warm Desk Lamp"],
+    ["morning_daylight", "Morning Daylight"],
+    ["sunset_glow", "Sunset Glow"],
+    ["night_cyber_studio", "Night Cyber Studio"],
+    ["neutral_broadcast", "Neutral Broadcast"],
+  ]) {
+    const o = document.createElement("option");
+    o.value = id;
+    o.textContent = label;
+    lightSel.append(o);
+  }
+  lightSel.addEventListener("change", () => {
+    updateSettings((s) => {
+      s.visualStyle ||= {};
+      s.visualStyle.lightingPreset = lightSel.value;
+    });
+  });
+  s2Row.append(lightSel);
+  step2.append(s2Row);
+
+  const step3 = document.createElement("div");
+  step3.innerHTML = `<div style="font-weight:600;margin-bottom:6px">3. Starting Room Layout</div>`;
+  const s3Row = document.createElement("div");
+  s3Row.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;";
+  for (const [id, label] of [
+    ["cozy_study", "Cozy Study"],
+    ["creator_studio_desk", "Creator Studio"],
+    ["minimal_stage", "Minimal Stage"],
+  ]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-sm";
+    b.textContent = label;
+    b.addEventListener("click", () => {
+      unifiedRoom.loadPreset(id);
+      updateSettings((s) => {
+        s.roomEditor ||= {};
+        s.roomEditor.presetId = id;
+        s.onboarding ||= {};
+        s.onboarding.done = true;
+      });
+      flushSettings();
+      reopened = false;
+      sync();
+      announce(`Loaded ${label}`);
+    });
+    s3Row.append(b);
+  }
+  step3.append(s3Row);
+
+  wrap.append(step1, step2, step3);
+  card.append(wrap);
+})();

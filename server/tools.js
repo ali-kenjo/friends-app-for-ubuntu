@@ -353,6 +353,78 @@ const ROBOT_TOOLS = {
   ),
 };
 
+const CHOREOGRAPHY_TOOLS = {
+  move_to_asset: fn(
+    "move_to_asset",
+    "Walk or hover cleanly via A* pathfinding to an interactive asset in the room (e.g. 'whiteboard', 'desk_table', 'vase_flowers', 'books_notebook', 'gaming_console', 'rubiks_cube').",
+    {
+      assetId: str("Target asset id in the room"),
+      gait: str("Optional locomotion gait: 'walk' | 'hover' | 'brisk' | 'playful'"),
+    },
+    ["assetId"]
+  ),
+  explain_on_whiteboard: fn(
+    "explain_on_whiteboard",
+    "Walk to the whiteboard, equip a marker from the pens cup, and write a structured explanation line-by-line (title, bullet list, or flowchart nodes) on the 3D whiteboard.",
+    {
+      title: str("Heading title to write on the board"),
+      bullets: { type: "ARRAY", items: { type: "STRING" }, description: "Bullet points or diagram steps to write step-by-step" },
+      diagramType: str("Optional visual layout: 'notes' | 'flowchart'"),
+    },
+    ["title"]
+  ),
+  clear_whiteboard: fn(
+    "clear_whiteboard",
+    "Walk to the whiteboard and run an animated wiper erase across the 3D board surface.",
+    {}
+  ),
+  write_in_notebook: fn(
+    "write_in_notebook",
+    "Walk to the desk, equip a pen from the cup, and write live notes or session takeaways onto the open 3D notebook pages.",
+    {
+      note: str("Concise takeaway or note to write in the open notebook"),
+      heading: str("Optional section heading"),
+    },
+    ["note"]
+  ),
+  play_with_toy: fn(
+    "play_with_toy",
+    "Walk to an interactive 3D toy in the room and play with it (bouncy_ball, rubiks_cube, rc_drone, retro_handheld, holo_projector, newtons_cradle, stacking_blocks, mini_synth).",
+    {
+      toyId: str("Toy id: bouncy_ball, rubiks_cube, rc_drone, retro_handheld, holo_projector, newtons_cradle, stacking_blocks, or mini_synth"),
+      action: str("Optional toy action, e.g. 'play', 'juggle', 'solve', 'fly', 'stack', 'topple', 'laser'"),
+    },
+    ["toyId"]
+  ),
+  water_flowers: fn(
+    "water_flowers",
+    "Walk to the vase & flowers, equip a watering can, water drooping flowers back to Vibrant Bloom, and smile.",
+    {}
+  ),
+  set_emotion: fn(
+    "set_emotion",
+    "Set the robot's emotional state and optional subtle ambient lighting mood (happy, curious, thinking, excited, calm, playful, proud, surprised).",
+    {
+      emotion: str("Emotion name: happy | curious | thinking | excited | calm | playful | proud | surprised"),
+    },
+    ["emotion"]
+  ),
+  follow_route: fn(
+    "follow_route",
+    "Follow the configured custom waypoint route around the room (loop, ping_pong, or random).",
+    {
+      mode: str("Optional route mode override: 'loop' | 'ping_pong' | 'random'"),
+    }
+  ),
+  return_home: fn(
+    "return_home",
+    "Walk smoothly back to the configured Home Standing Spot and face the user.",
+    {}
+  ),
+};
+
+const isChoreographyTool = (name) => Object.hasOwn(CHOREOGRAPHY_TOOLS, name);
+
 // Compact versions of the robot tools for small local models ("essential" tool set)
 const ROBOT_TOOLS_LOCAL = {
   robot_mood: fn("robot_mood", "Set robot face mood.", { mood: { type: "STRING", enum: robot.MOODS } }),
@@ -491,6 +563,10 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
   if (!hidden) list.push(...whiteboardTools.declarations(settings, { source: voice ? "voice" : source, withhold }));
   if (robotToolsOn(settings, { voice, robot: onScreen })) {
     for (const tool of Object.values(ROBOT_TOOLS)) if (robotAllowed(settings, tool.name)) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
+    const perms = settings.behaviorEngine?.toolPermissions || {};
+    for (const tool of Object.values(CHOREOGRAPHY_TOOLS)) {
+      if (perms[tool.name] !== false) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
+    }
   }
   return list;
 }
@@ -508,6 +584,7 @@ const ESSENTIAL = new Set([
   "search_gmail", "get_calendar_events",
   "home_devices", "home_control", "start_mission",
   "robot_mood", "robot_gesture", "robot_use_prop", "robot_go_to", "robot_look_at",
+  "move_to_asset", "explain_on_whiteboard", "clear_whiteboard", "write_in_notebook", "play_with_toy", "water_flowers", "set_emotion", "follow_route", "return_home",
   ...whiteboardTools.ESSENTIAL_WHITEBOARD_TOOLS,
 ]);
 
@@ -515,7 +592,7 @@ function forLocal(list, settings) {
   if (settings.aiControl?.localTools === "all") return list;
   // Apps you added yourself (MCP) are kept too; robot tools use their compact essential schema
   return list
-    .filter((t) => ESSENTIAL.has(t.name) || Object.hasOwn(FILE_TOOLS, t.name) || isRobotTool(t.name) || t.name.startsWith("mcp_"))
+    .filter((t) => ESSENTIAL.has(t.name) || Object.hasOwn(FILE_TOOLS, t.name) || isRobotTool(t.name) || isChoreographyTool(t.name) || t.name.startsWith("mcp_"))
     .map((t) => ROBOT_TOOLS_LOCAL[t.name] || whiteboardTools.WHITEBOARD_TOOLS_LOCAL[t.name] || t);
 }
 
@@ -782,6 +859,14 @@ async function run(name, args, ctx) {
       return { error: err.message };
     }
   }
+  if (isChoreographyTool(name)) {
+    const perms = ctx.settings?.behaviorEngine?.toolPermissions || {};
+    if (perms[name] === false) return { error: `Tool ${name} is disabled in Behavior Studio permissions.` };
+    const choreography = { tool: name, args: args && typeof args === "object" ? args : {} };
+    ctx.onRobot?.({ choreography });
+    ctx.onActivity?.(`Robot: ${name.replace(/_/g, " ")}`);
+    return { ok: true, tool: name, args: choreography.args };
+  }
   // Private mode: nothing leaves this computer, even if the AI asks
   if (ctx.settings.privacy?.localOnly === true && ONLINE_TOOLS.has(name)) {
     return { error: "Private mode is on: this tool needs the internet, so it's off." };
@@ -1023,4 +1108,4 @@ async function run(name, args, ctx) {
   }
 }
 
-module.exports = { declarations, forLocal, run, isRobotTool, robotEvent, robotAllowed, briefing };
+module.exports = { declarations, forLocal, run, isRobotTool, isChoreographyTool, robotEvent, robotAllowed, briefing, CHOREOGRAPHY_TOOLS };

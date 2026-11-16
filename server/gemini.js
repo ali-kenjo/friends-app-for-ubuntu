@@ -247,9 +247,13 @@ async function generateText({ key, model, system, prompt, temperature = 0.3, sig
 // Gemini Live models (real-time voice), best first. Only the ones the key has
 // when its models list names any; otherwise the known ones are tried in turn.
 const LIVE_MODELS = ["gemini-3.8-live", "gemini-3.1-flash-live-preview", "gemini-2.5-flash-native-audio-preview-12-2025"];
+const EXTENDED_THINKING_LIVE_MODEL = "gemini-3.8-live-extended-thinking";
 const liveCache = new Map(); // key → { models, at }
 
-async function liveModels(key) {
+async function liveModels(key, { extendedThinking = false } = {}) {
+  if (extendedThinking) {
+    return [EXTENDED_THINKING_LIVE_MODEL, ...LIVE_MODELS];
+  }
   const cached = liveCache.get(key);
   // Ones whose quota is used up go last (they're tried only if nothing else works)
   const order = (list) => [...list.filter((m) => !isExhausted(key, m)), ...list.filter((m) => isExhausted(key, m))];
@@ -275,6 +279,7 @@ async function liveModels(key) {
 // tool response"), so a call there would put a pause into what it says.
 const ASYNC_LIVE_TOOLS = /^(gemini-3\.8-live|gemini-2\.5-flash-native-audio|gemini-live-2\.5-flash|gemini-2\.5-flash-live)/;
 const liveAsyncTools = (model) => ASYNC_LIVE_TOOLS.test(String(model || ""));
+const liveSupportsThinking = (model) => /extended-thinking/.test(String(model || ""));
 
 // The Live model that worked last is tried first next time
 function preferLiveModel(key, model) {
@@ -497,4 +502,4 @@ async function searchWeb({ key, model, query, signal }) {
   });
 }
 
-module.exports = { GeminiError, TASK_MODEL, FALLBACK_MODELS, cachedModels, markExhausted, isExhausted, searchWeb, listModels, checkModel, streamChat, transcribe, speak, generateText, liveModels, preferLiveModel, liveAsyncTools, LIVE_MODELS };
+module.exports = { GeminiError, TASK_MODEL, FALLBACK_MODELS, cachedModels, markExhausted, isExhausted, searchWeb, listModels, checkModel, streamChat, transcribe, speak, generateText, liveModels, preferLiveModel, liveAsyncTools, liveSupportsThinking, LIVE_MODELS, EXTENDED_THINKING_LIVE_MODEL };

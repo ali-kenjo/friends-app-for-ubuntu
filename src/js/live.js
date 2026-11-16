@@ -12,6 +12,12 @@ const CUSHION = 0.08; // s of audio gathered before a new stretch of speech star
 
 const loadedWorklets = new WeakSet();
 
+function emitDocEvent(name, detail) {
+  if (typeof document?.dispatchEvent === "function" && typeof CustomEvent === "function") {
+    document.dispatchEvent(new CustomEvent(name, detail !== undefined ? { detail } : undefined));
+  }
+}
+
 export class LiveVoice {
   // audioCtx: the page's AudioContext; micSource: a node carrying your mic (or null);
   // output: where the AI's voice goes (visualizer, speakers, recorder); handlers: see handle();
@@ -64,7 +70,10 @@ export class LiveVoice {
       const ws = new WebSocket(`${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/api/live`);
       ws.binaryType = "arraybuffer";
       this.ws = ws;
-      ws.onopen = () => ws.send(JSON.stringify({ type: "start", ...startMessage }));
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "start", ...startMessage }));
+        emitDocEvent("friends:live-ws-open", { send: (ev) => this.send(ev) });
+      };
       ws.onmessage = (e) => {
         if (typeof e.data !== "string") return this.play(e.data);
         const event = JSON.parse(e.data);
@@ -79,6 +88,7 @@ export class LiveVoice {
       ws.onclose = () => {
         const wasReady = this.ready;
         this.ready = false;
+        emitDocEvent("friends:live-ws-close");
         settle(reject, new Error(t("Can't reach the Friends helper. Is `npm start` still running?")));
         if (wasReady && !this.closed) this.on.onClosed?.();
       };
@@ -285,7 +295,20 @@ export class LiveVoice {
         break;
       case "robot":
         if (this.dropAudio) return; // part of the answer you cut off
-        this.later("robot", () => this.on.onRobot?.({ mood: event.mood, gesture: event.gesture, useProp: event.useProp, goTo: event.goTo, lookAt: event.lookAt }));
+        this.later("robot", () =>
+          this.on.onRobot?.({
+            mood: event.mood,
+            emotion: event.emotion,
+            gesture: event.gesture,
+            useProp: event.useProp,
+            goTo: event.goTo,
+            lookAt: event.lookAt,
+            choreography: event.choreography,
+          })
+        );
+        break;
+      case "interaction_status":
+        this.on.onInteractionStatus?.(event.status);
         break;
       case "whiteboard":
         // A pointing cue waits for the speech before it, like a robot move; drawing itself is on the board at once
@@ -339,6 +362,7 @@ export class LiveVoice {
 
   stop() {
     this.closed = true;
+    emitDocEvent("friends:live-ws-close");
     clearInterval(this.timer);
     clearTimeout(this.dropTimer);
     this.stopPlayback();

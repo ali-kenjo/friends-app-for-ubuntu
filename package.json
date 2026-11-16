@@ -1,7 +1,7 @@
 {
   "name": "friends",
-  "version": "0.8.0",
-  "description": "A personal AI chat app",
+  "version": "1.0.0",
+  "description": "An open-source interactive 3D desktop AI robot companion for Ubuntu",
   "private": true,
   "main": "electron/main.js",
   "engines": {
@@ -17,6 +17,7 @@
     "desktop": "electron . --no-sandbox",
     "dist": "node scripts/build-deb.js",
     "dist:appimage": "node scripts/build-appimage.js",
+    "dist:release": "bash scripts/build-release.sh",
     "update": "bash scripts/update.sh",
     "backup": "node scripts/backup.js",
     "doctor": "node scripts/doctor.js",

@@ -376,6 +376,151 @@ const DEFAULTS = {
     notifyBriefing: false,
     watchers: [],
   },
+  // v1.0 Provider-Agnostic Voice & AI Bridge
+  aiVoice: {
+    provider: "gemini-live", // gemini-live | openai-realtime | local-pipeline | text-sandbox
+    geminiModel: "gemini-3.8-live", // gemini-3.8-live | gemini-3.8-live-extended-thinking | gemini-3.1-flash-live-preview
+    extendedThinking: false,
+    geminiVoice: "", // "" follows active character voice, or explicit preset Kore|Aoede|Charon|...
+    openaiModel: "gpt-4o-realtime-preview",
+    openaiVoice: "alloy",
+    localSttUrl: "http://127.0.0.1:18492/transcribe",
+    localLlmUrl: "http://127.0.0.1:11434/v1/chat/completions",
+    localLlmModel: "llama3.2",
+    localTtsEngine: "piper", // piper | kokoro | system
+    localTtsUrl: "http://127.0.0.1:18492/speak",
+    vadThreshold: 0.035,
+    systemPersona: "",
+    geminiKey: "",
+    openaiKey: "",
+    hasGeminiKey: false,
+    hasOpenaiKey: false,
+  },
+  // v1.0 4-Style Shader Pipeline, Mood Lighting & Quality Controls
+  visualStyle: {
+    shaderTheme: "cozy_stylized", // realistic_pbr | anime_cel | cozy_stylized | minimalist_studio
+    lightingPreset: "warm_desk_lamp", // morning_daylight | warm_desk_lamp | sunset_glow | night_cyber_studio | neutral_broadcast
+    emotionLightingTint: true,
+    deskLampEmission: 1.0,
+    shadowQuality: "high", // off | medium | high
+    antiAliasing: "msaa", // off | fxaa | msaa
+    throttleWhenHidden: true,
+  },
+  // v1.0 Customizable Voice Mode Action Dock
+  voiceDock: {
+    preset: "creator_stage", // minimal | creator_stage | full_control | custom
+    position: "bottom", // bottom | left | right | floating
+    floatingX: 24,
+    floatingY: 24,
+    showLabels: false,
+    order: [
+      "mic_mute",
+      "mic_mode",
+      "interrupt",
+      "summon_home",
+      "emotion_picker",
+      "toggle_whiteboard",
+      "quick_prop",
+      "camera_preset",
+      "vision_toggle",
+      "roam_toggle",
+      "clean_stage",
+      "open_studio",
+    ],
+    visible: {
+      mic_mute: true,
+      mic_mode: true,
+      interrupt: true,
+      summon_home: true,
+      emotion_picker: true,
+      toggle_whiteboard: true,
+      quick_prop: true,
+      camera_preset: true,
+      vision_toggle: false,
+      roam_toggle: true,
+      clean_stage: true,
+      open_studio: true,
+    },
+    shortcuts: {
+      mic_mute: "KeyM",
+      interrupt: "Space",
+      summon_home: "KeyR",
+      clean_stage: "KeyH",
+      toggle_whiteboard: "KeyB",
+      roam_toggle: "KeyP",
+    },
+  },
+  // v1.0 Behavior, Physical IK & Choreography Engine
+  behaviorEngine: {
+    autonomousRoaming: true,
+    focusLock: false,
+    homeReturnDelaySec: 8,
+    homeSpot: { x: 0, z: 0.15, rotY: 0 },
+    quotas: {
+      maxPerSession: 40,
+      maxPerHour: 18,
+      perAssetPerHour: 6,
+      globalCooldownSec: 12,
+      perAssetCooldownSec: 45,
+    },
+    kinematics: {
+      walkSpeed: 1.15,
+      turnRate: 4.5,
+      easing: "smoothstep", // linear | smoothstep | spring
+      headGazeWeight: 0.85,
+      eyeGazeWeight: 1.0,
+      idleMicroAmount: 0.7,
+    },
+    foley: {
+      enabled: true,
+      volume: 65,
+    },
+    interruptPolicy: "finish_briefly", // immediate_return | finish_briefly | pause_and_resume | finish_before_listening
+    categoryMultipliers: {
+      furniture: 0.8,
+      desk_prop: 1.0,
+      toy: 1.2,
+      flower: 1.0,
+    },
+    assetWeights: {},
+    assetDwells: {},
+    toolPermissions: {
+      move_to_asset: true,
+      explain_on_whiteboard: true,
+      clear_whiteboard: true,
+      write_in_notebook: true,
+      play_with_toy: true,
+      water_flowers: true,
+      set_emotion: true,
+      follow_route: true,
+      return_home: true,
+    },
+    waypointRoute: {
+      mode: "loop", // loop | ping_pong | random
+      gait: "hover", // walk | hover | brisk | playful
+      nodes: [
+        { x: -0.9, z: 0.0, dwellSec: 3 },
+        { x: 0.0, z: 0.35, dwellSec: 4 },
+        { x: 0.9, z: -0.1, dwellSec: 3 },
+      ],
+    },
+  },
+  // v1.0 Live 3D Room Layout Editor
+  roomEditor: {
+    presetId: "creator_studio_desk", // creator_studio_desk | cozy_study_corner | minimalist_open_stage
+    gridSnap: false,
+    gridSize: 0.1,
+    surfaceSnap: true,
+    assets: [],
+  },
+  // v1.0 Clean Stage & OBS Broadcast Mode
+  stageMode: {
+    cleanStage: false,
+    backdrop: "full_room", // full_room | solid_studio | chroma_green | chroma_blue | transparent_window
+    solidColor: "#14161f",
+    cameraPreset: "wide_room", // wide_room | desk_closeup | whiteboard_focus | follow_robot | cinema_orbit
+    hoverPill: true,
+  },
 };
 
 // The languages the AI can be told to answer in (Settings → AI & privacy → Answers)
@@ -733,6 +878,97 @@ function sanitize(input) {
     enabled: w.enabled !== false,
   })).filter((w) => w.subreddit).slice(0, 30) : [];
 
+  // v1.0 sanitization
+  s.aiVoice = { ...clone(DEFAULTS.aiVoice), ...(s.aiVoice && typeof s.aiVoice === "object" ? s.aiVoice : {}) };
+  const av = s.aiVoice;
+  if (!["gemini-live", "openai-realtime", "local-pipeline", "text-sandbox"].includes(av.provider)) av.provider = DEFAULTS.aiVoice.provider;
+  av.extendedThinking = Boolean(av.extendedThinking);
+  av.geminiModel = String(av.geminiModel || DEFAULTS.aiVoice.geminiModel).trim().slice(0, 100);
+  if (av.extendedThinking && av.geminiModel === "gemini-3.8-live") av.geminiModel = "gemini-3.8-live-extended-thinking";
+  av.geminiVoice = typeof av.geminiVoice === "string" ? av.geminiVoice.trim().slice(0, 40) : "";
+  av.openaiModel = String(av.openaiModel || DEFAULTS.aiVoice.openaiModel).trim().slice(0, 100);
+  av.openaiVoice = String(av.openaiVoice || "alloy").trim().slice(0, 40);
+  av.localSttUrl = String(av.localSttUrl || DEFAULTS.aiVoice.localSttUrl).trim().slice(0, 300);
+  av.localLlmUrl = String(av.localLlmUrl || DEFAULTS.aiVoice.localLlmUrl).trim().slice(0, 300);
+  av.localLlmModel = String(av.localLlmModel || DEFAULTS.aiVoice.localLlmModel).trim().slice(0, 120);
+  if (!["piper", "kokoro", "system"].includes(av.localTtsEngine)) av.localTtsEngine = "piper";
+  av.localTtsUrl = String(av.localTtsUrl || DEFAULTS.aiVoice.localTtsUrl).trim().slice(0, 300);
+  av.vadThreshold = Math.max(0.005, Math.min(0.4, Number(av.vadThreshold) || 0.035));
+  av.systemPersona = String(av.systemPersona || "").slice(0, 4000);
+  av.geminiKey = typeof av.geminiKey === "string" ? av.geminiKey.trim().slice(0, 300) : "";
+  av.openaiKey = typeof av.openaiKey === "string" ? av.openaiKey.trim().slice(0, 300) : "";
+  av.hasGeminiKey = false;
+  av.hasOpenaiKey = false;
+
+  s.visualStyle = { ...clone(DEFAULTS.visualStyle), ...(s.visualStyle && typeof s.visualStyle === "object" ? s.visualStyle : {}) };
+  const vs = s.visualStyle;
+  if (!["realistic_pbr", "anime_cel", "cozy_stylized", "minimalist_studio"].includes(vs.shaderTheme)) vs.shaderTheme = "cozy_stylized";
+  if (!["morning_daylight", "warm_desk_lamp", "sunset_glow", "night_cyber_studio", "neutral_broadcast"].includes(vs.lightingPreset)) vs.lightingPreset = "warm_desk_lamp";
+  vs.emotionLightingTint = vs.emotionLightingTint !== false;
+  vs.deskLampEmission = Math.max(0, Math.min(3, Number(vs.deskLampEmission ?? 1)));
+  if (!["off", "medium", "high"].includes(vs.shadowQuality)) vs.shadowQuality = "high";
+  if (!["off", "fxaa", "msaa"].includes(vs.antiAliasing)) vs.antiAliasing = "msaa";
+  vs.throttleWhenHidden = vs.throttleWhenHidden !== false;
+
+  const vdBase = clone(DEFAULTS.voiceDock);
+  const vdIn = s.voiceDock && typeof s.voiceDock === "object" ? s.voiceDock : {};
+  s.voiceDock = {
+    ...vdBase,
+    ...vdIn,
+    visible: { ...vdBase.visible, ...(vdIn.visible && typeof vdIn.visible === "object" ? vdIn.visible : {}) },
+    shortcuts: { ...vdBase.shortcuts, ...(vdIn.shortcuts && typeof vdIn.shortcuts === "object" ? vdIn.shortcuts : {}) },
+  };
+  if (!["minimal", "creator_stage", "full_control", "custom"].includes(s.voiceDock.preset)) s.voiceDock.preset = "creator_stage";
+  if (!["bottom", "left", "right", "floating"].includes(s.voiceDock.position)) s.voiceDock.position = "bottom";
+  s.voiceDock.showLabels = Boolean(s.voiceDock.showLabels);
+  s.voiceDock.floatingX = Math.max(0, Math.min(4000, Number(s.voiceDock.floatingX) || 24));
+  s.voiceDock.floatingY = Math.max(0, Math.min(4000, Number(s.voiceDock.floatingY) || 24));
+  s.voiceDock.order = Array.isArray(s.voiceDock.order) && s.voiceDock.order.length ? [...new Set(s.voiceDock.order.map(String))] : vdBase.order;
+
+  const beBase = clone(DEFAULTS.behaviorEngine);
+  const beIn = s.behaviorEngine && typeof s.behaviorEngine === "object" ? s.behaviorEngine : {};
+  s.behaviorEngine = {
+    ...beBase,
+    ...beIn,
+    homeSpot: { ...beBase.homeSpot, ...(beIn.homeSpot && typeof beIn.homeSpot === "object" ? beIn.homeSpot : {}) },
+    quotas: { ...beBase.quotas, ...(beIn.quotas && typeof beIn.quotas === "object" ? beIn.quotas : {}) },
+    kinematics: { ...beBase.kinematics, ...(beIn.kinematics && typeof beIn.kinematics === "object" ? beIn.kinematics : {}) },
+    foley: { ...beBase.foley, ...(beIn.foley && typeof beIn.foley === "object" ? beIn.foley : {}) },
+    categoryMultipliers: { ...beBase.categoryMultipliers, ...(beIn.categoryMultipliers && typeof beIn.categoryMultipliers === "object" ? beIn.categoryMultipliers : {}) },
+    toolPermissions: { ...beBase.toolPermissions, ...(beIn.toolPermissions && typeof beIn.toolPermissions === "object" ? beIn.toolPermissions : {}) },
+    waypointRoute: { ...beBase.waypointRoute, ...(beIn.waypointRoute && typeof beIn.waypointRoute === "object" ? beIn.waypointRoute : {}) },
+    assetWeights: beIn.assetWeights && typeof beIn.assetWeights === "object" ? beIn.assetWeights : {},
+    assetDwells: beIn.assetDwells && typeof beIn.assetDwells === "object" ? beIn.assetDwells : {},
+  };
+  s.behaviorEngine.autonomousRoaming = s.behaviorEngine.autonomousRoaming !== false;
+  s.behaviorEngine.focusLock = Boolean(s.behaviorEngine.focusLock);
+  s.behaviorEngine.homeReturnDelaySec = clamp(s.behaviorEngine.homeReturnDelaySec, 1, 120);
+  if (!["immediate_return", "finish_briefly", "pause_and_resume", "finish_before_listening"].includes(s.behaviorEngine.interruptPolicy)) {
+    s.behaviorEngine.interruptPolicy = "finish_briefly";
+  }
+  s.behaviorEngine.foley.enabled = s.behaviorEngine.foley.enabled !== false;
+  s.behaviorEngine.foley.volume = clamp(s.behaviorEngine.foley.volume, 0, 100);
+
+  s.roomEditor = { ...clone(DEFAULTS.roomEditor), ...(s.roomEditor && typeof s.roomEditor === "object" ? s.roomEditor : {}) };
+  if (!["creator_studio_desk", "cozy_study_corner", "minimalist_open_stage"].includes(s.roomEditor.presetId)) {
+    s.roomEditor.presetId = "creator_studio_desk";
+  }
+  s.roomEditor.gridSnap = Boolean(s.roomEditor.gridSnap);
+  s.roomEditor.surfaceSnap = s.roomEditor.surfaceSnap !== false;
+  s.roomEditor.gridSize = Math.max(0.05, Math.min(1.0, Number(s.roomEditor.gridSize) || 0.1));
+  if (!Array.isArray(s.roomEditor.assets)) s.roomEditor.assets = [];
+
+  s.stageMode = { ...clone(DEFAULTS.stageMode), ...(s.stageMode && typeof s.stageMode === "object" ? s.stageMode : {}) };
+  s.stageMode.cleanStage = Boolean(s.stageMode.cleanStage);
+  if (!["full_room", "solid_studio", "chroma_green", "chroma_blue", "transparent_window"].includes(s.stageMode.backdrop)) {
+    s.stageMode.backdrop = "full_room";
+  }
+  if (!/^#[0-9a-f]{6}$/i.test(s.stageMode.solidColor)) s.stageMode.solidColor = "#14161f";
+  if (!["wide_room", "desk_closeup", "whiteboard_focus", "follow_robot", "cinema_orbit"].includes(s.stageMode.cameraPreset)) {
+    s.stageMode.cameraPreset = "wide_room";
+  }
+  s.stageMode.hoverPill = s.stageMode.hoverPill !== false;
+
   return s;
 }
 
@@ -749,6 +985,28 @@ function storeTelegramToken(s) {
   }
   s.telegram.hasToken = Boolean(keys.getSecret(TELEGRAM_TOKEN_KEY)) || Boolean(process.env.FRIENDS_TELEGRAM_BOT_TOKEN);
   return Boolean(token);
+}
+
+function storeVoiceSecrets(s) {
+  if (!s.aiVoice) return false;
+  let changed = false;
+  if (s.aiVoice.geminiKey) {
+    try {
+      keys.setSecret("v1-gemini-key", s.aiVoice.geminiKey);
+    } catch {}
+    s.aiVoice.geminiKey = "";
+    changed = true;
+  }
+  if (s.aiVoice.openaiKey) {
+    try {
+      keys.setSecret("v1-openai-key", s.aiVoice.openaiKey);
+    } catch {}
+    s.aiVoice.openaiKey = "";
+    changed = true;
+  }
+  s.aiVoice.hasGeminiKey = Boolean(keys.getSecret("v1-gemini-key")) || Boolean(process.env.GEMINI_API_KEY);
+  s.aiVoice.hasOpenaiKey = Boolean(keys.getSecret("v1-openai-key")) || Boolean(process.env.OPENAI_API_KEY);
+  return changed;
 }
 
 function storeRedditSecret(s) {
@@ -801,7 +1059,8 @@ function get() {
   // Tokens an older version kept in this file move to the keyring
   const changedTg = storeTelegramToken(cache);
   const changedRd = storeRedditSecret(cache);
-  if (changedTg || changedRd) writeJson(file, withoutDerived(cache));
+  const changedVoice = storeVoiceSecrets(cache);
+  if (changedTg || changedRd || changedVoice) writeJson(file, withoutDerived(cache));
   return cache;
 }
 
@@ -819,6 +1078,12 @@ function withoutDerived(s) {
     delete copy.reddit.hasRefreshToken;
     copy.reddit.clientSecret = "";
   }
+  if (copy.aiVoice) {
+    delete copy.aiVoice.hasGeminiKey;
+    delete copy.aiVoice.hasOpenaiKey;
+    copy.aiVoice.geminiKey = "";
+    copy.aiVoice.openaiKey = "";
+  }
   return copy;
 }
 
@@ -826,6 +1091,7 @@ function set(input) {
   cache = sanitize(input);
   storeTelegramToken(cache);
   storeRedditSecret(cache);
+  storeVoiceSecrets(cache);
   writeJson(file, withoutDerived(cache));
   for (const fn of listeners) {
     try {

@@ -41,6 +41,8 @@ import { recording } from "./recording.js";
 import { spoken } from "./spoken.js";
 import { hooks as stageHooks, stage, syncRobot, resizeCanvas, setVoiceTheme, isRobotStyle } from "./stage.js";
 import { status } from "./status.js";
+import { bus, EVENTS } from "../core/event-bus.mjs";
+import { voiceDock } from "../ui/voice-dock.js";
 
 export { setVoiceTheme };
 
@@ -141,8 +143,9 @@ async function startEngine({ greet = false } = {}) {
     if (activeDoc && engine?.setDoc) engine.setDoc(activeDoc);
     return greetClassic();
   }
-  // Gemini Live is Google's; a local AI speaks through Studio voice
-  if (!liveWanted()) {
+  // Gemini Live is Google's unless an explicit v1 provider adapter (OpenAI / Local / Text Sandbox) is selected
+  const aiProvider = getSettings()?.aiVoice?.provider || "gemini-live";
+  if (aiProvider === "gemini-live" && !liveWanted()) {
     const local = getLocalBrainId();
     if (local) api.local.warm(local, true); // the speech models too
     startClassic("studio");
@@ -278,6 +281,12 @@ setVoiceHooks({
 // so the microphone isn't left open and Gemini isn't left listening
 document.addEventListener("friends:window-hidden", () => closeVoice());
 
+bus.on(EVENTS.DOCK_ACTION, (ev) => {
+  if (voiceMode.hidden) return;
+  if (ev?.action === "mic_mute") toggleMute();
+  else if (ev?.action === "interrupt") interrupt();
+});
+
 // ---------- Filming mode (filming.js) ----------
 const filmingLook = () => {
   const f = getSettings()?.robot?.filming || {};
@@ -363,7 +372,9 @@ export async function openVoice() {
   stage.start();
 
   await audio.ensureOutput();
-  await startMic();
+  const aiProvider = getSettings()?.aiVoice?.provider || "gemini-live";
+  if (aiProvider !== "text-sandbox") await startMic();
+  voiceDock.setVisible(true);
   if (voiceMode.hidden || session !== opened) return;
   clearInterval(heartbeatTimer);
   heartbeatTimer = setInterval(() => {
@@ -379,6 +390,7 @@ export function closeVoice() {
   endTimer = null;
   filming.exit({ resume: false });
   voiceMode.hidden = true;
+  voiceDock.setVisible(false);
   resetOnAir();
   controls.closeActivities();
   robot.director.closeVoice();

@@ -36,6 +36,8 @@ const roleData = require("../src/js/robot/roles.mjs");
 const voiceStyle = require("./voice-style");
 const whiteboard = require("./whiteboard");
 const whiteboardTools = require("./whiteboard-tools");
+const roomContext = require("./core/ai/room-context");
+const voiceAdapter = require("./core/ai/voice-adapter");
 
 const UPSTREAM = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 const MIC_TYPE = "audio/pcm;rate=16000";
@@ -112,6 +114,10 @@ class LiveSession {
       if (!this.started || this.muted) return;
       const chunk = toBuffer(data);
       if (this.micHeld) return;
+      if (this.adapter) {
+        this.adapter.sendAudio(chunk);
+        return;
+      }
       if (this.ready) this.toGemini({ realtimeInput: { audio: { data: chunk.toString("base64"), mimeType: MIC_TYPE } } });
       else if (this.earlyAudio.length < EARLY_AUDIO) this.earlyAudio.push(chunk);
       return;
@@ -124,7 +130,9 @@ class LiveSession {
     }
     if (msg.type === "start" && !this.started) this.start(msg);
     else if (msg.type === "text" && typeof msg.text === "string" && msg.text.trim()) this.sendText(msg.text.trim().slice(0, 8000));
-    else if (msg.type === "audio-end") this.toGemini({ realtimeInput: { audioStreamEnd: true } });
+    else if (msg.type === "audio-end") this.adapter ? this.adapter.endAudio() : this.toGemini({ realtimeInput: { audioStreamEnd: true } });
+    else if (msg.type === "interrupt") this.adapter?.interrupt();
+    else if (msg.type === "room_context" && msg.context) this.updateRoomContext(msg.context);
     else if (msg.type === "mute") this.muted = msg.on === true;
     else if (msg.type === "style") this.setStyle(msg.style);
     else if (msg.type === "confirm") this.confirmations.get(msg.id)?.(msg.allow === true);
@@ -135,7 +143,23 @@ class LiveSession {
     else if (msg.type === "echo") this.turn.echo = true;
     // Something the app tells the AI (a reminder went off): it says it, and it isn't saved as yours
     else if (msg.type === "note" && typeof msg.text === "string" && msg.text.trim() && this.ready) {
-      this.toGemini({ realtimeInput: { text: prompt.appNote(this.settings || settings.get(), msg.text.trim().slice(0, 1000)) } });
+      if (this.adapter) this.adapter.sendText(msg.text.trim().slice(0, 1000));
+      else this.toGemini({ realtimeInput: { text: prompt.appNote(this.settings || settings.get(), msg.text.trim().slice(0, 1000)) } });
+    }
+  }
+
+  updateRoomContext(ctx) {
+    const updated = roomContext.update(ctx);
+    if (this.adapter) {
+      this.adapter.sendRoomContext(updated);
+      return;
+    }
+    if (this.ready && !this.turn.model) {
+      this.toGemini({
+        realtimeInput: {
+          text: `(Room Update — silent context, do not announce unless asked):\n${roomContext.formatPromptBlock(updated)}`,
+        },
+      });
     }
   }
 
@@ -199,7 +223,7 @@ class LiveSession {
     if (this.ready && !this.turn.model && !this.toolsRunning) this.reconnect({ quiet: true });
   }
 
-  async start({ chatId, brainId, googleAccessToken, robot, onAir, doc, style }) {
+  async start({ chatId, brainId, googleAccessToken, robot, onAir, doc, style, provider }) {
     this.started = true;
     this.style = voiceStyle.STYLES.includes(style) ? style : null;
     this.robot = robot === true;
@@ -207,27 +231,122 @@ class LiveSession {
     this.doc = doc && doc.content ? doc : null;
     this.googleAccessToken = typeof googleAccessToken === "string" ? googleAccessToken : null;
     this.pageToken = Boolean(this.googleAccessToken); // otherwise the one Friends keeps (renewed per tool call)
-    try {
-      // Gemini Live is the cloud: in the routing modes the cloud brain is used (the page only starts Live when that's wanted)
-      this.brain = settings.get().routing.mode === "fixed" ? brains.getForChat(Number(brainId) || null) : brains.getByKind("cloud", Number(brainId) || null);
-    } catch (err) {
-      return this.fail(err.message);
-    }
-    if (!this.brain) return this.fail(brains.has("local") ? "LIVE_NEEDS_GEMINI" : "NO_BRAIN");
-    if (settings.get().privacy.localOnly) return this.fail("PRIVATE_MODE");
-    if (this.brain.provider !== "gemini") return this.fail("LIVE_NEEDS_GEMINI");
+    const currentSettings = settings.get();
+    this.settings = currentSettings;
+    const chosenProvider = provider || currentSettings.aiVoice?.provider || "gemini-live";
     if (chatId) {
       try {
         chats.get(chatId);
         this.chatId = chatId;
       } catch {} // deleted meanwhile: a new chat starts with the first turn
     }
-    this.models = await gemini.liveModels(this.brain.key);
+
+    if (chosenProvider !== "gemini-live") {
+      return this.startAdapterSession(chosenProvider, currentSettings);
+    }
+
+    try {
+      // Gemini Live is the cloud: in the routing modes the cloud brain is used (the page only starts Live when that's wanted)
+      this.brain = currentSettings.routing.mode === "fixed" ? brains.getForChat(Number(brainId) || null) : brains.getByKind("cloud", Number(brainId) || null);
+    } catch (err) {
+      return this.fail(err.message);
+    }
+    if (!this.brain) {
+      const v1Key = voiceAdapter.resolveProviderKey("gemini-live", currentSettings);
+      if (v1Key) this.brain = { provider: "gemini", key: v1Key };
+    }
+    if (!this.brain) return this.fail(brains.has("local") ? "LIVE_NEEDS_GEMINI" : "NO_BRAIN");
+    if (currentSettings.privacy.localOnly) return this.fail("PRIVATE_MODE");
+    if (this.brain.provider !== "gemini") return this.fail("LIVE_NEEDS_GEMINI");
+    const extendedThinking = currentSettings.aiVoice?.extendedThinking === true;
+    this.models = await gemini.liveModels(this.brain.key, { extendedThinking });
     if (!this.closed) this.connect();
+  }
+
+  async startAdapterSession(providerId, current) {
+    const withTools = this.robot;
+    this.withhold = current.privacy?.shareMemoryWithCloud === false;
+    this.offered = tools.declarations(current, { voice: true, robot: withTools, nonBlocking: true, onAir: this.onAir, live: false, withhold: this.withhold, source: "voice" });
+    this.robotTools = this.offered.some((t) => tools.isRobotTool(t.name) || tools.isChoreographyTool?.(t.name));
+    const apiKey = voiceAdapter.resolveProviderKey(providerId, current);
+    const av = current.aiVoice || {};
+    const sys = prompt.build(current, { voice: true, live: true, toolsOffered: this.offered, onAir: this.onAir, chatId: this.chatId, doc: this.doc, style: this.currentStyle(), withhold: this.withhold });
+
+    this.adapter = voiceAdapter.createAdapter(providerId, {
+      settings: current,
+      apiKey,
+      model: providerId === "openai-realtime" ? av.openaiModel : av.localLlmModel,
+      voiceName: providerId === "openai-realtime" ? av.openaiVoice : av.localTtsEngine,
+      vadThreshold: av.vadThreshold,
+      systemPrompt: sys,
+      tools: providerId === "local-pipeline" ? tools.forLocal(this.offered, current) : this.offered,
+    });
+
+    this.adapter.on("ready", ({ model }) => {
+      this.ready = true;
+      this.everReady = true;
+      this.toPage({ type: "ready", provider: providerId, model: model || providerId, robotTools: this.robotTools });
+    });
+    this.adapter.on("audio_format", ({ rate }) => this.toPage({ type: "audio-format", rate }));
+    this.adapter.on("audio", (pcm) => {
+      if (this.client.readyState === WebSocket.OPEN) this.client.send(pcm, { binary: true });
+    });
+    this.adapter.on("transcript", ({ role, text }) => {
+      if (role === "user") this.turn.user += (this.turn.user ? " " : "") + text;
+      else this.turn.model += (this.turn.model ? " " : "") + text;
+      this.toPage({ type: "transcript", role, text });
+    });
+    this.adapter.on("interaction_status", ({ status }) => this.toPage({ type: "interaction_status", status }));
+    this.adapter.on("interrupted", () => {
+      this.toPage({ type: "interrupted" });
+      this.finishTurn();
+    });
+    this.adapter.on("turn_complete", () => {
+      this.finishTurn();
+      this.toPage({ type: "turn-complete" });
+    });
+    this.adapter.on("tool_calls", (calls) => {
+      for (const call of calls) {
+        this.toolChain = this.toolChain.then(() => this.runOneAdapterTool(call)).catch(() => {});
+      }
+    });
+    this.adapter.on("error", (err) => this.toPage({ type: "error", error: String(err?.message || err) }));
+
+    try {
+      await this.adapter.start();
+    } catch (err) {
+      this.toPage({ type: "error", error: String(err?.message || err) });
+      this.client.close();
+    }
+  }
+
+  async runOneAdapterTool(call) {
+    if (this.closed || !this.adapter) return;
+    const result = await tools.run(call.name, call.args || {}, {
+      settings: this.settings || settings.get(),
+      source: "voice",
+      googleAccessToken: null,
+      confirm: (s, d) => this.confirm(s, d),
+      onActivity: (text) => {
+        this.turn.activity.push(text);
+        this.toPage({ type: "activity", text });
+      },
+      onDraft: (draft) => {
+        this.turn.drafts.push(draft);
+        this.toPage({ type: "draft", draft });
+      },
+      onRobot: (event) => this.toPage({ type: "robot", ...event }),
+    });
+    this.adapter.sendToolResult(call.id, call.name, this.withhold ? redact.redactDeep(result, (this.settings || settings.get()).privacy?.redact) : result);
   }
 
   // Typed in voice mode: Gemini answers it like something you said
   sendText(text) {
+    if (this.adapter) {
+      this.turn.user += (this.turn.user ? " " : "") + text;
+      this.adapter.sendText(text);
+      return;
+    }
     if (!this.ready) {
       if (this.earlyText.length < 5) this.earlyText.push(text);
       return;
@@ -307,13 +426,28 @@ class LiveSession {
       model: `models/${model}`,
       generationConfig: {
         responseModalities: ["AUDIO"],
-        // Lowest latency; gemini-3.8-live doesn't take a thinking level at all
-        ...(/^gemini-3\.1-flash-live/.test(model) ? { thinkingConfig: { thinkingLevel: "minimal" } } : {}),
+        // Lowest latency for normal; extended-thinking takes thinkingConfig cleanly
+        ...(gemini.liveSupportsThinking(model)
+          ? { thinkingConfig: { thinkingLevel: "medium" } }
+          : /^gemini-3\.1-flash-live/.test(model)
+            ? { thinkingConfig: { thinkingLevel: "minimal" } }
+            : {}),
         temperature: prompt.temperature(current),
         // The active character's voice (a session keeps the voice it started with)
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: (this.voiceName ||= characters.voiceOf(characters.active(current)).name) } } },
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: (this.voiceName ||= current.aiVoice?.geminiVoice || characters.voiceOf(characters.active(current)).name) } } },
       },
-      systemInstruction: { parts: [{ text: this.scrub(this.system + boardBlock) }] },
+      systemInstruction: {
+        parts: [
+          {
+            text: this.scrub(
+              this.system +
+                boardBlock +
+                (current.aiVoice?.systemPersona ? `\n\n## Custom Personality\n${current.aiVoice.systemPersona}` : "") +
+                (roomContext.get().activeProps?.length ? `\n\n${roomContext.formatPromptBlock()}` : "")
+            ),
+          },
+        ],
+      },
       tools: toolList,
       // Patience before answering, so a pause to think doesn't end your turn: how much
       // depends on the conversation style (voice-style.js). Every ms is added to each answer's delay.
@@ -334,6 +468,8 @@ class LiveSession {
     } catch {
       return;
     }
+    const status = msg.interactionStatus || msg.serverContent?.interactionStatus;
+    if (status === "IN_PROGRESS" || status === "IDLE") this.toPage({ type: "interaction_status", status });
     if (msg.setupComplete) this.onReady(model);
     if (msg.serverContent) this.onContent(msg.serverContent);
     if (msg.toolCall?.functionCalls?.length) this.onToolCall(msg.toolCall.functionCalls);
@@ -660,6 +796,8 @@ class LiveSession {
     clearTimeout(this.micTimer);
     clearTimeout(this.boardNote.timer);
     whiteboard.events.off("ops", this.onBoardOps);
+    this.adapter?.stop().catch(() => {});
+    this.adapter = null;
     this.finishTurn();
     for (const answer of [...this.confirmations.values()]) answer(false);
     const upstream = this.upstream;

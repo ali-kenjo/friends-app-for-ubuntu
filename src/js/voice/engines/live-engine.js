@@ -48,7 +48,19 @@ export class LiveEngine {
     const voice = new LiveVoice({ audioCtx: audio.ctx, micSource: audio.micSource, output: audio.bus, handlers: this.handlers(), barge });
     this.voice = voice;
     window.__friendsAudioLead = () => voice.audioLead();
-    await voice.start({ chatId: getCurrentChatId(), brainId: getSelectedBrainId(), googleAccessToken: getAccessToken(), robot: robotOnScreen(), onAir: isOnAir(), doc: this.doc, style: getSettings()?.voice?.style });
+    const s = getSettings();
+    const aiVoice = s?.aiVoice || {};
+    await voice.start({
+      chatId: getCurrentChatId(),
+      brainId: getSelectedBrainId(),
+      googleAccessToken: getAccessToken(),
+      robot: robotOnScreen(),
+      onAir: isOnAir(),
+      doc: this.doc,
+      style: s?.voice?.style,
+      provider: aiVoice.provider || "gemini-live",
+      extendedThinking: aiVoice.extendedThinking === true,
+    });
     if (!this.stopped) voice.setMuted(isMuted());
   }
 
@@ -148,6 +160,7 @@ export class LiveEngine {
         addTranscript(role, text);
         robot.director.caption(role, text);
         if (role === "user") {
+          document.dispatchEvent(new CustomEvent("friends:user-speech", { detail: { active: true } }));
           this.userLine += text;
           captions.show("You", this.userLine.trim(), true);
           if (status.state !== "speaking") {
@@ -160,12 +173,18 @@ export class LiveEngine {
           captions.show(characterName(), this.aiLine.trim(), false);
         }
       },
+      onInteractionStatus: (interactionStatus) => {
+        if (interactionStatus === "IN_PROGRESS") status.set("thinking");
+        else if (interactionStatus === "IDLE" && status.state === "thinking") status.set("listening");
+      },
       onInterrupted: () => {
+        document.dispatchEvent(new CustomEvent("friends:user-speech", { detail: { active: false } }));
         spoken.add(this.aiLine); // what it got to say is still what the mic may hear
         this.aiLine = "";
         this.echoTurn = false;
       },
       onTurnComplete: () => {
+        document.dispatchEvent(new CustomEvent("friends:user-speech", { detail: { active: false } }));
         spoken.add(this.aiLine);
         this.echoTurn = false;
         endTurn();

@@ -15,9 +15,10 @@ const TAU = Math.PI * 2;
 
 export class Director {
   // animator: the Animator; smartMood(text, heard) → Promise<mood|null> (or null when off)
-  constructor(animator, { smartMood = null } = {}) {
+  constructor(animator, { smartMood = null, onToolEvent = null } = {}) {
     this.a = animator;
     this.smartMood = smartMood;
+    this.onToolEvent = onToolEvent;
     this.context = "chat"; // "voice" while voice mode is open
     this.t = 0;
     this.aiWords = new CaptionMood({ role: "ai" });
@@ -140,9 +141,11 @@ export class Director {
     return 1000;
   }
 
-  // ---------- The AI moving its body (robot_mood, robot_gesture, robot_use_prop, robot_go_to, robot_look_at) ----------
-  toolEvent({ mood, gesture, useProp, goTo, lookAt } = {}) {
-    if (mood) this.a.setMood(mood, { source: "tool", strength: 1 });
+  // ---------- The AI moving its body (robot_mood, robot_gesture, robot_use_prop, robot_go_to, robot_look_at, choreography) ----------
+  toolEvent(ev = {}) {
+    let { mood, gesture, useProp, goTo, lookAt, emotion } = ev || {};
+    const nextMood = mood || emotion;
+    if (nextMood) this.a.setMood(nextMood, { source: "tool", strength: 1 });
     // At the whiteboard: writing and wiping are an arm movement that follows where it is working, not a one-off gesture
     if (gesture === "board_write" || gesture === "board_erase") {
       const at = lookAt && typeof lookAt === "object" ? lookAt : {};
@@ -153,6 +156,7 @@ export class Director {
     if (goTo && typeof goTo === "object") this.a.goTo(goTo);
     if (lookAt && typeof lookAt === "object") this.a.lookAt(lookAt);
     if (useProp && typeof useProp === "object") this.a.useProp({ ...useProp, source: "tool" });
+    this.onToolEvent?.(ev);
   }
 
   // The robot writing on the board right now (called every frame while it does): its arm follows the pen
