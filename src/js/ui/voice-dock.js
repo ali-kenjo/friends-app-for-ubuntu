@@ -89,7 +89,7 @@ export class VoiceDockController {
       visible: { ...DOCK_PRESETS.creator_stage.visible },
       shortcuts: {
         mic_mute: "KeyM",
-        interrupt: "Space",
+        interrupt: "",
         summon_home: "KeyR",
         clean_stage: "KeyH",
         toggle_whiteboard: "KeyB",
@@ -106,9 +106,11 @@ export class VoiceDockController {
     this.el.className = "v1-voice-dock pos-bottom";
     this.el.setAttribute("role", "toolbar");
     this.el.setAttribute("aria-label", "Voice Mode Action Dock");
+    this.el.setAttribute("data-no-i18n", "");
 
     this.popover = document.createElement("div");
     this.popover.className = "v1-dock-popover hidden";
+    this.popover.setAttribute("data-no-i18n", "");
     parent.appendChild(this.el);
     parent.appendChild(this.popover);
 
@@ -325,12 +327,14 @@ export class VoiceDockController {
       this.triggerAction("clean_stage");
       return;
     }
+    const voiceModeEl = document.getElementById("voice-mode");
+    const voiceOpen = voiceModeEl ? !voiceModeEl.hidden : false;
     for (const [modId, code] of Object.entries(this.config.shortcuts || {})) {
-      if (code && e.code === code) {
-        e.preventDefault();
-        this.triggerAction(modId);
-        return;
-      }
+      if (!code || e.code !== code) continue;
+      if (modId !== "clean_stage" && !voiceOpen) continue;
+      e.preventDefault();
+      this.triggerAction(modId);
+      return;
     }
   }
 }

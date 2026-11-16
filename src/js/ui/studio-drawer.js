@@ -39,6 +39,7 @@ export class StudioDrawer {
     this.el.id = "v1-studio-drawer";
     this.el.className = "v1-studio-drawer hidden";
     this.el.setAttribute("aria-label", "3D Robot Studio Drawer");
+    this.el.setAttribute("data-no-i18n", "");
     parent.appendChild(this.el);
 
     bus.on(EVENTS.DOCK_ACTION, ({ action, forceOpen }) => {

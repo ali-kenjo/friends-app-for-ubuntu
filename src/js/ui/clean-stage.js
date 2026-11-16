@@ -32,6 +32,7 @@ export class CleanStageController {
     this.pill = document.createElement("div");
     this.pill.id = "v1-stage-hover-pill";
     this.pill.className = "v1-stage-hover-pill hidden";
+    this.pill.setAttribute("data-no-i18n", "");
     this.pill.innerHTML = `
       <button type="button" id="v1-pill-exit-clean">Exit Clean Stage (H)</button>
       <button type="button" id="v1-pill-open-studio">Studio</button>

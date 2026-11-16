@@ -265,6 +265,7 @@ onSettings(sync);
   if (!card || card.querySelector(".onb-v1-wizard")) return;
   const wrap = document.createElement("div");
   wrap.className = "onb-v1-wizard";
+  wrap.setAttribute("data-no-i18n", "");
   wrap.style.cssText = "margin-top:14px;padding-top:12px;border-top:1px solid var(--border-subtle,rgba(255,255,255,0.12));display:grid;gap:10px;font-size:13px;";
 
   const step1 = document.createElement("div");

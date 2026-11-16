@@ -443,7 +443,7 @@ const DEFAULTS = {
     },
     shortcuts: {
       mic_mute: "KeyM",
-      interrupt: "Space",
+      interrupt: "", // Leave empty by default so voice.interruptKey in Settings controls Space/custom interrupt key
       summon_home: "KeyR",
       clean_stage: "KeyH",
       toggle_whiteboard: "KeyB",
