@@ -1,0 +1,3890 @@
+{
+  "when": "2026-11-17T12:24:29.022Z",
+  "stats": {
+    "low": [
+      {
+        "id": "desk_writing",
+        "drawCalls": 4,
+        "triangles": 3386,
+        "size": [
+          1.4,
+          0.76,
+          0.7
+        ]
+      },
+      {
+        "id": "desk_standing",
+        "drawCalls": 6,
+        "triangles": 3632,
+        "size": [
+          1.2,
+          1.05,
+          0.66
+        ]
+      },
+      {
+        "id": "chair_office",
+        "drawCalls": 5,
+        "triangles": 5156,
+        "size": [
+          0.61,
+          1.12,
+          0.61
+        ]
+      },
+      {
+        "id": "chair_dining",
+        "drawCalls": 3,
+        "triangles": 2816,
+        "size": [
+          0.46,
+          0.87,
+          0.53
+        ]
+      },
+      {
+        "id": "sofa",
+        "drawCalls": 3,
+        "triangles": 4440,
+        "size": [
+          2.01,
+          0.89,
+          0.88
+        ]
+      },
+      {
+        "id": "armchair",
+        "drawCalls": 2,
+        "triangles": 3544,
+        "size": [
+          1,
+          0.75,
+          0.85
+        ]
+      },
+      {
+        "id": "pouf",
+        "drawCalls": 1,
+        "triangles": 672,
+        "size": [
+          0.55,
+          0.4,
+          0.55
+        ]
+      },
+      {
+        "id": "bookcase",
+        "drawCalls": 5,
+        "triangles": 15312,
+        "size": [
+          1.1,
+          2,
+          0.35
+        ]
+      },
+      {
+        "id": "shelf_low",
+        "drawCalls": 6,
+        "triangles": 6048,
+        "size": [
+          1.2,
+          0.8,
+          0.38
+        ]
+      },
+      {
+        "id": "bed",
+        "drawCalls": 5,
+        "triangles": 3852,
+        "size": [
+          1.54,
+          1,
+          2.14
+        ]
+      },
+      {
+        "id": "table_side",
+        "drawCalls": 2,
+        "triangles": 1120,
+        "size": [
+          0.48,
+          0.55,
+          0.48
+        ]
+      },
+      {
+        "id": "table_coffee",
+        "drawCalls": 3,
+        "triangles": 2680,
+        "size": [
+          1.1,
+          0.42,
+          0.59
+        ]
+      },
+      {
+        "id": "rug_round",
+        "drawCalls": 2,
+        "triangles": 6224,
+        "size": [
+          1.99,
+          0.02,
+          1.99
+        ]
+      },
+      {
+        "id": "rug_rect",
+        "drawCalls": 2,
+        "triangles": 4072,
+        "size": [
+          2.4,
+          0.01,
+          1.7
+        ]
+      },
+      {
+        "id": "rug_runner",
+        "drawCalls": 2,
+        "triangles": 4248,
+        "size": [
+          2.71,
+          0.01,
+          0.8
+        ]
+      },
+      {
+        "id": "monstera",
+        "drawCalls": 4,
+        "triangles": 4800,
+        "size": [
+          0.67,
+          1.25,
+          0.76
+        ]
+      },
+      {
+        "id": "fig_tree",
+        "drawCalls": 4,
+        "triangles": 9680,
+        "size": [
+          0.79,
+          1.85,
+          0.61
+        ]
+      },
+      {
+        "id": "succulents",
+        "drawCalls": 2,
+        "triangles": 6948,
+        "size": [
+          0.28,
+          0.12,
+          0.1
+        ]
+      },
+      {
+        "id": "vase_flowers",
+        "drawCalls": 3,
+        "triangles": 3952,
+        "size": [
+          0.17,
+          0.52,
+          0.18
+        ]
+      },
+      {
+        "id": "lamp_floor",
+        "drawCalls": 5,
+        "triangles": 1886,
+        "size": [
+          0.4,
+          1.66,
+          0.4
+        ]
+      },
+      {
+        "id": "lamp_desk",
+        "drawCalls": 4,
+        "triangles": 2412,
+        "size": [
+          0.21,
+          0.43,
+          0.31
+        ]
+      },
+      {
+        "id": "whiteboard",
+        "drawCalls": 6,
+        "triangles": 6584,
+        "size": [
+          1.39,
+          1.73,
+          0.54
+        ]
+      },
+      {
+        "id": "books_stack",
+        "drawCalls": 2,
+        "triangles": 864,
+        "size": [
+          0.27,
+          0.15,
+          0.21
+        ]
+      },
+      {
+        "id": "notebook",
+        "drawCalls": 6,
+        "triangles": 600,
+        "size": [
+          0.24,
+          0.07,
+          0.32
+        ]
+      },
+      {
+        "id": "mug",
+        "drawCalls": 5,
+        "triangles": 1848,
+        "size": [
+          0.13,
+          0.12,
+          0.09
+        ]
+      },
+      {
+        "id": "pen_cup",
+        "drawCalls": 2,
+        "triangles": 784,
+        "size": [
+          0.09,
+          0.18,
+          0.09
+        ]
+      },
+      {
+        "id": "game_console",
+        "drawCalls": 4,
+        "triangles": 1400,
+        "size": [
+          0.39,
+          0.06,
+          0.21
+        ]
+      },
+      {
+        "id": "tv",
+        "drawCalls": 3,
+        "triangles": 1136,
+        "size": [
+          1.1,
+          0.71,
+          0.2
+        ]
+      },
+      {
+        "id": "monitor",
+        "drawCalls": 3,
+        "triangles": 1136,
+        "size": [
+          0.62,
+          0.48,
+          0.17
+        ]
+      },
+      {
+        "id": "window_french",
+        "drawCalls": 4,
+        "triangles": 4596,
+        "size": [
+          1.78,
+          1.61,
+          0.19
+        ]
+      },
+      {
+        "id": "window_picture",
+        "drawCalls": 2,
+        "triangles": 3792,
+        "size": [
+          2.1,
+          1.37,
+          0.16
+        ]
+      },
+      {
+        "id": "window_arched",
+        "drawCalls": 4,
+        "triangles": 3044,
+        "size": [
+          1.68,
+          1.91,
+          0.19
+        ]
+      },
+      {
+        "id": "clock_wall",
+        "drawCalls": 6,
+        "triangles": 2524,
+        "size": [
+          0.35,
+          0.35,
+          0.07
+        ]
+      },
+      {
+        "id": "frame_picture",
+        "drawCalls": 3,
+        "triangles": 1848,
+        "size": [
+          0.44,
+          0.56,
+          0.03
+        ]
+      },
+      {
+        "id": "pinboard",
+        "drawCalls": 4,
+        "triangles": 2872,
+        "size": [
+          0.9,
+          0.62,
+          0.03
+        ]
+      },
+      {
+        "id": "plush_bear",
+        "drawCalls": 4,
+        "triangles": 3224,
+        "size": [
+          0.3,
+          0.39,
+          0.24
+        ]
+      },
+      {
+        "id": "ball_bouncy",
+        "drawCalls": 2,
+        "triangles": 544,
+        "size": [
+          0.23,
+          0.22,
+          0.24
+        ]
+      },
+      {
+        "id": "puzzle_cube",
+        "drawCalls": 2,
+        "triangles": 6132,
+        "size": [
+          0.07,
+          0.07,
+          0.07
+        ]
+      },
+      {
+        "id": "bean_bag",
+        "drawCalls": 1,
+        "triangles": 1680,
+        "size": [
+          0.83,
+          0.66,
+          0.83
+        ]
+      },
+      {
+        "id": "chair_gaming",
+        "drawCalls": 6,
+        "triangles": 5546,
+        "size": [
+          0.68,
+          1.44,
+          0.67
+        ]
+      },
+      {
+        "id": "bench_wood",
+        "drawCalls": 2,
+        "triangles": 1788,
+        "size": [
+          1.4,
+          0.46,
+          0.42
+        ]
+      },
+      {
+        "id": "lounge_chair",
+        "drawCalls": 2,
+        "triangles": 3736,
+        "size": [
+          0.77,
+          0.8,
+          1.51
+        ]
+      },
+      {
+        "id": "deck_chair",
+        "drawCalls": 2,
+        "triangles": 3640,
+        "size": [
+          0.58,
+          0.9,
+          1.04
+        ]
+      },
+      {
+        "id": "zabuton",
+        "drawCalls": 2,
+        "triangles": 1050,
+        "size": [
+          0.58,
+          0.16,
+          0.58
+        ]
+      },
+      {
+        "id": "log_seat",
+        "drawCalls": 3,
+        "triangles": 636,
+        "size": [
+          1.18,
+          0.42,
+          0.38
+        ]
+      },
+      {
+        "id": "captain_chair",
+        "drawCalls": 3,
+        "triangles": 3944,
+        "size": [
+          0.89,
+          1.22,
+          0.76
+        ]
+      },
+      {
+        "id": "table_dining",
+        "drawCalls": 2,
+        "triangles": 1752,
+        "size": [
+          1.6,
+          0.75,
+          0.9
+        ]
+      },
+      {
+        "id": "bistro_table",
+        "drawCalls": 2,
+        "triangles": 1216,
+        "size": [
+          0.64,
+          0.74,
+          0.64
+        ]
+      },
+      {
+        "id": "chabudai",
+        "drawCalls": 2,
+        "triangles": 2240,
+        "size": [
+          0.89,
+          0.34,
+          0.89
+        ]
+      },
+      {
+        "id": "workbench",
+        "drawCalls": 6,
+        "triangles": 3224,
+        "size": [
+          1.8,
+          1,
+          0.78
+        ]
+      },
+      {
+        "id": "holo_table",
+        "drawCalls": 3,
+        "triangles": 7496,
+        "size": [
+          1.09,
+          1.17,
+          1.09
+        ]
+      },
+      {
+        "id": "platform",
+        "drawCalls": 2,
+        "triangles": 2060,
+        "size": [
+          2.02,
+          0.18,
+          1.42
+        ]
+      },
+      {
+        "id": "sideboard",
+        "drawCalls": 6,
+        "triangles": 2418,
+        "size": [
+          1.4,
+          0.72,
+          0.48
+        ]
+      },
+      {
+        "id": "plant_shelf",
+        "drawCalls": 4,
+        "triangles": 5476,
+        "size": [
+          0.9,
+          1.44,
+          0.35
+        ]
+      },
+      {
+        "id": "wall_shelves",
+        "drawCalls": 2,
+        "triangles": 1752,
+        "size": [
+          1,
+          0.61,
+          0.22
+        ]
+      },
+      {
+        "id": "counter_kitchen",
+        "drawCalls": 6,
+        "triangles": 4448,
+        "size": [
+          2.2,
+          1.07,
+          0.62
+        ]
+      },
+      {
+        "id": "pastry_case",
+        "drawCalls": 4,
+        "triangles": 3920,
+        "size": [
+          1.1,
+          1.06,
+          0.55
+        ]
+      },
+      {
+        "id": "log_rack",
+        "drawCalls": 2,
+        "triangles": 5872,
+        "size": [
+          0.77,
+          0.89,
+          0.35
+        ]
+      },
+      {
+        "id": "vending",
+        "drawCalls": 6,
+        "triangles": 9600,
+        "size": [
+          0.9,
+          1.85,
+          0.77
+        ]
+      },
+      {
+        "id": "room_divider",
+        "drawCalls": 2,
+        "triangles": 4068,
+        "size": [
+          1.48,
+          1.75,
+          0.23
+        ]
+      },
+      {
+        "id": "mirror_floor",
+        "drawCalls": 2,
+        "triangles": 1736,
+        "size": [
+          0.6,
+          1.7,
+          0.29
+        ]
+      },
+      {
+        "id": "charging_pad",
+        "drawCalls": 2,
+        "triangles": 2080,
+        "size": [
+          0.89,
+          0.06,
+          0.89
+        ]
+      },
+      {
+        "id": "tent",
+        "drawCalls": 4,
+        "triangles": 2388,
+        "size": [
+          1.71,
+          1.53,
+          1.93
+        ]
+      },
+      {
+        "id": "cat_tree",
+        "drawCalls": 5,
+        "triangles": 2884,
+        "size": [
+          0.68,
+          1.5,
+          0.66
+        ]
+      },
+      {
+        "id": "cactus",
+        "drawCalls": 4,
+        "triangles": 2080,
+        "size": [
+          0.52,
+          1.17,
+          0.36
+        ]
+      },
+      {
+        "id": "bonsai",
+        "drawCalls": 4,
+        "triangles": 2640,
+        "size": [
+          0.41,
+          0.39,
+          0.26
+        ]
+      },
+      {
+        "id": "terrarium",
+        "drawCalls": 6,
+        "triangles": 1680,
+        "size": [
+          0.25,
+          0.29,
+          0.25
+        ]
+      },
+      {
+        "id": "plant_hanging",
+        "drawCalls": 4,
+        "triangles": 4816,
+        "size": [
+          0.39,
+          0.85,
+          0.4
+        ]
+      },
+      {
+        "id": "plants_hanging_trio",
+        "drawCalls": 4,
+        "triangles": 9744,
+        "size": [
+          1.09,
+          0.9,
+          0.42
+        ]
+      },
+      {
+        "id": "palm",
+        "drawCalls": 4,
+        "triangles": 2016,
+        "size": [
+          1.11,
+          1.47,
+          1.11
+        ]
+      },
+      {
+        "id": "fern",
+        "drawCalls": 3,
+        "triangles": 1856,
+        "size": [
+          0.84,
+          0.41,
+          0.78
+        ]
+      },
+      {
+        "id": "herb_pots",
+        "drawCalls": 2,
+        "triangles": 2400,
+        "size": [
+          0.49,
+          0.22,
+          0.17
+        ]
+      },
+      {
+        "id": "flower_bed",
+        "drawCalls": 5,
+        "triangles": 9304,
+        "size": [
+          1.4,
+          0.5,
+          0.56
+        ]
+      },
+      {
+        "id": "bamboo",
+        "drawCalls": 2,
+        "triangles": 16434,
+        "size": [
+          1.11,
+          2.41,
+          0.6
+        ]
+      },
+      {
+        "id": "pine_tree",
+        "drawCalls": 2,
+        "triangles": 6800,
+        "size": [
+          1.33,
+          3.05,
+          1.33
+        ]
+      },
+      {
+        "id": "ikebana",
+        "drawCalls": 5,
+        "triangles": 2336,
+        "size": [
+          0.28,
+          0.49,
+          0.25
+        ]
+      },
+      {
+        "id": "lava_lamp",
+        "drawCalls": 6,
+        "triangles": 1910,
+        "size": [
+          0.15,
+          0.49,
+          0.15
+        ]
+      },
+      {
+        "id": "lantern_paper",
+        "drawCalls": 3,
+        "triangles": 2528,
+        "size": [
+          0.49,
+          0.7,
+          0.49
+        ]
+      },
+      {
+        "id": "pendant",
+        "drawCalls": 4,
+        "triangles": 1472,
+        "size": [
+          0.39,
+          0.88,
+          0.39
+        ]
+      },
+      {
+        "id": "string_lights",
+        "drawCalls": 3,
+        "triangles": 9884,
+        "size": [
+          3,
+          0.4,
+          0.06
+        ]
+      },
+      {
+        "id": "neon_bar",
+        "drawCalls": 2,
+        "triangles": 1012,
+        "size": [
+          1.2,
+          0.05,
+          0.06
+        ]
+      },
+      {
+        "id": "neon_sign",
+        "drawCalls": 2,
+        "triangles": 302,
+        "size": [
+          1.1,
+          0.42,
+          0.03
+        ]
+      },
+      {
+        "id": "fireplace",
+        "drawCalls": 8,
+        "triangles": 3288,
+        "size": [
+          1.54,
+          1.15,
+          0.56
+        ]
+      },
+      {
+        "id": "fire_pit",
+        "drawCalls": 6,
+        "triangles": 6528,
+        "size": [
+          0.92,
+          0.44,
+          0.92
+        ]
+      },
+      {
+        "id": "candles",
+        "drawCalls": 5,
+        "triangles": 2712,
+        "size": [
+          0.2,
+          0.25,
+          0.13
+        ]
+      },
+      {
+        "id": "lantern_floor",
+        "drawCalls": 4,
+        "triangles": 2376,
+        "size": [
+          0.26,
+          0.61,
+          0.26
+        ]
+      },
+      {
+        "id": "street_lamp",
+        "drawCalls": 3,
+        "triangles": 1728,
+        "size": [
+          0.57,
+          2.94,
+          0.34
+        ]
+      },
+      {
+        "id": "lamp_banker",
+        "drawCalls": 3,
+        "triangles": 1696,
+        "size": [
+          0.31,
+          0.41,
+          0.2
+        ]
+      },
+      {
+        "id": "tv_retro",
+        "drawCalls": 6,
+        "triangles": 3228,
+        "size": [
+          0.71,
+          1.03,
+          0.54
+        ]
+      },
+      {
+        "id": "turntable",
+        "drawCalls": 7,
+        "triangles": 2496,
+        "size": [
+          0.45,
+          0.13,
+          0.35
+        ]
+      },
+      {
+        "id": "radio",
+        "drawCalls": 5,
+        "triangles": 1656,
+        "size": [
+          0.42,
+          0.29,
+          0.21
+        ]
+      },
+      {
+        "id": "arcade_cabinet",
+        "drawCalls": 7,
+        "triangles": 2474,
+        "size": [
+          0.7,
+          1.75,
+          0.72
+        ]
+      },
+      {
+        "id": "holo_projector",
+        "drawCalls": 3,
+        "triangles": 1024,
+        "size": [
+          0.23,
+          0.18,
+          0.23
+        ]
+      },
+      {
+        "id": "speaker",
+        "drawCalls": 4,
+        "triangles": 1676,
+        "size": [
+          0.32,
+          0.95,
+          0.32
+        ]
+      },
+      {
+        "id": "server_rack",
+        "drawCalls": 3,
+        "triangles": 6888,
+        "size": [
+          0.6,
+          1.2,
+          0.62
+        ]
+      },
+      {
+        "id": "tablet_stand",
+        "drawCalls": 3,
+        "triangles": 1008,
+        "size": [
+          0.24,
+          0.22,
+          0.14
+        ]
+      },
+      {
+        "id": "retro_handheld",
+        "drawCalls": 4,
+        "triangles": 984,
+        "size": [
+          0.1,
+          0.03,
+          0.16
+        ]
+      },
+      {
+        "id": "mini_synth",
+        "drawCalls": 5,
+        "triangles": 4080,
+        "size": [
+          0.45,
+          0.07,
+          0.2
+        ]
+      },
+      {
+        "id": "microphone",
+        "drawCalls": 3,
+        "triangles": 1360,
+        "size": [
+          0.21,
+          0.46,
+          0.24
+        ]
+      },
+      {
+        "id": "headphones_stand",
+        "drawCalls": 3,
+        "triangles": 2256,
+        "size": [
+          0.21,
+          0.31,
+          0.17
+        ]
+      },
+      {
+        "id": "printer_3d",
+        "drawCalls": 6,
+        "triangles": 3428,
+        "size": [
+          0.49,
+          0.5,
+          0.45
+        ]
+      },
+      {
+        "id": "robot_arm",
+        "drawCalls": 4,
+        "triangles": 1816,
+        "size": [
+          0.24,
+          0.47,
+          0.23
+        ]
+      },
+      {
+        "id": "console_bridge",
+        "drawCalls": 3,
+        "triangles": 3956,
+        "size": [
+          1.2,
+          1,
+          0.6
+        ]
+      },
+      {
+        "id": "projector_screen",
+        "drawCalls": 2,
+        "triangles": 332,
+        "size": [
+          2.06,
+          1.3,
+          0.08
+        ]
+      },
+      {
+        "id": "aquarium",
+        "drawCalls": 12,
+        "triangles": 3580,
+        "size": [
+          1,
+          1.27,
+          0.41
+        ]
+      },
+      {
+        "id": "fish_tank",
+        "drawCalls": 11,
+        "triangles": 4288,
+        "size": [
+          0.7,
+          0.9,
+          0.35
+        ]
+      },
+      {
+        "id": "easel",
+        "drawCalls": 3,
+        "triangles": 4100,
+        "size": [
+          0.64,
+          1.72,
+          0.44
+        ]
+      },
+      {
+        "id": "sculpture_loop",
+        "drawCalls": 2,
+        "triangles": 2124,
+        "size": [
+          0.2,
+          0.37,
+          0.14
+        ]
+      },
+      {
+        "id": "amphora",
+        "drawCalls": 2,
+        "triangles": 2304,
+        "size": [
+          0.41,
+          0.75,
+          0.41
+        ]
+      },
+      {
+        "id": "mobile_kinetic",
+        "drawCalls": 6,
+        "triangles": 1716,
+        "size": [
+          1.14,
+          0.75,
+          0.1
+        ]
+      },
+      {
+        "id": "bust",
+        "drawCalls": 2,
+        "triangles": 1898,
+        "size": [
+          0.26,
+          0.51,
+          0.19
+        ]
+      },
+      {
+        "id": "paper_crane",
+        "drawCalls": 3,
+        "triangles": 299,
+        "size": [
+          0.32,
+          0.21,
+          0.26
+        ]
+      },
+      {
+        "id": "geode",
+        "drawCalls": 2,
+        "triangles": 1608,
+        "size": [
+          0.2,
+          0.17,
+          0.17
+        ]
+      },
+      {
+        "id": "sand_timer",
+        "drawCalls": 3,
+        "triangles": 2108,
+        "size": [
+          0.11,
+          0.26,
+          0.11
+        ]
+      },
+      {
+        "id": "globe",
+        "drawCalls": 4,
+        "triangles": 3552,
+        "size": [
+          0.39,
+          0.45,
+          0.27
+        ]
+      },
+      {
+        "id": "orrery",
+        "drawCalls": 8,
+        "triangles": 2580,
+        "size": [
+          0.53,
+          0.75,
+          0.41
+        ]
+      },
+      {
+        "id": "meteorite",
+        "drawCalls": 4,
+        "triangles": 1104,
+        "size": [
+          0.3,
+          0.23,
+          0.24
+        ]
+      },
+      {
+        "id": "mirror_wall",
+        "drawCalls": 2,
+        "triangles": 1256,
+        "size": [
+          0.6,
+          0.9,
+          0.04
+        ]
+      },
+      {
+        "id": "macrame",
+        "drawCalls": 2,
+        "triangles": 8608,
+        "size": [
+          0.58,
+          0.82,
+          0.03
+        ]
+      },
+      {
+        "id": "calendar_wall",
+        "drawCalls": 4,
+        "triangles": 1114,
+        "size": [
+          0.36,
+          0.51,
+          0.03
+        ]
+      },
+      {
+        "id": "photo_frame",
+        "drawCalls": 3,
+        "triangles": 1358,
+        "size": [
+          0.4,
+          0.32,
+          0.03
+        ]
+      },
+      {
+        "id": "panels_acoustic",
+        "drawCalls": 2,
+        "triangles": 3900,
+        "size": [
+          1.2,
+          1,
+          0.06
+        ]
+      },
+      {
+        "id": "scroll_hanging",
+        "drawCalls": 3,
+        "triangles": 334,
+        "size": [
+          0.52,
+          1.19,
+          0.03
+        ]
+      },
+      {
+        "id": "posters",
+        "drawCalls": 3,
+        "triangles": 220,
+        "size": [
+          1.14,
+          0.75,
+          0.01
+        ]
+      },
+      {
+        "id": "star_chart",
+        "drawCalls": 3,
+        "triangles": 1358,
+        "size": [
+          1,
+          0.7,
+          0.03
+        ]
+      },
+      {
+        "id": "chalkboard",
+        "drawCalls": 4,
+        "triangles": 1620,
+        "size": [
+          0.8,
+          1,
+          0.04
+        ]
+      },
+      {
+        "id": "pegboard",
+        "drawCalls": 5,
+        "triangles": 10152,
+        "size": [
+          1.4,
+          0.9,
+          0.06
+        ]
+      },
+      {
+        "id": "hoop_basketball",
+        "drawCalls": 3,
+        "triangles": 2360,
+        "size": [
+          0.5,
+          0.44,
+          0.27
+        ]
+      },
+      {
+        "id": "surfboard",
+        "drawCalls": 2,
+        "triangles": 232,
+        "size": [
+          0.42,
+          2,
+          0.12
+        ]
+      },
+      {
+        "id": "bike_mount",
+        "drawCalls": 6,
+        "triangles": 4708,
+        "size": [
+          1.69,
+          0.87,
+          0.26
+        ]
+      },
+      {
+        "id": "guitar_wall",
+        "drawCalls": 6,
+        "triangles": 3236,
+        "size": [
+          0.34,
+          1,
+          0.1
+        ]
+      },
+      {
+        "id": "wind_chimes",
+        "drawCalls": 9,
+        "triangles": 2068,
+        "size": [
+          0.18,
+          0.61,
+          0.18
+        ]
+      },
+      {
+        "id": "window_round",
+        "drawCalls": 3,
+        "triangles": 1628,
+        "size": [
+          0.9,
+          0.9,
+          0.08
+        ]
+      },
+      {
+        "id": "window_shoji",
+        "drawCalls": 3,
+        "triangles": 5172,
+        "size": [
+          1.4,
+          1.4,
+          0.06
+        ]
+      },
+      {
+        "id": "window_viewport",
+        "drawCalls": 3,
+        "triangles": 5060,
+        "size": [
+          3.2,
+          1.6,
+          0.15
+        ]
+      },
+      {
+        "id": "door",
+        "drawCalls": 4,
+        "triangles": 1460,
+        "size": [
+          0.9,
+          2.05,
+          0.12
+        ]
+      },
+      {
+        "id": "blinds",
+        "drawCalls": 3,
+        "triangles": 4128,
+        "size": [
+          1.2,
+          1.4,
+          0.06
+        ]
+      },
+      {
+        "id": "curtains",
+        "drawCalls": 3,
+        "triangles": 1272,
+        "size": [
+          1.8,
+          2.09,
+          0.08
+        ]
+      },
+      {
+        "id": "rug_cloud",
+        "drawCalls": 1,
+        "triangles": 1148,
+        "size": [
+          1.64,
+          0.02,
+          1.12
+        ]
+      },
+      {
+        "id": "mat_yoga",
+        "drawCalls": 1,
+        "triangles": 428,
+        "size": [
+          1.8,
+          0.01,
+          0.6
+        ]
+      },
+      {
+        "id": "mat_pebble",
+        "drawCalls": 2,
+        "triangles": 5036,
+        "size": [
+          1.2,
+          0.05,
+          0.8
+        ]
+      },
+      {
+        "id": "rug_braided",
+        "drawCalls": 2,
+        "triangles": 7004,
+        "size": [
+          1.9,
+          0.02,
+          1.3
+        ]
+      },
+      {
+        "id": "kettle",
+        "drawCalls": 2,
+        "triangles": 1430,
+        "size": [
+          0.27,
+          0.26,
+          0.2
+        ]
+      },
+      {
+        "id": "espresso",
+        "drawCalls": 5,
+        "triangles": 2244,
+        "size": [
+          0.36,
+          0.4,
+          0.43
+        ]
+      },
+      {
+        "id": "fruit_bowl",
+        "drawCalls": 2,
+        "triangles": 2240,
+        "size": [
+          0.32,
+          0.16,
+          0.32
+        ]
+      },
+      {
+        "id": "cake_stand",
+        "drawCalls": 4,
+        "triangles": 2876,
+        "size": [
+          0.29,
+          0.3,
+          0.29
+        ]
+      },
+      {
+        "id": "ramen_bowl",
+        "drawCalls": 9,
+        "triangles": 2114,
+        "size": [
+          0.22,
+          0.18,
+          0.23
+        ]
+      },
+      {
+        "id": "tea_set",
+        "drawCalls": 5,
+        "triangles": 2878,
+        "size": [
+          0.36,
+          0.22,
+          0.24
+        ]
+      },
+      {
+        "id": "cookie_jar",
+        "drawCalls": 3,
+        "triangles": 3620,
+        "size": [
+          0.17,
+          0.26,
+          0.17
+        ]
+      },
+      {
+        "id": "watering_can",
+        "drawCalls": 1,
+        "triangles": 1952,
+        "size": [
+          0.43,
+          0.28,
+          0.18
+        ]
+      },
+      {
+        "id": "toy_train",
+        "drawCalls": 4,
+        "triangles": 4692,
+        "size": [
+          0.9,
+          0.11,
+          0.54
+        ]
+      },
+      {
+        "id": "chess",
+        "drawCalls": 3,
+        "triangles": 9876,
+        "size": [
+          0.4,
+          0.1,
+          0.4
+        ]
+      },
+      {
+        "id": "tin_robot",
+        "drawCalls": 4,
+        "triangles": 2280,
+        "size": [
+          0.12,
+          0.21,
+          0.09
+        ]
+      },
+      {
+        "id": "gacha",
+        "drawCalls": 5,
+        "triangles": 8100,
+        "size": [
+          0.5,
+          1.12,
+          0.49
+        ]
+      },
+      {
+        "id": "blocks",
+        "drawCalls": 3,
+        "triangles": 2120,
+        "size": [
+          0.31,
+          0.31,
+          0.24
+        ]
+      },
+      {
+        "id": "snow_globe",
+        "drawCalls": 10,
+        "triangles": 1624,
+        "size": [
+          0.14,
+          0.17,
+          0.14
+        ]
+      },
+      {
+        "id": "rocket_model",
+        "drawCalls": 4,
+        "triangles": 1034,
+        "size": [
+          0.17,
+          0.42,
+          0.19
+        ]
+      },
+      {
+        "id": "newtons_cradle",
+        "drawCalls": 7,
+        "triangles": 2202,
+        "size": [
+          0.24,
+          0.21,
+          0.14
+        ]
+      },
+      {
+        "id": "rc_drone",
+        "drawCalls": 6,
+        "triangles": 3380,
+        "size": [
+          0.31,
+          0.09,
+          0.24
+        ]
+      },
+      {
+        "id": "plush_claw",
+        "drawCalls": 4,
+        "triangles": 1616,
+        "size": [
+          0.18,
+          0.24,
+          0.2
+        ]
+      },
+      {
+        "id": "guitar_stand",
+        "drawCalls": 6,
+        "triangles": 4728,
+        "size": [
+          0.42,
+          1.09,
+          0.38
+        ]
+      },
+      {
+        "id": "piano",
+        "drawCalls": 5,
+        "triangles": 9324,
+        "size": [
+          1.49,
+          1.25,
+          0.6
+        ]
+      },
+      {
+        "id": "synth_keys",
+        "drawCalls": 6,
+        "triangles": 9816,
+        "size": [
+          1.1,
+          0.9,
+          0.34
+        ]
+      },
+      {
+        "id": "cello",
+        "drawCalls": 5,
+        "triangles": 2744,
+        "size": [
+          0.42,
+          1.35,
+          0.42
+        ]
+      },
+      {
+        "id": "bongos",
+        "drawCalls": 4,
+        "triangles": 3328,
+        "size": [
+          0.42,
+          0.55,
+          0.26
+        ]
+      },
+      {
+        "id": "metronome",
+        "drawCalls": 3,
+        "triangles": 368,
+        "size": [
+          0.11,
+          0.24,
+          0.1
+        ]
+      },
+      {
+        "id": "kalimba",
+        "drawCalls": 4,
+        "triangles": 1650,
+        "size": [
+          0.12,
+          0.05,
+          0.18
+        ]
+      },
+      {
+        "id": "gramophone",
+        "drawCalls": 6,
+        "triangles": 2540,
+        "size": [
+          0.62,
+          0.77,
+          0.45
+        ]
+      },
+      {
+        "id": "skateboard",
+        "drawCalls": 3,
+        "triangles": 2156,
+        "size": [
+          0.8,
+          0.1,
+          0.21
+        ]
+      },
+      {
+        "id": "dumbbells",
+        "drawCalls": 2,
+        "triangles": 1376,
+        "size": [
+          0.31,
+          0.11,
+          0.29
+        ]
+      },
+      {
+        "id": "kettlebell",
+        "drawCalls": 2,
+        "triangles": 864,
+        "size": [
+          0.2,
+          0.3,
+          0.2
+        ]
+      },
+      {
+        "id": "trophy",
+        "drawCalls": 3,
+        "triangles": 2168,
+        "size": [
+          0.24,
+          0.36,
+          0.16
+        ]
+      },
+      {
+        "id": "football",
+        "drawCalls": 2,
+        "triangles": 3744,
+        "size": [
+          0.23,
+          0.22,
+          0.23
+        ]
+      },
+      {
+        "id": "telescope",
+        "drawCalls": 4,
+        "triangles": 3114,
+        "size": [
+          0.67,
+          1.31,
+          0.52
+        ]
+      },
+      {
+        "id": "typewriter",
+        "drawCalls": 5,
+        "triangles": 8068,
+        "size": [
+          0.44,
+          0.3,
+          0.3
+        ]
+      },
+      {
+        "id": "tome_open",
+        "drawCalls": 4,
+        "triangles": 2176,
+        "size": [
+          0.44,
+          0.05,
+          0.31
+        ]
+      },
+      {
+        "id": "microscope",
+        "drawCalls": 4,
+        "triangles": 1842,
+        "size": [
+          0.18,
+          0.38,
+          0.2
+        ]
+      },
+      {
+        "id": "quill_ink",
+        "drawCalls": 4,
+        "triangles": 1152,
+        "size": [
+          0.18,
+          0.19,
+          0.09
+        ]
+      },
+      {
+        "id": "blueprints",
+        "drawCalls": 2,
+        "triangles": 1632,
+        "size": [
+          0.37,
+          0.15,
+          0.3
+        ]
+      },
+      {
+        "id": "ladder_library",
+        "drawCalls": 3,
+        "triangles": 3632,
+        "size": [
+          0.58,
+          2.2,
+          0.49
+        ]
+      },
+      {
+        "id": "bookcase_tall",
+        "drawCalls": 5,
+        "triangles": 21924,
+        "size": [
+          1.66,
+          2.5,
+          0.42
+        ]
+      },
+      {
+        "id": "pergola",
+        "drawCalls": 1,
+        "triangles": 4500,
+        "size": [
+          3.3,
+          2.58,
+          2.7
+        ]
+      },
+      {
+        "id": "umbrella_beach",
+        "drawCalls": 3,
+        "triangles": 2048,
+        "size": [
+          1.62,
+          2.25,
+          1.63
+        ]
+      },
+      {
+        "id": "fountain",
+        "drawCalls": 9,
+        "triangles": 4468,
+        "size": [
+          0.99,
+          0.91,
+          0.99
+        ]
+      },
+      {
+        "id": "fence",
+        "drawCalls": 1,
+        "triangles": 2008,
+        "size": [
+          2,
+          0.85,
+          0.06
+        ]
+      },
+      {
+        "id": "pond",
+        "drawCalls": 4,
+        "triangles": 3352,
+        "size": [
+          1.66,
+          0.15,
+          0.88
+        ]
+      },
+      {
+        "id": "shells",
+        "drawCalls": 3,
+        "triangles": 1268,
+        "size": [
+          0.55,
+          0.05,
+          0.36
+        ]
+      },
+      {
+        "id": "backpack",
+        "drawCalls": 5,
+        "triangles": 2580,
+        "size": [
+          0.4,
+          0.71,
+          0.39
+        ]
+      },
+      {
+        "id": "lighthouse_model",
+        "drawCalls": 5,
+        "triangles": 2720,
+        "size": [
+          0.49,
+          1.38,
+          0.49
+        ]
+      },
+      {
+        "id": "cat",
+        "drawCalls": 3,
+        "triangles": 1724,
+        "size": [
+          0.41,
+          0.2,
+          0.3
+        ]
+      },
+      {
+        "id": "drone_mini",
+        "drawCalls": 4,
+        "triangles": 1180,
+        "size": [
+          0.26,
+          0.09,
+          0.26
+        ]
+      },
+      {
+        "id": "goldfish",
+        "drawCalls": 5,
+        "triangles": 1604,
+        "size": [
+          0.25,
+          0.29,
+          0.25
+        ]
+      },
+      {
+        "id": "plant_sprite",
+        "drawCalls": 5,
+        "triangles": 1140,
+        "size": [
+          0.24,
+          0.32,
+          0.17
+        ]
+      },
+      {
+        "id": "vacuum",
+        "drawCalls": 3,
+        "triangles": 1222,
+        "size": [
+          0.34,
+          0.09,
+          0.34
+        ]
+      }
+    ],
+    "high": [
+      {
+        "id": "desk_writing",
+        "drawCalls": 4,
+        "triangles": 6946,
+        "size": [
+          1.4,
+          0.76,
+          0.7
+        ]
+      },
+      {
+        "id": "desk_standing",
+        "drawCalls": 6,
+        "triangles": 9360,
+        "size": [
+          1.2,
+          1.05,
+          0.66
+        ]
+      },
+      {
+        "id": "chair_office",
+        "drawCalls": 5,
+        "triangles": 15746,
+        "size": [
+          0.61,
+          1.12,
+          0.6
+        ]
+      },
+      {
+        "id": "chair_dining",
+        "drawCalls": 3,
+        "triangles": 8916,
+        "size": [
+          0.46,
+          0.87,
+          0.53
+        ]
+      },
+      {
+        "id": "sofa",
+        "drawCalls": 3,
+        "triangles": 14104,
+        "size": [
+          2.01,
+          0.89,
+          0.88
+        ]
+      },
+      {
+        "id": "armchair",
+        "drawCalls": 2,
+        "triangles": 8240,
+        "size": [
+          1,
+          0.76,
+          0.86
+        ]
+      },
+      {
+        "id": "pouf",
+        "drawCalls": 1,
+        "triangles": 2976,
+        "size": [
+          0.55,
+          0.4,
+          0.55
+        ]
+      },
+      {
+        "id": "bookcase",
+        "drawCalls": 5,
+        "triangles": 20688,
+        "size": [
+          1.1,
+          2,
+          0.35
+        ]
+      },
+      {
+        "id": "shelf_low",
+        "drawCalls": 6,
+        "triangles": 11644,
+        "size": [
+          1.2,
+          0.8,
+          0.38
+        ]
+      },
+      {
+        "id": "bed",
+        "drawCalls": 5,
+        "triangles": 12072,
+        "size": [
+          1.54,
+          1,
+          2.14
+        ]
+      },
+      {
+        "id": "table_side",
+        "drawCalls": 2,
+        "triangles": 4896,
+        "size": [
+          0.48,
+          0.55,
+          0.48
+        ]
+      },
+      {
+        "id": "table_coffee",
+        "drawCalls": 3,
+        "triangles": 4528,
+        "size": [
+          1.1,
+          0.42,
+          0.59
+        ]
+      },
+      {
+        "id": "rug_round",
+        "drawCalls": 2,
+        "triangles": 14304,
+        "size": [
+          1.99,
+          0.02,
+          1.99
+        ]
+      },
+      {
+        "id": "rug_rect",
+        "drawCalls": 2,
+        "triangles": 11912,
+        "size": [
+          2.4,
+          0.01,
+          1.7
+        ]
+      },
+      {
+        "id": "rug_runner",
+        "drawCalls": 2,
+        "triangles": 13656,
+        "size": [
+          2.71,
+          0.01,
+          0.8
+        ]
+      },
+      {
+        "id": "monstera",
+        "drawCalls": 4,
+        "triangles": 19200,
+        "size": [
+          0.67,
+          1.25,
+          0.76
+        ]
+      },
+      {
+        "id": "fig_tree",
+        "drawCalls": 4,
+        "triangles": 38432,
+        "size": [
+          0.79,
+          1.85,
+          0.61
+        ]
+      },
+      {
+        "id": "succulents",
+        "drawCalls": 2,
+        "triangles": 8550,
+        "size": [
+          0.28,
+          0.12,
+          0.1
+        ]
+      },
+      {
+        "id": "vase_flowers",
+        "drawCalls": 3,
+        "triangles": 11252,
+        "size": [
+          0.17,
+          0.52,
+          0.18
+        ]
+      },
+      {
+        "id": "lamp_floor",
+        "drawCalls": 5,
+        "triangles": 7402,
+        "size": [
+          0.4,
+          1.66,
+          0.4
+        ]
+      },
+      {
+        "id": "lamp_desk",
+        "drawCalls": 4,
+        "triangles": 6948,
+        "size": [
+          0.21,
+          0.43,
+          0.31
+        ]
+      },
+      {
+        "id": "whiteboard",
+        "drawCalls": 6,
+        "triangles": 18904,
+        "size": [
+          1.39,
+          1.73,
+          0.54
+        ]
+      },
+      {
+        "id": "books_stack",
+        "drawCalls": 2,
+        "triangles": 864,
+        "size": [
+          0.27,
+          0.15,
+          0.21
+        ]
+      },
+      {
+        "id": "notebook",
+        "drawCalls": 6,
+        "triangles": 600,
+        "size": [
+          0.24,
+          0.07,
+          0.32
+        ]
+      },
+      {
+        "id": "mug",
+        "drawCalls": 5,
+        "triangles": 4810,
+        "size": [
+          0.13,
+          0.12,
+          0.09
+        ]
+      },
+      {
+        "id": "pen_cup",
+        "drawCalls": 2,
+        "triangles": 1640,
+        "size": [
+          0.09,
+          0.18,
+          0.09
+        ]
+      },
+      {
+        "id": "game_console",
+        "drawCalls": 4,
+        "triangles": 3932,
+        "size": [
+          0.39,
+          0.06,
+          0.21
+        ]
+      },
+      {
+        "id": "tv",
+        "drawCalls": 3,
+        "triangles": 4048,
+        "size": [
+          1.1,
+          0.71,
+          0.2
+        ]
+      },
+      {
+        "id": "monitor",
+        "drawCalls": 3,
+        "triangles": 4048,
+        "size": [
+          0.62,
+          0.48,
+          0.17
+        ]
+      },
+      {
+        "id": "window_french",
+        "drawCalls": 4,
+        "triangles": 10542,
+        "size": [
+          1.78,
+          1.61,
+          0.19
+        ]
+      },
+      {
+        "id": "window_picture",
+        "drawCalls": 2,
+        "triangles": 8944,
+        "size": [
+          2.1,
+          1.37,
+          0.16
+        ]
+      },
+      {
+        "id": "window_arched",
+        "drawCalls": 4,
+        "triangles": 7558,
+        "size": [
+          1.68,
+          1.91,
+          0.19
+        ]
+      },
+      {
+        "id": "clock_wall",
+        "drawCalls": 6,
+        "triangles": 5420,
+        "size": [
+          0.35,
+          0.35,
+          0.07
+        ]
+      },
+      {
+        "id": "frame_picture",
+        "drawCalls": 3,
+        "triangles": 4216,
+        "size": [
+          0.44,
+          0.56,
+          0.03
+        ]
+      },
+      {
+        "id": "pinboard",
+        "drawCalls": 4,
+        "triangles": 5240,
+        "size": [
+          0.9,
+          0.62,
+          0.03
+        ]
+      },
+      {
+        "id": "plush_bear",
+        "drawCalls": 4,
+        "triangles": 11984,
+        "size": [
+          0.3,
+          0.39,
+          0.25
+        ]
+      },
+      {
+        "id": "ball_bouncy",
+        "drawCalls": 2,
+        "triangles": 4224,
+        "size": [
+          0.23,
+          0.22,
+          0.24
+        ]
+      },
+      {
+        "id": "puzzle_cube",
+        "drawCalls": 2,
+        "triangles": 6804,
+        "size": [
+          0.07,
+          0.07,
+          0.07
+        ]
+      },
+      {
+        "id": "bean_bag",
+        "drawCalls": 1,
+        "triangles": 2976,
+        "size": [
+          0.83,
+          0.66,
+          0.83
+        ]
+      },
+      {
+        "id": "chair_gaming",
+        "drawCalls": 6,
+        "triangles": 18270,
+        "size": [
+          0.68,
+          1.44,
+          0.67
+        ]
+      },
+      {
+        "id": "bench_wood",
+        "drawCalls": 2,
+        "triangles": 3538,
+        "size": [
+          1.4,
+          0.46,
+          0.42
+        ]
+      },
+      {
+        "id": "lounge_chair",
+        "drawCalls": 2,
+        "triangles": 11230,
+        "size": [
+          0.77,
+          0.8,
+          1.51
+        ]
+      },
+      {
+        "id": "deck_chair",
+        "drawCalls": 2,
+        "triangles": 10752,
+        "size": [
+          0.58,
+          0.9,
+          1.04
+        ]
+      },
+      {
+        "id": "zabuton",
+        "drawCalls": 2,
+        "triangles": 2198,
+        "size": [
+          0.58,
+          0.17,
+          0.58
+        ]
+      },
+      {
+        "id": "log_seat",
+        "drawCalls": 3,
+        "triangles": 2844,
+        "size": [
+          1.18,
+          0.42,
+          0.38
+        ]
+      },
+      {
+        "id": "captain_chair",
+        "drawCalls": 3,
+        "triangles": 11168,
+        "size": [
+          0.89,
+          1.22,
+          0.76
+        ]
+      },
+      {
+        "id": "table_dining",
+        "drawCalls": 2,
+        "triangles": 4336,
+        "size": [
+          1.6,
+          0.75,
+          0.9
+        ]
+      },
+      {
+        "id": "bistro_table",
+        "drawCalls": 2,
+        "triangles": 5376,
+        "size": [
+          0.64,
+          0.74,
+          0.64
+        ]
+      },
+      {
+        "id": "chabudai",
+        "drawCalls": 2,
+        "triangles": 5712,
+        "size": [
+          0.89,
+          0.34,
+          0.89
+        ]
+      },
+      {
+        "id": "workbench",
+        "drawCalls": 6,
+        "triangles": 10094,
+        "size": [
+          1.8,
+          1,
+          0.78
+        ]
+      },
+      {
+        "id": "holo_table",
+        "drawCalls": 3,
+        "triangles": 11112,
+        "size": [
+          1.09,
+          1.17,
+          1.09
+        ]
+      },
+      {
+        "id": "platform",
+        "drawCalls": 2,
+        "triangles": 5996,
+        "size": [
+          2.02,
+          0.18,
+          1.42
+        ]
+      },
+      {
+        "id": "sideboard",
+        "drawCalls": 6,
+        "triangles": 5554,
+        "size": [
+          1.4,
+          0.72,
+          0.48
+        ]
+      },
+      {
+        "id": "plant_shelf",
+        "drawCalls": 4,
+        "triangles": 19404,
+        "size": [
+          0.9,
+          1.44,
+          0.35
+        ]
+      },
+      {
+        "id": "wall_shelves",
+        "drawCalls": 2,
+        "triangles": 6168,
+        "size": [
+          1,
+          0.61,
+          0.22
+        ]
+      },
+      {
+        "id": "counter_kitchen",
+        "drawCalls": 6,
+        "triangles": 12480,
+        "size": [
+          2.2,
+          1.07,
+          0.62
+        ]
+      },
+      {
+        "id": "pastry_case",
+        "drawCalls": 4,
+        "triangles": 16352,
+        "size": [
+          1.1,
+          1.06,
+          0.55
+        ]
+      },
+      {
+        "id": "log_rack",
+        "drawCalls": 2,
+        "triangles": 28376,
+        "size": [
+          0.77,
+          0.89,
+          0.35
+        ]
+      },
+      {
+        "id": "vending",
+        "drawCalls": 6,
+        "triangles": 18716,
+        "size": [
+          0.9,
+          1.85,
+          0.77
+        ]
+      },
+      {
+        "id": "room_divider",
+        "drawCalls": 2,
+        "triangles": 10404,
+        "size": [
+          1.48,
+          1.75,
+          0.24
+        ]
+      },
+      {
+        "id": "mirror_floor",
+        "drawCalls": 2,
+        "triangles": 5232,
+        "size": [
+          0.6,
+          1.7,
+          0.29
+        ]
+      },
+      {
+        "id": "charging_pad",
+        "drawCalls": 2,
+        "triangles": 3648,
+        "size": [
+          0.89,
+          0.06,
+          0.89
+        ]
+      },
+      {
+        "id": "tent",
+        "drawCalls": 4,
+        "triangles": 8310,
+        "size": [
+          1.71,
+          1.53,
+          1.93
+        ]
+      },
+      {
+        "id": "cat_tree",
+        "drawCalls": 5,
+        "triangles": 9632,
+        "size": [
+          0.68,
+          1.5,
+          0.66
+        ]
+      },
+      {
+        "id": "cactus",
+        "drawCalls": 4,
+        "triangles": 8160,
+        "size": [
+          0.52,
+          1.17,
+          0.36
+        ]
+      },
+      {
+        "id": "bonsai",
+        "drawCalls": 4,
+        "triangles": 13072,
+        "size": [
+          0.4,
+          0.39,
+          0.26
+        ]
+      },
+      {
+        "id": "terrarium",
+        "drawCalls": 6,
+        "triangles": 10766,
+        "size": [
+          0.25,
+          0.29,
+          0.25
+        ]
+      },
+      {
+        "id": "plant_hanging",
+        "drawCalls": 4,
+        "triangles": 16864,
+        "size": [
+          0.39,
+          0.85,
+          0.4
+        ]
+      },
+      {
+        "id": "plants_hanging_trio",
+        "drawCalls": 4,
+        "triangles": 34120,
+        "size": [
+          1.09,
+          0.9,
+          0.42
+        ]
+      },
+      {
+        "id": "palm",
+        "drawCalls": 4,
+        "triangles": 8416,
+        "size": [
+          1.11,
+          1.48,
+          1.11
+        ]
+      },
+      {
+        "id": "fern",
+        "drawCalls": 3,
+        "triangles": 7872,
+        "size": [
+          0.84,
+          0.41,
+          0.78
+        ]
+      },
+      {
+        "id": "herb_pots",
+        "drawCalls": 2,
+        "triangles": 8826,
+        "size": [
+          0.49,
+          0.22,
+          0.17
+        ]
+      },
+      {
+        "id": "flower_bed",
+        "drawCalls": 5,
+        "triangles": 22488,
+        "size": [
+          1.4,
+          0.5,
+          0.56
+        ]
+      },
+      {
+        "id": "bamboo",
+        "drawCalls": 2,
+        "triangles": 35370,
+        "size": [
+          1.11,
+          2.41,
+          0.6
+        ]
+      },
+      {
+        "id": "pine_tree",
+        "drawCalls": 2,
+        "triangles": 16704,
+        "size": [
+          1.33,
+          3.05,
+          1.33
+        ]
+      },
+      {
+        "id": "ikebana",
+        "drawCalls": 5,
+        "triangles": 6364,
+        "size": [
+          0.28,
+          0.49,
+          0.25
+        ]
+      },
+      {
+        "id": "lava_lamp",
+        "drawCalls": 6,
+        "triangles": 4202,
+        "size": [
+          0.15,
+          0.49,
+          0.15
+        ]
+      },
+      {
+        "id": "lantern_paper",
+        "drawCalls": 3,
+        "triangles": 10172,
+        "size": [
+          0.49,
+          0.7,
+          0.49
+        ]
+      },
+      {
+        "id": "pendant",
+        "drawCalls": 4,
+        "triangles": 5542,
+        "size": [
+          0.39,
+          0.88,
+          0.39
+        ]
+      },
+      {
+        "id": "string_lights",
+        "drawCalls": 3,
+        "triangles": 14690,
+        "size": [
+          3,
+          0.4,
+          0.06
+        ]
+      },
+      {
+        "id": "neon_bar",
+        "drawCalls": 2,
+        "triangles": 3358,
+        "size": [
+          1.2,
+          0.05,
+          0.06
+        ]
+      },
+      {
+        "id": "neon_sign",
+        "drawCalls": 2,
+        "triangles": 974,
+        "size": [
+          1.1,
+          0.42,
+          0.03
+        ]
+      },
+      {
+        "id": "fireplace",
+        "drawCalls": 8,
+        "triangles": 11474,
+        "size": [
+          1.54,
+          1.15,
+          0.56
+        ]
+      },
+      {
+        "id": "fire_pit",
+        "drawCalls": 6,
+        "triangles": 24770,
+        "size": [
+          0.92,
+          0.44,
+          0.92
+        ]
+      },
+      {
+        "id": "candles",
+        "drawCalls": 5,
+        "triangles": 4760,
+        "size": [
+          0.2,
+          0.25,
+          0.13
+        ]
+      },
+      {
+        "id": "lantern_floor",
+        "drawCalls": 4,
+        "triangles": 5748,
+        "size": [
+          0.26,
+          0.61,
+          0.26
+        ]
+      },
+      {
+        "id": "street_lamp",
+        "drawCalls": 3,
+        "triangles": 8800,
+        "size": [
+          0.57,
+          2.94,
+          0.34
+        ]
+      },
+      {
+        "id": "lamp_banker",
+        "drawCalls": 3,
+        "triangles": 6784,
+        "size": [
+          0.31,
+          0.41,
+          0.2
+        ]
+      },
+      {
+        "id": "tv_retro",
+        "drawCalls": 6,
+        "triangles": 8112,
+        "size": [
+          0.71,
+          1.03,
+          0.54
+        ]
+      },
+      {
+        "id": "turntable",
+        "drawCalls": 7,
+        "triangles": 6522,
+        "size": [
+          0.45,
+          0.13,
+          0.35
+        ]
+      },
+      {
+        "id": "radio",
+        "drawCalls": 5,
+        "triangles": 3172,
+        "size": [
+          0.42,
+          0.29,
+          0.21
+        ]
+      },
+      {
+        "id": "arcade_cabinet",
+        "drawCalls": 7,
+        "triangles": 3628,
+        "size": [
+          0.7,
+          1.75,
+          0.72
+        ]
+      },
+      {
+        "id": "holo_projector",
+        "drawCalls": 3,
+        "triangles": 4424,
+        "size": [
+          0.23,
+          0.18,
+          0.23
+        ]
+      },
+      {
+        "id": "speaker",
+        "drawCalls": 4,
+        "triangles": 7466,
+        "size": [
+          0.32,
+          0.95,
+          0.32
+        ]
+      },
+      {
+        "id": "server_rack",
+        "drawCalls": 3,
+        "triangles": 13608,
+        "size": [
+          0.6,
+          1.2,
+          0.62
+        ]
+      },
+      {
+        "id": "tablet_stand",
+        "drawCalls": 3,
+        "triangles": 1008,
+        "size": [
+          0.24,
+          0.22,
+          0.14
+        ]
+      },
+      {
+        "id": "retro_handheld",
+        "drawCalls": 4,
+        "triangles": 1816,
+        "size": [
+          0.1,
+          0.03,
+          0.16
+        ]
+      },
+      {
+        "id": "mini_synth",
+        "drawCalls": 5,
+        "triangles": 5232,
+        "size": [
+          0.45,
+          0.07,
+          0.2
+        ]
+      },
+      {
+        "id": "microphone",
+        "drawCalls": 3,
+        "triangles": 5904,
+        "size": [
+          0.21,
+          0.46,
+          0.24
+        ]
+      },
+      {
+        "id": "headphones_stand",
+        "drawCalls": 3,
+        "triangles": 7304,
+        "size": [
+          0.21,
+          0.32,
+          0.17
+        ]
+      },
+      {
+        "id": "printer_3d",
+        "drawCalls": 6,
+        "triangles": 10910,
+        "size": [
+          0.49,
+          0.5,
+          0.45
+        ]
+      },
+      {
+        "id": "robot_arm",
+        "drawCalls": 4,
+        "triangles": 5684,
+        "size": [
+          0.24,
+          0.47,
+          0.23
+        ]
+      },
+      {
+        "id": "console_bridge",
+        "drawCalls": 3,
+        "triangles": 3996,
+        "size": [
+          1.2,
+          1,
+          0.6
+        ]
+      },
+      {
+        "id": "projector_screen",
+        "drawCalls": 2,
+        "triangles": 1062,
+        "size": [
+          2.06,
+          1.3,
+          0.08
+        ]
+      },
+      {
+        "id": "aquarium",
+        "drawCalls": 12,
+        "triangles": 8716,
+        "size": [
+          1,
+          1.27,
+          0.41
+        ]
+      },
+      {
+        "id": "fish_tank",
+        "drawCalls": 11,
+        "triangles": 9840,
+        "size": [
+          0.7,
+          0.9,
+          0.35
+        ]
+      },
+      {
+        "id": "easel",
+        "drawCalls": 3,
+        "triangles": 15836,
+        "size": [
+          0.64,
+          1.72,
+          0.44
+        ]
+      },
+      {
+        "id": "sculpture_loop",
+        "drawCalls": 2,
+        "triangles": 4876,
+        "size": [
+          0.2,
+          0.37,
+          0.14
+        ]
+      },
+      {
+        "id": "amphora",
+        "drawCalls": 2,
+        "triangles": 9536,
+        "size": [
+          0.41,
+          0.75,
+          0.41
+        ]
+      },
+      {
+        "id": "mobile_kinetic",
+        "drawCalls": 6,
+        "triangles": 6768,
+        "size": [
+          1.14,
+          0.75,
+          0.1
+        ]
+      },
+      {
+        "id": "bust",
+        "drawCalls": 2,
+        "triangles": 7758,
+        "size": [
+          0.26,
+          0.51,
+          0.19
+        ]
+      },
+      {
+        "id": "paper_crane",
+        "drawCalls": 3,
+        "triangles": 895,
+        "size": [
+          0.32,
+          0.21,
+          0.26
+        ]
+      },
+      {
+        "id": "geode",
+        "drawCalls": 2,
+        "triangles": 4008,
+        "size": [
+          0.21,
+          0.17,
+          0.18
+        ]
+      },
+      {
+        "id": "sand_timer",
+        "drawCalls": 3,
+        "triangles": 4500,
+        "size": [
+          0.11,
+          0.26,
+          0.11
+        ]
+      },
+      {
+        "id": "globe",
+        "drawCalls": 4,
+        "triangles": 21390,
+        "size": [
+          0.39,
+          0.45,
+          0.27
+        ]
+      },
+      {
+        "id": "orrery",
+        "drawCalls": 8,
+        "triangles": 9134,
+        "size": [
+          0.53,
+          0.75,
+          0.41
+        ]
+      },
+      {
+        "id": "meteorite",
+        "drawCalls": 4,
+        "triangles": 4944,
+        "size": [
+          0.3,
+          0.23,
+          0.24
+        ]
+      },
+      {
+        "id": "mirror_wall",
+        "drawCalls": 2,
+        "triangles": 3376,
+        "size": [
+          0.6,
+          0.9,
+          0.04
+        ]
+      },
+      {
+        "id": "macrame",
+        "drawCalls": 2,
+        "triangles": 17370,
+        "size": [
+          0.58,
+          0.82,
+          0.03
+        ]
+      },
+      {
+        "id": "calendar_wall",
+        "drawCalls": 4,
+        "triangles": 3674,
+        "size": [
+          0.36,
+          0.51,
+          0.03
+        ]
+      },
+      {
+        "id": "photo_frame",
+        "drawCalls": 3,
+        "triangles": 3470,
+        "size": [
+          0.4,
+          0.32,
+          0.03
+        ]
+      },
+      {
+        "id": "panels_acoustic",
+        "drawCalls": 2,
+        "triangles": 11964,
+        "size": [
+          1.2,
+          1,
+          0.06
+        ]
+      },
+      {
+        "id": "scroll_hanging",
+        "drawCalls": 3,
+        "triangles": 994,
+        "size": [
+          0.52,
+          1.19,
+          0.03
+        ]
+      },
+      {
+        "id": "posters",
+        "drawCalls": 3,
+        "triangles": 220,
+        "size": [
+          1.14,
+          0.75,
+          0.01
+        ]
+      },
+      {
+        "id": "star_chart",
+        "drawCalls": 3,
+        "triangles": 3470,
+        "size": [
+          1,
+          0.7,
+          0.03
+        ]
+      },
+      {
+        "id": "chalkboard",
+        "drawCalls": 4,
+        "triangles": 3732,
+        "size": [
+          0.8,
+          1,
+          0.04
+        ]
+      },
+      {
+        "id": "pegboard",
+        "drawCalls": 5,
+        "triangles": 16862,
+        "size": [
+          1.4,
+          0.9,
+          0.06
+        ]
+      },
+      {
+        "id": "hoop_basketball",
+        "drawCalls": 3,
+        "triangles": 6808,
+        "size": [
+          0.5,
+          0.44,
+          0.27
+        ]
+      },
+      {
+        "id": "surfboard",
+        "drawCalls": 2,
+        "triangles": 1032,
+        "size": [
+          0.42,
+          2,
+          0.12
+        ]
+      },
+      {
+        "id": "bike_mount",
+        "drawCalls": 6,
+        "triangles": 17864,
+        "size": [
+          1.69,
+          0.88,
+          0.26
+        ]
+      },
+      {
+        "id": "guitar_wall",
+        "drawCalls": 6,
+        "triangles": 5980,
+        "size": [
+          0.34,
+          1,
+          0.1
+        ]
+      },
+      {
+        "id": "wind_chimes",
+        "drawCalls": 9,
+        "triangles": 4274,
+        "size": [
+          0.18,
+          0.61,
+          0.18
+        ]
+      },
+      {
+        "id": "window_round",
+        "drawCalls": 3,
+        "triangles": 3932,
+        "size": [
+          0.9,
+          0.9,
+          0.08
+        ]
+      },
+      {
+        "id": "window_shoji",
+        "drawCalls": 3,
+        "triangles": 7284,
+        "size": [
+          1.4,
+          1.4,
+          0.06
+        ]
+      },
+      {
+        "id": "window_viewport",
+        "drawCalls": 3,
+        "triangles": 13220,
+        "size": [
+          3.2,
+          1.6,
+          0.15
+        ]
+      },
+      {
+        "id": "door",
+        "drawCalls": 4,
+        "triangles": 2516,
+        "size": [
+          0.9,
+          2.05,
+          0.12
+        ]
+      },
+      {
+        "id": "blinds",
+        "drawCalls": 3,
+        "triangles": 8864,
+        "size": [
+          1.2,
+          1.4,
+          0.06
+        ]
+      },
+      {
+        "id": "curtains",
+        "drawCalls": 3,
+        "triangles": 1970,
+        "size": [
+          1.8,
+          2.09,
+          0.07
+        ]
+      },
+      {
+        "id": "rug_cloud",
+        "drawCalls": 1,
+        "triangles": 1916,
+        "size": [
+          1.64,
+          0.02,
+          1.12
+        ]
+      },
+      {
+        "id": "mat_yoga",
+        "drawCalls": 1,
+        "triangles": 1996,
+        "size": [
+          1.8,
+          0.01,
+          0.6
+        ]
+      },
+      {
+        "id": "mat_pebble",
+        "drawCalls": 2,
+        "triangles": 41612,
+        "size": [
+          1.2,
+          0.05,
+          0.8
+        ]
+      },
+      {
+        "id": "rug_braided",
+        "drawCalls": 2,
+        "triangles": 7196,
+        "size": [
+          1.9,
+          0.02,
+          1.3
+        ]
+      },
+      {
+        "id": "kettle",
+        "drawCalls": 2,
+        "triangles": 4886,
+        "size": [
+          0.27,
+          0.26,
+          0.2
+        ]
+      },
+      {
+        "id": "espresso",
+        "drawCalls": 5,
+        "triangles": 4846,
+        "size": [
+          0.36,
+          0.4,
+          0.43
+        ]
+      },
+      {
+        "id": "fruit_bowl",
+        "drawCalls": 2,
+        "triangles": 9554,
+        "size": [
+          0.32,
+          0.16,
+          0.32
+        ]
+      },
+      {
+        "id": "cake_stand",
+        "drawCalls": 4,
+        "triangles": 9468,
+        "size": [
+          0.29,
+          0.3,
+          0.29
+        ]
+      },
+      {
+        "id": "ramen_bowl",
+        "drawCalls": 9,
+        "triangles": 5918,
+        "size": [
+          0.22,
+          0.18,
+          0.23
+        ]
+      },
+      {
+        "id": "tea_set",
+        "drawCalls": 5,
+        "triangles": 6698,
+        "size": [
+          0.36,
+          0.22,
+          0.24
+        ]
+      },
+      {
+        "id": "cookie_jar",
+        "drawCalls": 3,
+        "triangles": 8810,
+        "size": [
+          0.17,
+          0.26,
+          0.17
+        ]
+      },
+      {
+        "id": "watering_can",
+        "drawCalls": 1,
+        "triangles": 6676,
+        "size": [
+          0.43,
+          0.28,
+          0.18
+        ]
+      },
+      {
+        "id": "toy_train",
+        "drawCalls": 4,
+        "triangles": 8420,
+        "size": [
+          0.9,
+          0.11,
+          0.54
+        ]
+      },
+      {
+        "id": "chess",
+        "drawCalls": 3,
+        "triangles": 13428,
+        "size": [
+          0.4,
+          0.1,
+          0.4
+        ]
+      },
+      {
+        "id": "tin_robot",
+        "drawCalls": 4,
+        "triangles": 6464,
+        "size": [
+          0.12,
+          0.21,
+          0.09
+        ]
+      },
+      {
+        "id": "gacha",
+        "drawCalls": 5,
+        "triangles": 24806,
+        "size": [
+          0.5,
+          1.12,
+          0.49
+        ]
+      },
+      {
+        "id": "blocks",
+        "drawCalls": 3,
+        "triangles": 6460,
+        "size": [
+          0.31,
+          0.31,
+          0.25
+        ]
+      },
+      {
+        "id": "snow_globe",
+        "drawCalls": 10,
+        "triangles": 6584,
+        "size": [
+          0.14,
+          0.17,
+          0.14
+        ]
+      },
+      {
+        "id": "rocket_model",
+        "drawCalls": 4,
+        "triangles": 2378,
+        "size": [
+          0.17,
+          0.42,
+          0.19
+        ]
+      },
+      {
+        "id": "newtons_cradle",
+        "drawCalls": 7,
+        "triangles": 5082,
+        "size": [
+          0.24,
+          0.21,
+          0.14
+        ]
+      },
+      {
+        "id": "rc_drone",
+        "drawCalls": 6,
+        "triangles": 8112,
+        "size": [
+          0.31,
+          0.09,
+          0.24
+        ]
+      },
+      {
+        "id": "plush_claw",
+        "drawCalls": 4,
+        "triangles": 5990,
+        "size": [
+          0.18,
+          0.24,
+          0.2
+        ]
+      },
+      {
+        "id": "guitar_stand",
+        "drawCalls": 6,
+        "triangles": 12016,
+        "size": [
+          0.42,
+          1.09,
+          0.38
+        ]
+      },
+      {
+        "id": "piano",
+        "drawCalls": 5,
+        "triangles": 14112,
+        "size": [
+          1.49,
+          1.25,
+          0.6
+        ]
+      },
+      {
+        "id": "synth_keys",
+        "drawCalls": 6,
+        "triangles": 18096,
+        "size": [
+          1.1,
+          0.9,
+          0.34
+        ]
+      },
+      {
+        "id": "cello",
+        "drawCalls": 5,
+        "triangles": 7090,
+        "size": [
+          0.42,
+          1.35,
+          0.42
+        ]
+      },
+      {
+        "id": "bongos",
+        "drawCalls": 4,
+        "triangles": 12560,
+        "size": [
+          0.42,
+          0.55,
+          0.26
+        ]
+      },
+      {
+        "id": "metronome",
+        "drawCalls": 3,
+        "triangles": 400,
+        "size": [
+          0.11,
+          0.24,
+          0.1
+        ]
+      },
+      {
+        "id": "kalimba",
+        "drawCalls": 4,
+        "triangles": 2886,
+        "size": [
+          0.12,
+          0.05,
+          0.18
+        ]
+      },
+      {
+        "id": "gramophone",
+        "drawCalls": 6,
+        "triangles": 9352,
+        "size": [
+          0.62,
+          0.77,
+          0.45
+        ]
+      },
+      {
+        "id": "skateboard",
+        "drawCalls": 3,
+        "triangles": 5772,
+        "size": [
+          0.8,
+          0.1,
+          0.21
+        ]
+      },
+      {
+        "id": "dumbbells",
+        "drawCalls": 2,
+        "triangles": 4300,
+        "size": [
+          0.31,
+          0.11,
+          0.29
+        ]
+      },
+      {
+        "id": "kettlebell",
+        "drawCalls": 2,
+        "triangles": 4648,
+        "size": [
+          0.2,
+          0.3,
+          0.2
+        ]
+      },
+      {
+        "id": "trophy",
+        "drawCalls": 3,
+        "triangles": 8024,
+        "size": [
+          0.24,
+          0.36,
+          0.16
+        ]
+      },
+      {
+        "id": "football",
+        "drawCalls": 2,
+        "triangles": 9864,
+        "size": [
+          0.23,
+          0.22,
+          0.23
+        ]
+      },
+      {
+        "id": "telescope",
+        "drawCalls": 4,
+        "triangles": 10326,
+        "size": [
+          0.67,
+          1.31,
+          0.52
+        ]
+      },
+      {
+        "id": "typewriter",
+        "drawCalls": 5,
+        "triangles": 13958,
+        "size": [
+          0.44,
+          0.3,
+          0.3
+        ]
+      },
+      {
+        "id": "tome_open",
+        "drawCalls": 4,
+        "triangles": 2992,
+        "size": [
+          0.44,
+          0.05,
+          0.31
+        ]
+      },
+      {
+        "id": "microscope",
+        "drawCalls": 4,
+        "triangles": 4086,
+        "size": [
+          0.18,
+          0.38,
+          0.21
+        ]
+      },
+      {
+        "id": "quill_ink",
+        "drawCalls": 4,
+        "triangles": 2916,
+        "size": [
+          0.18,
+          0.19,
+          0.09
+        ]
+      },
+      {
+        "id": "blueprints",
+        "drawCalls": 2,
+        "triangles": 6402,
+        "size": [
+          0.37,
+          0.15,
+          0.3
+        ]
+      },
+      {
+        "id": "ladder_library",
+        "drawCalls": 3,
+        "triangles": 11618,
+        "size": [
+          0.58,
+          2.2,
+          0.49
+        ]
+      },
+      {
+        "id": "bookcase_tall",
+        "drawCalls": 5,
+        "triangles": 27300,
+        "size": [
+          1.66,
+          2.5,
+          0.42
+        ]
+      },
+      {
+        "id": "pergola",
+        "drawCalls": 1,
+        "triangles": 14580,
+        "size": [
+          3.3,
+          2.58,
+          2.7
+        ]
+      },
+      {
+        "id": "umbrella_beach",
+        "drawCalls": 3,
+        "triangles": 4906,
+        "size": [
+          1.62,
+          2.25,
+          1.63
+        ]
+      },
+      {
+        "id": "fountain",
+        "drawCalls": 9,
+        "triangles": 10340,
+        "size": [
+          0.99,
+          0.91,
+          0.99
+        ]
+      },
+      {
+        "id": "fence",
+        "drawCalls": 1,
+        "triangles": 7840,
+        "size": [
+          2,
+          0.85,
+          0.06
+        ]
+      },
+      {
+        "id": "pond",
+        "drawCalls": 4,
+        "triangles": 8420,
+        "size": [
+          1.66,
+          0.15,
+          0.88
+        ]
+      },
+      {
+        "id": "shells",
+        "drawCalls": 3,
+        "triangles": 3134,
+        "size": [
+          0.55,
+          0.05,
+          0.36
+        ]
+      },
+      {
+        "id": "backpack",
+        "drawCalls": 5,
+        "triangles": 8168,
+        "size": [
+          0.4,
+          0.71,
+          0.39
+        ]
+      },
+      {
+        "id": "lighthouse_model",
+        "drawCalls": 5,
+        "triangles": 11704,
+        "size": [
+          0.49,
+          1.38,
+          0.49
+        ]
+      },
+      {
+        "id": "cat",
+        "drawCalls": 3,
+        "triangles": 6672,
+        "size": [
+          0.41,
+          0.2,
+          0.3
+        ]
+      },
+      {
+        "id": "drone_mini",
+        "drawCalls": 4,
+        "triangles": 3626,
+        "size": [
+          0.26,
+          0.09,
+          0.26
+        ]
+      },
+      {
+        "id": "goldfish",
+        "drawCalls": 5,
+        "triangles": 7404,
+        "size": [
+          0.25,
+          0.29,
+          0.25
+        ]
+      },
+      {
+        "id": "plant_sprite",
+        "drawCalls": 5,
+        "triangles": 4132,
+        "size": [
+          0.24,
+          0.32,
+          0.17
+        ]
+      },
+      {
+        "id": "vacuum",
+        "drawCalls": 3,
+        "triangles": 3596,
+        "size": [
+          0.34,
+          0.09,
+          0.34
+        ]
+      }
+    ]
+  },
+  "errors": []
+}

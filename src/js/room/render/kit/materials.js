@@ -18,7 +18,7 @@ const FAMILIES = {
   ceramic: { rough: 0.25, clearcoat: 0.5, map: null },
   wood: { rough: 0.55, map: "wood", relief: 0.35 },
   fabric: { rough: 0.85, sheen: 0.7, map: "weave", relief: 0.45 },
-  leather: { rough: 0.45, sheen: 0.2, map: "leather", relief: 0.5 },
+  leather: { rough: 0.55, sheen: 0.2, map: "leather", relief: 0.18 },
   metal: { rough: 0.3, metal: 1, map: null },
   glass: { rough: 0.05, opacity: 0.32, map: null },
   leaf: { rough: 0.55, map: null },

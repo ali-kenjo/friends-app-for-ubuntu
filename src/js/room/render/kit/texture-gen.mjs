@@ -151,7 +151,7 @@ function knit(u, v, s) {
 function leather(u, v, s) {
   const n = fbm(u, v, 24, 4, s, 0.55);
   const cells = Math.abs(fbm(u, v, 48, 2, s + 5) - 0.5) * 2;
-  return { tone: 0.88 + (n - 0.5) * 0.12, height: n * 0.6 + (1 - cells) * 0.4, rough: 0.45 + n * 0.1 };
+  return { tone: 0.93 + (n - 0.5) * 0.06, height: n * 0.6 + (1 - cells) * 0.4, rough: 0.55 + n * 0.1 };
 }
 
 // Plaster and clay: soft trowel marks

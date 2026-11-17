@@ -10,7 +10,7 @@ const SATIN = { family: "plastic" };
 const FABRIC = { family: "fabric" };
 
 // A tapered leg standing on the floor with a soft foot, from y0 to y1
-function leg(b, x, z, y0, y1, rTop, rBot, { splay = 0, spec = WOOD, slot = "c2" } = {}) {
+export function _leg(b, x, z, y0, y1, rTop, rBot, { splay = 0, spec = WOOD, slot = "c2" } = {}) {
   const g = b.cyl(rTop, rBot, y1 - y0, Math.min(rBot, rTop) * 0.45);
   if (splay) turn(g, splay * Math.sign(z || 1), 0, -splay * Math.sign(x || 1));
   at(g, x, y0, z);
@@ -31,7 +31,7 @@ export function desk_writing(b) {
     for (const sz of [-1, 1]) {
       const x = sx * (W / 2 - 0.1);
       const z = sz * (D / 2 - 0.09);
-      leg(b, x, z, 0, H - T - 0.03, 0.026, 0.017, { splay: 0.04, spec: METAL_BLACK });
+      _leg(b, x, z, 0, H - T - 0.03, 0.026, 0.017, { splay: 0.04, spec: METAL_BLACK });
       b.part("c2", at(b.cyl(0.034, 0.034, 0.03, 0.01), x, H - T - 0.04, z), METAL_BLACK);
     }
   }
@@ -84,7 +84,7 @@ export function table_coffee(b) {
   // A lower shelf, and four chunky round legs
   const shelf = turn(b.extrude(pebble(W * 0.78, D * 0.7), 0.028, 0.01), -Math.PI / 2, 0, 0);
   b.part("c1", at(shelf, 0, 0.11, 0), WOOD);
-  for (const [x, z] of [[-0.36, -0.15], [0.36, -0.15], [-0.36, 0.15], [0.36, 0.15]]) leg(b, x, z, 0, H - T, 0.03, 0.026, { spec: WOOD, slot: "c2" });
+  for (const [x, z] of [[-0.36, -0.15], [0.36, -0.15], [-0.36, 0.15], [0.36, 0.15]]) _leg(b, x, z, 0, H - T, 0.03, 0.026, { spec: WOOD, slot: "c2" });
 }
 
 // ---------- Chairs ----------
@@ -120,7 +120,7 @@ export function chair_dining(b) {
   for (const sx of [-1, 1]) {
     // Back legs rise into the back posts, front legs taper
     b.part("c1", b.tube([[sx * 0.19, 0.0, -0.2], [sx * 0.19, seatY, -0.205], [sx * 0.185, 0.84, -0.26]], 0.017), WOOD);
-    leg(b, sx * 0.19, 0.19, 0, seatY - 0.02, 0.019, 0.015, { spec: WOOD, slot: "c1" });
+    _leg(b, sx * 0.19, 0.19, 0, seatY - 0.02, 0.019, 0.015, { spec: WOOD, slot: "c1" });
   }
   // Stretchers between the legs
   b.part("c1", at(turn(b.capsule(0.01, 0.34), 0, 0, Math.PI / 2), 0, 0.16, 0.19), WOOD);
@@ -150,7 +150,7 @@ export function sofa(b) {
     b.part("c2", at(turn(b.cushion(0.78, 0.36, 0.17, { puff: 0.4, round: 0.8, seed: 7 + sx }), -0.22, 0, 0), sx * 0.4, 0.64, -D / 2 + 0.26), { family: "fabric", finish: "boucle", scale: 1.4 });
   }
   // Tapered wooden legs
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) leg(b, sx * (W / 2 - 0.12), sz * (D / 2 - 0.12), 0, 0.11, 0.025, 0.018, { spec: WOOD, slot: "c3" });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) _leg(b, sx * (W / 2 - 0.12), sz * (D / 2 - 0.12), 0, 0.11, 0.025, 0.018, { spec: WOOD, slot: "c3" });
 }
 
 export function armchair(b) {
@@ -172,7 +172,7 @@ export function armchair(b) {
   b.part("c1", wrap, { family: "fabric", finish: "boucle", scale: 1.5 });
   b.part("c1", at(b.cushion(0.82, 0.3, 0.74, { puff: 0.12, round: 0.85 }), 0, 0.27, -0.02), { family: "fabric", finish: "boucle", scale: 1.5 });
   b.part("c1", at(b.cushion(0.6, 0.12, 0.56, { puff: 0.4, round: 0.85, sag: 0.06 }), 0, seatY, 0.05), { family: "fabric", finish: "boucle", scale: 1.5 });
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) leg(b, sx * 0.3, sz * 0.27, 0, 0.12, 0.022, 0.016, { spec: WOOD, slot: "c2", splay: 0.08 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) _leg(b, sx * 0.3, sz * 0.27, 0, 0.12, 0.022, 0.016, { spec: WOOD, slot: "c2", splay: 0.08 });
 }
 
 export function pouf(b) {
@@ -184,7 +184,7 @@ export function pouf(b) {
 const BOOK_TINTS = ["#ffffff", "#f0d7a8", "#b9d4c6", "#c9c3e6", "#e8b8a8", "#a8c4e0", "#f2e6c8", "#d6a6a6", "#9fb8a0"];
 
 // Books standing on a shelf from x0 to x1 at height y (tinted copies of the "Books" color, one mesh)
-function books(b, x0, x1, y, depth, maxH, { slot = "c2", lean = true } = {}) {
+export function _books(b, x0, x1, y, depth, maxH, { slot = "c2", lean = true } = {}) {
   let x = x0;
   let i = 0;
   while (x < x1 - 0.03) {
@@ -216,10 +216,10 @@ export function bookcase(b) {
   for (const y of levels.slice(1)) b.part("c1", at(b.box(W - 2 * t, 0.026, D - 0.02, 0.008), 0, y - 0.013, 0.005), WOOD);
   b.part("c1", at(b.box(W - 2 * t, 0.026, D - 0.02, 0.008), 0, 0.07 + 0.013, 0.005), WOOD);
   // Books on every shelf, leaving room for a few things of yours
-  books(b, -W / 2 + t + 0.01, W / 2 - t - 0.05, 0.096, D - 0.06, 0.4);
-  books(b, -W / 2 + t + 0.01, 0.12, 0.55, D - 0.06, 0.42);
-  books(b, -0.05, W / 2 - t - 0.01, 1.05, D - 0.06, 0.42);
-  books(b, -W / 2 + t + 0.01, -0.1, 1.55, D - 0.06, 0.38);
+  _books(b, -W / 2 + t + 0.01, W / 2 - t - 0.05, 0.096, D - 0.06, 0.4);
+  _books(b, -W / 2 + t + 0.01, 0.12, 0.55, D - 0.06, 0.42);
+  _books(b, -0.05, W / 2 - t - 0.01, 1.05, D - 0.06, 0.42);
+  _books(b, -W / 2 + t + 0.01, -0.1, 1.55, D - 0.06, 0.38);
   // A couple of lying books as bookends
   const stack = b.box(0.2, 0.035, 0.24, 0.006);
   b.part("c2", at(stack, 0.33, 0.57, 0), { family: "paper", rough: 0.7, map: false }, { tint: "#d6a6a6" });
@@ -238,14 +238,14 @@ export function shelf_low(b) {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.part("c1", at(b.cyl(0.022, 0.018, 0.06, 0.008), sx * (W / 2 - 0.06), 0, sz * (D / 2 - 0.06)), WOOD);
   // A woven basket in one cubby, books in the other
   b.part("#c9a77a", at(b.cushion(0.4, 0.22, 0.28, { puff: 0.05, round: 0.35 }), -0.29, 0.21, 0.02), { family: "fabric", finish: "knit", scale: 1.6 });
-  books(b, 0.04, 0.5, 0.413, D - 0.08, 0.3);
+  _books(b, 0.04, 0.5, 0.413, D - 0.08, 0.3);
 }
 
 export function bed(b) {
   const W = 1.5, L = 2.1;
   // A wooden frame on stubby legs, a headboard with a soft top edge
   b.part("c3", at(b.box(W, 0.18, L, 0.03), 0, 0.2, 0.05), WOOD);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) leg(b, sx * (W / 2 - 0.08), 0.05 + sz * (L / 2 - 0.08), 0, 0.12, 0.035, 0.03, { spec: WOOD, slot: "c3" });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) _leg(b, sx * (W / 2 - 0.08), 0.05 + sz * (L / 2 - 0.08), 0, 0.12, 0.035, 0.03, { spec: WOOD, slot: "c3" });
   b.part("c3", at(b.box(W + 0.04, 0.9, 0.08, 0.035), 0, 0.55, -L / 2 + 0.05), WOOD_LAQ);
   // The mattress, the duvet folded back at the top, and two plump pillows
   b.part("#f2efe8", at(b.cushion(W - 0.08, 0.2, L - 0.12, { puff: 0.15, round: 0.5 }), 0, 0.39, 0.1), FABRIC);

@@ -60,14 +60,14 @@ export function rug_runner(b) {
 
 // ---------- Plants ----------
 // A rounded pot with a rim and soil; returns the soil height
-function pot(b, rTop, h, { slot = "c2", rim = 0.018, foot = 0.86 } = {}) {
+export function _pot(b, rTop, h, { slot = "c2", rim = 0.018, foot = 0.86 } = {}) {
   b.part(slot, b.lathe([[0, 0], [rTop * foot, 0], [rTop * 0.97, h * 0.85], [rTop + rim * 0.4, h - rim], [rTop + rim * 0.5, h], [rTop - rim * 0.9, h], [rTop - rim * 1.1, h - rim * 1.5], [0, h - rim * 1.5]], [0, 0.012, 0.02, 0.008, 0.006, 0.006, 0.006, 0]), POT);
   b.part("#4a3628", at(b.cyl(rTop - rim * 1.15, rTop - rim * 1.15, 0.012, 0.004), 0, h - rim * 2.2, 0), SOIL);
   return h - rim * 1.6;
 }
 
 // Leaves on stems from a point: each { len, width, angle (around), lean (from up), height }
-function foliage(b, base, leaves, { slot = "c1", split = 0, stem = "#3f6b45", stemR = 0.008, droop = 0.3, fold = 0.35 } = {}) {
+export function _foliage(b, base, leaves, { slot = "c1", split = 0, stem = "#3f6b45", stemR = 0.008, droop = 0.3, fold = 0.35 } = {}) {
   const foliageGeos = [];
   const stems = [];
   for (const l of leaves) {
@@ -87,7 +87,7 @@ function foliage(b, base, leaves, { slot = "c1", split = 0, stem = "#3f6b45", st
 }
 
 // Leaves sway as one piece around their base (gentle; still while filming or with reduced motion)
-function sway(b, geos, slot, spec, pivotY, amount = 0.035) {
+export function _sway(b, geos, slot, spec, pivotY, amount = 0.035) {
   if (!geos.length) return;
   const merged = geos.length === 1 ? geos[0] : mergeAll(geos);
   merged.translate(0, -pivotY, 0);
@@ -104,7 +104,7 @@ function sway(b, geos, slot, spec, pivotY, amount = 0.035) {
 import { merge as mergeAll } from "../kit/geometry.js";
 
 export function monstera(b) {
-  const top = pot(b, 0.2, 0.36);
+  const top = _pot(b, 0.2, 0.36);
   const base = new THREE.Vector3(0, top, 0);
   const leaves = [];
   const n = 9;
@@ -113,12 +113,12 @@ export function monstera(b) {
     const outer = i % 3 !== 0;
     leaves.push({ angle: a, lean: outer ? 0.55 + b.rand() * 0.25 : 0.2 + b.rand() * 0.15, height: outer ? 0.45 + b.rand() * 0.25 : 0.7 + b.rand() * 0.15, len: 0.32 + b.rand() * 0.1, width: 0.3 + b.rand() * 0.08, tilt: 0.7 });
   }
-  const geos = foliage(b, base, leaves, { split: 1, droop: 0.22, fold: 0.18, stemR: 0.007 });
-  sway(b, geos, "c1", LEAF, top, 0.03);
+  const geos = _foliage(b, base, leaves, { split: 1, droop: 0.22, fold: 0.18, stemR: 0.007 });
+  _sway(b, geos, "c1", LEAF, top, 0.03);
 }
 
 export function fig_tree(b) {
-  const top = pot(b, 0.19, 0.34);
+  const top = _pot(b, 0.19, 0.34);
   // A slender trunk that leans and curves, with three branches carrying clusters of small leaves
   b.part("#7a5a3e", b.tube([[0, top - 0.02, 0], [0.03, top + 0.4, 0.01], [-0.02, top + 0.8, 0.02], [0.01, top + 1.1, 0]], 0.022), { family: "wood", rough: 0.8 });
   const clusters = [[0.0, 1.32, 0.0, 0.3], [0.2, 1.08, 0.06, 0.24], [-0.18, 0.98, -0.05, 0.22], [0.05, 0.86, 0.18, 0.2]];
@@ -137,7 +137,7 @@ export function fig_tree(b) {
       geos.push(g);
     }
   }
-  sway(b, geos, "c1", LEAF, top + 0.6, 0.02);
+  _sway(b, geos, "c1", LEAF, top + 0.6, 0.02);
 }
 
 export function succulents(b) {

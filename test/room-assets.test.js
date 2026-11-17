@@ -10,16 +10,19 @@ before(async () => {
   assets = await import("../src/js/room/render/assets/index.js");
 });
 
-// Builders that draw a picture on a canvas need a page; geometry-only checks skip just those parts
-const NEEDS_CANVAS = new Set(["frame_picture"]);
+// Builders that draw a picture on a canvas use a plain pixel when there is no page, so every asset is checked
+const NEEDS_CANVAS = new Set();
 
 describe("Room asset builders", () => {
   test("an entry is pending exactly when it has no 3D builder", () => {
     for (const a of catalog.CATALOG) assert.equal(assets.hasBuilder(a), !a.pending, `${a.id}: pending=${a.pending}, builder=${assets.hasBuilder(a)}`);
     assert.ok(catalog.CATALOG.filter((a) => a.hero).every((a) => assets.hasBuilder(a)), "the whole hero set is built");
+    // Release gate (PLAN step 4): every catalog entry has its 3D builder, nothing is hidden as pending
+    assert.deepEqual(catalog.CATALOG.filter((a) => a.pending).map((a) => a.id), []);
   });
 
   test("each built asset is a handful of merged meshes within budget, at High and Low", () => {
+    const counts = [];
     for (const level of ["high", "low"]) {
       for (const def of catalog.CATALOG.filter((a) => !a.pending && !NEEDS_CANVAS.has(a.id))) {
         const built = assets.buildAsset(def, { id: def.id }, level);
@@ -34,10 +37,14 @@ describe("Room asset builders", () => {
           assert.ok(g.attributes.normal && g.attributes.uv, `${def.id}: normals and UVs`);
           assert.ok(!Number.isNaN(g.boundingSphere?.radius ?? 0), `${def.id}: a sane bound`);
         });
-        assert.ok(calls >= 1 && calls <= 9, `${def.id} (${level}): ${calls} draw calls`);
+        // A typical asset is a few merged meshes; ones with parts that move on their own (fish, a train) need more
+        assert.ok(calls >= 1 && calls <= 14, `${def.id} (${level}): ${calls} draw calls`);
+        counts.push(calls);
         assert.ok(tris <= (level === "low" ? 25000 : 60000), `${def.id} (${level}): ${Math.round(tris)} triangles`);
       }
     }
+    counts.sort((a, b) => a - b);
+    assert.ok(counts[Math.floor(counts.length / 2)] <= 6, `the typical asset is at most 6 draw calls (median ${counts[Math.floor(counts.length / 2)]})`);
   });
 
   test("assets stand on the floor at their catalog size (within 15 %)", async () => {

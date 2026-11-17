@@ -110,3 +110,10 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
 - **R13 Budgets are per frame over all passes** (Low 180 / 0.3 M, Medium 420 / 1.2 M, High 560 / 2.4 M,
   Ultra 720 / 4 M draw calls / triangles); `test/robot-budget.test.js` pins them. "ultra" is a valid
   `robot.quality` now.
+- **R14 The whole catalog is built (194 assets).** Measured from the contact sheets: median 3 draw calls per
+  asset (max 12, for things with parts that move on their own: fish, a train, wind chimes), median 2.4k
+  triangles on Low and 7.2k on High (max 22k / 42k). `test/room-assets.test.js` keeps every asset within
+  14 calls and 25k/60k triangles, the median at 6 calls or fewer, standing on the floor at its catalog size,
+  and no entry pending. Sheets: `docs/design/screenshots/1.1/assets/catalog-{low,high}.jpg`.
+- **R15 Builders are registered by catalog id** (one registry over the asset modules) instead of
+  "category/id" paths, so a builder can live in whichever module groups it best.

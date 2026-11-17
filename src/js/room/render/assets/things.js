@@ -274,6 +274,7 @@ const artCache = new Map();
 function artTexture(seed, hex) {
   const key = `${seed}|${hex}`;
   if (artCache.has(key)) return artCache.get(key);
+  if (typeof document === "undefined") return new THREE.DataTexture(new Uint8Array([240, 220, 180, 255]), 1, 1);
   const c = document.createElement("canvas");
   c.width = 192;
   c.height = 240;

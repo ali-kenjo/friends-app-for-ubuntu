@@ -49,6 +49,11 @@ export const TAGS = [
   "animal", "water", "fire", "winter", "summer", "neon", "wood", "metal", "glass", "paper", "personal", "tv", "tech",
 ];
 
+// Entries whose 3D builder isn't written yet (hidden in the editor); the list shrinks to nothing by release
+const PENDING = new Set([
+
+]);
+
 const DEFAULT_VARIANTS = { S: 0.85, M: 1, L: 1.15 };
 const col = (pairs) => pairs.map(([label, def], i) => ({ key: `c${i + 1}`, label, def }));
 
@@ -92,7 +97,7 @@ function entry(slot, id, label, category, w, d, height, colors, o = {}) {
     since: o.since || "1.1",
     from: { builder: o.builder || [], v1: o.v1 || [] },
     hero: Boolean(o.hero),
-    pending: o.pending !== false && !o.hero,
+    pending: PENDING.has(id),
     ...(o.extra || {}),
   };
 }
@@ -276,7 +281,7 @@ export const CATALOG = [
   floor("bistro_table", "Bistro table", "tables", 0.65, 0.65, 0.74, [["Top", "#f4efe6"], ["Base", DARK]], { tags: ["table", "kitchen", "drink"], surfaces: [top(0.74, 0.6, 0.6)] }),
   floor("chabudai", "Low tea table", "tables", 0.9, 0.9, 0.34, [["Wood", "#6b4a34"]], { tags: ["table", "wood"], surfaces: [top(0.34, 0.86, 0.86)] }),
   floor("workbench", "Heavy workbench", "tables", 1.8, 0.75, 0.9, [["Top", "#b98a5e"], ["Frame", "#3a3d46"]], { tags: ["table", "work", "wood"], surfaces: [top(0.9, 1.76, 0.71)], actions: ["look", "go", "touch", "lean"], anchors: { lean: [0, 0, 0.42] } }),
-  floor("holo_table", "Holo-map table", "tables", 1.1, 1.1, 0.95, [["Body", "#2b3346"], ["Hologram", "#5eead4"]], { tags: ["space", "screen", "glow"], states: { on: true }, actions: ["look", "go", "touch", "use"] }),
+  floor("holo_table", "Holo-map table", "tables", 1.1, 1.1, 1.15, [["Body", "#2b3346"], ["Hologram", "#5eead4"]], { tags: ["space", "screen", "glow"], states: { on: true }, actions: ["look", "go", "touch", "use"] }),
   floor("platform", "Low stage platform", "furniture", 2.0, 1.4, 0.18, [["Top", "#3a3d46"], ["Edge light", "#6f9cf5"]], { tags: ["floor", "glow"], blocksPath: false, overlap: true, surfaces: [top(0.18, 2.0, 1.4)], actions: ["look", "go"] }),
 
   // ===== Storage =====
@@ -301,8 +306,8 @@ export const CATALOG = [
   surface("terrarium", "Glass moss terrarium", "plants", 0.26, 0.26, 0.3, [["Glass", "#5eead4"], ["Moss", LEAF]], { builder: ["terrarium_orb"], tags: ["plant", "glass"], fragile: true }),
   ceiling("plant_hanging", "Hanging ivy basket", "plants", 0.45, 0.45, 0.8, [["Leaves", LEAF], ["Basket", "#a3743f"]], { builder: ["hanging_ivy"], tags: ["plant", "green"], actions: ["look", "water"], states: { thirst: 0 } }),
   ceiling("plants_hanging_trio", "Hanging plant trio", "plants", 1.0, 0.4, 0.9, [["Leaves", "#5f8f4e"], ["Pots", CREAM]], { tags: ["plant", "green"], actions: ["look", "water"], states: { thirst: 0 } }),
-  floor("palm", "Potted palm", "plants", 0.8, 0.8, 1.9, [["Leaves", "#4d8a62"], ["Pot", "#d9c29c"]], { tags: ["plant", "green", "summer"], actions: ["look", "go", "touch", "water"], states: { thirst: 0 } }),
-  floor("fern", "Boston fern", "plants", 0.6, 0.6, 0.85, [["Fronds", "#5f8f4e"], ["Pot", TERRACOTTA]], { tags: ["plant", "green"], actions: ["look", "go", "touch", "water"], states: { thirst: 0 } }),
+  floor("palm", "Potted palm", "plants", 1.0, 1.0, 1.7, [["Leaves", "#4d8a62"], ["Pot", "#d9c29c"]], { tags: ["plant", "green", "summer"], actions: ["look", "go", "touch", "water"], states: { thirst: 0 } }),
+  floor("fern", "Boston fern", "plants", 0.8, 0.8, 0.45, [["Fronds", "#5f8f4e"], ["Pot", TERRACOTTA]], { tags: ["plant", "green"], actions: ["look", "go", "touch", "water"], states: { thirst: 0 } }),
   floor("herb_pots", "Herb pots", "plants", 0.5, 0.18, 0.28, [["Herbs", "#66bb6a"], ["Pots", TERRACOTTA]], { slots: ["surface", "floor"], tags: ["plant", "kitchen", "green"], blocksPath: false, actions: ["look", "go", "touch", "water"], states: { thirst: 0 } }),
   floor("flower_bed", "Blooming flower bed", "plants", 1.4, 0.6, 0.5, [["Flowers", "#f472b6"], ["Leaves", "#4d8a62"], ["Box", "#8a5a33"]], { tags: ["flower", "garden", "outdoor"], actions: ["look", "go", "touch", "water"], states: { thirst: 0 } }),
   floor("bamboo", "Bamboo grove", "plants", 1.0, 0.5, 2.4, [["Stems", "#7fa65a"], ["Leaves", "#4d8a62"]], { tags: ["plant", "garden", "outdoor"] }),
@@ -313,19 +318,19 @@ export const CATALOG = [
   surface("lava_lamp", "Lava lamp", "lights", 0.16, 0.16, 0.46, [["Lava", "#f472b6"], ["Base", BRASS]], { builder: ["lava_lamp"], tags: ["lamp", "glow", "retro"], states: { on: true }, light: lit("#ff8fc8", 0.5, 1.6, [0, 0.3, 0]), actions: ["look", "go", "touch", "use"] }),
   ceiling("lantern_paper", "Paper lantern", "lights", 0.5, 0.5, 0.7, [["Paper", "#fff8ee"], ["Cord", "#2b2e35"]], { builder: ["paper_lantern"], tags: ["lamp", "light", "paper"], states: { on: true }, light: warm(1.0, 3.4, [0, -0.55, 0]) }),
   ceiling("pendant", "Pendant lamp", "lights", 0.4, 0.4, 0.9, [["Shade", "#d9b25a"], ["Cord", DARK]], { tags: ["lamp", "light", "kitchen"], states: { on: true }, light: warm(1.0, 3.0, [0, -0.8, 0]) }),
-  wall("string_lights", "String lights", "lights", 3.0, 0.06, 0.5, [["Bulbs", "#ffd34d"], ["Wire", "#2b2e35"]], { pending: false, builder: ["fairy_lights"], tags: ["light", "glow", "cozy"], states: { on: true }, extra: { mount: 2.1 }, scale: [0.4, 2] }),
+  wall("string_lights", "String lights", "lights", 3.0, 0.06, 0.5, [["Bulbs", "#ffd34d"], ["Wire", "#2b2e35"]], { builder: ["fairy_lights"], tags: ["light", "glow", "cozy"], states: { on: true }, extra: { mount: 2.1 }, scale: [0.4, 2] }),
   wall("neon_bar", "Neon light bar", "lights", 1.2, 0.06, 0.08, [["Neon", "#5eead4"], ["Mount", "#c084fc"]], { builder: ["neon_tube"], tags: ["neon", "glow", "light"], states: { on: true }, extra: { mount: 1.9 } }),
   wall("neon_sign", "Neon sign", "lights", 1.1, 0.06, 0.42, [["Neon", "#ff3ea5"], ["Backing", "#1d1a26"]], { builder: ["neon_sign"], tags: ["neon", "glow", "light"], states: { on: true, text: "ON AIR" }, extra: { mount: 1.65 } }),
-  floor("fireplace", "Fireplace", "lights", 1.4, 0.5, 1.15, [["Stone", "#8d877d"], ["Mantel", "#6b4a34"]], { pending: false, slots: ["floor", "wall"], builder: ["fireplace_hearth"], tags: ["fire", "winter", "cozy"], states: { on: true }, light: lit("#ff8542", 1.6, 4, [0, 0.35, 0.3]), surfaces: [top(1.15, 1.4, 0.32)], actions: ["look", "go", "touch", "use"] }),
-  floor("fire_pit", "Fire pit", "outdoor", 0.9, 0.9, 0.35, [["Stones", "#8d877d"], ["Fire", "#ff8542"]], { tags: ["fire", "outdoor"], states: { on: true }, light: lit("#ff8542", 1.8, 4.5, [0, 0.4, 0]), actions: ["look", "go", "use"] }),
-  surface("candles", "Pillar candles", "lights", 0.24, 0.16, 0.22, [["Wax", "#f8f5ee"], ["Flame", "#ffb074"]], { pending: false, builder: ["candle_cluster"], tags: ["fire", "glow", "cozy"], states: { on: true }, light: lit("#ffb074", 0.4, 1.4, [0, 0.22, 0]), actions: ["look", "go", "use"] }),
+  floor("fireplace", "Fireplace", "lights", 1.4, 0.5, 1.15, [["Stone", "#8d877d"], ["Mantel", "#6b4a34"]], { slots: ["floor", "wall"], builder: ["fireplace_hearth"], tags: ["fire", "winter", "cozy"], states: { on: true }, light: lit("#ff8542", 1.6, 4, [0, 0.35, 0.3]), surfaces: [top(1.15, 1.4, 0.32)], actions: ["look", "go", "touch", "use"] }),
+  floor("fire_pit", "Fire pit", "outdoor", 0.9, 0.9, 0.45, [["Stones", "#8d877d"], ["Fire", "#ff8542"]], { tags: ["fire", "outdoor"], states: { on: true }, light: lit("#ff8542", 1.8, 4.5, [0, 0.4, 0]), actions: ["look", "go", "use"] }),
+  surface("candles", "Pillar candles", "lights", 0.24, 0.16, 0.22, [["Wax", "#f8f5ee"], ["Flame", "#ffb074"]], { builder: ["candle_cluster"], tags: ["fire", "glow", "cozy"], states: { on: true }, light: lit("#ffb074", 0.4, 1.4, [0, 0.22, 0]), actions: ["look", "go", "use"] }),
   floor("lantern_floor", "Floor lantern", "lights", 0.3, 0.3, 0.6, [["Metal", "#2d3038"], ["Glow", "#ffc98a"]], { tags: ["lamp", "light", "outdoor"], states: { on: true }, light: warm(0.6, 2.2, [0, 0.35, 0]), blocksPath: false, actions: ["look", "go", "touch", "use"] }),
   floor("street_lamp", "Street lamp", "outdoor", 0.4, 0.4, 3.0, [["Post", "#2b2e35"], ["Glow", "#ffd98a"]], { tags: ["lamp", "outdoor"], states: { on: true }, light: warm(1.4, 5, [0, 2.8, 0]) }),
   surface("lamp_banker", "Banker's lamp", "lights", 0.36, 0.2, 0.42, [["Shade", "#2f7a52"], ["Base", BRASS]], { tags: ["lamp", "desk", "study"], states: { on: true }, light: lit("#ffd9a8", 0.8, 2, [0, 0.34, 0.06]), actions: ["look", "go", "touch", "use"] }),
 
   // ===== Tech =====
   floor("tv_retro", "Retro CRT television", "tech", 0.7, 0.55, 0.9, [["Case", TERRACOTTA], ["Screen", "#5eead4"]], { builder: ["retro_tv"], tags: ["screen", "tv", "retro"], states: { on: true }, actions: ["look", "go", "point", "use"] }),
-  surface("turntable", "Vinyl turntable", "tech", 0.45, 0.35, 0.14, [["Wood", "#a3743f"], ["Platter", "#25272d"]], { pending: false, builder: ["record_player"], tags: ["music", "retro"], states: { on: false }, actions: ["look", "go", "touch", "use"] }),
+  surface("turntable", "Vinyl turntable", "tech", 0.45, 0.35, 0.14, [["Wood", "#a3743f"], ["Platter", "#25272d"]], { builder: ["record_player"], tags: ["music", "retro"], states: { on: false }, actions: ["look", "go", "touch", "use"] }),
   surface("radio", "Tube radio", "tech", 0.42, 0.2, 0.28, [["Wood", "#8a5a33"], ["Dial", "#ffd34d"]], { builder: ["vintage_radio"], tags: ["music", "retro"], states: { on: false }, actions: ["look", "go", "touch", "use"] }),
   floor("arcade_cabinet", "Arcade cabinet", "tech", 0.7, 0.75, 1.75, [["Cabinet", "#5b4bb7"], ["Glow", "#5eead4"]], { builder: ["arcade_cab"], tags: ["game", "retro", "neon"], states: { on: true }, actions: ["look", "go", "touch", "play"], light: lit("#5eead4", 0.5, 1.8, [0, 1.3, 0.45]) }),
   surface("holo_projector", "Holo projector", "tech", 0.24, 0.24, 0.14, [["Base", "#2b2e35"], ["Hologram", "#5eead4"]], { builder: ["hologram_proj"], v1: ["holo_projector"], tags: ["space", "glow", "science"], states: { on: true }, actions: ["look", "go", "touch", "use"] }),
@@ -388,7 +393,7 @@ export const CATALOG = [
   floor("rug_braided", "Braided hearth rug", "rugs", 1.8, 1.2, 0.015, [["Braid", "#c0392b"], ["Braid 2", "#d9b98a"]], { tags: ["rug", "cozy", "winter"], overlap: true, blocksPath: false, actions: ["look"] }),
 
   // ===== Food & kitchen =====
-  surface("kettle", "Steaming kettle", "kitchen", 0.24, 0.2, 0.24, [["Body", "#e05a47"], ["Handle", DARK]], { pending: false, builder: ["kettle_steam"], tags: ["kitchen", "drink", "cozy"], states: { steam: true }, actions: ["look", "go", "touch", "use"] }),
+  surface("kettle", "Steaming kettle", "kitchen", 0.24, 0.2, 0.24, [["Body", "#e05a47"], ["Handle", DARK]], { builder: ["kettle_steam"], tags: ["kitchen", "drink", "cozy"], states: { steam: true }, actions: ["look", "go", "touch", "use"] }),
   surface("espresso", "Espresso machine", "kitchen", 0.36, 0.34, 0.4, [["Body", "#c4c9d2"], ["Accents", "#2d3038"]], { builder: ["espresso_maker"], tags: ["kitchen", "drink"], states: { on: false }, actions: ["look", "go", "touch", "use"] }),
   surface("fruit_bowl", "Fruit bowl", "kitchen", 0.32, 0.32, 0.16, [["Bowl", "#f4efe6"], ["Fruit", "#e8453c"]], { builder: ["fruit_bowl"], tags: ["kitchen", "food"] }),
   surface("cake_stand", "Berry layer cake", "kitchen", 0.3, 0.3, 0.3, [["Cake", "#f4b6c8"], ["Stand", "#f8f5ee"]], { builder: ["cake_stand"], tags: ["food", "kitchen"] }),
@@ -398,7 +403,7 @@ export const CATALOG = [
   surface("watering_can", "Watering can", "plants", 0.36, 0.18, 0.28, [["Can", "#6d9c7a"]], { slots: ["surface", "floor"], tags: ["garden", "water"], movable: true, actions: ["look", "go", "touch", "carry", "put_back", "use"], anchors: { grip: [0, 0.26, 0] } }),
 
   // ===== Toys & games =====
-  floor("toy_train", "Wooden train set", "toys", 1.0, 0.6, 0.18, [["Train", "#e05a47"], ["Track", "#ffd34d"]], { builder: ["toy_train"], tags: ["toy", "kid", "wood"], blocksPath: false, states: { on: false }, actions: ["look", "go", "touch", "play"] }),
+  floor("toy_train", "Wooden train set", "toys", 0.95, 0.6, 0.12, [["Train", "#e05a47"], ["Track", "#ffd34d"]], { builder: ["toy_train"], tags: ["toy", "kid", "wood"], blocksPath: false, states: { on: false }, actions: ["look", "go", "touch", "play"] }),
   surface("chess", "Chess set", "toys", 0.4, 0.4, 0.1, [["Board", "#4a3326"], ["Pieces", "#f4efe6"]], { builder: ["chess_board"], tags: ["game", "study"], actions: ["look", "go", "touch", "play"] }),
   surface("tin_robot", "Tin wind-up robot", "toys", 0.12, 0.1, 0.2, [["Tin", "#6f9cf5"], ["Trim", "#e05a47"]], { builder: ["mini_robot"], tags: ["toy", "retro"], movable: true, actions: ["look", "go", "touch", "play", "carry", "put_back"] }),
   floor("gacha", "Capsule toy machine", "toys", 0.5, 0.45, 1.2, [["Body", "#e84a7f"], ["Globe", "#fff8ee"]], { builder: ["gacha_machine"], tags: ["toy", "game", "retro"], actions: ["look", "go", "touch", "play"] }),
@@ -428,7 +433,7 @@ export const CATALOG = [
 
   // ===== Books & study =====
   floor("telescope", "Brass telescope", "study", 0.7, 0.7, 1.4, [["Brass", BRASS], ["Tripod", "#2b2e35"]], { builder: ["brass_telescope"], tags: ["space", "science", "metal"], actions: ["look", "go", "touch", "use"] }),
-  surface("typewriter", "Vintage typewriter", "study", 0.4, 0.32, 0.18, [["Body", "#4d8a62"], ["Keys", "#f8f5ee"]], { builder: ["typewriter"], tags: ["study", "retro", "work"], actions: ["look", "go", "touch", "write"] }),
+  surface("typewriter", "Vintage typewriter", "study", 0.44, 0.32, 0.3, [["Body", "#4d8a62"], ["Keys", "#f8f5ee"]], { builder: ["typewriter"], tags: ["study", "retro", "work"], actions: ["look", "go", "touch", "write"] }),
   surface("tome_open", "Open illustrated tome", "study", 0.44, 0.3, 0.06, [["Cover", "#5b4bb7"], ["Pages", "#f6e08a"]], { builder: ["open_grimoire"], tags: ["books", "study", "paper"], actions: ["look", "go", "touch", "read"] }),
   surface("microscope", "Lab microscope", "study", 0.2, 0.22, 0.34, [["Body", "#e2e7ee"], ["Base", "#2b2e35"]], { builder: ["microscope"], tags: ["science", "study"], actions: ["look", "go", "touch", "use"] }),
   surface("quill_ink", "Calligraphy set", "study", 0.2, 0.14, 0.18, [["Quill", "#f8f5ee"], ["Ink", "#25272d"]], { builder: ["quill_ink"], tags: ["study", "paper"] }),
@@ -443,11 +448,11 @@ export const CATALOG = [
   floor("fence", "Garden fence", "outdoor", 2.0, 0.1, 0.9, [["Pickets", "#f4efe6"]], { tags: ["garden", "outdoor", "wood"] }),
   floor("pond", "Lily pond", "outdoor", 1.6, 1.1, 0.12, [["Water", "#4a8fb0"], ["Lilies", "#f4b6c8"]], { tags: ["water", "garden", "outdoor"], overlap: true, actions: ["look", "go"] }),
   floor("shells", "Seashells & starfish", "outdoor", 0.6, 0.4, 0.06, [["Shells", "#f4d9c6"], ["Starfish", "#e8845a"]], { slots: ["floor", "surface"], tags: ["summer", "outdoor"], blocksPath: false, overlap: true }),
-  floor("backpack", "Hiking pack", "outdoor", 0.4, 0.3, 0.6, [["Pack", "#c0392b"], ["Straps", "#2d3038"]], { tags: ["outdoor"], movable: false }),
+  floor("backpack", "Hiking pack", "outdoor", 0.4, 0.4, 0.7, [["Pack", "#c0392b"], ["Straps", "#2d3038"]], { tags: ["outdoor"], movable: false }),
   floor("lighthouse_model", "Lighthouse model", "outdoor", 0.5, 0.5, 1.4, [["Stripes", "#e05a47"], ["White", "#f8f5ee"]], { tags: ["outdoor", "glow", "summer"], states: { on: true } }),
 
   // ===== Companions (animated, with rules) =====
-  floor("cat", "Sleeping cat", "companions", 0.45, 0.3, 0.22, [["Fur", "#e8a25a"], ["Stripes", "#a35a2a"]], { pending: false, slots: ["floor", "surface"], tags: ["animal", "soft", "cozy"], blocksPath: false, fragile: true, states: { asleep: true }, actions: ["look", "go", "touch"], extra: { companion: true } }),
+  floor("cat", "Sleeping cat", "companions", 0.45, 0.3, 0.22, [["Fur", "#e8a25a"], ["Stripes", "#a35a2a"]], { slots: ["floor", "surface"], tags: ["animal", "soft", "cozy"], blocksPath: false, fragile: true, states: { asleep: true }, actions: ["look", "go", "touch"], extra: { companion: true } }),
   floor("drone_mini", "Mini drone", "companions", 0.3, 0.3, 0.12, [["Body", "#2d3038"], ["Lights", "#5eead4"]], { tags: ["animal", "toy"], blocksPath: false, states: { on: true }, actions: ["look", "go", "play"], extra: { companion: true, floats: 1.2 } }),
   surface("goldfish", "Goldfish bowl", "companions", 0.26, 0.26, 0.26, [["Glass", "#a9d0f5"], ["Fish", "#f2992e"]], { slots: ["surface", "floor"], tags: ["animal", "water", "glass"], fragile: true, actions: ["look", "go", "touch"], extra: { companion: true } }),
   floor("plant_sprite", "Plant sprite", "companions", 0.25, 0.25, 0.35, [["Leaves", "#66bb6a"], ["Glow", "#d8ffb8"]], { tags: ["animal", "plant", "glow"], blocksPath: false, actions: ["look", "go", "play"], extra: { companion: true } }),

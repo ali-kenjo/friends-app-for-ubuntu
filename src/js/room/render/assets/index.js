@@ -1,40 +1,26 @@
-// Every asset builder, by its catalog `build` path ("category/id"). A builder gets a Build (kit/build.js)
-// and describes the asset's pieces; buildAsset() turns a catalog entry and an instance into meshes.
+// Every asset builder, by its catalog id. A builder gets a Build (kit/build.js) and describes the asset's
+// pieces; buildAsset() turns a catalog entry and an instance into meshes.
 import { Build } from "../kit/build.js";
 import * as furniture from "./furniture.js";
 import * as soft from "./soft.js";
 import * as things from "./things.js";
 import * as cozy from "./cozy.js";
-
-const byCategory = {
-  tables: furniture,
-  seating: furniture,
-  storage: furniture,
-  furniture,
-  rugs: soft,
-  plants: soft,
-  lights: things,
-  study: things,
-  kitchen: things,
-  tech: things,
-  windows: things,
-  wall: things,
-  toys: things,
-};
-// Pieces whose catalog category differs from their file
-const EXTRA = { "lights/string_lights": cozy.string_lights, "lights/fireplace": cozy.fireplace, "companions/cat": cozy.cat, "tech/turntable": cozy.turntable, "kitchen/kettle": cozy.kettle, "lights/candles": cozy.candles };
+import * as more_study from "./more-study.js";
+import * as more_nature from "./more-nature.js";
+import * as more_play from "./more-play.js";
+import * as more_home from "./more-home.js";
+import * as more_furniture from "./more-furniture.js";
 
 export const BUILDERS = {};
-for (const [category, mod] of Object.entries(byCategory)) {
-  for (const [id, fn] of Object.entries(mod)) if (typeof fn === "function") BUILDERS[`${category}/${id}`] = fn;
+for (const mod of [furniture, soft, things, cozy, more_furniture, more_home, more_play, more_nature, more_study]) {
+  for (const [id, fn] of Object.entries(mod)) if (typeof fn === "function" && !id.startsWith("_")) BUILDERS[id] = fn;
 }
-Object.assign(BUILDERS, EXTRA);
 
-export const hasBuilder = (def) => Boolean(def && BUILDERS[def.build]);
+export const hasBuilder = (def) => Boolean(def && BUILDERS[def.id]);
 
 // def: catalog entry; asset: { colors, state, id }; level: quality tier
 export function buildAsset(def, asset = {}, level = "high") {
-  const fn = BUILDERS[def.build];
+  const fn = BUILDERS[def.id];
   if (!fn) return null;
   const seed = [...String(asset.id || def.id)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
   const b = new Build({ def, colors: asset.colors || {}, level, seed, state: { ...(def.states || {}), ...(asset.state || {}) } });

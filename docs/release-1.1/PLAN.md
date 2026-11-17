@@ -26,10 +26,9 @@ with what is left written next to it. A fresh session continues from this file a
 
 - [x] `src/js/room/model.mjs`: schema (§4.4), ids, limits (§4.2), `sanitizeRoom()`, `migrateRoom()`,
       `roomSummary()`; units meters/degrees; unknown asset types dropped with a note.
-- [~] `src/js/room/catalog.mjs`: catalog entry shape (§4.3); entries for every existing asset first
+- [x] `src/js/room/catalog.mjs`: catalog entry shape (§4.3); entries for every existing asset first
       (104 Builder props, 15 v1 assets, the places' set pieces, 5 companions), then the new ones; `labels()`;
       registered in `scripts/lib/i18n-scan.js`. Fix the malformed `sand_timer` entry.
-      **Left:** 146 of 194 entries are still `pending` (no 3D builder yet); see step 4.
 - [~] `src/js/room/templates.mjs`: 27 places + 3 v1 presets + "Empty" as room documents; `labels()`.
       **Left:** only the Living room is rebuilt from catalog assets; the other 26 places still carry a `legacy` block.
 - [x] `src/js/room/rules.mjs`: `canDo(room, actor, assetId, action, context) → { ok, reason }`.
@@ -90,13 +89,13 @@ with what is left written next to it. A fresh session continues from this file a
 - [x] One template rebuilt from the hero set (Living room) with before/after shots.
 - [x] **ART-DIRECTION CHECKPOINT** (approved by the owner on 2026-11-17: "good for me"): show the owner the contact sheet and the
       before/after of the template; continue only after approval. Record the outcome in DECISIONS.md.
-- [ ] The rest of the existing catalog (remaining Builder props and v1 assets).
-- [ ] Every place's set pieces as catalog assets.
-- [ ] Companions (cat, goldfish, drone, plant sprite, vacuum) as animated assets with rules.
-- [ ] New assets: bean bag, gaming chair, cat tree, room divider, door, platform/stage, plant shelf,
+- [x] The rest of the existing catalog (remaining Builder props and v1 assets).
+- [x] Every place's set pieces as catalog assets.
+- [x] Companions (cat, goldfish, drone, plant sprite, vacuum) as animated assets with rules.
+- [x] New assets: bean bag, gaming chair, cat tree, room divider, door, platform/stage, plant shelf,
       hanging plants, wall shelves set, kitchen counter set, aquarium, projector screen, charging pad,
       photo frame (personal data), wall calendar (personal data).
-- [ ] Catalog ≥ 150 assets, each with en/de/ar names, 2–3 named color slots, footprint, surfaces/anchors,
+- [x] Catalog ≥ 150 assets, each with en/de/ar names, 2–3 named color slots, footprint, surfaces/anchors,
       actions, LODs, thumbnail, contact-sheet entry.
 - [ ] All 27 templates + 3 presets rebuilt from catalog assets and architecture; compared with 1.0.
 - [ ] Contact sheets reviewed against §3; every failure fixed.
@@ -230,7 +229,7 @@ Next, after approval (in this order):
    `engine.setPost()` (depth of field, AA, AO, grading) get their UI in step 8. Done since the checkpoint:
    the AO stage (GTAO at half resolution), per-mood grading, depth of field (diorama, portrait), SMAA when
    there is no multisampling, the Ultra tier, reworked budgets, `compileAsync`, per-frame stats over all passes.
-2. Step 4: the remaining 146 catalog entries, the other 26 templates and the 3 presets' missing assets.
+2. Step 4: the other 26 templates (the catalog is complete: 194 assets, all built, 2026-11-17).
 3. Steps 5–9 as listed.
 
 Known transitional state on this branch (each has its step):
