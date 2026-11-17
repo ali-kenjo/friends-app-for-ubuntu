@@ -1010,6 +1010,26 @@ export class RobotEngine {
   // The virtual camera: the shot, the robot's place in the picture (thirds),
   // a slow drift and a push-in on emphasis when "cinematic" is on
   frameCamera(dt, pose) {
+    // The Room Editor flies its own camera (orbit, the plan from above, the robot's eyes)
+    const ev = this.active?.options.editorView;
+    if (ev) {
+      this.camera.position.set(...ev.position);
+      if (ev.up) this.camera.up.set(...ev.up);
+      else this.camera.up.set(0, 1, 0);
+      this.camera.lookAt(...ev.target);
+      if (this.camera.fov !== ev.fov) {
+        this.camera.fov = ev.fov;
+        this.camera.updateProjectionMatrix();
+      }
+      this.camera.clearViewOffset();
+      this.cam.ready = false;
+      return;
+    }
+    if (this.camera.fov !== 30) {
+      this.camera.fov = 30;
+      this.camera.up.set(0, 1, 0);
+      this.camera.updateProjectionMatrix();
+    }
     const shotId = this.hostOption("shot") || "medium";
     const base = SHOTS[shotId] || SHOTS.medium;
     // A taller, wider or smaller robot (or one in a tall hat) is framed in proportion

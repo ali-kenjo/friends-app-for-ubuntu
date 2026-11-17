@@ -134,3 +134,17 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
   keeps only the Builder's walls, floor and props, as in 1.0.
 - **R19 Default colors take the rebuilt template's curated wall and floor colors** (the 1.0 palettes were
   tuned for a painted backdrop and read too dark as real walls); a color the user had changed carries over.
+- **R20 The editor draws with the robot's own engine** (`robot.host("editor", …)` at priority 50 with an
+  `editorView` camera the engine follows) instead of a second renderer: one scene, one set of lights and
+  post-processing, so what you edit is exactly what voice mode shows. Catalog thumbnails are the one
+  exception: a small offscreen renderer draws each asset once, cached in IndexedDB per catalog version.
+- **R21 Texture clones follow their source.** Materials use clones of the shared procedural textures (own
+  repeat, shared image). Clones made before the worker fills the image used to keep the 1×1 placeholder's
+  GPU storage and filters, so the full-size upload overflowed (a WebGL error, and in a software renderer a
+  crashed tab). Clones now read the source's mipmap settings and are released when the image grows.
+- **R22 One way into the editor** (`src/js/room/editor/open.js`): buttons carry `data-edit-room`; the palette
+  and the voice dock call `editRoom()`. Over voice mode it opens as a compact overlay (the conversation
+  goes on); elsewhere full screen. Coming from the Studio, the Studio closes and comes back after Done.
+- **R23 Keys a control uses stay with it.** The editor's shortcuts ignore keys a widget already handled
+  (arrow keys in tabs, tile groups and the outline), and the inspector puts focus back on the same control
+  after a change rebuilds it.

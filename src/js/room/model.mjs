@@ -254,6 +254,7 @@ export function sanitizeAsset(raw, { custom = {}, notes } = {}) {
     locked: bool(a.locked, false),
     hidden: bool(a.hidden, false),
     glb: cleanId(a.glb),
+    group: cleanId(a.group),
     drop: num(a.drop, 0, 2, 0.4, 0.01),
     rules: cleanRules(a.rules, def),
     schedule: cleanSchedule(a.schedule),

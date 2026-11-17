@@ -94,8 +94,12 @@ function texturesFor(kind, level, scale, seed) {
     t.anisotropy = anisotropy;
     t.userData.shared = true;
     out[k] = t;
-    // When the worker fills the source in, this clone must upload too
+    // When the worker fills the source in, this clone must upload too, with the source's mipmaps
     Object.defineProperty(t, "version", { get: () => src.version, set() {}, configurable: true });
+    Object.defineProperty(t, "generateMipmaps", { get: () => src.generateMipmaps, set() {}, configurable: true });
+    Object.defineProperty(t, "minFilter", { get: () => src.minFilter, set() {}, configurable: true });
+    // …and let go of the GPU storage it made for the 1×1 placeholder (textures.js fill())
+    if (!maps.ready) (src.userData.clones ||= new Set()).add(t);
   }
   return out;
 }

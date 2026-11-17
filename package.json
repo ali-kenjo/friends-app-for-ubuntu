@@ -26,7 +26,7 @@
     "test:e2e": "node --test --test-concurrency=1 test/e2e/*.test.js",
     "test:voice": "node scripts/e2e-voice.js",
     "test:desktop": "node scripts/e2e-desktop.js",
-    "test:a11y": "node scripts/a11y.js",
+    "test:a11y": "node scripts/a11y.js && node scripts/a11y.js --editor",
     "i18n": "node scripts/i18n.js",
     "design:shots": "node scripts/design-shots.js",
     "design:assets": "node scripts/asset-sheet.js --only all",

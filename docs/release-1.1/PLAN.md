@@ -101,35 +101,47 @@ with what is left written next to it. A fresh session continues from this file a
 
 ## Step 5: Editor
 
-- [ ] Full-screen Room Editor (§5.2): top bar (inline rename, room menu, undo/redo, views: Perspective,
-      Top-down, Robot's eyes, Camera shot 16:9 / 9:16; snapping menu; Simulate; Done), Catalog + Outline (left),
-      viewport with grid and bounds, Inspector tabs Look / Placement / Robot rules / Advanced (right),
-      tool strip (Select, Robot, Spots, Zones, Routes, Cameras, Measure), context hints; sheets when narrow.
-- [ ] Entry points: Studio → Room tab (summary: thumbnail, name, template, Edit room, quick mood/time/air),
-      voice 🎥 menu and dock studio button, Settings → Robot, the robot page, palette "Edit room",
-      voice request ("let me rearrange the room").
-- [ ] Catalog: categories, search in en/de/ar over labels+tags, favourites, recent, My models; thumbnails
-      from the real builders into a cached atlas (IndexedDB keyed by catalog version); badges; click/drag.
-- [ ] Placing by drag (§5.4): ghost, slot-aware raycast (floor, wall flush + height snaps, surfaces glow +
-      re-parent, ceiling drop length, stack), green/red/amber validity with reason (announced), Esc,
-      Shift stamps, "match room colors".
-- [ ] Moving/turning/sizing (§5.5): slide on surface, re-parent, children follow, rotate ring, size handle,
-      lift handle, keys table, multi-select + marquee, snapping (grid, angle, guides, walls, surface centre,
-      equal spacing; Ctrl off), live distances, Placement tab, replace, copy look, save set.
-- [ ] Architecture (§5.6): New room dialog (Empty sizes/walls/materials, Template, Duplicate), walls,
-      windows/doors cut openings, floor, ceiling, outside.
-- [ ] Atmosphere and light (§5.7) incl. per-light settings and "lamps on at dusk".
-- [ ] Camera shots (§5.8): saved shots, room-relative presets (hidden when their asset is missing),
-      fixed / follow / auto-frame.
-- [ ] Backdrop layers (§5.9): full room, robot + chosen assets, solid, chroma (#00B140/#0047BB exactly),
-      transparent; replaces `stageMode.backdrop`.
-- [ ] History/saving/sharing (§5.10): ≥100-step command undo, autosave + "Saved", revert, Save as…,
-      export/import `.friends-room`, copy/paste between rooms, picker thumbnails.
+- [x] Full-screen Room Editor (§5.2): top bar (inline rename, room menu, undo/redo, views: Perspective,
+      Top-down, Robot's eyes, Camera shot 16:9 / 9:16; snapping menu; Done), Catalog + Outline (left),
+      viewport with selection handles and guides, Inspector tabs Look / Placement / Robot rules / Advanced
+      (right), tools and context hints below; at phone width the room on top and the panels in a sheet
+      below. A compact overlay form over voice mode. (Simulate and the Robot/Spots/Zones/Routes tools are
+      step 6; Cameras and Measure are below.)
+- [x] Entry points: Studio → Room tab ("Your room" with its name and count, Edit the room…), voice mode's
+      Robot scene menu, the voice dock ("Edit room"), Settings → Robot (overview and "Where it is"), the
+      robot page's palette ("Edit the robot's room"). One opener (`editor/open.js`, `data-edit-room`); from
+      the Studio, the Studio comes back after Done. (The voice request is an AI tool: step 7.)
+- [ ] Studio Room tab summary: room thumbnail, template name, quick mood/time/air.
+- [x] Catalog: categories, search in en/de/ar over labels and tags, favourites, recently used, My sets;
+      thumbnails drawn from the real builders and cached in IndexedDB by catalog version; badges; click or drag.
+- [ ] Catalog: My models (with the wizard below).
+- [x] Placing by drag (§5.4): ghost, slot-aware raycast (floor, wall flush, surfaces re-parent, ceiling),
+      green/red/amber with the reason shown and announced, Esc, Shift stamps, "match room colors". A
+      click places in view at the first free spot, never on the robot's home.
+- [x] Moving/turning/sizing (§5.5): slide, re-parent, children follow, rotate ring, size and lift handles,
+      the keys table, multi-select + marquee (plan view), snapping (grid, angle, guides, walls, surface
+      centre; Ctrl off), distances while dragging, Placement tab, replace, copy look, align, even gaps,
+      group, save as a set.
+- [x] Architecture (§5.6): New room dialog (Empty with size, walls, floor and wall finish; Template;
+      Duplicate), walls, accent wall, thickness, cutaway, floor, ceiling, outside.
+- [x] Atmosphere (§5.7): mood, brightness, time of day, emotion tint, air, wind, season, weather, light effects.
+- [ ] Per-light settings and "lamps on at dusk".
+- [x] Camera shots (§5.8): save the view as a shot, look through it, remove.
+- [ ] Room-relative shot presets (hidden when their asset is missing), fixed / follow / auto-frame.
+- [x] Backdrop layers (§5.9): full room, robot + chosen things, solid, chroma, transparent (the old
+      `stageMode.backdrop` goes in step 8).
+- [x] History/saving/sharing (§5.10): command undo (≥100 steps, drags as one), autosave + "Saved",
+      revert, Save as…, duplicate, export/import `.friends-room`, copy/paste between rooms (Ctrl+C/V).
+- [ ] Room picker thumbnails (the room's picture sent with the save).
 - [ ] Custom models wizard (§5.11) and re-skinning built-ins; texture/triangle caps.
-- [ ] Extras (§5.12): scenes, per-asset schedules, Describe a room, ask the robot to rearrange, tidy up,
-      plants that need care, measure tool + floor-plan PNG, "Describe my room" for screen readers.
-- [ ] Live-edit overlay during a conversation; the robot reacts to placed things.
-- [ ] Touch, keyboard and accessibility for all of it.
+- [x] Extras: per-asset schedules (Advanced tab), floor plan as a PNG.
+- [ ] Extras: scenes UI, Describe a room, ask the robot to rearrange, tidy up, plants that need care,
+      measure tool, "Describe my room" for screen readers.
+- [ ] The robot reacts to placed things during a conversation (with step 6).
+- [x] Touch, keyboard and accessibility for all of the above: keyboard shortcuts, outline as a tree,
+      arrow keys in tabs/tiles not stolen by the shortcuts, focus kept when the inspector rebuilds, live
+      announcements, 44 px targets on touch, RTL. `test/e2e/room-editor.test.js` (12 tests),
+      `scripts/a11y.js` scans the editor.
 
 ## Step 6: Robot
 
@@ -233,7 +245,8 @@ Next, after approval (in this order):
 2. Step 4 is done (2026-11-17): 194 assets built, all 27 places rebuilt (`src/js/room/rebuilt.mjs`),
    rooms with a legacy block rebuilt on load. The old place builders now only draw 1.0 room objects the
    Studio's Room tab still writes (gone with that tab in step 5/8).
-3. Steps 5–9 as listed.
+3. Step 5 (2026-11-17): the editor itself is built and committed (see the ticked items); the open
+   items of step 5 come next, then steps 6–9.
 
 Known transitional state on this branch (each has its step):
 - The Studio's Room and Room Builder tabs, the looks and character switching still write 1.0 room objects;

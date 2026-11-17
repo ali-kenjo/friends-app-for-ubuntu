@@ -7,7 +7,7 @@
 // tells the migration which asset ids each 1.0 prop switch turns on or off.
 import { PLACES, PLACE_BY_ID } from "../robot/room.mjs";
 import { sanitizeRoom, emptyRoom, defaultArchitecture, defaultAtmosphere } from "./model.mjs";
-import { WALL_LAYOUTS, SIZE_PRESETS } from "./choices.mjs";
+import { WALL_LAYOUTS, SIZE_PRESETS, FLOOR_MATERIALS, WALL_MATERIALS } from "./choices.mjs";
 import { fromV1Assets } from "./legacy.mjs";
 
 // Open-air places: painted backdrops, no walls
@@ -125,13 +125,17 @@ function presetTemplate(id) {
   return room;
 }
 
-function emptyTemplate({ size = "medium", walls = "corner" } = {}) {
+function emptyTemplate({ size = "medium", walls = "corner", floor = "", wall = "" } = {}) {
   const preset = SIZE_PRESETS.find((s) => s.id === size && s.w) || SIZE_PRESETS[1];
   const layout = WALL_LAYOUTS.find((l) => l.id === walls) || WALL_LAYOUTS[2];
   const room = emptyRoom({ id: "empty", name: "Empty room", size: { w: preset.w, d: preset.d, h: preset.h } });
   room.template = "empty";
   room.architecture.walls = { ...layout.walls };
   room.atmosphere.mood = "day";
+  const f = FLOOR_MATERIALS.find((m) => m.id === floor);
+  if (f) room.architecture.floor = { material: f.id, color: f.def };
+  const w = WALL_MATERIALS.find((m) => m.id === wall);
+  if (w) room.architecture.wall = { ...room.architecture.wall, material: w.id, color: w.def };
   return room;
 }
 
@@ -142,10 +146,10 @@ export const TEMPLATES = [
 ];
 export const TEMPLATE_BY_ID = Object.fromEntries(TEMPLATES.map((t) => [t.id, t]));
 
-// A fresh room from a template (cleaned); options: { id, name, size, walls } (size/walls for "empty")
-export function templateRoom(templateId, { id, name, size, walls, now = Date.now() } = {}) {
+// A fresh room from a template (cleaned); options: { id, name, size, walls, floor, wall } (the last four for "empty")
+export function templateRoom(templateId, { id, name, size, walls, floor, wall, now = Date.now() } = {}) {
   const t = TEMPLATE_BY_ID[templateId] || TEMPLATE_BY_ID.studio;
-  const doc = t.kind === "empty" ? emptyTemplate({ size, walls }) : t.kind === "preset" ? presetTemplate(t.id) : placeTemplate(t.id);
+  const doc = t.kind === "empty" ? emptyTemplate({ size, walls, floor, wall }) : t.kind === "preset" ? presetTemplate(t.id) : placeTemplate(t.id);
   doc.id = id || doc.id;
   doc.name = name || doc.name;
   doc.createdAt = doc.updatedAt = now;

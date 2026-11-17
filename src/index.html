@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="css/filming.css">
   <link rel="stylesheet" href="css/robot-dock.css">
   <link rel="stylesheet" href="css/robot-studio.css">
+  <link rel="stylesheet" href="css/room-editor.css">
   <link rel="stylesheet" href="css/characters.css">
   <link rel="stylesheet" href="css/voice-ui.css">
   <link rel="stylesheet" href="css/life.css">
@@ -1880,6 +1881,7 @@
           <div class="robot-look-card">
             <div class="robot-look-summary" id="robot-look-summary" aria-live="polite"></div>
             <button type="button" class="btn btn-primary" id="robot-studio-open" data-open-studio="">Open Robot Studio…</button>
+            <button type="button" class="btn" id="robot-room-edit" data-edit-room="">Edit the room…</button>
           </div>
           <div class="row">
             <div>
@@ -2290,7 +2292,7 @@
           </div></div>
 
           <div class="row">
-            <div><div class="row-label">Where it is</div><div class="row-desc" id="robot-bg-hint">The room it is in. More in the Robot Studio: colors, lights, props and your own picture.</div></div>
+            <div><div class="row-label">Where it is</div><div class="row-desc" id="robot-bg-hint">The room it is in. Furnish it, light it and set the robot's rules in the Room Editor.</div><button type="button" class="btn small" data-edit-room="">Edit the room…</button></div>
             <select class="field" id="robot-place" aria-label="Where it is"></select>
           </div>
           <div class="row">
@@ -3605,6 +3607,10 @@
       <div class="voice-record-row">
         <span>Look and room</span>
         <button type="button" class="btn small" data-open-studio="">Customize…</button>
+      </div>
+      <div class="voice-record-row">
+        <span>The room</span>
+        <button type="button" class="btn small" id="voice-scene-edit-room" data-edit-room="">Edit the room…</button>
       </div>
       <div class="voice-record-row">
         <span id="voice-scene-shot">Shot</span>

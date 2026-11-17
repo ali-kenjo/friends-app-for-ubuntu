@@ -359,6 +359,11 @@
   background: var(--border);
 }
 
+/* Right to left: the range fills from the right, where its thumb starts (Firefox's progress bar does this itself) */
+[dir="rtl"] .rs-range::-webkit-slider-runnable-track {
+  background: linear-gradient(to left, var(--accent) var(--p), var(--border) var(--p));
+}
+
 .rs-range::-moz-range-progress {
   height: 6px;
   border-radius: 3px;

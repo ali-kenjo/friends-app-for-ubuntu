@@ -19,6 +19,7 @@ export const DOCK_MODULES = [
   { id: "vision_toggle", label: "Vision Ctx", icon: "👁️" },
   { id: "roam_toggle", label: "Auto Roam", icon: "🧭" },
   { id: "clean_stage", label: "Clean Stage", icon: "📺" },
+  { id: "edit_room", label: "Edit room", icon: "🛋️" },
   { id: "open_studio", label: "Studio", icon: "⚙️" },
 ];
 
@@ -38,6 +39,7 @@ export const DOCK_PRESETS = Object.freeze({
       vision_toggle: false,
       roam_toggle: false,
       clean_stage: true,
+      edit_room: false,
       open_studio: true,
     },
   },
@@ -56,6 +58,7 @@ export const DOCK_PRESETS = Object.freeze({
       vision_toggle: false,
       roam_toggle: true,
       clean_stage: true,
+      edit_room: true,
       open_studio: true,
     },
   },

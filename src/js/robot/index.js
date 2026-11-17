@@ -306,6 +306,7 @@ export const robot = {
     return roomDoc;
   },
   setRoom,
+  ready: () => loadEngine(),
   get engine() {
     return engine;
   },
@@ -323,6 +324,12 @@ export const robot = {
   host(name, el, options = {}) {
     hosts.set(name, { el, options, visible: false });
     engine?.attach(name, el, options);
+  },
+
+  // A place that doesn't show the robot any more (the Room Editor closing)
+  unhost(name) {
+    hosts.delete(name);
+    engine?.detach(name);
   },
 
   // Shown or not; the first host shown loads the engine

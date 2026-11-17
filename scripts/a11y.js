@@ -1,6 +1,7 @@
 // `npm run test:a11y`: axe-core over the main surfaces, in dark and light, left-to-right (English)
 // and right-to-left (Arabic). Fails on serious or critical violations.
 //   node scripts/a11y.js [--langs en,ar] [--themes dark,light] [--width 1280] [--report path.json] [--all-impacts]
+//   node scripts/a11y.js --editor   the Room Editor (needs WebGL, so it runs in a browser of its own)
 // Needs Chrome (CHROME_PATH or the usual places). Runs against the real helper with a fake local AI.
 const fs = require("node:fs");
 const path = require("node:path");
@@ -18,12 +19,14 @@ const HERO_PACKS = flag("hero-packs", "sunrise,forest,lavender,ocean").split(","
 const WIDTH = Number(flag("width", 1280));
 const REPORT = flag("report", "");
 const ACCENT = flag("accent", ""); // one of the accent colours of Settings → Appearance, e.g. #f59e0b
+// --editor: only the Room Editor, in a browser with (software) WebGL, which the editor needs
+const EDITOR = args.includes("--editor");
 const FAIL_ON = args.includes("--all-impacts") ? ["minor", "moderate", "serious", "critical"] : ["serious", "critical"];
 
 const axeSource = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 
 async function main() {
-  const h = await launch();
+  const h = await launch({ webgl: EDITOR });
   const { page } = h;
   const results = [];
 
@@ -120,6 +123,51 @@ async function main() {
     await click("#settings-close");
     await sleep(300);
   };
+
+  // The Room Editor: the room's settings, a thing's four tabs, the outline, the new-room dialog, narrow
+  const scanEditor = async (lang, theme) => {
+    await page.evaluate(() => import("/js/robot/index.js").then((m) => (window.__robot = m.robot)));
+    await page.waitForFunction(() => window.__robot.room, { timeout: 90000 });
+    await page.evaluate(() => import("/js/room/editor/open.js").then((m) => m.editRoom()));
+    await page.waitForFunction(() => document.querySelector("#room-editor .re-stage canvas"), { timeout: 60000 });
+    await sleep(1200);
+    await scan("room-editor", lang, theme);
+    await page.evaluate(() => document.querySelector(".re-grid .re-item")?.click());
+    await sleep(800);
+    for (const [i, name] of ["look", "place", "rules", "advanced"].entries()) {
+      await page.evaluate((n) => document.querySelectorAll(".re-inspector [role=tab]")[n]?.click(), i);
+      await sleep(300);
+      await scan(`room-editor-${name}`, lang, theme);
+    }
+    await page.evaluate(() => document.getElementById("re-tab-outline")?.click());
+    await sleep(300);
+    await scan("room-editor-outline", lang, theme);
+    await page.evaluate(() => {
+      const menu = document.querySelector("#room-editor .re-menu");
+      menu.value = "new";
+      menu.dispatchEvent(new Event("change"));
+    });
+    await page.waitForSelector(".re-new-box", { timeout: 10000 });
+    await scan("room-editor-new", lang, theme);
+    await page.keyboard.press("Escape");
+    await sleep(200);
+    await page.setViewport({ width: 420, height: 860, deviceScaleFactor: 1 });
+    await sleep(800);
+    await scan("room-editor-narrow", lang, theme);
+  };
+
+  if (EDITOR) {
+    // A software renderer: the cheapest tier (the editor's panels are what's checked)
+    const s0 = await h.api("GET", "/api/settings");
+    await h.api("PUT", "/api/settings", { ...s0, robot: { ...s0.robot, quality: "low", chatDock: false } });
+    for (const lang of LANGS) {
+      for (const theme of THEMES) {
+        await h.setLook({ theme, pack: "cozy", width: WIDTH, lang });
+        await scanEditor(lang, theme);
+      }
+    }
+    return finish(h, results);
+  }
 
   for (const lang of LANGS) {
     for (const theme of THEMES) {
@@ -274,6 +322,10 @@ async function main() {
     }
   }
 
+  return finish(h, results);
+}
+
+async function finish(h, results) {
   await h.close();
   if (REPORT) fs.writeFileSync(REPORT, JSON.stringify(results, null, 2));
 

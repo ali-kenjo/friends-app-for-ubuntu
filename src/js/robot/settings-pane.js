@@ -8,6 +8,7 @@ import * as D from "./design.mjs";
 import * as R from "./room.mjs";
 import { useTemplate } from "../room/client.js";
 import "./studio/studio.js";
+import "../room/editor/open.js";
 import { board } from "../whiteboard/store.js";
 import { characterName } from "../characters.js";
 
@@ -142,7 +143,7 @@ onSettings((s) => {
   void hue;
   bgHint.textContent = clash
     ? t("Its light color is close to this key color, so keying it out would remove the robot's glow too. Pick another light color or the other chroma color.")
-    : t("The room it is in. More in the Robot Studio: colors, lights, props and your own picture.");
+    : t("The room it is in. Furnish it, light it and set the robot's rules in the Room Editor.");
   bgHint.classList.toggle("warn", clash);
 });
 

@@ -112,7 +112,7 @@ function create(body = {}) {
     doc = model.sanitizeRoom(migrate.upgradeLegacy(model.migrateRoom(body.room)), { custom: customCatalog(), notes, now });
   } else {
     const t = typeof body.template === "string" && templates.TEMPLATE_BY_ID[body.template] ? body.template : "empty";
-    doc = templates.templateRoom(t, { size: body.size, walls: body.walls, now });
+    doc = templates.templateRoom(t, { size: body.size, walls: body.walls, floor: body.floor, wall: body.wall, now });
   }
   const name = model.text(body.name, model.LIMITS.name, "") || doc.name;
   doc.id = model.newId(slug(name) || "room", ids);

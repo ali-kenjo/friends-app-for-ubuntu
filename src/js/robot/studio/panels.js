@@ -6,7 +6,8 @@ import * as D from "../design.mjs";
 import * as R from "../room.mjs";
 import * as C from "../room-catalog.mjs";
 import { BUILTIN_LOOKS } from "../looks.mjs";
-import { t } from "../../i18n.js";
+import { t, tp } from "../../i18n.js";
+import { robot as robotApi } from "../index.js";
 import { h, section, hint, swatches, tiles, slider, toggle, textField, button, arrowKeys, nextId, glyph } from "./ui.js";
 
 const OUTFIT_COLORS = ["#e05a47", "#f2c14e", "#4d8a62", "#3b6fd6", "#7a5cf0", "#f06bb0", "#f4efe6", "#2b2e35", "#8a5a33", "#5eead4", "#ff8a3d"];
@@ -234,7 +235,16 @@ export function roomPanel(ctx) {
   const lighting = section(t("Lighting"), light.el, brightness.el);
   const ground = section(t("Floor"), floor.el);
   const atmosphere = section(t("In the air"), air.el, amount.el);
-  el.append(section(t("Place"), places.el, h("div", { class: "rs-actions" }, surprise)), dynamic, lighting, ground, atmosphere);
+  // The Room Editor is where the room is furnished; this says which room it is and opens it
+  const roomName = h("p", { class: "rs-room-summary", "aria-live": "polite" });
+  const edit = h("button", { type: "button", class: "btn btn-primary small", "data-edit-room": "full", text: t("Edit the room…") });
+  const summary = () => {
+    const doc = robotApi.room;
+    roomName.textContent = doc ? tp("{name}: {n} thing", "{name}: {n} things", doc.assets.filter((a) => !a.hidden).length, { name: doc.name }) : t("The room is still loading.");
+  };
+  document.addEventListener("friends:robot-room", summary);
+  summary();
+  el.append(section(t("Your room"), roomName, hint(t("Place furniture and things, change the walls and the light, and say what the robot may use.")), h("div", { class: "rs-actions" }, edit)), section(t("Place"), places.el, h("div", { class: "rs-actions" }, surprise)), dynamic, lighting, ground, atmosphere);
 
   let builtFor = null;
   let colorControls = {};

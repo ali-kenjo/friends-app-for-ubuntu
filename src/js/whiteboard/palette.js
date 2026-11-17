@@ -13,6 +13,7 @@ import { getSettings } from "../store.js";
 import { chooseRole, roleName } from "./robotwin.js";
 import { wbIcon } from "./wb-icons.js";
 import { ago } from "./controls.js";
+import { editRoom } from "../room/editor/open.js";
 
 const norm = (s) => String(s || "").toLowerCase();
 
@@ -47,6 +48,7 @@ export function commandsFor(ui) {
   add(t("Panels"), t("Show or hide the options panel"), () => ui.toggleInspector(), { icon: "sliders" });
   add(t("Panels"), t("Show or hide the robot's window"), () => ui.setRobotWindow(!ui.robotWin.win.visible), { icon: "robot" });
   add(t("Panels"), t("Put the robot's window back where it started"), () => ui.robotWin.win.reset(), { icon: "undo" });
+  add(t("Robot"), t("Edit the robot's room"), () => editRoom(), { icon: "robot", keywords: t("room furniture place things editor") });
   add(t("View"), t("Show everything on this page"), () => ui.view?.fitContent(), { icon: "fit" });
   add(t("View"), t("Show the whole board"), () => ui.view?.fitBoard(), { icon: "grid" });
   add(t("View"), t("Zoom in"), () => ui.view?.setZoom(ui.view.zoom * 1.25), { icon: "zoomIn" });

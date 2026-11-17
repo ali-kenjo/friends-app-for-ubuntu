@@ -64,6 +64,13 @@ function fill(job, data) {
   const { maps, size } = job;
   for (const k of ["albedo", "normal", "rough"]) {
     const t = maps[k];
+    // A renderer keeps the GPU storage it made for the 1×1 placeholder; a bigger picture needs new storage
+    // (dispose() tells every renderer to let go, the next draw uploads the full size)
+    if (t.image?.width !== size || t.image?.height !== size) {
+      t.dispose();
+      for (const c of t.userData.clones || []) c.dispose();
+    }
+    delete t.userData.clones;
     t.image = { data: new Uint8Array(data[k].buffer), width: size, height: size };
     t.generateMipmaps = true;
     t.minFilter = THREE.LinearMipmapLinearFilter;

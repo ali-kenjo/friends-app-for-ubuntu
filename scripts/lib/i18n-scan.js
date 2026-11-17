@@ -150,7 +150,7 @@ function serverStrings() {
   // The 1.1 room: its choices, the catalog (names, color slots, categories, search tags), templates, the
   // permission model's spoken reasons and the words of the room summary
   const roomDir = path.join(root, "src", "js", "room");
-  for (const mod of ["choices.mjs", "catalog.mjs", "templates.mjs", "rules.mjs", "model.mjs"]) {
+  for (const mod of ["choices.mjs", "catalog.mjs", "templates.mjs", "rules.mjs", "model.mjs", "editor/ops.mjs"]) {
     for (const label of require(path.join(roomDir, mod)).labels()) out.add(label);
   }
   return out;
