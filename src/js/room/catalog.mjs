@@ -245,7 +245,7 @@ export const CATALOG = [
     builder: ["win_stained"], extra: { opening: { w: 0.98, h: 1.68, y: 0.06, arch: true }, mount: 0.75 }, scale: [0.7, 1.4],
   }),
   wall("clock_wall", "Wall clock", "wall", 0.34, 0.06, 0.34, [["Face", "#f8f5ee"], ["Rim", WOOD]], {
-    hero: true, tags: ["wall"], builder: ["wall_clock"], extra: { mount: 1.75 }, scale: [0.6, 2],
+    hero: true, slots: ["wall", "surface"], tags: ["wall"], builder: ["wall_clock"], extra: { mount: 1.75 }, scale: [0.6, 2],
   }),
   wall("frame_picture", "Picture frame", "wall", 0.44, 0.035, 0.56, [["Frame", "#d8c9a6"], ["Picture", "#e8b65a"]], {
     hero: true, tags: ["picture", "art", "wall"], builder: ["framed_trio"], extra: { mount: 1.4 }, scale: [0.5, 2.2],

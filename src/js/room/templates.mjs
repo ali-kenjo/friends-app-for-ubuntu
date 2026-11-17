@@ -24,49 +24,9 @@ const WALL_OF = {
   cabin: "logs", cafe: "brick", arcade: "painted", observatory: "starwall", tatami: "shoji", spaceship: "concrete", greenhouse: "plaster", rooftop: "brick",
 };
 
-// Rebuilt templates: their architecture and things, from catalog assets. `props` maps a 1.0 prop switch to
-// the asset ids it shows or hides; `stateProps` maps a switch to an asset's state; `companionSpots` is where
-// a switched-on 1.0 companion goes.
-const W = (x, y, z) => [x, y, z];
-export const REBUILT = {
-  lounge: {
-    size: { w: 6, d: 5.2, h: 2.8 },
-    architecture: {
-      walls: { back: true, left: true, right: false, front: false },
-      wall: { material: "painted", color: "#4a3a45", trim: true, trimColor: "#2f252c" },
-      floor: { material: "oak_planks", color: "#8a5e44" },
-      ceiling: { kind: "none", color: "#f1ece3" },
-      outside: "city_night",
-      backdrop: { mode: "vignette", bg: "#2a2128", edge: "#120d11", glow: 0, glowColor: "", mid: "", horizon: 0.4 },
-      palette: { wall: "#3c3039", floor: "#6b4a3a", glow: "#ffbf80", detail: "#c9744f" },
-    },
-    atmosphere: { mood: "cozy", brightness: 1.1, timeMode: "template", timeHour: 19.5, air: "dust" },
-    assets: [
-      { id: "bookcase", type: "bookcase", pos: W(-1.9, 0, -2.42), colors: { c1: "#7a4f30", c2: "#c9744f" } },
-      { id: "fireplace", type: "fireplace", pos: W(-0.35, 0, -2.35), colors: { c1: "#a39a8c", c2: "#5a3d2b" } },
-      { id: "kettle", type: "kettle", parent: "fireplace", surface: "top", slot: "surface", pos: W(0.48, 0, -0.02), rot: -20, colors: { c1: "#c9744f" } },
-      { id: "candles", type: "candles", parent: "fireplace", surface: "top", slot: "surface", pos: W(-0.5, 0, 0) },
-      { id: "clock", type: "clock_wall", slot: "wall", pos: W(-0.35, 1.62, -2.6), colors: { c1: "#f4efe6", c2: "#7a4f30" } },
-      { id: "frame_a", type: "frame_picture", slot: "wall", pos: W(-1.08, 1.42, -2.6), scale: 0.72, colors: { c1: "#d8c9a6", c2: "#c9744f" } },
-      { id: "frame_b", type: "frame_picture", slot: "wall", pos: W(0.3, 1.42, -2.6), scale: 0.6, colors: { c1: "#d8c9a6", c2: "#5b8fa8" } },
-      { id: "window", type: "window_french", slot: "wall", pos: W(1.4, 0.85, -2.6), colors: { c1: "#e8e2d6", c2: "#b5654a" } },
-      { id: "low_shelf", type: "shelf_low", pos: W(1.4, 0, -2.41), colors: { c1: "#8a5e44", c2: "#e9dcc6" } },
-      { id: "turntable", type: "turntable", parent: "low_shelf", surface: "top", slot: "surface", pos: W(-0.24, 0, 0.0), state: { on: true } },
-      { id: "succulents", type: "succulents", parent: "low_shelf", surface: "top", slot: "surface", pos: W(0.33, 0, 0.02) },
-      { id: "floor_lamp", type: "lamp_floor", pos: W(2.3, 0, -1.5), colors: { c1: "#efe2c8", c2: "#2d3038" } },
-      { id: "plant", type: "monstera", pos: W(2.62, 0, -2.2), scale: 1.12, colors: { c1: "#4d8a62", c2: "#c47a5a" } },
-      { id: "rug", type: "rug_round", pos: W(0, 0, -0.15), scale: 1.12, colors: { c1: "#c9744f", c2: "#f3e6d2" } },
-      { id: "armchair", type: "armchair", pos: W(-1.95, 0, -1.0), rot: 55, colors: { c1: "#ede4d6", c2: "#8a5e44" } },
-      { id: "side_table", type: "table_side", pos: W(-1.15, 0, -1.75), colors: { c1: "#8a5e44", c2: "#2d3038" } },
-      { id: "mug", type: "mug", parent: "side_table", surface: "top", slot: "surface", pos: W(0.05, 0, 0.04), colors: { c1: "#f4efe6" } },
-      { id: "cat", type: "cat", pos: W(-1.0, 0, 0.4), rot: -25 },
-      { id: "string_lights", type: "string_lights", slot: "wall", pos: W(0, 2.05, -2.6), scale: 1.75, colors: { c1: "#ffcf8a" } },
-    ],
-    props: { window: ["window"], shelf: ["bookcase"], plant: ["plant"], lamp: ["floor_lamp"], rug: ["rug"], lights: ["string_lights"], frames: ["frame_a", "frame_b"], clock: ["clock"], fireplace: ["fireplace", "candles"], cat: ["cat"], record_player: ["turntable"], kettle: ["kettle"] },
-    stateProps: { curtains: { asset: "window", key: "curtains" } },
-    companionSpots: { cat: [-1.0, 0, 0.4], drone: [1.0, 0, 0.3], goldfish: [1.6, 0, -2.4], plant_sprite: [0.9, 0, 0.5], vacuum: [0.8, 0, 0.9] },
-  },
-};
+import { REBUILT } from "./rebuilt.mjs";
+
+export { REBUILT };
 
 function placeTemplate(place) {
   const p = PLACE_BY_ID[place];

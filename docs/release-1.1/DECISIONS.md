@@ -117,3 +117,20 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
   and no entry pending. Sheets: `docs/design/screenshots/1.1/assets/catalog-{low,high}.jpg`.
 - **R15 Builders are registered by catalog id** (one registry over the asset modules) instead of
   "category/id" paths, so a builder can live in whichever module groups it best.
+- **R16 All 27 places are rebuilt from catalog assets** (`src/js/room/rebuilt.mjs`). Each keeps its 1.0
+  palette, mood and "about": the same pieces in the same places, with the switches that were off in 1.0
+  as hidden things. Every 1.0 prop switch has a home (an asset, an asset state such as curtains, an
+  atmosphere effect such as bokeh, or the painted view outside), checked by a unit test. Studio-like
+  places keep their light effects (bokeh, light shaft, rings) as `atmosphere.effects`; Gradient keeps its
+  spotlight; Green and Blue screen are the chroma backdrop layer with nothing drawn.
+- **R17 Scenery is painted, not placed.** The sun, moon, clouds, skyline, sea, hills, planet and stars are
+  the outside view (outside.js). Animated scenery of 1.0 that the painter doesn't draw yet (flocks of
+  birds, butterflies, a rainbow, a balloon, a kite, a windmill, light trails, a holo billboard, shooting
+  stars, satellites) is listed as scenery so no false "missing" note appears, and is a polish item in
+  PLAN step 9 ("animated outside scenery").
+- **R18 Rooms already saved with a legacy block are rebuilt on load** (`migrate.upgradeLegacy`): the
+  template's things with the room's prop switches, companions, sign words, changed colors and atmosphere,
+  plus every thing the room had of its own; written back once. A 0.7 room with "Use custom room build" on
+  keeps only the Builder's walls, floor and props, as in 1.0.
+- **R19 Default colors take the rebuilt template's curated wall and floor colors** (the 1.0 palettes were
+  tuned for a painted backdrop and read too dark as real walls); a color the user had changed carries over.

@@ -44,9 +44,13 @@ export function roomFromLegacy(legacy, { id = "room", name = "", v1Assets = null
     glow: c.glow === "" ? "" : color(c.glow, arch.palette.glow),
     detail: color(c.detail, arch.palette.detail),
   };
-  arch.wall.color = arch.palette.wall;
-  arch.floor.color = arch.palette.floor;
-  arch.backdrop.bg = arch.palette.wall;
+  // A color the user changed carries over; the place's own default leaves the rebuilt room's curated color
+  const defaults = PLACE_BY_ID[place].colors;
+  if (doc.legacy || arch.palette.wall !== defaults.wall) {
+    arch.wall.color = arch.palette.wall;
+    arch.backdrop.bg = arch.palette.wall;
+  }
+  if (doc.legacy || arch.palette.floor !== defaults.floor) arch.floor.color = arch.palette.floor;
   const photo = obj(r.photo);
   arch.photo = { blur: num(photo.blur, 0, 1, 0.25), dim: num(photo.dim, 0, 0.8, 0.15) };
   const atm = doc.atmosphere;
@@ -72,6 +76,9 @@ export function roomFromLegacy(legacy, { id = "room", name = "", v1Assets = null
   const b = obj(r.builder);
   const taken = new Set(doc.assets.map((a) => a.id));
   if (b.enabled) {
+    // "Use custom room build" replaced the place's own set: only the Builder's walls, floor and props remain
+    doc.assets = [];
+    taken.clear();
     arch.walls = { back: true, left: true, right: true, front: false };
     arch.openAir = false;
     arch.wall.material = WALL_STYLE[b.wallStyle] || "plaster";
@@ -120,8 +127,12 @@ function applyToRebuilt(doc, { props, companions, sign, notes }) {
     const a = doc.assets.find((x) => x.id === asset);
     if (a) a.state = { ...(a.state || {}), [key]: props[prop] };
   }
-  // A 1.0 switch that was on but has no thing in the rebuilt room (the TV, the fish tank): say so
-  const known = new Set([...Object.keys(t.props || {}), ...Object.keys(t.stateProps || {})]);
+  for (const [prop, key] of Object.entries(t.effectProps || {})) {
+    if (typeof props[prop] === "boolean") doc.atmosphere.effects = { ...(doc.atmosphere.effects || {}), [key]: props[prop] };
+  }
+  // A 1.0 switch that was on but has no thing in the rebuilt room (the TV, the fish tank): say so.
+  // Scenery (the sun, the moon, a skyline) is part of the painted view outside, not a thing.
+  const known = new Set([...Object.keys(t.props || {}), ...Object.keys(t.stateProps || {}), ...Object.keys(t.effectProps || {}), ...(t.scenery || [])]);
   for (const [prop, on] of Object.entries(props)) if (on === true && !known.has(prop)) notes?.push(`The ${prop.replace(/_/g, " ")} of the old room isn't in the new one; add it from the catalog`);
   for (const a of doc.assets) if (a.type === "neon_sign") a.state = { ...a.state, text: sign };
   const taken = new Set(doc.assets.map((a) => a.id));
@@ -295,4 +306,27 @@ export function migrateSettings(stored, { now = Date.now() } = {}) {
 
 function presetAssets(presetId) {
   return v1PresetList(presetId && /^[\w-]+$/.test(presetId) ? presetId : V1_DEFAULT);
+}
+
+// A room document saved while its template still had a legacy block: rebuilt from the template now, with
+// its own things, prop switches, sign words, companions, colors and atmosphere kept. Returns the document
+// unchanged when there is nothing to do.
+export function upgradeLegacy(raw, { now = Date.now() } = {}) {
+  const r = obj(raw);
+  const l = obj(r.legacy);
+  if (!r.legacy || !REBUILT[l.place]) return raw;
+  const notes = [];
+  const atm = obj(r.atmosphere);
+  const pal = obj(obj(r.architecture).palette);
+  const legacyRoom = { place: l.place, colors: pal, light: l.light, brightness: atm.brightness, floor: l.floor, air: atm.air, airAmount: atm.airAmount, props: l.props, companions: l.companions, timeMode: atm.timeMode === "clock" ? "clock" : "manual", timeHour: atm.timeHour, weatherSync: atm.weatherSync, season: atm.season, sign: l.sign, photo: obj(r.architecture).photo };
+  const rebuilt = roomFromLegacy(legacyRoom, { id: cleanId(r.id) || "room", name: text(r.name, 60, "") || PLACE_BY_ID[l.place].label, now, notes });
+  // The room's own things (Builder props, v1 things, things you placed) stay, after the template's
+  const taken = new Set(rebuilt.assets.map((a) => a.id));
+  for (const a of Array.isArray(r.assets) ? r.assets : []) {
+    if (!a || typeof a !== "object") continue;
+    const id = taken.has(a.id) ? newId(a.id, taken) : a.id;
+    taken.add(id);
+    rebuilt.assets.push({ ...a, id, parent: a.parent && taken.has(a.parent) ? a.parent : a.parent });
+  }
+  return sanitizeRoom({ ...rebuilt, robot: r.robot, cameras: r.cameras, scenes: r.scenes, activeScene: r.activeScene, defaultCamera: r.defaultCamera, backdrop: r.backdrop?.layer?.startsWith("chroma") ? r.backdrop : rebuilt.backdrop, createdAt: r.createdAt, notes: [...(Array.isArray(r.notes) ? r.notes : []), ...notes] }, { now });
 }

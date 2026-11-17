@@ -209,6 +209,35 @@ describe("Templates", () => {
     }
   });
 
+  test("every place is rebuilt from catalog things: no legacy set, every 1.0 switch has a home", () => {
+    for (const p of PLACES) {
+      const doc = templates.templateRoom(p.id);
+      assert.equal(doc.legacy, null, `${p.id} still draws its 1.0 set`);
+      const r = templates.REBUILT[p.id];
+      const ids = new Set(doc.assets.map((a) => a.id));
+      for (const [prop, list] of Object.entries(r.props)) for (const id of list) assert.ok(ids.has(id), `${p.id}: ${prop} → ${id}`);
+      const known = new Set([...Object.keys(r.props), ...Object.keys(r.stateProps || {}), ...Object.keys(r.effectProps || {}), ...(r.scenery || [])]);
+      for (const q of p.props) assert.ok(known.has(q.id), `${p.id}: the 1.0 switch "${q.id}" has no home`);
+      // A switch that was off in 1.0 is a hidden thing now, and one that was on is shown
+      for (const q of p.props) for (const id of r.props[q.id] || []) {
+        const parentHidden = doc.assets.find((a) => a.id === id)?.hidden;
+        if (!q.on) assert.equal(parentHidden, true, `${p.id}: ${id} should start hidden`);
+      }
+    }
+  });
+
+  test("a room saved with a legacy block is rebuilt from its template, keeping its own things and switches", () => {
+    const old = migrate.roomFromLegacy({ place: "studio" });
+    const legacyDoc = { ...old, template: "lounge", legacy: { place: "lounge", props: { rug: false, cat: false }, companions: {}, sign: "HI", floor: "auto", light: "auto" }, assets: [{ id: "my_mug", type: "mug", pos: [0, 0, 0] }] };
+    const up = migrate.upgradeLegacy(legacyDoc);
+    assert.equal(up.legacy, null);
+    assert.equal(up.template, "lounge");
+    assert.equal(up.assets.find((a) => a.id === "rug").hidden, true);
+    assert.equal(up.assets.find((a) => a.id === "cat").hidden, true);
+    assert.ok(up.assets.some((a) => a.id === "my_mug"), "the room's own things stay");
+    assert.equal(migrate.upgradeLegacy(up), up, "nothing to do the second time");
+  });
+
   test("the chroma templates use the documented colors and nothing else is drawn", () => {
     assert.equal(templates.templateRoom("green").backdrop.layer, "chroma_green");
     assert.equal(templates.templateRoom("blue").backdrop.layer, "chroma_blue");

@@ -134,7 +134,7 @@ export function defaultArchitecture() {
 }
 
 export function defaultAtmosphere() {
-  return { mood: "studio", brightness: 1, timeMode: "template", timeHour: 14, air: "dust", airAmount: 1, season: "none", weatherSync: true, wind: 0.3, emotionTint: true };
+  return { mood: "studio", brightness: 1, timeMode: "template", timeHour: 14, air: "dust", airAmount: 1, season: "none", weatherSync: true, wind: 0.3, emotionTint: true, effects: { bokeh: false, shaft: false, rings: false, spot: false } };
 }
 
 export function emptyRoom({ id = "room", name = "My room", size = { w: 5, d: 4, h: 2.7 }, now = Date.now() } = {}) {
@@ -445,6 +445,8 @@ function cleanAtmosphere(raw) {
     weatherSync: bool(a.weatherSync, true),
     wind: num(a.wind, 0, 1, def.wind, 0.01),
     emotionTint: bool(a.emotionTint, true),
+    // Light effects of the 1.0 studio places: soft out-of-focus lights, a beam of light, rings when it talks, a spotlight
+    effects: Object.fromEntries(["bokeh", "shaft", "rings", "spot"].map((k) => [k, bool(obj(a.effects)[k], def.effects[k])])),
   };
 }
 

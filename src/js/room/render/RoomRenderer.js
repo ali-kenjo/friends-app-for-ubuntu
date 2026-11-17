@@ -146,10 +146,19 @@ export class RoomRenderer {
       this.legacy.place = null;
       for (const mesh of Object.values(this.legacy.floors)) mesh.visible = false;
       if (doc.architecture.floor.material === "grid") this.legacy.floors.grid.visible = true;
+      // A glossy floor in the open is 1.0's dark reflective pool, fading into the backdrop
+      if (doc.architecture.floor.material === "glossy") {
+        const pool = this.legacy.floors.glossy;
+        pool.visible = true;
+        pool.material.color.set(doc.architecture.floor.color);
+        if (!doc.architecture.openAir) pool.scale.set(0.6, 0.6, 1);
+        else pool.scale.set(0.28, 0.28, 1);
+      }
       this.buildArchitecture(doc, level);
       this.stage.setMood(roomMood(doc), doc.atmosphere.brightness);
       this.stage.setChroma(false);
       this.configureAir(doc);
+      this.lookLight = look.light;
       this.ownBackdrop = this.backdropFor(doc);
     }
     this.syncAssets(doc, level);
@@ -184,8 +193,15 @@ export class RoomRenderer {
     }
     if (a.outside !== "none" && a.outside !== "photo") return { mode: "image", texture: outsideTexture(a.outside, roomHour(doc), 11), aspect: 2, dim: 0, bg: new THREE.Color(a.backdrop.bg), edge: new THREE.Color(a.backdrop.edge), glow: 0, glowColor: new THREE.Color(), blobs: [] };
     if (a.outside === "photo") return { mode: "image", bg: new THREE.Color(a.backdrop.bg), edge: new THREE.Color(a.backdrop.edge), glow: 0, glowColor: new THREE.Color(), blobs: [] };
-    const bg = new THREE.Color(a.backdrop.bg);
-    return { mode: "vignette", bg, edge: bg.clone().multiplyScalar(0.35), glow: a.backdrop.glow, glowColor: new THREE.Color(a.backdrop.glowColor || "#ffffff"), blobs: [] };
+    const bd = a.backdrop;
+    const bg = new THREE.Color(bd.bg);
+    const glow = doc.atmosphere.effects?.spot ? Math.max(bd.glow, 0.35) : bd.glow;
+    const out = { mode: bd.mode === "image" ? "vignette" : bd.mode, bg, edge: new THREE.Color(bd.edge), glow, glowColor: bd.glowColor || a.palette.glow ? new THREE.Color(bd.glowColor || a.palette.glow) : (this.lookLight?.clone?.() || new THREE.Color("#ffffff")), blobs: [] };
+    if (bd.mode === "gradient" && bd.mid) {
+      out.mid = new THREE.Color(bd.mid);
+      out.horizon = bd.horizon;
+    }
+    return out;
   }
 
   configureAir(doc) {
@@ -194,7 +210,7 @@ export class RoomRenderer {
     let kind = a.air === "none" ? "" : a.air;
     if (!kind && a.weatherSync && this.legacy.weatherState === "snow") kind = "snow";
     else if (!kind && season === "winter") kind = "snow";
-    this.world.configure({ air: { kind, amount: a.airAmount, color: kind === "petals" ? new THREE.Color(doc.architecture.palette.detail) : null }, bokeh: false, shaft: false, rings: false, reflection: doc.architecture.floor.material === "glossy" });
+    this.world.configure({ air: { kind, amount: a.airAmount, color: kind === "petals" ? new THREE.Color(doc.architecture.palette.detail) : null }, bokeh: Boolean(a.effects?.bokeh), shaft: Boolean(a.effects?.shaft), rings: Boolean(a.effects?.rings), reflection: doc.architecture.floor.material === "glossy" });
   }
 
   // ---- Architecture ----

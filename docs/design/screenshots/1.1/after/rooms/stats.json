@@ -1,13 +1,62 @@
 {
-  "when": "2026-11-17T00:17:39.565Z",
+  "when": "2026-11-17T12:58:26.414Z",
   "renderer": "SwiftShader (software WebGL)",
   "stats": {
-    "lounge|high|16x9|dark": {
-      "calls": 387,
-      "triangles": 779796,
-      "ms": 1985,
+    "studio|high|16x9|dark": {
+      "calls": 135,
+      "triangles": 126958,
+      "ms": 834,
       "level": "high",
-      "meshes": 105
+      "meshes": 40
+    },
+    "glow|high|16x9|dark": {
+      "calls": 135,
+      "triangles": 126958,
+      "ms": 866,
+      "level": "high",
+      "meshes": 40
+    },
+    "greenhouse|high|16x9|dark": {
+      "calls": 210,
+      "triangles": 660146,
+      "ms": 1316,
+      "level": "high",
+      "meshes": 65
+    },
+    "seaside|high|16x9|dark": {
+      "calls": 190,
+      "triangles": 303352,
+      "ms": 1157,
+      "level": "high",
+      "meshes": 60
+    },
+    "garden|high|16x9|dark": {
+      "calls": 148,
+      "triangles": 503404,
+      "ms": 1331,
+      "level": "high",
+      "meshes": 38
+    },
+    "city|high|16x9|dark": {
+      "calls": 88,
+      "triangles": 126790,
+      "ms": 853,
+      "level": "high",
+      "meshes": 39
+    },
+    "sky|high|16x9|dark": {
+      "calls": 80,
+      "triangles": 102884,
+      "ms": 960,
+      "level": "high",
+      "meshes": 21
+    },
+    "creator_studio_desk|high|16x9|dark": {
+      "calls": 329,
+      "triangles": 473682,
+      "ms": 1247,
+      "level": "high",
+      "meshes": 91
     }
   },
   "errors": []

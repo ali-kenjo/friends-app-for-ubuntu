@@ -29,8 +29,7 @@ with what is left written next to it. A fresh session continues from this file a
 - [x] `src/js/room/catalog.mjs`: catalog entry shape (§4.3); entries for every existing asset first
       (104 Builder props, 15 v1 assets, the places' set pieces, 5 companions), then the new ones; `labels()`;
       registered in `scripts/lib/i18n-scan.js`. Fix the malformed `sand_timer` entry.
-- [~] `src/js/room/templates.mjs`: 27 places + 3 v1 presets + "Empty" as room documents; `labels()`.
-      **Left:** only the Living room is rebuilt from catalog assets; the other 26 places still carry a `legacy` block.
+- [x] `src/js/room/templates.mjs`: 27 places + 3 v1 presets + "Empty" as room documents; `labels()`.
 - [x] `src/js/room/rules.mjs`: `canDo(room, actor, assetId, action, context) → { ok, reason }`.
 - [x] `src/js/room/nav.mjs`: grid from oriented footprints, clearance, zones; A*; string pulling +
       Catmull-Rom; reachability.
@@ -97,8 +96,8 @@ with what is left written next to it. A fresh session continues from this file a
       photo frame (personal data), wall calendar (personal data).
 - [x] Catalog ≥ 150 assets, each with en/de/ar names, 2–3 named color slots, footprint, surfaces/anchors,
       actions, LODs, thumbnail, contact-sheet entry.
-- [ ] All 27 templates + 3 presets rebuilt from catalog assets and architecture; compared with 1.0.
-- [ ] Contact sheets reviewed against §3; every failure fixed.
+- [x] All 27 templates + 3 presets rebuilt from catalog assets and architecture; compared with 1.0.
+- [x] Contact sheets reviewed against §3; every failure fixed.
 
 ## Step 5: Editor
 
@@ -177,6 +176,8 @@ with what is left written next to it. A fresh session continues from this file a
 - [ ] Performance pass; measured numbers per tier in DECISIONS.md.
 - [ ] Docs: `docs/design/room.md`, `docs/design/robot-studio.md`, README (accurate numbers, screenshots),
       CHANGELOG 1.1.0 (migration notes, keyboard map).
+- [ ] Animated outside scenery the painter doesn't draw yet: flocks of birds, butterflies, rainbow, balloon, kite,
+      windmill, light trails, holo billboard, shooting stars, satellites (DECISIONS R17).
 - [ ] Final screenshots in `docs/design/screenshots/1.1/`; `npm run design:assets` and `design:rooms`.
 - [ ] Definition of done (§14) items 1–11 each verified on screen, with how.
 - [ ] Final report.
@@ -229,7 +230,9 @@ Next, after approval (in this order):
    `engine.setPost()` (depth of field, AA, AO, grading) get their UI in step 8. Done since the checkpoint:
    the AO stage (GTAO at half resolution), per-mood grading, depth of field (diorama, portrait), SMAA when
    there is no multisampling, the Ultra tier, reworked budgets, `compileAsync`, per-frame stats over all passes.
-2. Step 4: the other 26 templates (the catalog is complete: 194 assets, all built, 2026-11-17).
+2. Step 4 is done (2026-11-17): 194 assets built, all 27 places rebuilt (`src/js/room/rebuilt.mjs`),
+   rooms with a legacy block rebuilt on load. The old place builders now only draw 1.0 room objects the
+   Studio's Room tab still writes (gone with that tab in step 5/8).
 3. Steps 5–9 as listed.
 
 Known transitional state on this branch (each has its step):

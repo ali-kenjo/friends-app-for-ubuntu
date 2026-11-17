@@ -55,8 +55,11 @@ function customCatalog() {
 function readRoom(id) {
   try {
     const raw = JSON.parse(fs.readFileSync(fileFor(id), "utf8"));
-    const doc = model.migrateRoom(raw);
-    return model.sanitizeRoom({ ...doc, id }, { custom: customCatalog() });
+    const upgraded = migrate.upgradeLegacy(model.migrateRoom(raw));
+    const doc = model.sanitizeRoom({ ...upgraded, id }, { custom: customCatalog() });
+    // A room rebuilt from its template is written back once, so it isn't rebuilt on every read
+    if (raw.legacy && !doc.legacy) write(doc);
+    return doc;
   } catch {
     return null;
   }
@@ -106,7 +109,7 @@ function create(body = {}) {
   let doc;
   if (body.room && typeof body.room === "object") {
     const notes = [];
-    doc = model.sanitizeRoom(model.migrateRoom(body.room), { custom: customCatalog(), notes, now });
+    doc = model.sanitizeRoom(migrate.upgradeLegacy(model.migrateRoom(body.room)), { custom: customCatalog(), notes, now });
   } else {
     const t = typeof body.template === "string" && templates.TEMPLATE_BY_ID[body.template] ? body.template : "empty";
     doc = templates.templateRoom(t, { size: body.size, walls: body.walls, now });

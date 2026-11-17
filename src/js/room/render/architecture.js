@@ -77,7 +77,25 @@ export function buildArchitecture(room, { level = "high", hidden = new Set() } =
   const hour = room.atmosphere?.timeHour ?? 14;
 
   // ----- The floor: a soft slab whose top is at y = 0 -----
-  if (arch.floor.material !== "none" && arch.floor.material !== "grid") {
+  if (arch.openAir && arch.floor.material !== "none" && arch.floor.material !== "grid" && arch.floor.material !== "glossy") {
+    // Out in the open the ground fades into the painted view instead of ending at a hard edge
+    const spec = FLOOR_SPEC[arch.floor.material] || FLOOR_SPEC.oak_planks;
+    const disc = new THREE.CircleGeometry(Math.max(w, d) * 1.1, 64);
+    disc.rotateX(-Math.PI / 2);
+    // Two sets of UVs: meters for the floor's texture, 0..1 across the disc for the fade (second channel)
+    disc.setAttribute("uv1", disc.attributes.uv.clone());
+    G.boxUV(disc, { along: "x" });
+    const mat = material({ ...spec, seed: 5, env: 0.3 }, arch.floor.color, level).clone();
+    mat.transparent = true;
+    mat.depthWrite = false;
+    mat.alphaMap = fadeTexture();
+    mat.userData = { ...mat.userData, shared: false, owned: true };
+    const floor = new THREE.Mesh(G.compact(withColor(disc)), mat);
+    floor.receiveShadow = true;
+    floor.renderOrder = -1;
+    floor.name = "floor";
+    group.add(floor);
+  } else if (arch.floor.material !== "none" && arch.floor.material !== "grid" && arch.floor.material !== "glossy") {
     const spec = FLOOR_SPEC[arch.floor.material] || FLOOR_SPEC.oak_planks;
     const slab = G.roundedBox(w + (arch.walls.left ? t : 0.6) + (arch.walls.right ? t : 0.6), 0.06, d + (arch.walls.back ? t : 0.6) + (arch.walls.front ? t : 0.6), 0.02, tier, { along: "x" });
     slab.translate((arch.walls.left ? -t / 2 : -0.3) + (arch.walls.right ? t / 2 : 0.3), -0.03, (arch.walls.back ? -t / 2 : -0.3) + (arch.walls.front ? t / 2 : 0.3));
@@ -345,4 +363,24 @@ export function updateCutaway(walls, camera, mode = "auto", dt = 0.016) {
       wall.mesh.material = wall.faded;
     } else if (wall.solid && wall.mesh.material !== wall.solid) wall.mesh.material = wall.solid;
   }
+}
+
+// A round alpha: solid in the middle, gone at the edge (UVs of a CircleGeometry run 0..1 across it)
+let fade = null;
+function fadeTexture() {
+  if (fade) return fade;
+  const size = 256;
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const r = Math.hypot(x / size - 0.5, y / size - 0.5) * 2;
+      const a = Math.max(0, Math.min(1, (1 - r) / 0.55));
+      data.set([a * 255, a * 255, a * 255, 255], (y * size + x) * 4);
+    }
+  }
+  fade = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  fade.channel = 1;
+  fade.needsUpdate = true;
+  fade.userData.shared = true;
+  return fade;
 }
