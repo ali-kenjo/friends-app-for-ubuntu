@@ -873,3 +873,90 @@
 .re-inspector > section > select.field {
   inline-size: 100%;
 }
+
+/* ----- Scenes ----- */
+.re-scene {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+}
+
+.re-scene > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--target);
+  padding-inline: var(--space-3);
+  cursor: pointer;
+}
+
+.re-scene-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.re-scene-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.re-scene-body {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.re-scene-things {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-block-size: 16rem;
+  overflow-y: auto;
+}
+
+.re-scene-thing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: 40px;
+  font-size: var(--fs-sm);
+}
+
+.re-scene-thing > span:first-child {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.re-scene-thing.child > span:first-child {
+  padding-inline-start: var(--space-4);
+}
+
+.re-scene-lamp {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.re-scene-head {
+  display: flex;
+  justify-content: flex-end;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  padding-inline-end: var(--space-1);
+}
+
+/* A tool that's on (Measure) */
+.re-tools [aria-pressed="true"] {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.re-describe {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+}

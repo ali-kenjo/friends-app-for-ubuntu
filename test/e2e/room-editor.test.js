@@ -285,6 +285,37 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await savedWhere((r) => r.defaultCamera === "auto", "the robot's own framing");
   });
 
+  test("a scene hides a thing and is switched on; measuring and the room in words", async () => {
+    await page.evaluate(() => import("/js/room/editor/open.js").then((m) => m.editRoom()));
+    await editorOpen();
+    await page.waitForFunction(() => document.querySelector(".re-inspector .re-title")?.textContent === "The room");
+    await page.evaluate(() => [...document.querySelectorAll(".re-inspector button")].find((b) => b.textContent.trim() === "New scene").click());
+    await page.waitForSelector(".re-scene[open] .re-scene-thing input");
+    const first = await page.$eval(".re-scene[open] .re-scene-thing input", (el) => el.getAttribute("aria-label"));
+    await page.evaluate(() => document.querySelector(".re-scene[open] .re-scene-thing input").click());
+    const saved = await savedWhere((r) => r.scenes.length === 1 && Object.keys(r.scenes[0].overrides.hidden).length + Object.keys(r.scenes[0].overrides.lights).length === 1, "the scene's change");
+    assert.match(first, /in this scene/);
+    await page.evaluate(() => [...document.querySelectorAll(".re-scene[open] button")].find((b) => b.textContent.trim() === "Switch to it now").click());
+    await savedWhere((r) => r.activeScene === saved.scenes[0].id, "the scene switched on");
+    // Measuring: two clicks in the room, the distance is said
+    await page.evaluate(() => [...document.querySelectorAll(".re-tools button")].find((b) => b.textContent.trim() === "Measure").click());
+    const stage = await (await page.$("#room-editor .re-stage")).boundingBox();
+    await page.mouse.click(stage.x + stage.width * 0.4, stage.y + stage.height * 0.75);
+    await page.mouse.click(stage.x + stage.width * 0.7, stage.y + stage.height * 0.7);
+    await page.waitForFunction(() => /cm between the two points/.test(document.querySelector("#room-editor .sr-only[aria-live]").textContent), { timeout: 5000 });
+    await page.keyboard.press("Escape");
+    assert.strictEqual(await page.evaluate(() => [...document.querySelectorAll(".re-tools button")].find((b) => b.textContent.trim() === "Measure").getAttribute("aria-pressed")), "false");
+    // The room in words: one line per thing that shows
+    await page.evaluate(() => [...document.querySelectorAll(".re-tools button")].find((b) => b.textContent.trim() === "Describe the room").click());
+    await page.waitForSelector(".re-describe li");
+    const lines = await page.$$eval(".re-describe li", (els) => els.length);
+    assert.strictEqual(lines, (await savedRoom()).assets.filter((a) => !a.hidden).length);
+    await page.keyboard.press("Escape");
+    await page.evaluate((x) => [...document.querySelectorAll(".re-scene button")].find((b) => b.textContent.trim() === "Remove the scene")?.click(), null);
+    await savedWhere((r) => r.scenes.length === 0 && r.activeScene === "auto", "the scene removed");
+    await done();
+  });
+
   test("in Arabic the editor is right to left and every word is translated", async () => {
     const s = await api("GET", "/api/settings");
     s.ui.language = "ar";

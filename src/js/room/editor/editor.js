@@ -13,7 +13,7 @@ import * as ops from "./ops.mjs";
 import { Viewport } from "./viewport.js";
 import { catalogPanel, outlinePanel, inspectorPanel, newRoomDialog, roomPickerDialog } from "./panels.js";
 import { cancelThumbs } from "./thumbs.js";
-import { sanitizeRoom } from "../model.mjs";
+import { sanitizeRoom, roomSummary } from "../model.mjs";
 
 export const DEFAULT_PREFS = {
   grid: 0.1,
@@ -238,7 +238,9 @@ class RoomEditor {
     const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable;
     const mod = e.ctrlKey || e.metaKey;
     if (e.key === "Escape") {
-      if (this.vp.ghost) {
+      if (this.vp.measure) {
+        this.toggleMeasure(false);
+      } else if (this.vp.ghost) {
         this.vp.cancelPlacing();
         this.say(t("Placing cancelled"));
       } else if (this.selected.length) this.select([]);
@@ -487,7 +489,9 @@ class RoomEditor {
     const right = h("aside", { class: "re-right", "aria-label": t("Inspector") }, this.inspector.el);
     // Bottom: tools and hints
     this.hintsEl = h("p", { class: "re-hints" });
-    const bottom = h("footer", { class: "re-bottom" }, h("div", { class: "re-tools", role: "toolbar", "aria-label": t("Tools") }, button(t("Select"), () => this.say(t("Select: click a thing, Shift-click to add more")), { icon: "target" }), button(t("Frame the room"), () => this.vp.frameRoom(), { icon: "eye" }), button(t("Plan as a picture"), () => this.exportPlan(), { icon: "image" })), this.hintsEl);
+    this.measureBtn = button(t("Measure"), () => this.toggleMeasure(!this.vp.measure), { icon: "ruler" });
+    this.measureBtn.setAttribute("aria-pressed", "false");
+    const bottom = h("footer", { class: "re-bottom" }, h("div", { class: "re-tools", role: "toolbar", "aria-label": t("Tools") }, button(t("Select"), () => this.say(t("Select: click a thing, Shift-click to add more")), { icon: "target" }), button(t("Frame the room"), () => this.vp.frameRoom(), { icon: "eye" }), this.measureBtn, button(t("Describe the room"), () => this.describe(), { icon: "chat" }), button(t("Plan as a picture"), () => this.exportPlan(), { icon: "image" })), this.hintsEl);
     this.live = h("div", { class: "sr-only", "aria-live": "polite" });
     this.el.append(top, h("div", { class: "re-body" }, left, this.stage, right), bottom, this.live);
   }
@@ -534,6 +538,36 @@ class RoomEditor {
     this.frame.hidden = view !== "shot";
     this.frame.dataset.aspect = this.shotAspect.value;
     this.say({ perspective: t("Perspective view"), top: t("Plan from above"), eyes: t("Through the robot's eyes"), shot: t("How the camera sees it") }[view]);
+  }
+
+  toggleMeasure(on) {
+    if (on) this.vp.startMeasuring();
+    else if (this.vp.stopMeasuring()) this.say(t("Measuring stopped"));
+    this.measureBtn.setAttribute("aria-pressed", String(Boolean(on)));
+  }
+
+  // The room in words: for screen readers, and for anyone who wants a list
+  describe() {
+    const say = (k, v) => t(k, v);
+    const sum = roomSummary(this.room, { detail: "names", say, nameOf: (a) => a.name || t(ops.defOf(a)?.label || a.type) });
+    const head = t("{name}: {w} × {d} m, {n}.", { name: this.room.name, w: this.room.size.w.toFixed(1), d: this.room.size.d.toFixed(1), n: tp("{n} thing", "{n} things", sum.items.length) });
+    const back = h("div", { class: "modal-backdrop re-new" });
+    const box = h("div", { class: "modal re-new-box", role: "dialog", "aria-modal": "true", "aria-labelledby": "re-describe-title" });
+    const close = () => {
+      back.remove();
+      this.stage.focus();
+    };
+    const list = h("ul", { class: "re-describe" }, ...sum.text.split("; ").filter(Boolean).map((line) => h("li", { text: line })));
+    box.append(h("h2", { id: "re-describe-title", text: t("The room in words") }), h("p", { text: head }), list, h("div", { class: "rs-actions" }, button(t("Close"), close, { primary: true })));
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        close();
+      }
+    });
+    back.append(box);
+    document.body.append(back);
+    box.querySelector("button")?.focus();
   }
 
   // A picture of the plan from above, with the room's size written on it

@@ -132,6 +132,15 @@ async function main() {
     await page.waitForFunction(() => document.querySelector("#room-editor .re-stage canvas"), { timeout: 60000 });
     await sleep(1200);
     await scan("room-editor", lang, theme);
+    // A scene, opened; then the room in words
+    await page.evaluate(() => document.querySelector(".re-scene-add")?.click());
+    await page.waitForSelector(".re-scene[open]", { timeout: 5000 }).catch(() => {});
+    if (await page.$(".re-scene[open]")) await scan("room-editor-scene", lang, theme);
+    await page.evaluate(() => [...document.querySelectorAll(".re-tools button")].at(-2)?.click());
+    await page.waitForSelector(".re-describe", { timeout: 5000 }).catch(() => {});
+    await scan("room-editor-describe", lang, theme);
+    await page.keyboard.press("Escape");
+    await sleep(200);
     await page.evaluate(() => document.querySelector(".re-grid .re-item")?.click());
     await sleep(800);
     for (const [i, name] of ["look", "place", "rules", "advanced"].entries()) {

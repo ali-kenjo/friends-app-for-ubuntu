@@ -53,6 +53,7 @@ export class Viewport {
 
   detach() {
     this.cancelPlacing();
+    this.stopMeasuring();
     this.overlay.removeFromParent();
     this.clearHandles();
     for (const [t, fn] of [["pointerdown", this.onDown], ["pointermove", this.onMove], ["pointerup", this.onUp], ["pointercancel", this.onUp], ["wheel", this.onWheel], ["contextmenu", this.onContext]]) this.host.removeEventListener(t, fn);
@@ -397,6 +398,7 @@ export class Viewport {
       return;
     }
     if (this.ghost) return;
+    if (this.measure && e.button === 0) return this.measureClick(e);
     const room = this.ctx.getRoom();
     const sel = this.ctx.selection();
     const pan = e.button === 2 || e.button === 1 || (e.shiftKey && e.button === 0 && !this.pickAsset(e));
@@ -427,6 +429,7 @@ export class Viewport {
   move(e) {
     if (this.pointers.has(e.pointerId)) this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.ghost) return this.updateGhost(e);
+    if (this.measure && this.measure.a && !this.measure.b && !this.drag) return this.measureTo(this.measurePoint(e), e);
     const d = this.drag;
     if (!d) {
       const hover = this.pickAsset(e);
@@ -552,6 +555,76 @@ export class Viewport {
     const y = Math.max(0, Math.min(max, d.y0 + dy));
     this.ctx.commit(ops.updateAsset(room, d.id, a.slot === "ceiling" ? { drop: Math.max(0, Math.min(2, (a.drop || 0) - dy)) } : { pos: [a.pos[0], Math.round(y * 1000) / 1000, a.pos[2]] }), this.ctx.say("Lift"), { coalesce: d.key });
     this.ctx.onHint?.(`${Math.round(y * 100)} cm`, e);
+  }
+
+  // ---------- Measuring: two clicks, the distance between them ----------
+  // A point on a thing (where the pointer hits it) or on the floor
+  measurePoint(e) {
+    const hit = this.pickAsset(e);
+    return hit ? hit.point.clone() : this.floorPoint(e);
+  }
+
+  startMeasuring() {
+    this.stopMeasuring();
+    const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: COLORS.warn, depthTest: false, transparent: true }));
+    line.renderOrder = 20;
+    line.visible = false;
+    const dots = [0, 1].map(() => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 8), new THREE.MeshBasicMaterial({ color: COLORS.warn, depthTest: false }));
+      m.renderOrder = 21;
+      m.visible = false;
+      return m;
+    });
+    this.overlay.add(line, ...dots);
+    this.measure = { a: null, b: null, line, dots };
+    this.host.style.cursor = "crosshair";
+    this.ctx.announce(this.ctx.say("Measuring: click where it starts, then where it ends. Escape stops."));
+  }
+
+  stopMeasuring() {
+    const m = this.measure;
+    if (!m) return false;
+    for (const o of [m.line, ...m.dots]) {
+      o.removeFromParent();
+      o.geometry.dispose();
+      o.material.dispose();
+    }
+    this.measure = null;
+    this.host.style.cursor = "";
+    this.ctx.onHint?.("");
+    return true;
+  }
+
+  measureClick(e) {
+    const m = this.measure;
+    const p = this.measurePoint(e);
+    if (!p) return;
+    if (!m.a || m.b) {
+      m.a = p;
+      m.b = null;
+      m.dots[0].position.copy(p);
+      m.dots[0].visible = true;
+      m.dots[1].visible = false;
+      m.line.visible = false;
+      this.ctx.onHint?.("");
+      return;
+    }
+    m.b = p;
+    this.measureTo(p, e, true);
+  }
+
+  measureTo(p, e, done = false) {
+    const m = this.measure;
+    if (!p || !m?.a) return;
+    m.dots[1].position.copy(p);
+    m.dots[1].visible = true;
+    m.line.geometry.setFromPoints([m.a, p]);
+    m.line.visible = true;
+    const cm = Math.round(m.a.distanceTo(p) * 100);
+    const text = this.ctx.say("{n} cm", { n: cm });
+    this.ctx.onHint?.(text, e);
+    if (done) this.ctx.announce(this.ctx.say("{n} cm between the two points", { n: cm }));
   }
 
   // ---------- Marquee (in the plan from above) ----------

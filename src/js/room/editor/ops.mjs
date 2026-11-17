@@ -420,5 +420,6 @@ export function labels() {
     "{cm} cm left", "{cm} cm right", "{cm} cm back", "{cm} cm forward", "on the {name}", "on the wall", "on the ceiling", "on the floor", "{name} moved {how}, {where}", "nowhere",
     "Outside the room", "Inside a wall", "On top of the {name}", "Blocks the robot's way to the {name}", "Stands where the robot lives",
     "Move {name}", "{name} placed", "Placing {name}. Move the pointer to where it goes; Escape cancels.", "{left} cm from the left wall, {back} cm from the back",
+    "Measuring: click where it starts, then where it ends. Escape stops.", "{n} cm between the two points",
   ];
 }

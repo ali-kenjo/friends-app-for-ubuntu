@@ -727,7 +727,7 @@ export function displayName(asset) {
 // roomSummary: what's in the room, in plain words and as data.
 //   detail: "all" | "names" | "none"; personal: whether personal-data things may show their data
 //   say: (english, vars) → the words (the page passes t(), the helper passes its say())
-export function roomSummary(room, { detail = "all", personal = false, say = (s, v) => fill(s, v), canDo = null } = {}) {
+export function roomSummary(room, { detail = "all", personal = false, say = (s, v) => fill(s, v), canDo = null, nameOf = displayName } = {}) {
   if (detail === "none") return { text: "", items: [] };
   const byId = new Map(room.assets.map((a) => [a.id, a]));
   const items = [];
@@ -736,7 +736,7 @@ export function roomSummary(room, { detail = "all", personal = false, say = (s, 
     const def = CATALOG_BY_ID[a.type];
     const t = worldTransform(room, a, byId);
     const where = whereWords(room, t, a, byId);
-    const item = { id: a.id, name: displayName(a), type: a.type, where, personal: Boolean(def?.personalData) };
+    const item = { id: a.id, name: nameOf(a), type: a.type, where, personal: Boolean(def?.personalData) };
     if (detail === "all") {
       item.pos = [Math.round(t.x * 100) / 100, Math.round(t.y * 100) / 100, Math.round(t.z * 100) / 100];
       item.permission = a.rules.permission;

@@ -9,6 +9,7 @@ import { TEMPLATES } from "../templates.mjs";
 import { defaultRules, displayName, worldTransform, newId } from "../model.mjs";
 import * as ops from "./ops.mjs";
 import { resolveShot, shotPresets } from "../cameras.mjs";
+import * as SC from "./scenes.mjs";
 import { thumbFor } from "./thumbs.js";
 
 const PALETTE = ["#f4efe6", "#ede4d6", "#d9c29c", "#c89b6e", "#b07a4a", "#8a5a33", "#5a3d2b", "#2d3038", "#c47a5a", "#e05a47", "#f2c14e", "#4d8a62", "#5b8fa8", "#6f9cf5", "#7c66dc", "#c98bb8"];
@@ -540,8 +541,62 @@ function roomPanel(ed) {
     section(t("In the air"), tiles({ label: null, name: t("In the air"), items: C.AIRS, value: atm.air, compact: true, columns: 3, onChange: (v) => setAtm({ air: v }) }).el, slider({ label: t("How much"), min: 0.3, max: 2, step: 0.01, value: atm.airAmount, def: 1, onChange: (v) => setAtm({ airAmount: v }) }).el, slider({ label: t("Wind"), min: 0, max: 1, step: 0.01, value: atm.wind, def: 0.3, onChange: (v) => setAtm({ wind: v }) }).el, tiles({ label: t("Season"), items: C.SEASONS, value: atm.season, compact: true, columns: 2, onChange: (v) => setAtm({ season: v }) }).el, toggle({ label: t("Follow the weather outside (when connected, not in Private mode)"), value: atm.weatherSync, onChange: (on) => setAtm({ weatherSync: on }) }).el),
     section(t("Light effects"), ...[["bokeh", "Soft lights"], ["shaft", "Beam of light"], ["rings", "Rings when it talks"], ["spot", "Spotlight"]].map(([k, l]) => toggle({ label: t(l), value: Boolean(atm.effects?.[k]), onChange: (on) => setAtm({ effects: { ...(ed.room.atmosphere.effects || {}), [k]: on } }) }).el)),
     section(t("What's drawn behind the robot"), tiles({ label: null, name: t("Backdrop"), items: C.BACKDROP_LAYERS, value: room.backdrop.layer, compact: true, columns: 2, onChange: (v) => ed.commit({ ...ed.room, backdrop: { ...ed.room.backdrop, layer: v } }, t("Backdrop")) }).el, room.backdrop.layer === "solid" ? swatches({ label: t("Backdrop color"), colors: PALETTE, value: room.backdrop.color, onChange: (v) => ed.commit({ ...ed.room, backdrop: { ...ed.room.backdrop, color: v } }, t("Backdrop")) }).el : null, room.backdrop.layer === "selected" ? h("div", {}, hint(tp("{n} thing stays; select others and press the button to change them.", "{n} things stay; select others and press the button to change them.", room.backdrop.keep.length)), keepSel) : null),
+    scenesSection(ed),
     section(t("Camera shots"), h("div", { class: "rs-field" }, h("span", { class: "rs-label", text: t("In voice mode the camera") }), inVoice), ...cams, addPreset, h("div", { class: "rs-actions" }, saveShot)),
   ];
+}
+
+// ---------- Scenes: named variants of the room ----------
+function scenesSection(ed) {
+  const room = ed.room;
+  const label = (sc) => sc.name || t("Scene");
+  const now = h("select", { class: "field", "aria-label": t("Scene now") }, h("option", { value: "auto", text: t("Automatic (by its schedule, or while filming)") }), h("option", { value: "none", text: t("No scene: the room as it is") }), ...room.scenes.map((sc) => h("option", { value: sc.id, text: label(sc) })));
+  now.value = room.activeScene || "auto";
+  now.addEventListener("change", () => ed.commit({ ...ed.room, activeScene: now.value }, t("Scene")));
+  const rows = room.scenes.map((sc) => {
+    const box = h("details", { class: "re-scene", ...(ed.openScene === sc.id ? { open: "" } : {}) });
+    box.addEventListener("toggle", () => (ed.openScene = box.open ? sc.id : ed.openScene === sc.id ? null : ed.openScene));
+    const n = SC.changeCount(sc);
+    box.append(h("summary", {}, h("span", { class: "re-scene-name", text: label(sc) }), h("span", { class: "re-scene-meta", text: tp("{n} change", "{n} changes", n) })));
+    const set = (patch, lbl = t("Scene")) => ed.commit(SC.updateScene(ed.room, sc.id, patch), lbl, { coalesce: `scene-${sc.id}-${Object.keys(patch)[0]}` });
+    const name = textField({ label: t("Name"), max: 60, value: sc.name, onChange: (v) => set({ name: v }) }).el;
+    const when = tiles({ label: t("Switches on"), items: C.SCENE_WHEN, value: sc.when.kind, compact: true, columns: 3, onChange: (v) => set({ when: { kind: v } }) }).el;
+    const time = (lbl, key) => {
+      const id = `re-sc-${sc.id}-${key}`;
+      const input = h("input", { id, type: "time", class: "field", value: sc.when[key] || "" });
+      input.addEventListener("change", () => set({ when: { [key]: input.value } }));
+      return h("div", { class: "re-num-row" }, h("label", { for: id, text: lbl }), input);
+    };
+    const schedule = sc.when.kind === "schedule" ? h("div", {}, time(t("From"), "from"), time(t("Until"), "to"), h("div", { class: "re-weekdays" }, ...C.WEEKDAYS.map((d) => toggle({ label: t(d.label), value: sc.when.weekdays.includes(d.id), onChange: (on) => set({ when: { weekdays: on ? [...sc.when.weekdays, d.id] : sc.when.weekdays.filter((x) => x !== d.id) } }) }).el)), hint(t("No days chosen: every day."))) : null;
+    const mood = h("select", { class: "field", "aria-label": t("Mood in this scene") }, h("option", { value: "", text: t("Same as the room") }), ...C.MOODS.map((m) => h("option", { value: m.id, text: t(m.label) })));
+    mood.value = sc.overrides.mood || "";
+    mood.addEventListener("change", () => ed.commit(SC.setMood(ed.room, sc.id, mood.value || null), t("Scene")));
+    // What shows, and which lamps are on, in this scene
+    const things = h("ul", { class: "re-scene-things", "aria-label": t("What this scene shows") }, h("li", { class: "re-scene-head", "aria-hidden": "true" }, h("span", { text: t("Shows") })));
+    for (const a of room.assets) {
+      const v = SC.sceneView(room, sc, a);
+      const nm = displayName(a);
+      const shown = h("input", { type: "checkbox", class: "toggle", "aria-label": t("Show {name} in this scene", { name: nm }) });
+      shown.checked = v.shown;
+      shown.addEventListener("change", () => ed.commit(SC.setShown(ed.room, sc.id, a.id, shown.checked), t("Scene")));
+      let lamp = null;
+      if (v.on !== null) {
+        lamp = h("input", { type: "checkbox", class: "toggle", "aria-label": t("{name} switched on in this scene", { name: nm }) });
+        lamp.checked = v.on;
+        lamp.addEventListener("change", () => ed.commit(SC.setLamp(ed.room, sc.id, a.id, lamp.checked), t("Scene")));
+      }
+      things.append(h("li", { class: `re-scene-thing${a.parent ? " child" : ""}` }, h("span", { text: nm }), lamp ? h("span", { class: "re-scene-lamp", text: t("On") }) : null, lamp, shown));
+    }
+    box.append(h("div", { class: "re-scene-body" }, name, when, schedule, h("div", { class: "rs-field" }, h("span", { class: "rs-label", text: t("Mood in this scene") }), mood), h("div", { class: "rs-label", text: t("What this scene shows") }), things, h("div", { class: "rs-actions re-wrap" }, button(t("Switch to it now"), () => ed.commit({ ...ed.room, activeScene: sc.id }, t("Scene")), { icon: "play" }), button(t("Remove the scene"), () => ed.commit(SC.removeScene(ed.room, sc.id), t("Scene")), { icon: "trash" }))));
+    return box;
+  });
+  const add = button(t("New scene"), () => {
+    const r = SC.addScene(ed.room, t("Scene {n}", { n: ed.room.scenes.length + 1 }));
+    ed.openScene = r.id;
+    ed.commit(r.room, t("New scene"));
+  }, { icon: "plus" });
+  add.classList.add("re-scene-add");
+  return section(t("Scenes"), hint(t("A scene is the same room another way: work, chill, filming. It changes what shows, which lamps are on and the mood.")), h("div", { class: "rs-field" }, h("span", { class: "rs-label", text: t("Scene now") }), now), ...rows, h("div", { class: "rs-actions" }, add));
 }
 
 // ---------- New room ----------

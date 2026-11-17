@@ -86,3 +86,45 @@ describe("Lamps", () => {
     assert.equal(on(scened), false);
   });
 });
+
+describe("Scenes", () => {
+  const SC = require("../src/js/room/editor/scenes.mjs");
+  test("a scene holds only what it changes, and the room shows it while it's on", () => {
+    let room = lounge();
+    const lamp = room.assets.find((a) => a.state && "on" in a.state);
+    const other = room.assets.find((a) => !a.hidden && a.id !== lamp.id && !a.parent);
+    let r = SC.addScene(room, "Night");
+    room = r.room;
+    const id = r.id;
+    room = SC.setShown(room, id, other.id, false);
+    room = SC.setLamp(room, id, lamp.id, false);
+    room = SC.setMood(room, id, "night");
+    room = model.sanitizeRoom(room);
+    const sc = room.scenes.find((s) => s.id === id);
+    assert.deepEqual(Object.keys(sc.overrides.hidden), [other.id]);
+    assert.equal(sc.overrides.lights[lamp.id].on, false);
+    assert.equal(SC.changeCount(sc), 3);
+    // Back to the room's own values: the overrides go
+    room = SC.setShown(room, id, other.id, true);
+    room = SC.setMood(room, id, room.atmosphere.mood);
+    assert.equal(SC.changeCount(room.scenes.find((s) => s.id === id)), 1);
+    // Switched on by hand, the room shows it
+    room = SC.setShown(room, id, other.id, false);
+    const on = effectiveRoom(model.sanitizeRoom({ ...room, activeScene: id }));
+    assert.ok(on.hidden.has(other.id));
+    assert.equal(on.room.assets.find((a) => a.id === lamp.id).state.on, false);
+    assert.deepEqual(SC.sceneView(room, room.scenes.find((s) => s.id === id), other), { shown: false, on: null });
+  });
+
+  test("a scheduled scene switches on in its window; removing the one that's on goes back to automatic", () => {
+    let r = SC.addScene(lounge(), "Work");
+    let room = SC.updateScene(r.room, r.id, { when: { kind: "schedule", from: "09:00", to: "17:00", weekdays: [1, 2, 3, 4, 5] } });
+    room = model.sanitizeRoom(room);
+    assert.equal(effectiveRoom(room, { now: new Date(2026, 10, 16, 10, 0) }).scene?.id, r.id); // a Monday
+    assert.equal(effectiveRoom(room, { now: new Date(2026, 10, 15, 10, 0) }).scene, null); // a Sunday
+    assert.equal(effectiveRoom(room, { now: new Date(2026, 10, 16, 19, 0) }).scene, null);
+    room = SC.removeScene({ ...room, activeScene: r.id }, r.id);
+    assert.equal(room.activeScene, "auto");
+    assert.equal(room.scenes.length, 0);
+  });
+});

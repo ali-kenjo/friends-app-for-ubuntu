@@ -6,6 +6,7 @@
 const PATHS = {
   // navigation and places
   home: '<path d="M4 11.5 12 5l8 6.5"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/>',
+  ruler: '<rect x="3" y="8" width="18" height="8" rx="1.5"/><path d="M7 8v3M11 8v4M15 8v3M19 8v2"/>',
   talk: '<rect x="4" y="5" width="16" height="12" rx="4"/><path d="M9 21h6"/><path d="M12 17v4"/><line x1="9.5" y1="10" x2="9.5" y2="12"/><line x1="14.5" y1="10" x2="14.5" y2="12"/>',
   missions: '<path d="M5 21V4"/><path d="M5 5h11l-2 3.5L16 12H5"/>',
   today: '<rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/><polyline points="9 15 11 17 15 13"/>',

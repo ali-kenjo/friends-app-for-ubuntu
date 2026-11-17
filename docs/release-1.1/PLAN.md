@@ -140,9 +140,11 @@ with what is left written next to it. A fresh session continues from this file a
       revert, Save as…, duplicate, export/import `.friends-room`, copy/paste between rooms (Ctrl+C/V).
 - [x] Room picker ("Your rooms…") with pictures; the editor sends the room's picture when it closes.
 - [ ] Custom models wizard (§5.11) and re-skinning built-ins; texture/triangle caps.
-- [x] Extras: per-asset schedules (Advanced tab), floor plan as a PNG.
-- [ ] Extras: scenes UI, Describe a room, ask the robot to rearrange, tidy up, plants that need care,
-      measure tool, "Describe my room" for screen readers.
+- [x] Extras: per-asset schedules (Advanced tab), floor plan as a PNG, scenes (which is on now; per scene
+      its name, when it switches on, its mood, what shows and which lamps are on; holds only what it
+      changes), the measure tool, "Describe the room" (the room in words, for screen readers and anyone).
+- [ ] Extras that need the robot or the AI: Describe a room (AI, step 7), ask the robot to rearrange and
+      tidy up (step 7), plants that need care (step 6).
 - [ ] The robot reacts to placed things during a conversation (with step 6).
 - [x] Touch, keyboard and accessibility for all of the above: keyboard shortcuts, outline as a tree,
       arrow keys in tabs/tiles not stolen by the shortcuts, focus kept when the inspector rebuilds, live
