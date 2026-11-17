@@ -7,7 +7,7 @@ import { bus, EVENTS } from "./event-bus.mjs";
 import { appState } from "./state-store.mjs";
 import { attachLiveContextSocket, detachLiveContextSocket, initRoomContextBridge } from "./ai/room-context-bridge.mjs";
 import { shaderPipeline } from "./world/shader-pipeline.mjs";
-import { lightingController } from "./world/lighting-presets.mjs";
+import { EMOTION_AMBIENT_TINTS } from "./world/lighting-presets.mjs";
 import { unifiedRoom } from "./world/unified-room-manager.mjs";
 import { roomGizmos } from "./world/gizmos.mjs";
 import { navMesh } from "./robot/pathfinding.mjs";
@@ -28,7 +28,8 @@ let smoothCamActive = false;
 export function attachV1Engine(engine) {
   if (!engine || attachedEngine === engine) return;
   attachedEngine = engine;
-  unifiedRoom.attachToScene(engine.stage.scene);
+  // 1.1: the room's things are drawn by RoomRenderer from the room document; the v1 manager keeps only its
+  // state for the behaviour engine (it is no longer added to the scene, so no place shows v1 props twice)
   roomGizmos.init(engine.camera, engine.canvas, engine.stage.scene);
 
   const s = getSettings();
@@ -48,22 +49,15 @@ function applyVisualSettings(s) {
   if (!attachedEngine || !s) return;
   const vs = s.visualStyle || {};
   const accent = s.theme?.accent || "#f5a94a";
-  const theme = vs.shaderTheme || "cozy_stylized";
+  // Shader themes style the robot only; room things keep their art-directed materials (1.1, DECISIONS R6)
+  shaderPipeline.applyStyle(attachedEngine.robot?.root, vs.shaderTheme || "cozy_stylized", { accent });
+  setEmotionTint(appState.get("behavior")?.emotion || "calm", vs.emotionLightingTint !== false);
+}
 
-  shaderPipeline.applyStyle(attachedEngine.robot?.root, theme, { accent });
-  shaderPipeline.applyStyle(attachedEngine.rooms?.group, theme, { accent });
-  unifiedRoom.setVisualTheme(theme, accent);
-
-  lightingController.apply(attachedEngine.stage, attachedEngine.renderer, attachedEngine.rooms?.group, {
-    presetId: vs.lightingPreset || "warm_desk_lamp",
-    emotionTintEnabled: vs.emotionLightingTint !== false,
-    lampEmissionScale: vs.deskLampEmission ?? 1.0,
-    emotion: appState.get("behavior")?.emotion || "calm",
-  });
-
-  if (attachedEngine.stage?.setShadows) {
-    attachedEngine.stage.setShadows(vs.shadowQuality !== "off", vs.shadowQuality === "high" ? 2048 : 1024);
-  }
+// The robot's feeling tints the room's bounce light a little (the moods own every other light now)
+function setEmotionTint(emotion, on = true) {
+  const tint = EMOTION_AMBIENT_TINTS[emotion];
+  attachedEngine?.stage?.setEmotionTint?.(on && tint ? tint : null);
 }
 
 export function stepV1Frame(engine, pose, dt, time) {
@@ -139,9 +133,7 @@ export function initV1Runtime() {
   bus.on(EVENTS.SHADER_CHANGED, () => applyVisualSettings(getSettings()));
   bus.on(EVENTS.LIGHTING_CHANGED, () => applyVisualSettings(getSettings()));
   bus.on(EVENTS.ROBOT_EMOTION, ({ emotion }) => {
-    if (attachedEngine) {
-      lightingController.apply(attachedEngine.stage, attachedEngine.renderer, attachedEngine.rooms?.group, { emotion });
-    }
+    if (attachedEngine) setEmotionTint(emotion, getSettings()?.visualStyle?.emotionLightingTint !== false);
   });
   bus.on(EVENTS.CAMERA_PRESET_CHANGED, ({ preset }) => {
     currentCameraPreset = preset;

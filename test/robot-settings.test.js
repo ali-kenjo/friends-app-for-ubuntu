@@ -18,7 +18,10 @@ describe("Robot settings are kept, checked and repaired", () => {
     assert.strictEqual(r.design.colors.head, "#ede4d6");
     assert.strictEqual(r.design.face.mouth, "line");
     assert.strictEqual(r.design.face.eyes, "classic");
-    assert.strictEqual(r.room.place, "studio");
+    // 1.1: the room is a document in the rooms store; a fresh setup starts in a Studio room
+    assert.match(r.room.layoutId, /^[\w-]+$/);
+    assert.strictEqual(require("../server/rooms").get(r.room.layoutId).template, "studio");
+    assert.deepStrictEqual(r.ai, { mood: true, gestures: true, move: true, look: true, use: true, rearrange: "ask", describe: true, context: "all" });
     assert.deepStrictEqual(r.looks, []);
     assert.strictEqual(r.shot, "medium");
     assert.strictEqual(r.position, "center");
@@ -49,8 +52,9 @@ describe("Robot settings are kept, checked and repaired", () => {
       },
     };
     const saved = settings.set(input).robot;
-    const { design, room, looks, ...rest } = saved;
+    const { design, room, looks, ai, ...rest } = saved;
     assert.deepStrictEqual(rest, input.robot);
+    assert.deepStrictEqual(ai, settings.DEFAULTS.robot.ai);
     assert.deepStrictEqual(design, settings.DEFAULTS.robot.design);
     assert.deepStrictEqual(room, settings.DEFAULTS.robot.room);
     assert.deepStrictEqual(looks, []);

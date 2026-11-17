@@ -8,6 +8,7 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { LIGHT_MOODS } from "./room.mjs";
+import { MOOD_BY_ID } from "../room/choices.mjs";
 
 // A soft round spot: a canvas gradient, big and blurry on purpose (no fine detail)
 export function radialTexture(stops, size = 256) {
@@ -52,6 +53,11 @@ export class Stage {
     this.rim.position.set(0.8, 2.2, -2.6);
     this.rim.target.position.set(0, 0.7, 0);
     this.scene.add(this.key, this.key.target, this.fill, this.fill.target, this.rim, this.rim.target);
+    // Bounce light: the sky's color from above, the floor's from below (a cheap global-illumination feel);
+    // off until a room asks for it, so the 1.0 places look as they did
+    this.hemi = new THREE.HemisphereLight("#d9e2ff", "#6b4a3a", 0);
+    this.scene.add(this.hemi);
+    this.roomBounds = null;
 
     // The soft shadow right under it, and the ring's glow on the floor
     const shadowTexture = radialTexture([[0, "rgba(0,0,0,0.62)"], [0.45, "rgba(0,0,0,0.3)"], [1, "rgba(0,0,0,0)"]]);
@@ -94,7 +100,7 @@ export class Stage {
 
   // The lighting mood (room.mjs LIGHT_MOODS) and how bright: colors and strengths of the three lights
   setMood(id, brightness = 1) {
-    this.mood = LIGHT_MOODS[id] || LIGHT_MOODS.studio;
+    this.mood = MOOD_BY_ID[id] || LIGHT_MOODS[id] || LIGHT_MOODS.studio;
     this.brightness = brightness;
     this.applyLights();
   }
@@ -109,8 +115,85 @@ export class Stage {
     this.fill.color.set(m.fill[0]);
     this.fill.intensity = m.fill[1] * fill * b;
     this.rim.color.set(m.rim[0]);
-    this.rim.intensity = m.rim[1] * rim * b;
+    this.rim.intensity = m.rim[1] * rim * b * (this.roomBounds ? 0.4 : 1);
     this.scene.environmentIntensity = m.env * (0.6 + 0.4 * b);
+    if (this.roomBounds && m.hemi) {
+      this.hemi.color.set(m.hemi[0]);
+      if (this.emotionTint) this.hemi.color.lerp(this.emotionTint, 0.22);
+      this.hemi.intensity = m.hemi[1] * b;
+    } else this.hemi.intensity = 0;
+  }
+
+  // The robot's feeling, as a slight tint of the bounce light (null: none)
+  setEmotionTint(hex) {
+    this.emotionTint = hex ? new THREE.Color(hex) : null;
+    this.applyLights();
+  }
+
+  // A room with walls: the key light's shadow covers the whole room (every thing casts and receives),
+  // from a fixed place above the front left; the robot's own soft contact shadow still follows it.
+  // floorColor tints the bounce light from below. null goes back to the 1.0 behaviour.
+  setRoomBounds(box, { floorColor = "#6b4a3a", mapSize = 2048, soft = 4 } = {}) {
+    this.roomBounds = box ? box.clone() : null;
+    if (box) {
+      const c = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const r = Math.max(size.x, size.z) * 0.62 + 0.4;
+      this.key.position.set(c.x - r * 0.55, Math.max(3.4, size.y + 1.6), c.z + r * 0.85);
+      this.key.target.position.set(c.x, 0.4, c.z);
+      const cam = this.key.shadow.camera;
+      Object.assign(cam, { left: -r, right: r, top: r, bottom: -r, near: 0.3, far: r * 4 + 6 });
+      cam.updateProjectionMatrix();
+      this.key.shadow.radius = soft;
+      this.key.shadow.bias = -0.00025;
+      this.key.shadow.normalBias = 0.025;
+      this.hemi.groundColor.set(floorColor);
+      // The rim light outlines the robot from behind; in a room it would also light the whole floor in its
+      // color and glare off it towards the camera, so it stays high and gentle there (DECISIONS R7)
+      this.rim.position.set(0.8, 2.6, -2.6);
+      this.rim.target.position.set(0, 0.8, 0);
+      if (this.key.shadow.mapSize.x !== mapSize) this.setShadows(this.key.castShadow, mapSize);
+    } else {
+      Object.assign(this.key.shadow.camera, { left: -1.1, right: 1.1, top: 1.6, bottom: -0.4, near: 0.5, far: 8 });
+      this.rim.position.set(0.8, 2.2, -2.6);
+      this.rim.target.position.set(0, 0.7, 0);
+      this.key.shadow.camera.updateProjectionMatrix();
+      this.key.shadow.radius = 4;
+      this.key.shadow.bias = -0.0004;
+      this.key.shadow.normalBias = 0.02;
+    }
+    this.applyLights();
+  }
+
+  // Reflections from this room (its walls, floor and window light), not a neutral studio
+  makeRoomEnvironment(spec) {
+    if (!spec) return this.makeEnvironment();
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    const scene = new THREE.Scene();
+    const { w = 5, d = 4, h = 2.7, wall = "#e9e1d4", floor = "#b88457", ceiling = "#f1ece3", windows = [], light = "#fff1e0" } = spec;
+    const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [wall, wall, ceiling, floor, wall, wall].map((c) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(0.55), side: THREE.BackSide })));
+    box.position.y = h / 2;
+    scene.add(box);
+    for (const win of windows) {
+      const p = new THREE.Mesh(new THREE.PlaneGeometry(win.w, win.h), new THREE.MeshBasicMaterial({ color: new THREE.Color(win.color || "#dff0ff").multiplyScalar(1.1) }));
+      p.position.set(win.x, win.y, win.z);
+      p.lookAt(0, win.y, 0);
+      scene.add(p);
+    }
+    // A soft bright patch where the key light comes from
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(light).multiplyScalar(1.6) }));
+    lamp.position.set(-w * 0.3, h * 0.9, d * 0.3);
+    scene.add(lamp);
+    const target = pmrem.fromScene(scene, 0.035);
+    this.envTarget?.dispose();
+    this.envTarget = target;
+    this.scene.environment = target.texture;
+    scene.traverse((o) => {
+      o.geometry?.dispose();
+      for (const m of [].concat(o.material || [])) m.dispose();
+    });
+    pmrem.dispose();
+    this.applyLights();
   }
 
   // Chroma keys must stay one flat color: no shadow, no glow spilling onto them
@@ -130,8 +213,10 @@ export class Stage {
     const s = 1 + lift * 1.6;
     this.contact.position.set(x, 0.002, z);
     this.floorGlow.position.set(x, 0.003, z);
-    this.key.position.set(KEY_AT.x + x, KEY_AT.y, KEY_AT.z + z);
-    this.key.target.position.set(x, 0.6, z);
+    if (!this.roomBounds) {
+      this.key.position.set(KEY_AT.x + x, KEY_AT.y, KEY_AT.z + z);
+      this.key.target.position.set(x, 0.6, z);
+    }
     this.contact.scale.set(s, s, 1);
     this.contact.material.opacity = Math.max(0.35, 1 - lift * 2.2);
     this.floorGlow.material.opacity = Math.max(0.3, 0.9 - lift * 2.5);

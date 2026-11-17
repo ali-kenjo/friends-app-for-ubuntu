@@ -662,7 +662,7 @@ export function looksPanel(ctx) {
   const card = (look, { saved = false } = {}) => {
     const d = look.design;
     const worn = Object.keys(d.outfit).filter((k) => d.outfit[k].item !== "none").map((k) => t(D.ITEMS[k][d.outfit[k].item].label));
-    const place = R.PLACE_BY_ID[look.room.place];
+    const place = R.PLACE_BY_ID[look.room.place] || R.PLACE_BY_ID.studio;
     const b = h(
       "button", { type: "button", class: "rs-look", "data-id": look.id, title: look.about ? t(look.about) : "" },
       h("span", { class: "rs-look-swatch", "aria-hidden": "true", style: `--a:${d.colors.head};--b:${d.colors.body};--c:${d.colors.light || "var(--accent)"}` }, h("span", { class: "rs-look-eyes" }, h("i"), h("i"))),

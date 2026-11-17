@@ -46,6 +46,42 @@ const hosts = new Map(); // name → { el, options, visible }
 const filming = { on: false, cameraFriendly: true, largerFace: false };
 let modelInfo = { custom: false };
 
+// ---------- The room (a document in the rooms store, src/js/room/model.mjs) ----------
+// settings.robot.room is { layoutId }; the document itself is loaded from the helper, kept here, and
+// handed to the engine. The Room Editor and the AI's room tools change it through setRoom().
+let roomDoc = null;
+let roomWanted = "";
+async function loadRoom(id) {
+  roomWanted = id;
+  try {
+    const res = await fetch(`/api/rooms/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new Error(`room ${res.status}`);
+    const doc = await res.json();
+    if (roomWanted !== id) return;
+    roomDoc = doc;
+    engine?.setLook({ roomDoc });
+    notify("room", { room: roomDoc });
+  } catch (err) {
+    console.warn("The room couldn't be loaded:", err.message);
+  }
+}
+
+// A changed room: shown at once, saved a moment later (one write for a burst of changes)
+let roomSaveTimer = 0;
+export function setRoom(doc, { save = true } = {}) {
+  roomDoc = doc;
+  engine?.setLook({ roomDoc });
+  notify("room", { room: roomDoc });
+  if (!save || !doc?.id) return;
+  clearTimeout(roomSaveTimer);
+  roomSaveTimer = setTimeout(() => {
+    fetch(`/api/rooms/${encodeURIComponent(doc.id)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(doc) })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((saved) => saved && notify("room-saved", { room: saved }))
+      .catch(() => {});
+  }, 600);
+}
+
 export function webglSupported() {
   try {
     const c = document.createElement("canvas");
@@ -79,7 +115,9 @@ export function loadEngine() {
           else robotSound.blip("tap");
         },
         onPropUsed: (res) => {
-          const id = res?.propId || "";
+          // A thing that was switched (a lamp on or off) is saved with the room
+          if (res?.changed && roomDoc) setRoom(roomDoc);
+          const id = res?.changed?.type || res?.propId || "";
           if (id === "radio" || id === "record_player") robotSound.toggleAmbience("music");
           else if (id === "fireplace" || id === "fire_pit" || id === "wood_stove") robotSound.toggleAmbience("fireplace");
           else if (id === "plant" || id.includes("plant") || id.includes("fern")) robotSound.water();
@@ -138,14 +176,16 @@ function applySettings(s) {
   root.style.setProperty("--robot-face", d.colors.face || light);
   root.dataset.robotEyes = d.face.eyes;
   root.dataset.robotMouth = d.face.mouth === "none" ? "off" : "on";
+  const layoutId = r.room?.layoutId || "";
+  if (layoutId && layoutId !== roomDoc?.id && layoutId !== roomWanted) loadRoom(layoutId);
   if (!engine) return;
   if (engine.rooms) {
-    engine.rooms.weatherState = !s.privateMode && r.room?.weatherSync ? (window.__friendsWeatherState || "") : "";
+    engine.rooms.weatherState = !s.privateMode && (roomDoc?.atmosphere?.weatherSync ?? r.room?.weatherSync) ? (window.__friendsWeatherState || "") : "";
   }
   engine.setLook({
     design: d,
     accent: s.theme.accent,
-    room: r.room,
+    ...(layoutId ? { roomDoc: roomDoc?.id === layoutId ? roomDoc : null } : { room: r.room, roomDoc: null }),
     shot: r.shot,
     position: r.position,
     cinematic: r.cinematic,
@@ -262,6 +302,10 @@ export const robot = {
   animator,
   sound: robotSound,
   reactEvent: (type, detail = {}) => director.reactEvent(type, detail),
+  get room() {
+    return roomDoc;
+  },
+  setRoom,
   get engine() {
     return engine;
   },
@@ -321,3 +365,5 @@ export const robot = {
 
 // For checking the robot by hand or in a test browser: open the app with ?robot-debug
 if (new URLSearchParams(location.search).has("robot-debug")) Object.assign(window, { friendsRobot: robot, friendsSettings: { getSettings, updateSettings } });
+// The asset lab for contact sheets (scripts/asset-sheet.js): loaded only with ?room-lab
+if (new URLSearchParams(location.search).has("room-lab")) import("../room/render/lab.js").catch((e) => console.error(e));

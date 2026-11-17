@@ -226,6 +226,8 @@ const DEFAULTS = {
     world: true, // the room around it: glossy floor and reflection, drifting light, rings on the floor
     aiGestures: { voice: true, chat: false }, // the AI moves the robot itself (robot_mood / robot_gesture)
     aiAllowed: { mood: true, gesture: true, prop: true, move: true, look: true }, // which of its body's moves the AI may use
+    // 1.1: one permission model (src/js/room/rules.mjs); aiAllowed above is read for one more release
+    ai: { mood: true, gestures: true, move: true, look: true, use: true, rearrange: "ask", describe: true, context: "all" },
     interactive: true, // tap, hold and drag the robot, and tap things in its room
     nameTag: false, // the character's name under the robot
     smartMoods: false, // one small extra Gemini request per turn to read the mood
@@ -739,7 +741,7 @@ function sanitize(input) {
   const oneOf = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
   // (their parts differ by place and slot, so they're cleaned by their own modules, not by clean() above)
   r.design = look.design.sanitizeDesign(raw.design);
-  r.room = look.room.sanitizeRoom(raw.room);
+  r.room = look.cleanRoomRef(raw.room);
   r.looks = look.cleanLooks(raw.looks);
   r.customRooms = look.cleanCustomRooms(raw.customRooms);
   r.cameraMoves = look.cleanCameraMoves(raw.cameraMoves);
@@ -748,6 +750,12 @@ function sanitize(input) {
   r.voicePlace = geometry.cleanPlace(r.voicePlace);
   r.seat = oneOf(r.seat, ROBOT.seats, DEFAULTS.robot.seat);
   r.aiAllowed = Object.fromEntries(Object.keys(DEFAULTS.robot.aiAllowed).map((k) => [k, r.aiAllowed?.[k] !== false]));
+  const ai = raw.ai && typeof raw.ai === "object" ? raw.ai : {};
+  r.ai = {
+    ...Object.fromEntries(["mood", "gestures", "move", "look", "use", "describe"].map((k) => [k, ai[k] !== false])),
+    rearrange: oneOf(ai.rearrange, ["off", "ask", "allowed"], "ask"),
+    context: oneOf(ai.context, ["all", "names", "none"], "all"),
+  };
   r.interactive = r.interactive !== false;
   r.nameTag = Boolean(r.nameTag);
   r.quality = oneOf(r.quality, ROBOT.qualities, DEFAULTS.robot.quality);
@@ -1031,7 +1039,17 @@ function get() {
   } catch {}
   // Settings from before there were characters: a name you'd given the AI becomes your own character
   const upgraded = stored && characters.migrate(stored, stored.personality);
-  cache = sanitize(upgraded ? { ...stored, characters: upgraded } : stored || {});
+  let input = upgraded ? { ...stored, characters: upgraded } : stored || {};
+  // 1.1: the robot's rooms (places, Room Builder props, v1 assets, custom rooms, looks, each character's room)
+  // move into room documents once; the settings keep references ({ layoutId })
+  let movedRooms = null;
+  try {
+    movedRooms = require("./rooms").migrateOnStart(input);
+  } catch (err) {
+    require("./logger").warn?.(`Rooms: the move to room documents failed, the old rooms stay: ${err.message}`);
+  }
+  if (movedRooms) input = movedRooms;
+  cache = sanitize(input);
   // Before the redesign the accent was blue: someone who never changed it (and their built-in Atlas) gets the new one
   if (stored && (stored.ui?.design ?? 1) < 2) {
     if (cache.theme.accent === OLD_ACCENT) cache.theme.accent = DEFAULTS.theme.accent;
@@ -1060,7 +1078,7 @@ function get() {
   const changedTg = storeTelegramToken(cache);
   const changedRd = storeRedditSecret(cache);
   const changedVoice = storeVoiceSecrets(cache);
-  if (changedTg || changedRd || changedVoice) writeJson(file, withoutDerived(cache));
+  if (changedTg || changedRd || changedVoice || movedRooms) writeJson(file, withoutDerived(cache));
   return cache;
 }
 
@@ -1114,7 +1132,16 @@ function patch(changes) {
     }
     return out;
   };
-  return set(merge(clone(get()), changes));
+  const merged = merge(clone(get()), changes);
+  // The robot's room is one thing, not a merge: a patch that brings a reference ({ layoutId }) replaces a
+  // 1.0 room object, and a patch that brings a 1.0 room (a place) drops the reference (a diff can't say
+  // "this key is gone")
+  const room = changes?.robot?.room;
+  if (room && typeof room === "object" && merged.robot?.room) {
+    if (typeof room.layoutId === "string" && room.layoutId) merged.robot.room = { layoutId: room.layoutId };
+    else if (typeof room.place === "string") delete merged.robot.room.layoutId;
+  }
+  return set(merged);
 }
 
 // Read settings.json again (after a backup was restored)

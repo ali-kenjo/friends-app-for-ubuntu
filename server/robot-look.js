@@ -11,6 +11,13 @@ const MAX_ROOMS = 24;
 const MAX_CAMERA_MOVES = 12;
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
+// A room is a reference to a room document ({ layoutId }, 1.1) or, from older settings and files, a 1.0
+// room object (read for one more release; server/rooms.js moves it into a document on start)
+function cleanRoomRef(v) {
+  if (v && typeof v === "object" && typeof v.layoutId === "string" && /^[\w-]{1,40}$/.test(v.layoutId)) return { layoutId: v.layoutId };
+  return room.sanitizeRoom(v);
+}
+
 // One saved look: a name, a design and a room
 function cleanLook(input, id) {
   const l = input && typeof input === "object" ? input : {};
@@ -18,7 +25,7 @@ function cleanLook(input, id) {
     id: /^[\w-]{1,40}$/.test(l.id) ? l.id : id,
     name: typeof l.name === "string" ? l.name.replace(/\s+/g, " ").trim().slice(0, 40) || "My look" : "My look",
     design: design.sanitizeDesign(l.design),
-    room: room.sanitizeRoom(l.room),
+    room: cleanRoomRef(l.room),
   };
   if (typeof l.thumb === "string" && l.thumb.startsWith("data:image/") && l.thumb.length < 40000) {
     out.thumb = l.thumb;
@@ -46,7 +53,7 @@ function cleanCustomRoom(input, id) {
   const out = {
     id: /^[\w-]{1,40}$/.test(r.id) ? r.id : id,
     name: typeof r.name === "string" ? r.name.replace(/\s+/g, " ").trim().slice(0, 40) || "My room" : "My room",
-    room: room.sanitizeRoom(r.room),
+    room: cleanRoomRef(r.room),
   };
   if (typeof r.thumb === "string" && r.thumb.startsWith("data:image/") && r.thumb.length < 40000) {
     out.thumb = r.thumb;
@@ -105,5 +112,5 @@ function upgradeRobot(robot) {
 module.exports = {
   design, room, catalog,
   MAX_LOOKS, MAX_ROOMS, MAX_CAMERA_MOVES,
-  clone, cleanLook, cleanLooks, cleanCustomRoom, cleanCustomRooms, cleanCameraMoves, upgradeRobot,
+  clone, cleanRoomRef, cleanLook, cleanLooks, cleanCustomRoom, cleanCustomRooms, cleanCameraMoves, upgradeRobot,
 };

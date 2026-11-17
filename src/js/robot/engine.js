@@ -16,7 +16,7 @@ import { FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 import { Face } from "./face.js";
 import { Stage } from "./scene.js";
 import { World } from "./world.js";
-import { RoomScene } from "./room3d.js";
+import { RoomRenderer } from "../room/render/RoomRenderer.js";
 import { defaultRoom } from "./room.mjs";
 import { buildRobot, loadRobot, applyPose, applyLook, setMaterialDetail, disposeRobot, SCREEN_ASPECT } from "./model.js";
 import { userGlowFor } from "./presets.mjs";
@@ -246,7 +246,7 @@ export class RobotEngine {
     this.stage.scene.add(this.robot.root);
     this.world = new World(this.stage);
     this.world.setRobot(this.robot);
-    this.rooms = new RoomScene(this.stage, this.world);
+    this.rooms = new RoomRenderer(this.stage, this.world);
     this.roomKey = "";
     this.roomDirty = true;
     this.photo = { texture: null, aspect: 1, source: null, blur: -1 };
@@ -533,14 +533,14 @@ export class RobotEngine {
       this.stage.setAccent(this.look.accent);
       this.designDirty = true;
     }
-    if (look.room) this.roomDirty = true;
+    if (look.room || look.roomDoc !== undefined) this.roomDirty = true;
     if (look.cameraFriendly !== undefined) this.stage.setCameraFriendly(look.cameraFriendly);
     if (look.theme) this.look.themeColor.set(look.theme.bg);
   }
 
   // Which place is drawn: the host's own (the chat dock asks for "dock"), else the one in the settings
   placeId() {
-    return this.active?.options.background ?? this.look.room.place;
+    return this.active?.options.background ?? (this.look.roomDoc ? `room:${this.look.roomDoc.id}` : this.look.room?.place);
   }
 
   // Builds the room for the place that's showing (when it, its settings or the quality change)
@@ -549,6 +549,7 @@ export class RobotEngine {
     this.roomDirty = false;
     this.roomKey = `${place}|${this.level}`;
     if (place === "dock") this.rooms.configureDock();
+    else if (this.look.roomDoc && place?.startsWith("room:")) this.rooms.configure(this.look.roomDoc, { light: this.look.accent, level: this.level, filming: this.look.cameraFriendly });
     else this.rooms.configure({ ...this.look.room, place }, { light: this.look.accent, level: this.level });
     this.applyPhoto();
     this.glowingFor = null;
@@ -632,7 +633,7 @@ export class RobotEngine {
     applyPose(this.robot, pose, { accent: look.accent, user: look.user, cameraFriendly: look.cameraFriendly, glowBoost: bloomOn ? 1 : 1.3, time: pose.t });
     this.stage.follow(pose.hoverY, pose.posX, pose.posZ);
     this.updateWorld(dt, pose);
-    this.rooms.update(dt, pose, { friendly: look.cameraFriendly, reduced: this.reducedMotion.matches });
+    this.rooms.update(dt, pose, { friendly: look.cameraFriendly, reduced: this.reducedMotion.matches }, this.camera);
     this.face.render(pose, { face: look.design.face, largerFace: look.largerFace, color: look.faceColor || look.accent });
 
     this.frameCamera(dt, pose);
@@ -745,11 +746,16 @@ export class RobotEngine {
     }
     u.uGlow.value.copy(b.glowColor);
     u.uGlowAmount.value = b.glow;
-    if (mode === 4) {
+    if (mode === 4 && b.texture) {
+      // A room's painted outside view behind its open sides
+      u.uImage.value = b.texture;
+      u.uImageAspect.value = b.aspect || 2;
+      u.uDim.value = b.dim || 0;
+    } else if (mode === 4) {
       if (this.photo.texture) {
         u.uImage.value = this.photo.texture;
         u.uImageAspect.value = this.photo.aspect;
-        u.uDim.value = this.look.room.photo.dim;
+        u.uDim.value = (this.look.roomDoc?.architecture?.photo || this.look.room?.photo || { dim: 0 }).dim;
       } else u.uMode.value = 1;
     }
   }
@@ -771,7 +777,7 @@ export class RobotEngine {
   }
 
   applyPhoto() {
-    const blur = this.look.room.photo?.blur ?? 0;
+    const blur = (this.look.roomDoc?.architecture?.photo || this.look.room?.photo)?.blur ?? 0;
     const image = this.photo.source;
     if (!image || Math.abs(blur - this.photo.blur) < 0.005) return;
     this.photo.blur = blur;
@@ -1011,6 +1017,7 @@ export class RobotEngine {
 
   triggerProp(propId, action = "toggle") {
     const res = this.rooms.triggerProp(propId, action);
+    if (res.changed) this.roomDirty = true; // a lamp switched: rebuild that thing and its light
     if (res.triggered) {
       this.hooks.onPropUsed?.(res);
       this.emit("prop", res);

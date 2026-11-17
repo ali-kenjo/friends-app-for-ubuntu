@@ -141,7 +141,7 @@ function clean(input, fallback = {}) {
   const base = fallback.look || {};
   out.look = {
     design: D.sanitizeDesign(look.design || D.designFromLegacy(look), base.design),
-    room: R.sanitizeRoom(look.room || base.room),
+    room: require("./robot-look").cleanRoomRef(look.room || base.room),
     accent: /^#[0-9a-f]{6}$/i.test(look.accent) ? look.accent : base.accent || "#f5a94a",
   };
   return out;

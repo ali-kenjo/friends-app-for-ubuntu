@@ -9,6 +9,7 @@ import { announce } from "../../a11y.js";
 import { confirmDialog } from "../../dialogs.js";
 import * as D from "../design.mjs";
 import * as R from "../room.mjs";
+import { asLegacy } from "../../room/as-legacy.mjs";
 import { lookFile, readLookFile } from "../looks.mjs";
 import { colorsPanel, shapePanel, facePanel, outfitPanel, roomPanel, behaviorsPanel, builderPanel, looksPanel } from "./panels.js";
 import { h, button, slider, arrowKeys, glyph } from "./ui.js";
@@ -22,12 +23,19 @@ const undoBtn = document.getElementById("rs-undo");
 const redoBtn = document.getElementById("rs-redo");
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
-const robotSettings = () => getSettings()?.robot;
+// The Room tab still edits a 1.0 room object: a room document is read as one (src/js/room/as-legacy.mjs),
+// and a change here writes that object (the Room Editor replaces this tab; PLAN step 5)
+const rawRobot = () => getSettings()?.robot;
+const robotSettings = () => {
+  const r = rawRobot();
+  return r && { ...r, room: asLegacy(r.room, robot.room) };
+};
+const legacyFirst = (s) => (s.robot.room = asLegacy(s.robot.room, robot.room));
 
 // ---------- Undo ----------
 // A change within a second of the last one (a dragged slider) counts as one step
 const history = { undo: [], redo: [], at: 0 };
-const snapshot = () => ({ design: clone(robotSettings().design), room: clone(robotSettings().room) });
+const snapshot = () => ({ design: clone(rawRobot().design), room: clone(rawRobot().room) });
 
 function remember() {
   const now = performance.now();
@@ -74,19 +82,20 @@ const ctx = {
   room(fn) {
     remember();
     updateSettings((s) => {
+      legacyFirst(s);
       fn(s.robot.room);
       s.robot.room = R.sanitizeRoom(s.robot.room);
     });
   },
   place(id) {
     remember();
-    updateSettings((s) => (s.robot.room = R.changePlace(s.robot.room, id)));
+    updateSettings((s) => (s.robot.room = R.changePlace(legacyFirst(s), id)));
   },
   randomRoom() {
     const place = pickOther(R.PLACES.filter((p) => !p.chroma && p.id !== "photo"), robotSettings().room.place);
     remember();
     updateSettings((s) => {
-      s.robot.room = R.changePlace(s.robot.room, place.id);
+      s.robot.room = R.changePlace(legacyFirst(s), place.id);
       const lights = R.LIGHTS.filter((l) => l.id !== "auto");
       s.robot.room.air = pickOther(R.AIRS, s.robot.room.air).id;
       s.robot.room.light = lights[Math.floor(Math.random() * lights.length)].id;

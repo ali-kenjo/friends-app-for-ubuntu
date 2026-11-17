@@ -6,6 +6,7 @@ import { getSettings, onSettings, updateSettings } from "../store.js";
 import { t, nf } from "../i18n.js";
 import * as D from "./design.mjs";
 import * as R from "./room.mjs";
+import { useTemplate } from "../room/client.js";
 import "./studio/studio.js";
 import { board } from "../whiteboard/store.js";
 import { characterName } from "../characters.js";
@@ -97,15 +98,28 @@ document.addEventListener("keydown", (e) => {
 const placeSelects = [document.getElementById("robot-place"), document.getElementById("voice-scene-place-select")];
 for (const select of placeSelects) {
   select.replaceChildren(...R.PLACES.map((p) => Object.assign(document.createElement("option"), { value: p.id, textContent: t(p.label) })));
-  select.addEventListener("change", () => updateSettings((s) => (s.robot.room = R.changePlace(s.robot.room, select.value))));
+  select.addEventListener("change", () => {
+    // 1.1: a place is a room template; its room is used (made once)
+    if (getSettings()?.robot?.room?.layoutId) useTemplate(select.value).catch((err) => console.warn(err));
+    else updateSettings((s) => (s.robot.room = R.changePlace(s.robot.room, select.value)));
+  });
 }
 const lookSummary = document.getElementById("robot-look-summary");
 
+// The place shown in the pickers: the room's template (1.1) or the 1.0 room's place
+function currentPlace(s) {
+  if (!s.robot.room?.layoutId) return s.robot.room.place;
+  const doc = robot.room;
+  if (doc?.backdrop?.layer === "chroma_green") return "green";
+  if (doc?.backdrop?.layer === "chroma_blue") return "blue";
+  return R.PLACE_BY_ID[doc?.template] ? doc.template : R.PLACE_BY_ID[doc?.legacy?.place] ? doc.legacy.place : "studio";
+}
+
 function showLook(s) {
-  for (const select of placeSelects) select.value = s.robot.room.place;
+  for (const select of placeSelects) select.value = currentPlace(s);
   const d = s.robot.design;
   const worn = D.SLOTS.filter((slot) => d.outfit[slot.id].item !== "none").map((slot) => t(D.ITEMS[slot.id][d.outfit[slot.id].item].label));
-  const place = R.PLACE_BY_ID[s.robot.room.place];
+  const place = R.PLACE_BY_ID[currentPlace(s)];
   const dots = [d.colors.head, d.colors.body, d.colors.light || s.theme.accent].map((c) => `<i style="background:${c}"></i>`).join("");
   lookSummary.innerHTML = `<span class="robot-look-dots" aria-hidden="true">${dots}</span>`;
   const text = document.createElement("span");
@@ -113,13 +127,15 @@ function showLook(s) {
   lookSummary.append(text);
 }
 
+document.addEventListener("friends:robot-room", () => getSettings() && showLook(getSettings()));
+
 onSettings((s) => {
   showLook(s);
   syncChoices();
   // Keying out green takes a green accent with it
   const accent = s.theme.accent.toLowerCase();
   const hue = accentHue(accent);
-  const place = s.robot.room.place;
+  const place = currentPlace(s);
   const light = (s.robot.design.colors.light || accent).toLowerCase();
   const lightHue = accentHue(light);
   const clash = (place === "green" && lightHue > 70 && lightHue < 170) || (place === "blue" && lightHue > 190 && lightHue < 260);
