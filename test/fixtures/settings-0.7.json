@@ -1,0 +1,132 @@
+{
+  "ui": {
+    "language": "en",
+    "design": 2
+  },
+  "robot": {
+    "room": {
+      "place": "desk",
+      "colors": {
+        "wall": "#2f3136",
+        "floor": "#553d2d",
+        "glow": "#ffd6aa",
+        "detail": "#8b9d86"
+      },
+      "light": "auto",
+      "brightness": 1,
+      "floor": "auto",
+      "air": "dust",
+      "airAmount": 1,
+      "props": {
+        "plant": true,
+        "mug": true,
+        "books": true,
+        "lamp": true,
+        "clock": true
+      },
+      "companions": {
+        "cat": true,
+        "drone": false
+      },
+      "timeMode": "clock",
+      "timeHour": 14,
+      "weatherSync": true,
+      "season": "winter",
+      "sign": "ON AIR",
+      "photo": {
+        "blur": 0.25,
+        "dim": 0.15
+      },
+      "builder": {
+        "enabled": true,
+        "wallStyle": "brick",
+        "floorStyle": "herringbone",
+        "ceilingStyle": "beams",
+        "windowStyle": "french",
+        "lightingRig": "golden_hour",
+        "items": [
+          {
+            "id": "item-1",
+            "propId": "monstera_pot",
+            "slot": "floor",
+            "x": -1.25,
+            "y": 0,
+            "z": -0.8,
+            "rotY": 20,
+            "scale": 1.2,
+            "c1": "#4d8a62",
+            "c2": "#c47a5a",
+            "animated": true,
+            "interactive": true
+          },
+          {
+            "id": "item-2",
+            "propId": "wall_clock",
+            "slot": "wall",
+            "x": 0.4,
+            "y": 1.65,
+            "z": -1.36,
+            "rotY": 0,
+            "scale": 1,
+            "c1": "#f8f5ee",
+            "c2": "#a3743f",
+            "animated": true,
+            "interactive": true
+          },
+          {
+            "id": "item-3",
+            "propId": "lava_lamp",
+            "slot": "shelf",
+            "x": 1.05,
+            "y": 0.78,
+            "z": -0.85,
+            "rotY": 0,
+            "scale": 1,
+            "c1": "#f472b6",
+            "c2": "#ffd34d",
+            "animated": false,
+            "interactive": false
+          }
+        ]
+      }
+    },
+    "customRooms": [
+      {
+        "id": "room-1",
+        "name": "Cabin nights",
+        "room": {
+          "place": "cabin",
+          "companions": {
+            "cat": true
+          }
+        }
+      },
+      {
+        "id": "room-2",
+        "name": "Neon",
+        "room": {
+          "place": "city",
+          "light": "neon"
+        }
+      }
+    ],
+    "looks": []
+  },
+  "characters": {
+    "active": "atlas",
+    "list": [
+      {
+        "id": "atlas",
+        "name": "Atlas",
+        "look": {
+          "design": {},
+          "room": {
+            "place": "desk"
+          },
+          "accent": "#f5a94a"
+        },
+        "builtin": "atlas"
+      }
+    ]
+  }
+}

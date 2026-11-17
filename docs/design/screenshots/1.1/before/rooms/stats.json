@@ -1,0 +1,847 @@
+{
+  "when": "2026-11-16T23:01:30.257Z",
+  "renderer": "SwiftShader (software WebGL)",
+  "stats": {
+    "studio|low|16x9|dark": {
+      "calls": 117,
+      "triangles": 35421,
+      "ms": 438,
+      "level": "low",
+      "meshes": 107
+    },
+    "glow|low|16x9|dark": {
+      "calls": 117,
+      "triangles": 35421,
+      "ms": 409,
+      "level": "low",
+      "meshes": 107
+    },
+    "desk|low|16x9|dark": {
+      "calls": 142,
+      "triangles": 41515,
+      "ms": 525,
+      "level": "low",
+      "meshes": 155
+    },
+    "podcast|low|16x9|dark": {
+      "calls": 155,
+      "triangles": 40043,
+      "ms": 563,
+      "level": "low",
+      "meshes": 169
+    },
+    "lounge|low|16x9|dark": {
+      "calls": 181,
+      "triangles": 49071,
+      "ms": 693,
+      "level": "low",
+      "meshes": 196
+    },
+    "bedroom|low|16x9|dark": {
+      "calls": 155,
+      "triangles": 38115,
+      "ms": 607,
+      "level": "low",
+      "meshes": 163
+    },
+    "kitchen|low|16x9|dark": {
+      "calls": 163,
+      "triangles": 40219,
+      "ms": 597,
+      "level": "low",
+      "meshes": 165
+    },
+    "library|low|16x9|dark": {
+      "calls": 159,
+      "triangles": 38449,
+      "ms": 650,
+      "level": "low",
+      "meshes": 165
+    },
+    "greenhouse|low|16x9|dark": {
+      "calls": 159,
+      "triangles": 38395,
+      "ms": 616,
+      "level": "low",
+      "meshes": 161
+    },
+    "rooftop|low|16x9|dark": {
+      "calls": 157,
+      "triangles": 37447,
+      "ms": 624,
+      "level": "low",
+      "meshes": 162
+    },
+    "workshop|low|16x9|dark": {
+      "calls": 165,
+      "triangles": 38295,
+      "ms": 609,
+      "level": "low",
+      "meshes": 174
+    },
+    "cabin|low|16x9|dark": {
+      "calls": 172,
+      "triangles": 39819,
+      "ms": 623,
+      "level": "low",
+      "meshes": 174
+    },
+    "seaside|low|16x9|dark": {
+      "calls": 149,
+      "triangles": 37263,
+      "ms": 658,
+      "level": "low",
+      "meshes": 151
+    },
+    "campfire|low|16x9|dark": {
+      "calls": 147,
+      "triangles": 36893,
+      "ms": 629,
+      "level": "low",
+      "meshes": 142
+    },
+    "cafe|low|16x9|dark": {
+      "calls": 166,
+      "triangles": 38077,
+      "ms": 722,
+      "level": "low",
+      "meshes": 179
+    },
+    "arcade|low|16x9|dark": {
+      "calls": 159,
+      "triangles": 38045,
+      "ms": 580,
+      "level": "low",
+      "meshes": 161
+    },
+    "observatory|low|16x9|dark": {
+      "calls": 152,
+      "triangles": 38855,
+      "ms": 605,
+      "level": "low",
+      "meshes": 155
+    },
+    "tatami|low|16x9|dark": {
+      "calls": 154,
+      "triangles": 37075,
+      "ms": 675,
+      "level": "low",
+      "meshes": 163
+    },
+    "spaceship|low|16x9|dark": {
+      "calls": 157,
+      "triangles": 38077,
+      "ms": 559,
+      "level": "low",
+      "meshes": 158
+    },
+    "space|low|16x9|dark": {
+      "calls": 133,
+      "triangles": 46531,
+      "ms": 524,
+      "level": "low",
+      "meshes": 143
+    },
+    "garden|low|16x9|dark": {
+      "calls": 155,
+      "triangles": 46013,
+      "ms": 673,
+      "level": "low",
+      "meshes": 155
+    },
+    "city|low|16x9|dark": {
+      "calls": 123,
+      "triangles": 35475,
+      "ms": 516,
+      "level": "low",
+      "meshes": 115
+    },
+    "sky|low|16x9|dark": {
+      "calls": 125,
+      "triangles": 35439,
+      "ms": 516,
+      "level": "low",
+      "meshes": 122
+    },
+    "gradient|low|16x9|dark": {
+      "calls": 110,
+      "triangles": 35419,
+      "ms": 419,
+      "level": "low",
+      "meshes": 107
+    },
+    "photo|low|16x9|dark": {
+      "calls": 109,
+      "triangles": 35407,
+      "ms": 403,
+      "level": "low",
+      "meshes": 106
+    },
+    "green|low|16x9|dark": {
+      "calls": 107,
+      "triangles": 35403,
+      "ms": 417,
+      "level": "low",
+      "meshes": 104
+    },
+    "blue|low|16x9|dark": {
+      "calls": 107,
+      "triangles": 35403,
+      "ms": 417,
+      "level": "low",
+      "meshes": 104
+    },
+    "v1-creator_studio_desk|low|16x9|dark": {
+      "calls": 117,
+      "triangles": 35421,
+      "ms": 423,
+      "level": "low",
+      "meshes": 107
+    },
+    "v1-cozy_study_corner|low|16x9|dark": {
+      "calls": 79,
+      "triangles": 32035,
+      "ms": 432,
+      "level": "low",
+      "meshes": 69
+    },
+    "v1-minimalist_open_stage|low|16x9|dark": {
+      "calls": 43,
+      "triangles": 31783,
+      "ms": 396,
+      "level": "low",
+      "meshes": 33
+    },
+    "studio|low|9x16|dark": {
+      "calls": 36,
+      "triangles": 31671,
+      "ms": 285,
+      "level": "low",
+      "meshes": 33
+    },
+    "glow|low|9x16|dark": {
+      "calls": 36,
+      "triangles": 31671,
+      "ms": 284,
+      "level": "low",
+      "meshes": 33
+    },
+    "desk|low|9x16|dark": {
+      "calls": 36,
+      "triangles": 31681,
+      "ms": 326,
+      "level": "low",
+      "meshes": 81
+    },
+    "podcast|low|9x16|dark": {
+      "calls": 45,
+      "triangles": 29967,
+      "ms": 328,
+      "level": "low",
+      "meshes": 95
+    },
+    "lounge|low|9x16|dark": {
+      "calls": 64,
+      "triangles": 39711,
+      "ms": 396,
+      "level": "low",
+      "meshes": 122
+    },
+    "bedroom|low|9x16|dark": {
+      "calls": 46,
+      "triangles": 31935,
+      "ms": 368,
+      "level": "low",
+      "meshes": 89
+    },
+    "kitchen|low|9x16|dark": {
+      "calls": 50,
+      "triangles": 32957,
+      "ms": 387,
+      "level": "low",
+      "meshes": 91
+    },
+    "library|low|9x16|dark": {
+      "calls": 54,
+      "triangles": 31383,
+      "ms": 352,
+      "level": "low",
+      "meshes": 91
+    },
+    "greenhouse|low|9x16|dark": {
+      "calls": 49,
+      "triangles": 30785,
+      "ms": 444,
+      "level": "low",
+      "meshes": 87
+    },
+    "rooftop|low|9x16|dark": {
+      "calls": 55,
+      "triangles": 32235,
+      "ms": 391,
+      "level": "low",
+      "meshes": 88
+    },
+    "workshop|low|9x16|dark": {
+      "calls": 55,
+      "triangles": 31069,
+      "ms": 399,
+      "level": "low",
+      "meshes": 100
+    },
+    "cabin|low|9x16|dark": {
+      "calls": 69,
+      "triangles": 33105,
+      "ms": 398,
+      "level": "low",
+      "meshes": 100
+    },
+    "seaside|low|9x16|dark": {
+      "calls": 51,
+      "triangles": 32115,
+      "ms": 406,
+      "level": "low",
+      "meshes": 77
+    },
+    "campfire|low|9x16|dark": {
+      "calls": 45,
+      "triangles": 31793,
+      "ms": 352,
+      "level": "low",
+      "meshes": 68
+    },
+    "cafe|low|9x16|dark": {
+      "calls": 55,
+      "triangles": 30271,
+      "ms": 435,
+      "level": "low",
+      "meshes": 105
+    },
+    "arcade|low|9x16|dark": {
+      "calls": 54,
+      "triangles": 32275,
+      "ms": 334,
+      "level": "low",
+      "meshes": 87
+    },
+    "observatory|low|9x16|dark": {
+      "calls": 63,
+      "triangles": 34979,
+      "ms": 367,
+      "level": "low",
+      "meshes": 81
+    },
+    "tatami|low|9x16|dark": {
+      "calls": 48,
+      "triangles": 30189,
+      "ms": 445,
+      "level": "low",
+      "meshes": 89
+    },
+    "spaceship|low|9x16|dark": {
+      "calls": 57,
+      "triangles": 30637,
+      "ms": 365,
+      "level": "low",
+      "meshes": 84
+    },
+    "space|low|9x16|dark": {
+      "calls": 44,
+      "triangles": 38649,
+      "ms": 312,
+      "level": "low",
+      "meshes": 69
+    },
+    "garden|low|9x16|dark": {
+      "calls": 57,
+      "triangles": 39939,
+      "ms": 396,
+      "level": "low",
+      "meshes": 81
+    },
+    "city|low|9x16|dark": {
+      "calls": 38,
+      "triangles": 29989,
+      "ms": 307,
+      "level": "low",
+      "meshes": 41
+    },
+    "sky|low|9x16|dark": {
+      "calls": 40,
+      "triangles": 29993,
+      "ms": 329,
+      "level": "low",
+      "meshes": 48
+    },
+    "gradient|low|9x16|dark": {
+      "calls": 32,
+      "triangles": 31665,
+      "ms": 274,
+      "level": "low",
+      "meshes": 33
+    },
+    "photo|low|9x16|dark": {
+      "calls": 30,
+      "triangles": 29973,
+      "ms": 248,
+      "level": "low",
+      "meshes": 32
+    },
+    "green|low|9x16|dark": {
+      "calls": 30,
+      "triangles": 31661,
+      "ms": 259,
+      "level": "low",
+      "meshes": 30
+    },
+    "blue|low|9x16|dark": {
+      "calls": 30,
+      "triangles": 31661,
+      "ms": 253,
+      "level": "low",
+      "meshes": 30
+    },
+    "v1-creator_studio_desk|low|9x16|dark": {
+      "calls": 58,
+      "triangles": 31061,
+      "ms": 298,
+      "level": "low",
+      "meshes": 107
+    },
+    "v1-cozy_study_corner|low|9x16|dark": {
+      "calls": 50,
+      "triangles": 29315,
+      "ms": 299,
+      "level": "low",
+      "meshes": 69
+    },
+    "v1-minimalist_open_stage|low|9x16|dark": {
+      "calls": 34,
+      "triangles": 29979,
+      "ms": 261,
+      "level": "low",
+      "meshes": 33
+    },
+    "studio|high|16x9|dark": {
+      "calls": 145,
+      "triangles": 102326,
+      "ms": 875,
+      "level": "high",
+      "meshes": 52
+    },
+    "glow|high|16x9|dark": {
+      "calls": 147,
+      "triangles": 103686,
+      "ms": 781,
+      "level": "high",
+      "meshes": 52
+    },
+    "desk|high|16x9|dark": {
+      "calls": 172,
+      "triangles": 102282,
+      "ms": 1037,
+      "level": "high",
+      "meshes": 81
+    },
+    "podcast|high|16x9|dark": {
+      "calls": 198,
+      "triangles": 112442,
+      "ms": 1737,
+      "level": "high",
+      "meshes": 113
+    },
+    "lounge|high|16x9|dark": {
+      "calls": 248,
+      "triangles": 118236,
+      "ms": 1137,
+      "level": "high",
+      "meshes": 127
+    },
+    "bedroom|high|16x9|dark": {
+      "calls": 194,
+      "triangles": 92914,
+      "ms": 1011,
+      "level": "high",
+      "meshes": 95
+    },
+    "kitchen|high|16x9|dark": {
+      "calls": 218,
+      "triangles": 103222,
+      "ms": 968,
+      "level": "high",
+      "meshes": 101
+    },
+    "library|high|16x9|dark": {
+      "calls": 211,
+      "triangles": 94878,
+      "ms": 968,
+      "level": "high",
+      "meshes": 97
+    },
+    "greenhouse|high|16x9|dark": {
+      "calls": 209,
+      "triangles": 96274,
+      "ms": 934,
+      "level": "high",
+      "meshes": 92
+    },
+    "rooftop|high|16x9|dark": {
+      "calls": 201,
+      "triangles": 91322,
+      "ms": 980,
+      "level": "high",
+      "meshes": 91
+    },
+    "workshop|high|16x9|dark": {
+      "calls": 221,
+      "triangles": 96278,
+      "ms": 973,
+      "level": "high",
+      "meshes": 105
+    },
+    "cabin|high|16x9|dark": {
+      "calls": 241,
+      "triangles": 101038,
+      "ms": 995,
+      "level": "high",
+      "meshes": 108
+    },
+    "seaside|high|16x9|dark": {
+      "calls": 179,
+      "triangles": 90814,
+      "ms": 976,
+      "level": "high",
+      "meshes": 80
+    },
+    "campfire|high|16x9|dark": {
+      "calls": 176,
+      "triangles": 90038,
+      "ms": 966,
+      "level": "high",
+      "meshes": 70
+    },
+    "cafe|high|16x9|dark": {
+      "calls": 225,
+      "triangles": 96214,
+      "ms": 1056,
+      "level": "high",
+      "meshes": 112
+    },
+    "arcade|high|16x9|dark": {
+      "calls": 211,
+      "triangles": 110118,
+      "ms": 915,
+      "level": "high",
+      "meshes": 108
+    },
+    "observatory|high|16x9|dark": {
+      "calls": 192,
+      "triangles": 97830,
+      "ms": 929,
+      "level": "high",
+      "meshes": 86
+    },
+    "tatami|high|16x9|dark": {
+      "calls": 188,
+      "triangles": 91038,
+      "ms": 1133,
+      "level": "high",
+      "meshes": 94
+    },
+    "spaceship|high|16x9|dark": {
+      "calls": 202,
+      "triangles": 92622,
+      "ms": 928,
+      "level": "high",
+      "meshes": 87
+    },
+    "space|high|16x9|dark": {
+      "calls": 136,
+      "triangles": 103582,
+      "ms": 824,
+      "level": "high",
+      "meshes": 69
+    },
+    "garden|high|16x9|dark": {
+      "calls": 175,
+      "triangles": 106028,
+      "ms": 963,
+      "level": "high",
+      "meshes": 81
+    },
+    "city|high|16x9|dark": {
+      "calls": 125,
+      "triangles": 103668,
+      "ms": 869,
+      "level": "high",
+      "meshes": 59
+    },
+    "sky|high|16x9|dark": {
+      "calls": 109,
+      "triangles": 84848,
+      "ms": 939,
+      "level": "high",
+      "meshes": 48
+    },
+    "gradient|high|16x9|dark": {
+      "calls": 93,
+      "triangles": 84836,
+      "ms": 690,
+      "level": "high",
+      "meshes": 33
+    },
+    "photo|high|16x9|dark": {
+      "calls": 91,
+      "triangles": 84812,
+      "ms": 693,
+      "level": "high",
+      "meshes": 32
+    },
+    "green|high|16x9|dark": {
+      "calls": 48,
+      "triangles": 53145,
+      "ms": 607,
+      "level": "high",
+      "meshes": 30
+    },
+    "blue|high|16x9|dark": {
+      "calls": 48,
+      "triangles": 53145,
+      "ms": 617,
+      "level": "high",
+      "meshes": 30
+    },
+    "v1-creator_studio_desk|high|16x9|dark": {
+      "calls": 298,
+      "triangles": 109782,
+      "ms": 819,
+      "level": "high",
+      "meshes": 126
+    },
+    "v1-cozy_study_corner|high|16x9|dark": {
+      "calls": 228,
+      "triangles": 102382,
+      "ms": 823,
+      "level": "high",
+      "meshes": 88
+    },
+    "v1-minimalist_open_stage|high|16x9|dark": {
+      "calls": 145,
+      "triangles": 102326,
+      "ms": 820,
+      "level": "high",
+      "meshes": 52
+    },
+    "studio|high|9x16|dark": {
+      "calls": 130,
+      "triangles": 124826,
+      "ms": 653,
+      "level": "high",
+      "meshes": 52
+    },
+    "glow|high|9x16|dark": {
+      "calls": 124,
+      "triangles": 117094,
+      "ms": 650,
+      "level": "high",
+      "meshes": 52
+    },
+    "desk|high|9x16|dark": {
+      "calls": 109,
+      "triangles": 89602,
+      "ms": 682,
+      "level": "high",
+      "meshes": 81
+    },
+    "podcast|high|9x16|dark": {
+      "calls": 147,
+      "triangles": 130630,
+      "ms": 719,
+      "level": "high",
+      "meshes": 113
+    },
+    "lounge|high|9x16|dark": {
+      "calls": 159,
+      "triangles": 101920,
+      "ms": 755,
+      "level": "high",
+      "meshes": 127
+    },
+    "bedroom|high|9x16|dark": {
+      "calls": 119,
+      "triangles": 85646,
+      "ms": 1098,
+      "level": "high",
+      "meshes": 95
+    },
+    "kitchen|high|9x16|dark": {
+      "calls": 135,
+      "triangles": 90430,
+      "ms": 696,
+      "level": "high",
+      "meshes": 101
+    },
+    "library|high|9x16|dark": {
+      "calls": 147,
+      "triangles": 89378,
+      "ms": 694,
+      "level": "high",
+      "meshes": 97
+    },
+    "greenhouse|high|9x16|dark": {
+      "calls": 137,
+      "triangles": 89886,
+      "ms": 735,
+      "level": "high",
+      "meshes": 92
+    },
+    "rooftop|high|9x16|dark": {
+      "calls": 142,
+      "triangles": 86710,
+      "ms": 882,
+      "level": "high",
+      "meshes": 91
+    },
+    "workshop|high|9x16|dark": {
+      "calls": 150,
+      "triangles": 90422,
+      "ms": 707,
+      "level": "high",
+      "meshes": 105
+    },
+    "cabin|high|9x16|dark": {
+      "calls": 188,
+      "triangles": 96438,
+      "ms": 728,
+      "level": "high",
+      "meshes": 108
+    },
+    "seaside|high|9x16|dark": {
+      "calls": 130,
+      "triangles": 86354,
+      "ms": 726,
+      "level": "high",
+      "meshes": 80
+    },
+    "campfire|high|9x16|dark": {
+      "calls": 121,
+      "triangles": 85122,
+      "ms": 688,
+      "level": "high",
+      "meshes": 70
+    },
+    "cafe|high|9x16|dark": {
+      "calls": 150,
+      "triangles": 83702,
+      "ms": 767,
+      "level": "high",
+      "meshes": 112
+    },
+    "arcade|high|9x16|dark": {
+      "calls": 155,
+      "triangles": 126906,
+      "ms": 707,
+      "level": "high",
+      "meshes": 108
+    },
+    "observatory|high|9x16|dark": {
+      "calls": 159,
+      "triangles": 94450,
+      "ms": 710,
+      "level": "high",
+      "meshes": 86
+    },
+    "tatami|high|9x16|dark": {
+      "calls": 126,
+      "triangles": 85490,
+      "ms": 780,
+      "level": "high",
+      "meshes": 94
+    },
+    "spaceship|high|9x16|dark": {
+      "calls": 149,
+      "triangles": 86818,
+      "ms": 662,
+      "level": "high",
+      "meshes": 87
+    },
+    "space|high|9x16|dark": {
+      "calls": 107,
+      "triangles": 95094,
+      "ms": 635,
+      "level": "high",
+      "meshes": 69
+    },
+    "garden|high|9x16|dark": {
+      "calls": 128,
+      "triangles": 98280,
+      "ms": 724,
+      "level": "high",
+      "meshes": 81
+    },
+    "city|high|9x16|dark": {
+      "calls": 111,
+      "triangles": 119448,
+      "ms": 2367,
+      "level": "high",
+      "meshes": 59
+    },
+    "sky|high|9x16|dark": {
+      "calls": 98,
+      "triangles": 84628,
+      "ms": 1162,
+      "level": "high",
+      "meshes": 48
+    },
+    "gradient|high|9x16|dark": {
+      "calls": 84,
+      "triangles": 81724,
+      "ms": 585,
+      "level": "high",
+      "meshes": 33
+    },
+    "photo|high|9x16|dark": {
+      "calls": 82,
+      "triangles": 81220,
+      "ms": 563,
+      "level": "high",
+      "meshes": 32
+    },
+    "green|high|9x16|dark": {
+      "calls": 43,
+      "triangles": 51349,
+      "ms": 487,
+      "level": "high",
+      "meshes": 30
+    },
+    "blue|high|9x16|dark": {
+      "calls": 43,
+      "triangles": 51349,
+      "ms": 996,
+      "level": "high",
+      "meshes": 30
+    },
+    "v1-creator_studio_desk|high|9x16|dark": {
+      "calls": 162,
+      "triangles": 123682,
+      "ms": 668,
+      "level": "high",
+      "meshes": 126
+    },
+    "v1-cozy_study_corner|high|9x16|dark": {
+      "calls": 167,
+      "triangles": 122910,
+      "ms": 668,
+      "level": "high",
+      "meshes": 88
+    },
+    "v1-minimalist_open_stage|high|9x16|dark": {
+      "calls": 124,
+      "triangles": 119538,
+      "ms": 646,
+      "level": "high",
+      "meshes": 52
+    }
+  },
+  "errors": []
+}

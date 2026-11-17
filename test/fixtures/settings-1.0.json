@@ -1,0 +1,112 @@
+{
+  "ui": {
+    "language": "en",
+    "design": 2
+  },
+  "robot": {
+    "room": {
+      "place": "lounge"
+    },
+    "aiAllowed": {
+      "mood": true,
+      "gesture": true,
+      "prop": false,
+      "move": true,
+      "look": true
+    },
+    "customRooms": [],
+    "looks": []
+  },
+  "roomEditor": {
+    "presetId": "creator_studio_desk",
+    "gridSnap": false,
+    "gridSize": 0.1,
+    "surfaceSnap": true,
+    "assets": []
+  },
+  "behaviorEngine": {
+    "autonomousRoaming": true,
+    "focusLock": false,
+    "homeReturnDelaySec": 12,
+    "homeSpot": {
+      "x": 0.2,
+      "z": 0.3,
+      "rotY": 0.35
+    },
+    "quotas": {
+      "maxPerSession": 30,
+      "maxPerHour": 10,
+      "perAssetPerHour": 4,
+      "globalCooldownSec": 20,
+      "perAssetCooldownSec": 60
+    },
+    "kinematics": {
+      "walkSpeed": 1.4,
+      "turnRate": 3,
+      "easing": "smoothstep",
+      "headGazeWeight": 0.7,
+      "eyeGazeWeight": 0.9,
+      "idleMicroAmount": 0.7
+    },
+    "foley": {
+      "enabled": true,
+      "volume": 40
+    },
+    "interruptPolicy": "pause_and_resume",
+    "categoryMultipliers": {
+      "furniture": 0.8,
+      "desk_prop": 1,
+      "toy": 1.5,
+      "flower": 1
+    },
+    "assetWeights": {},
+    "assetDwells": {},
+    "toolPermissions": {
+      "move_to_asset": true,
+      "explain_on_whiteboard": true,
+      "clear_whiteboard": false,
+      "write_in_notebook": true,
+      "play_with_toy": true,
+      "water_flowers": false,
+      "set_emotion": true,
+      "follow_route": true,
+      "return_home": true
+    },
+    "waypointRoute": {
+      "mode": "ping_pong",
+      "gait": "brisk",
+      "nodes": [
+        {
+          "x": -0.9,
+          "z": 0,
+          "dwellSec": 3
+        },
+        {
+          "x": 0.9,
+          "z": -0.1,
+          "dwellSec": 5
+        }
+      ]
+    }
+  },
+  "stageMode": {
+    "backdrop": "full_room"
+  },
+  "characters": {
+    "active": "atlas",
+    "list": [
+      {
+        "id": "atlas",
+        "name": "Atlas",
+        "look": {
+          "design": {},
+          "room": {
+            "place": "lounge"
+          },
+          "accent": "#f5a94a"
+        },
+        "builtin": "atlas"
+      }
+    ]
+  }
+}

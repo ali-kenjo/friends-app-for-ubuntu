@@ -1,0 +1,130 @@
+{
+  "ui": {
+    "language": "en",
+    "design": 2
+  },
+  "robot": {
+    "room": {
+      "place": "studio",
+      "builder": {
+        "enabled": false,
+        "items": [
+          {
+            "id": "item-1",
+            "propId": "sofa_cozy",
+            "slot": "floor",
+            "x": 1.3,
+            "y": 0,
+            "z": -0.6,
+            "rotY": -30,
+            "scale": 1,
+            "c1": "#5b6b8c",
+            "c2": "#ede4d6",
+            "animated": false,
+            "interactive": true
+          }
+        ]
+      }
+    },
+    "aiAllowed": {
+      "mood": true,
+      "gesture": false,
+      "prop": true,
+      "move": true,
+      "look": true
+    },
+    "customRooms": [],
+    "looks": []
+  },
+  "roomEditor": {
+    "presetId": "cozy_study_corner",
+    "assets": [
+      {
+        "id": "desk_table",
+        "kind": "desk_table",
+        "x": -1,
+        "y": 0,
+        "z": -1.2,
+        "rotY": 1.5707963267948966,
+        "scale": 1
+      },
+      {
+        "id": "pens_cup",
+        "kind": "pens_cup",
+        "x": -1.05,
+        "y": 0.74,
+        "z": -1,
+        "rotY": 0,
+        "attachedTo": "desk_table"
+      },
+      {
+        "id": "vase_flowers_2",
+        "kind": "vase_flowers",
+        "x": -0.95,
+        "y": 0.74,
+        "z": -1.4,
+        "rotY": 0
+      },
+      {
+        "id": "bouncy_ball_mk",
+        "kind": "bouncy_ball",
+        "x": 0.6,
+        "y": 0,
+        "z": 0.1,
+        "rotY": 0,
+        "customGlbId": "my_ball",
+        "visible": false
+      },
+      {
+        "id": "mystery",
+        "kind": "teleporter",
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    ]
+  },
+  "behaviorEngine": {
+    "autonomousRoaming": false,
+    "homeSpot": {
+      "x": -0.3,
+      "z": 0.1,
+      "rotY": -0.5
+    },
+    "assetWeights": {
+      "pens_cup": 10,
+      "bouncy_ball_mk": 90
+    },
+    "assetDwells": {
+      "pens_cup": {
+        "min": 1,
+        "max": 2
+      }
+    },
+    "toolPermissions": {
+      "play_with_toy": false
+    },
+    "waypointRoute": {
+      "mode": "loop",
+      "gait": "walk",
+      "nodes": []
+    }
+  },
+  "characters": {
+    "active": "atlas",
+    "list": [
+      {
+        "id": "atlas",
+        "name": "Atlas",
+        "look": {
+          "design": {},
+          "room": {
+            "place": "studio"
+          },
+          "accent": "#f5a94a"
+        },
+        "builtin": "atlas"
+      }
+    ]
+  }
+}

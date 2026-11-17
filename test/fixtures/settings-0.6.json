@@ -1,0 +1,89 @@
+{
+  "ui": {
+    "language": "de",
+    "design": 2
+  },
+  "robot": {
+    "chatDock": true,
+    "room": {
+      "place": "lounge",
+      "colors": {
+        "wall": "#3c3039",
+        "floor": "#6b4a3a",
+        "glow": "#ffbf80",
+        "detail": "#2f6f8f"
+      },
+      "light": "golden",
+      "brightness": 1.2,
+      "floor": "auto",
+      "air": "dust",
+      "airAmount": 1.5,
+      "props": {
+        "window": true,
+        "shelf": true,
+        "plant": true,
+        "lamp": true,
+        "rug": false,
+        "lights": true,
+        "frames": true
+      },
+      "sign": "HELLO",
+      "photo": {
+        "blur": 0.4,
+        "dim": 0.2
+      }
+    },
+    "looks": [
+      {
+        "id": "look-a",
+        "name": "Café evening",
+        "design": {},
+        "room": {
+          "place": "cafe",
+          "light": "evening",
+          "brightness": 1,
+          "floor": "auto",
+          "air": "dust",
+          "airAmount": 1,
+          "props": {},
+          "sign": "OPEN",
+          "photo": {
+            "blur": 0.25,
+            "dim": 0.15
+          }
+        }
+      }
+    ],
+    "quality": "auto"
+  },
+  "characters": {
+    "active": "atlas",
+    "list": [
+      {
+        "id": "atlas",
+        "name": "Atlas",
+        "look": {
+          "design": {},
+          "room": {
+            "place": "studio"
+          },
+          "accent": "#f5a94a"
+        },
+        "builtin": "atlas"
+      },
+      {
+        "id": "mira",
+        "name": "Mira",
+        "look": {
+          "design": {},
+          "room": {
+            "place": "sky",
+            "air": "sparkles"
+          },
+          "accent": "#f5a94a"
+        },
+        "builtin": "mira"
+      }
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "ui": {
+    "language": "ar",
+    "design": 2
+  },
+  "whiteboard": {
+    "enabled": true
+  },
+  "robot": {
+    "room": {
+      "place": "kitchen",
+      "colors": {
+        "wall": "#3d352e",
+        "floor": "#6e503b",
+        "glow": "#ffd699",
+        "detail": "#6d9c7a"
+      },
+      "light": "day",
+      "brightness": 0.9,
+      "floor": "auto",
+      "air": "none",
+      "airAmount": 1,
+      "props": {
+        "counter": true,
+        "kettle": true,
+        "cat": true
+      },
+      "companions": {},
+      "timeMode": "manual",
+      "timeHour": 9,
+      "weatherSync": false,
+      "season": "none",
+      "sign": "ON AIR",
+      "photo": {
+        "blur": 0.25,
+        "dim": 0.15
+      },
+      "builder": {
+        "enabled": false,
+        "wallStyle": "plaster",
+        "floorStyle": "oak",
+        "ceilingStyle": "open",
+        "windowStyle": "arched",
+        "lightingRig": "cozy_warm",
+        "items": [
+          {
+            "id": "item-1",
+            "propId": "fruit_bowl",
+            "slot": "shelf",
+            "x": 0.55,
+            "y": 0.78,
+            "z": -0.95,
+            "rotY": 0,
+            "scale": 1,
+            "c1": "#f4efe6",
+            "c2": "#e8453c",
+            "animated": false,
+            "interactive": true
+          }
+        ]
+      }
+    },
+    "customRooms": [
+      {
+        "id": "room-1",
+        "name": "Library",
+        "room": {
+          "place": "library"
+        }
+      }
+    ],
+    "looks": []
+  },
+  "characters": {
+    "active": "mira",
+    "list": [
+      {
+        "id": "mira",
+        "name": "Mira",
+        "look": {
+          "design": {},
+          "room": {
+            "place": "kitchen"
+          },
+          "accent": "#f5a94a"
+        },
+        "builtin": "mira"
+      }
+    ]
+  }
+}
