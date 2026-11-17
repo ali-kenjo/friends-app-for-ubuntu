@@ -28,7 +28,9 @@
     "test:desktop": "node scripts/e2e-desktop.js",
     "test:a11y": "node scripts/a11y.js",
     "i18n": "node scripts/i18n.js",
-    "design:shots": "node scripts/design-shots.js"
+    "design:shots": "node scripts/design-shots.js",
+    "design:assets": "node scripts/asset-sheet.js --only all",
+    "design:rooms": "node scripts/room-shots.js after"
   },
   "license": "MIT",
   "repository": {
