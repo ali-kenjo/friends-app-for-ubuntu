@@ -2,7 +2,7 @@
 // Pure. Every function takes a room document and returns a new one (the old one is left alone, so undo
 // can keep it). Positions are meters, angles degrees; a thing on another thing is stored in its parent's
 // frame (model.mjs), so moving the parent moves it too.
-import { CATALOG_BY_ID } from "../catalog.mjs";
+import { entryFor } from "../catalog.mjs";
 import { newId, worldTransform, footprintOf, deg, displayName, CUSTOM_PREFIX } from "../model.mjs";
 import { obb, obbOverlap, buildGrid, findPath, standPoint, ROBOT_RADIUS } from "../nav.mjs";
 import { WALL_FACING, wallOfPoint } from "./walls.mjs";
@@ -12,7 +12,7 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 const round = (v, k = 1000) => Math.round(v * k) / k;
 
 export function defOf(asset, custom = {}) {
-  return CATALOG_BY_ID[asset.type] || (asset.type?.startsWith(CUSTOM_PREFIX) ? custom[asset.type.slice(CUSTOM_PREFIX.length)] : null);
+  return entryFor(asset.type) || (asset.type?.startsWith(CUSTOM_PREFIX) ? custom[asset.type.slice(CUSTOM_PREFIX.length)] : null);
 }
 
 const withAssets = (room, assets) => ({ ...room, assets });
@@ -49,7 +49,7 @@ export function toParentFrame(room, parent, world, surfaceId) {
 // ---------- Adding, changing, removing ----------
 // type: catalog id; o: { pos (world), rot, slot, parent, surface, colors, name, state, matchColors }
 export function addAsset(room, type, o = {}) {
-  const def = CATALOG_BY_ID[type] || (type.startsWith(CUSTOM_PREFIX) ? o.def : null);
+  const def = entryFor(type) || (type.startsWith(CUSTOM_PREFIX) ? o.def : null);
   if (!def) return { room, id: null };
   const taken = new Set(room.assets.map((a) => a.id));
   const id = newId(o.id || type.replace(CUSTOM_PREFIX, ""), taken);
@@ -211,7 +211,7 @@ function pointInPoly([x, z], poly, pad = 0) {
 
 // The first spot near `near` (world x, z) where a floor thing of this type fits
 export function firstFreeSpot(room, type, near = [0, -room.size.d / 4], { rot = 0, scale = 1, exclude = [] } = {}) {
-  const def = CATALOG_BY_ID[type];
+  const def = entryFor(type);
   if (!def) return near;
   const probe = (x, z) => {
     const test = addAsset({ ...room, assets: room.assets.filter((a) => !exclude.includes(a.id)) }, type, { pos: [x, 0, z], rot, scale });
@@ -272,7 +272,7 @@ export function paste(room, clip, offset = [0, 0, 0]) {
     taken.add(id);
     rename[a.id] = id;
   }
-  const added = clip.assets.filter((a) => CATALOG_BY_ID[a.type] || a.type?.startsWith(CUSTOM_PREFIX)).map((a) => ({
+  const added = clip.assets.filter((a) => entryFor(a.type) || a.type?.startsWith(CUSTOM_PREFIX)).map((a) => ({
     ...clone(a),
     id: rename[a.id],
     parent: a.parent ? rename[a.parent] || null : null,
@@ -309,7 +309,7 @@ export function distribute(room, ids) {
 // Another thing in the same place (its things on top stay when the new one has a surface)
 export function replaceWith(room, id, type) {
   const a = room.assets.find((x) => x.id === id);
-  const def = CATALOG_BY_ID[type];
+  const def = entryFor(type);
   if (!a || !def) return room;
   const slot = def.slots.includes(a.slot) ? a.slot : def.slots[0];
   let next = updateAsset(room, id, { type, slot, colors: {}, state: {}, variant: "M", scale: Math.min(def.scale[1], Math.max(def.scale[0], a.scale)) });

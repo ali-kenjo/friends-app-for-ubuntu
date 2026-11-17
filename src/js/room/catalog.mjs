@@ -460,6 +460,19 @@ export const CATALOG = [
 ];
 
 export const CATALOG_BY_ID = Object.fromEntries(CATALOG.map((a) => [a.id, a]));
+
+// Your own models ("custom:<id>" things), registered by the page (room/custom.js) or given by the helper.
+// entryFor(type) finds a thing's entry either way, so the pure modules (model, ops, nav, rules) handle both.
+const CUSTOM = {};
+export function setCustomEntries(map = {}) {
+  for (const k of Object.keys(CUSTOM)) delete CUSTOM[k];
+  Object.assign(CUSTOM, map);
+}
+export const customEntries = () => CUSTOM;
+export function entryFor(type) {
+  if (typeof type !== "string") return null;
+  return CATALOG_BY_ID[type] || (type.startsWith("custom:") ? CUSTOM[type.slice(7)] || null : null);
+}
 export const CATALOG_VERSION = `1.1-${CATALOG.length}`;
 
 // Old ids → new type: the 0.7 Room Builder prop ids and the 1.0 v1 kinds

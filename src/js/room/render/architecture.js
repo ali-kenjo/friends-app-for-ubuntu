@@ -5,7 +5,7 @@
 import * as THREE from "three";
 import * as G from "./kit/geometry.js";
 import { material } from "./kit/materials.js";
-import { CATALOG_BY_ID } from "../catalog.mjs";
+import { entryFor } from "../catalog.mjs";
 import { worldTransform } from "../model.mjs";
 import { outsideTexture, phaseFor } from "./outside.js";
 
@@ -110,7 +110,7 @@ export function buildArchitecture(room, { level = "high", hidden = new Set() } =
   const byId = new Map(room.assets.map((a) => [a.id, a]));
   for (const a of room.assets) {
     if (hidden.has(a.id) || a.slot !== "wall") continue;
-    const def = CATALOG_BY_ID[a.type];
+    const def = entryFor(a.type);
     const op = def?.opening;
     if (!op) continue;
     const p = worldTransform(room, a, byId);

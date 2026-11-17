@@ -169,6 +169,16 @@ async function main() {
     await scan("room-editor-rooms", lang, theme);
     await page.keyboard.press("Escape");
     await sleep(200);
+    // My models, and the "Add my model" wizard before a file is chosen
+    await page.evaluate(() => document.querySelector('.re-chip[data-cat="mine"]')?.click());
+    await sleep(300);
+    await scan("room-editor-mine", lang, theme);
+    await page.evaluate(() => document.querySelector(".re-add-model")?.click());
+    await page.waitForSelector(".re-wizard", { timeout: 10000 });
+    await scan("room-editor-wizard", lang, theme);
+    await page.keyboard.press("Escape");
+    await sleep(200);
+    await page.evaluate(() => document.querySelector('.re-chip[data-cat="all"]')?.click());
     // A lamp: its light settings
     await page.evaluate(() => {
       const lamp = window.__robot.room.assets.find((a) => a.type.startsWith("lamp_"));

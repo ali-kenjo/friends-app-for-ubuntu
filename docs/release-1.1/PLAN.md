@@ -116,7 +116,7 @@ with what is left written next to it. A fresh session continues from this file a
       floor and air controls go; until then they would be two "Mood" controls side by side).
 - [x] Catalog: categories, search in en/de/ar over labels and tags, favourites, recently used, My sets;
       thumbnails drawn from the real builders and cached in IndexedDB by catalog version; badges; click or drag.
-- [ ] Catalog: My models (with the wizard below).
+- [x] Catalog: My models ("Add my model…", remove), placed and used like any other thing.
 - [x] Placing by drag (§5.4): ghost, slot-aware raycast (floor, wall flush, surfaces re-parent, ceiling),
       green/red/amber with the reason shown and announced, Esc, Shift stamps, "match room colors". A
       click places in view at the first free spot, never on the robot's home.
@@ -139,7 +139,12 @@ with what is left written next to it. A fresh session continues from this file a
 - [x] History/saving/sharing (§5.10): command undo (≥100 steps, drags as one), autosave + "Saved",
       revert, Save as…, duplicate, export/import `.friends-room`, copy/paste between rooms (Ctrl+C/V).
 - [x] Room picker ("Your rooms…") with pictures; the editor sends the room's picture when it closes.
-- [ ] Custom models wizard (§5.11) and re-skinning built-ins; texture/triangle caps.
+- [x] Custom models wizard (§5.11): the file on a turntable next to the robot's height; name, category,
+      slots; units and height, flat tops found by downward raycasts (removable); anchors from node names
+      (anchor_robot_stand, socket_hand_grip, DynamicCanvas, surface_*, sit_*, look_*); actions; c1–c3
+      recolorable; Stylize (kit families, normals, shadows). Re-skinning built-ins (Advanced tab →
+      "Wear one of my models"). Textures capped at 2048 px; triangles capped per graphics level (a box of
+      its size above the cap, with a note). In backups and room exports; offline.
 - [x] Extras: per-asset schedules (Advanced tab), floor plan as a PNG, scenes (which is on now; per scene
       its name, when it switches on, its mood, what shows and which lamps are on; holds only what it
       changes), the measure tool, "Describe the room" (the room in words, for screen readers and anyone).

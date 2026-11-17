@@ -12,7 +12,8 @@
 import * as THREE from "three";
 import { RoomScene } from "../../robot/room3d.js";
 import { sanitizeRoom as sanitizeLegacyRoom, resolved, activeSeason } from "../../robot/room.mjs";
-import { CATALOG_BY_ID } from "../catalog.mjs";
+import { entryFor, customEntries } from "../catalog.mjs";
+import { buildModel } from "./custom-model.js";
 import { worldTransform, footprintOf } from "../model.mjs";
 import { effectiveRoom, roomHour } from "../schedule.mjs";
 import { legacyRoomOf } from "../as-legacy.mjs";
@@ -224,7 +225,7 @@ export class RoomRenderer {
 
   // ---- Architecture ----
   buildArchitecture(doc, level) {
-    const openings = doc.assets.filter((a) => a.slot === "wall" && CATALOG_BY_ID[a.type]?.opening && !this.hidden.has(a.id)).map((a) => [a.id, a.pos, a.scale, a.variant]);
+    const openings = doc.assets.filter((a) => a.slot === "wall" && entryFor(a.type)?.opening && !this.hidden.has(a.id)).map((a) => [a.id, a.pos, a.scale, a.variant]);
     const key = JSON.stringify([doc.size, doc.architecture, openings, level, Math.floor(roomHour(doc) * 2)]);
     if (key === this.archKey && this.arch) return;
     this.clearArchitecture();
@@ -249,14 +250,18 @@ export class RoomRenderer {
     this.roomGlow = [...(this.arch?.glowing || [])];
     for (const a of doc.assets) {
       if (this.hidden.has(a.id)) continue;
-      const def = CATALOG_BY_ID[a.type];
-      if (!def || !hasBuilder(def)) continue;
+      const def = entryFor(a.type);
+      // A built-in thing wearing one of your models keeps its behaviour and draws the model
+      const skin = a.glb ? customEntries()[a.glb] : null;
+      const model = def?.custom ? def : skin;
+      if (!def || !(model || hasBuilder(def))) continue;
       seen.add(a.id);
-      const shapeKey = JSON.stringify([a.type, a.state, level, a.glb, a.variant === "M" ? "" : ""]);
+      // A model is drawn as its file says: its colors and its slot rebuild it (no kit recolor)
+      const shapeKey = JSON.stringify([a.type, a.state, level, a.glb, model ? [a.colors, a.slot, model.unit, model.stylize, model.info?.triangles] : ""]);
       let inst = this.instances.get(a.id);
       if (!inst || inst.shapeKey !== shapeKey) {
         if (inst) this.dropInstance(a.id);
-        const built = buildAsset(def, a, level);
+        const built = model ? buildModel(model, a, level, { def }) : buildAsset(def, a, level);
         if (!built) continue;
         built.group.userData.assetId = a.id;
         built.group.userData.propId = a.id;
@@ -264,7 +269,7 @@ export class RoomRenderer {
         this.assetGroup.add(built.group);
         inst = { shapeKey, colorKey: JSON.stringify(a.colors), built, def };
         this.instances.set(a.id, inst);
-      } else if (inst.colorKey !== JSON.stringify(a.colors)) {
+      } else if (!model && inst.colorKey !== JSON.stringify(a.colors)) {
         recolor(inst.built, def, a.colors, level);
         inst.colorKey = JSON.stringify(a.colors);
       }
@@ -295,7 +300,7 @@ export class RoomRenderer {
     const uv = [];
     for (const a of doc.assets) {
       if (this.hidden.has(a.id) || !this.instances.has(a.id)) continue;
-      const def = CATALOG_BY_ID[a.type];
+      const def = entryFor(a.type);
       if (NO_DECAL(def, a)) continue;
       const corners = footprintOf(doc, a, byId);
       const t = worldTransform(doc, a, byId);
@@ -343,7 +348,7 @@ export class RoomRenderer {
     const byId = doc ? new Map(doc.assets.map((a) => [a.id, a])) : new Map();
     const candidates = [];
     for (const a of assets) {
-      const def = CATALOG_BY_ID[a.type];
+      const def = entryFor(a.type);
       if (!def?.light || a.state?.on === false || !this.instances.has(a.id)) continue;
       const t = worldTransform(doc, a, byId);
       const k = a.scale * (def.variants?.[a.variant] ?? 1);
@@ -372,7 +377,7 @@ export class RoomRenderer {
 
   // Reflections from this room, rebuilt a moment after the architecture or mood settles
   scheduleEnvironment(doc) {
-    const wins = doc.assets.filter((a) => a.slot === "wall" && CATALOG_BY_ID[a.type]?.opening && !this.hidden.has(a.id));
+    const wins = doc.assets.filter((a) => a.slot === "wall" && entryFor(a.type)?.opening && !this.hidden.has(a.id));
     const spec = {
       w: doc.size.w,
       d: doc.size.d,

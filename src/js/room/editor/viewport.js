@@ -5,7 +5,7 @@
 // doesn't and amber where it would cut the robot off; a selected thing gets a footprint outline, a ring
 // to turn it, a knob to size it and an arrow to lift it.
 import * as THREE from "three";
-import { CATALOG_BY_ID } from "../catalog.mjs";
+import { entryFor } from "../catalog.mjs";
 import { worldTransform, footprintOf } from "../model.mjs";
 import { buildAsset } from "../render/assets/index.js";
 import * as ops from "./ops.mjs";
@@ -266,7 +266,7 @@ export class Viewport {
   // ---------- Placing a new thing (a catalog tile dragged in, or clicked) ----------
   startPlacing(type, { stamp = false } = {}) {
     this.cancelPlacing();
-    const def = CATALOG_BY_ID[type];
+    const def = entryFor(type);
     if (!def) return;
     const built = buildAsset(def, { id: "ghost" }, "low");
     built.group.traverse((o) => {
@@ -361,7 +361,7 @@ export class Viewport {
 
   // A click on a catalog tile: the first good spot near the middle of the view
   placeNearCentre(type) {
-    const def = CATALOG_BY_ID[type];
+    const def = entryFor(type);
     const room = this.ctx.getRoom();
     const r = this.host.getBoundingClientRect();
     const fake = { clientX: r.left + r.width / 2, clientY: r.top + r.height * 0.6, ctrlKey: false, metaKey: false };

@@ -3,7 +3,11 @@
 import { t, tp } from "../../i18n.js";
 import { getSettings, updateSettings } from "../../store.js";
 import { h, section, tiles, slider, swatches, toggle, textField, button, hint, arrowKeys, glyph } from "../../robot/studio/ui.js";
-import { CATALOG, CATALOG_BY_ID, CATEGORIES } from "../catalog.mjs";
+import { CATALOG, CATEGORIES, entryFor } from "../catalog.mjs";
+import { customList, customType, customModels, loadCustomModels } from "../custom.js";
+import { forgetModel, tooDetailed } from "../render/custom-model.js";
+import { robot } from "../../robot/index.js";
+import { confirmDialog } from "../../dialogs.js";
 import * as C from "../choices.mjs";
 import { TEMPLATES } from "../templates.mjs";
 import { defaultRules, displayName, worldTransform, newId } from "../model.mjs";
@@ -52,7 +56,7 @@ export function catalogPanel(ed) {
       });
     }
   }, { root: grid, rootMargin: "120px" });
-  const chips = [["all", t("All")], ["favourites", t("Favourites")], ["recent", t("Recently used")], ["sets", t("My sets")], ...CATEGORIES.map((c) => [c.id, t(c.label)])];
+  const chips = [["all", t("All")], ["favourites", t("Favourites")], ["recent", t("Recently used")], ["mine", t("My models")], ["sets", t("My sets")], ...CATEGORIES.map((c) => [c.id, t(c.label)])];
   for (const [id, label] of chips) {
     const b = h("button", { type: "button", class: "re-chip", role: "radio", "aria-checked": String(id === "all"), "data-cat": id, text: label });
     b.addEventListener("click", () => {
@@ -72,7 +76,19 @@ export function catalogPanel(ed) {
     return q.toLowerCase().split(/\s+/).every((w) => words.includes(w));
   };
 
-  const tile = (a) => {
+  // The first tile of My models
+  const addMine = h("button", { type: "button", class: "re-item re-add-model" }, h("span", { class: "re-thumb ready re-add-icon", "aria-hidden": "true" }, glyph("plus", 36)), h("span", { class: "re-item-name", text: t("Add my model…") }), h("span", { class: "re-item-slots", text: ".glb" }));
+  addMine.addEventListener("click", async () => {
+    const { addModelWizard } = await import("./model-wizard.js");
+    const entry = await addModelWizard();
+    if (!entry) return addMine.focus();
+    render();
+    ed.vp.placeNearCentre(customType(entry.id));
+    remember(customType(entry.id));
+  });
+  document.addEventListener("friends:room-custom", () => category === "mine" && render());
+
+  const tile = (a, { removable = false } = {}) => {
     const fav = (editorPrefs().favourites || []).includes(a.id);
     const slots = a.slots.map((s) => t(C.SLOTS.find((x) => x.id === s)?.label || s)).join(", ");
     const badges = [];
@@ -138,7 +154,21 @@ export function catalogPanel(ed) {
       star.setAttribute("aria-pressed", String(list.has(a.id)));
       star.textContent = list.has(a.id) ? "★" : "☆";
     });
-    return h("div", { class: "re-cell", role: "listitem" }, b, star);
+    const cell = h("div", { class: "re-cell", role: "listitem" }, b, star);
+    if (removable) {
+      const del = h("button", { type: "button", class: "re-fav re-del", "aria-label": t("Remove {name} from my models", { name: a.label }), text: "✕" });
+      del.addEventListener("click", async () => {
+        const used = ed.room.assets.filter((x) => x.type === a.id).length;
+        const ok = await confirmDialog({ title: t("Remove {name}?", { name: a.label }), message: used ? tp("It's in this room once; it goes from the room too.", "It's in this room {n} times; they go from the room too.", used) : t("The model is deleted from this computer."), confirm: t("Remove"), danger: true });
+        if (!ok) return;
+        if (used) ed.commit(ops.removeAssets(ed.room, ed.room.assets.filter((x) => x.type === a.id).map((x) => x.id)), t("Remove"));
+        await fetch(`/api/room-assets/${encodeURIComponent(a.glb)}`, { method: "DELETE" });
+        forgetModel(a.glb);
+        await loadCustomModels({ force: true });
+      });
+      cell.append(del);
+    }
+    return cell;
   };
 
   const remember = (id) => {
@@ -166,9 +196,18 @@ export function catalogPanel(ed) {
       if (!sets.length) note.textContent = t("Select a few things in the room and use “Save as a set” to keep them here.");
       return;
     }
-    let list = CATALOG.filter((a) => !a.pending && matches(a, q));
+    // Your own models, as catalog entries placed by their "custom:<id>" type
+    const mine = customList().map((e) => ({ ...e, id: customType(e.id), tags: e.tags || [] }));
+    if (category === "mine") {
+      grid.append(h("div", { class: "re-cell", role: "listitem" }, addMine));
+      const list = mine.filter((a) => matches(a, q));
+      for (const a of list) grid.append(tile(a, { removable: true }));
+      if (!mine.length) note.textContent = t("Bring in a .glb model of your own: it's placed, moved and used like any other thing.");
+      return;
+    }
+    let list = [...CATALOG.filter((a) => !a.pending), ...mine].filter((a) => matches(a, q));
     if (category === "favourites") list = list.filter((a) => (editorPrefs().favourites || []).includes(a.id));
-    else if (category === "recent") list = (editorPrefs().recent || []).map((id) => CATALOG_BY_ID[id]).filter((a) => a && matches(a, q));
+    else if (category === "recent") list = (editorPrefs().recent || []).map((id) => (id.startsWith("custom:") ? mine.find((m) => m.id === id) : entryFor(id))).filter((a) => a && matches(a, q));
     else if (category !== "all") list = list.filter((a) => a.category === category);
     for (const a of list) grid.append(tile(a));
     if (!list.length) note.textContent = category === "favourites" ? t("Star things to find them here.") : t("Nothing matches.");
@@ -368,6 +407,9 @@ function lookTab(ed, a, def, commit) {
       l.auto === "dusk" ? hint(t("It follows the room's time and mood; a scene can still switch it.")) : null,
     ));
   }
+  // One of your models (or a thing wearing one) that is too detailed for this graphics level
+  const model = def.custom ? def : a.glb ? customModels()[a.glb] : null;
+  if (model && tooDetailed(model, robot.engine?.level || "high")) out.push(hint(t("This model is too detailed for the graphics level in use, so it's shown as a box of its size. A higher Quality in Settings → Robot → Performance and model shows it.")));
   if (def.personalData) out.push(hint(t("This shows your own things only when you switch it on. It stays hidden while filming unless you allow it in Settings → Robot → Privacy, and it follows Private mode.")));
   return out;
 }
@@ -448,8 +490,19 @@ function advancedTab(ed, a, def, commit) {
     section(t("Name"), textField({ label: t("Its name (the robot and the AI use it)"), max: 60, value: a.name, placeholder: t(def.label), onChange: (v) => commit(() => ({ name: v }), t("Rename")) }).el),
     section(t("Shown"), toggle({ label: t("Hidden"), value: a.hidden, onChange: (on) => commit(() => ({ hidden: on }), t("Hide")) }).el, toggle({ label: t("Locked (can't be moved by mistake)"), value: a.locked, onChange: (on) => commit(() => ({ locked: on }), t("Lock")) }).el),
     section(t("Only at some times"), hint(t("Leave everything empty and it's always there.")), ...C.SEASONS.filter((s) => !["none", "auto"].includes(s.id)).map((s) => toggle({ label: t(s.label), value: sch.seasons.includes(s.id), onChange: (on) => setSch({ seasons: on ? [...sch.seasons, s.id] : sch.seasons.filter((x) => x !== s.id) }) }).el), timeInput(t("From"), "from"), timeInput(t("Until"), "to"), h("div", { class: "re-weekdays" }, ...C.WEEKDAYS.map((d) => toggle({ label: t(d.label), value: sch.weekdays.includes(d.id), onChange: (on) => setSch({ weekdays: on ? [...sch.weekdays, d.id] : sch.weekdays.filter((x) => x !== d.id) }) }).el)), h("div", { class: "rs-actions" }, button(t("Always there"), () => commit(() => ({ schedule: null }), t("Schedule"))))),
+    def.custom ? null : reskinSection(a, commit),
     section(t("Remove"), h("div", { class: "rs-actions" }, button(t("Remove it"), () => ed.removeSelected(), { icon: "trash" }))),
   ];
+}
+
+// A built-in thing can wear one of your models and keep what it does
+function reskinSection(a, commit) {
+  const mine = customList();
+  if (!mine.length && !a.glb) return null;
+  const pick = h("select", { class: "field", "aria-label": t("Wear one of my models") }, h("option", { value: "", text: t("Its own look") }), ...mine.map((e) => h("option", { value: e.id, text: e.label })));
+  pick.value = mine.some((e) => e.id === a.glb) ? a.glb : "";
+  pick.addEventListener("change", () => commit(() => ({ glb: pick.value || null }), t("Look")));
+  return section(t("Wear one of my models"), pick, hint(t("It keeps what it does (its rules, what the robot can do with it); only how it looks changes.")));
 }
 
 function manyPanel(ed) {

@@ -11,7 +11,7 @@
 // surface it stands on), so it moves and turns with the parent.
 
 import * as C from "./choices.mjs";
-import { CATALOG_BY_ID, CATEGORIES } from "./catalog.mjs";
+import { CATALOG_BY_ID, CATEGORIES, entryFor, customEntries } from "./catalog.mjs";
 
 export const SCHEMA = 1;
 export const LIMITS = { rooms: 64, assets: 300, zones: 64, routes: 16, routePoints: 64, cameras: 32, scenes: 16, spots: 32, zonePoints: 32, name: 60, text: 120 };
@@ -229,10 +229,10 @@ function cleanState(raw, def) {
 }
 
 // One asset; `custom` is the catalog of the user's own models ({ id → entry })
-export function sanitizeAsset(raw, { custom = {}, notes } = {}) {
+export function sanitizeAsset(raw, { custom = null, notes } = {}) {
   const a = obj(raw);
   const type = typeof a.type === "string" ? a.type : "";
-  const def = CATALOG_BY_ID[type] || (type.startsWith(CUSTOM_PREFIX) ? custom[type.slice(CUSTOM_PREFIX.length)] : null);
+  const def = CATALOG_BY_ID[type] || (type.startsWith(CUSTOM_PREFIX) ? (custom || customEntries())[type.slice(CUSTOM_PREFIX.length)] : null);
   if (!def) {
     notes?.push(`Dropped an unknown thing: ${text(type, 40) || "(no type)"}`);
     return null;
@@ -491,7 +491,7 @@ function cleanScene(raw) {
 }
 
 // The whole room. Returns a clean copy; `notes` (an array) collects what was dropped and why.
-export function sanitizeRoom(input, { custom = {}, notes = [], now = Date.now() } = {}) {
+export function sanitizeRoom(input, { custom = null, notes = [], now = Date.now() } = {}) {
   const r = obj(input);
   const base = emptyRoom({ now });
   const size = obj(r.size);
@@ -610,8 +610,10 @@ export function sanitizeCustomEntry(raw, id) {
   const anchors = obj(e.anchors);
   const a3 = (v) => (Array.isArray(v) && v.length === 3 ? vec3(v, [0, 0, 0], 10) : null);
   const info = obj(e.info);
-  const recolor = arr(info.recolor).filter((k) => ["c1", "c2", "c3"].includes(k));
-  const colorsIn = obj(e.colorDefaults);
+  // The colorable materials: from the file's check, or (an entry read back) from its own color slots
+  const saved = arr(e.colors).map((c) => obj(c));
+  const recolor = (arr(info.recolor).length ? arr(info.recolor) : saved.map((c) => c.key)).filter((k) => ["c1", "c2", "c3"].includes(k));
+  const colorsIn = { ...Object.fromEntries(saved.map((c) => [c.key, c.def])), ...obj(e.colorDefaults) };
   const actions = arr(e.actions).filter((x) => C.ACTION_IDS.includes(x));
   return {
     id: cid,
@@ -648,6 +650,8 @@ export function sanitizeCustomEntry(raw, id) {
     build: "custom",
     custom: true,
     stylize: bool(e.stylize, true),
+    // How big one of the model's units is in meters (1: made in meters; 0.01: made in centimeters)
+    unit: num(e.unit, 0.001, 100, 1, 0.0001),
     glb: cid,
     since: "1.1",
     from: { builder: [], v1: [] },
@@ -657,6 +661,7 @@ export function sanitizeCustomEntry(raw, id) {
       maxTexture: num(info.maxTexture, 0, 65536, 0, 1),
       bytes: num(info.bytes, 0, 1e9, 0, 1),
       stripped: arr(info.stripped).map((x) => text(x, 60)).filter(Boolean).slice(0, 20),
+      recolor,
       sockets: obj(info.sockets),
     },
   };
@@ -674,7 +679,7 @@ export function worldTransform(room, asset, byId = new Map(room.assets.map((a) =
   let p = asset.parent ? byId.get(asset.parent) : null;
   let guard = 0;
   while (p && guard++ < 16) {
-    const def = CATALOG_BY_ID[p.type];
+    const def = entryFor(p.type);
     const surf = def?.surfaces?.find((s) => s.id === asset.surface) || def?.surfaces?.[0];
     const k = p.scale || 1;
     const sy = (surf?.y ?? def?.height ?? 0) * k;
@@ -696,7 +701,7 @@ export function worldTransform(room, asset, byId = new Map(room.assets.map((a) =
 
 // The four corners of an asset's footprint on the floor plan [[x, z]…] (oriented, scaled)
 export function footprintOf(room, asset, byId) {
-  const def = CATALOG_BY_ID[asset.type];
+  const def = entryFor(asset.type);
   const t = worldTransform(room, asset, byId);
   const k = (asset.scale || 1) * (def?.variants?.[asset.variant] ?? 1);
   const hw = ((def?.footprint?.w ?? 0.5) * k) / 2;
@@ -721,7 +726,7 @@ function whereWords(room, t, asset, byId) {
 }
 
 export function displayName(asset) {
-  return asset.name || CATALOG_BY_ID[asset.type]?.label || asset.type;
+  return asset.name || entryFor(asset.type)?.label || asset.type;
 }
 
 // roomSummary: what's in the room, in plain words and as data.
@@ -733,7 +738,7 @@ export function roomSummary(room, { detail = "all", personal = false, say = (s, 
   const items = [];
   for (const a of room.assets) {
     if (a.hidden) continue;
-    const def = CATALOG_BY_ID[a.type];
+    const def = entryFor(a.type);
     const t = worldTransform(room, a, byId);
     const where = whereWords(room, t, a, byId);
     const item = { id: a.id, name: nameOf(a), type: a.type, where, personal: Boolean(def?.personalData) };

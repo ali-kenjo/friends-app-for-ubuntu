@@ -9,6 +9,7 @@ import { Director } from "./director.mjs";
 import { FaceTracker } from "./facetrack.js";
 import { robotSound } from "./sound.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
+import { loadCustomModels } from "../room/custom.js";
 
 export const animator = new Animator();
 animator.onSound = (kind, sub) => {
@@ -54,6 +55,8 @@ let roomWanted = "";
 async function loadRoom(id) {
   roomWanted = id;
   try {
+    // Your own models first, so a room with them draws them at once
+    await loadCustomModels();
     const res = await fetch(`/api/rooms/${encodeURIComponent(id)}`);
     if (!res.ok) throw new Error(`room ${res.status}`);
     const doc = await res.json();
@@ -65,6 +68,9 @@ async function loadRoom(id) {
     console.warn("The room couldn't be loaded:", err.message);
   }
 }
+
+// A model added, changed or removed: the room is drawn again with the new list
+document.addEventListener("friends:room-custom", () => roomDoc && engine?.setLook({ roomDoc }));
 
 // A changed room: shown at once, saved a moment later (one write for a burst of changes)
 let roomSaveTimer = 0;

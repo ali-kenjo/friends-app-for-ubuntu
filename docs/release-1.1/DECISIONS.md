@@ -155,3 +155,15 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
 - **R25 The Studio's quick room controls wait for step 8.** Its 1.0 place/mood/floor/air controls, the
   looks and character switching and the Studio's undo all still write 1.0 room objects (and the Studio
   tests check those); replacing only the mood control now would put two "Mood" controls side by side.
+- **R26 Your models are registered next to the built-in catalog** (`catalog.entryFor(type)` finds either;
+  the page registers them from `/api/room-assets`, the helper passes them explicitly). The pure modules
+  (model, ops, nav, rules, cameras) and the renderer use `entryFor`, so a model's size, surfaces, anchors and
+  rules work like a built-in's, and the page's own room cleaning keeps them.
+- **R27 Models are drawn as their file says, stylized on request.** Stylize maps plain materials onto the
+  kit's families by name and settings (without the kit's baked-shading vertex colors, which a model
+  doesn't have) and keeps a material's own picture, softened. Triangle caps per level: Low 40k, Medium
+  120k, High 250k, Ultra 500k; above the cap the model is a box of its size and the Inspector says why.
+- **R28 The page may fetch `blob:` URLs** (`connect-src 'self' blob:`): three.js's GLTFLoader decodes a
+  model's embedded pictures from blob URLs it makes itself; without it a model loaded but lost its textures.
+- **R29 `npm run check` checks every relative import of the page's code**: a wrong path passed lint and
+  parsing and only failed in the browser.

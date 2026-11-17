@@ -8,7 +8,7 @@
 //
 // It combines the thing's rules (permission, allowed actions, fragile), the scene's overrides, zones,
 // the AI switches, filming mode, Private mode and personal-data flags.
-import { CATALOG_BY_ID } from "./catalog.mjs";
+import { entryFor } from "./catalog.mjs";
 import { LOOK_ACTIONS, ACTIONS } from "./choices.mjs";
 import { worldTransform, displayName } from "./model.mjs";
 import { effectiveRoom } from "./schedule.mjs";
@@ -68,7 +68,7 @@ export function canDo(room, actor, assetId, action, context = {}) {
   const asset = current.assets.find((a) => a.id === assetId);
   if (!asset) return no("not_found");
   if (hidden.has(asset.id)) return no("not_here");
-  const def = CATALOG_BY_ID[asset.type] || null;
+  const def = entryFor(asset.type);
   const supported = def?.actions || ["look"];
   if (!supported.includes(action)) return no("unsupported");
   const rules = asset.rules || {};
@@ -124,7 +124,7 @@ export function permissionTable(room, actor, context = {}) {
   return eff.room.assets
     .filter((a) => !eff.hidden.has(a.id))
     .map((a) => {
-      const def = CATALOG_BY_ID[a.type];
+      const def = entryFor(a.type);
       const allowed = (def?.actions || []).filter((act) => canDo(eff.room, actor, a.id, act, ctx).ok);
       return { id: a.id, name: displayName(a), permission: a.rules?.permission || "free", allowed, where: worldTransform(eff.room, a) };
     });

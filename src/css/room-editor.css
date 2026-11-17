@@ -960,3 +960,90 @@
   display: grid;
   gap: var(--space-1);
 }
+
+/* ----- Add my model ----- */
+.re-wizard {
+  inline-size: min(940px, 100%);
+}
+
+.re-wiz-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.re-wiz-main,
+.re-wiz-details {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.re-wiz-details[hidden] {
+  display: none;
+}
+
+.re-wiz-side {
+  position: sticky;
+  inset-block-start: 0;
+}
+
+.re-wiz-stage {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 360 / 260;
+  border-radius: var(--radius-md);
+  background: radial-gradient(circle at 50% 40%, var(--bg-hover), var(--bg-subtle));
+}
+
+.re-wiz-surfaces {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.re-wiz-surfaces li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+.re-wizard input[type="file"] {
+  inline-size: 100%;
+}
+
+.re-wiz-actions {
+  justify-content: flex-end;
+}
+
+.re-add-icon {
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.re-del {
+  inset-inline-end: auto;
+  inset-inline-start: var(--space-h);
+}
+
+.rs-hint.warn {
+  color: var(--warning);
+}
+
+@media (max-width: 760px) {
+  .re-wiz-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .re-wiz-side {
+    position: static;
+    order: -1;
+  }
+}

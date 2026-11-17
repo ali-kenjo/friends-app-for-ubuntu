@@ -4,7 +4,7 @@
 // and, when any "allowed area" exists, by everything outside those areas. Slow zones cost more.
 // The grid is rebuilt incrementally: each thing remembers the cells it covers, so moving one thing
 // updates only its cells.
-import { CATALOG_BY_ID } from "./catalog.mjs";
+import { entryFor } from "./catalog.mjs";
 import { worldTransform } from "./model.mjs";
 
 export const ROBOT_RADIUS = 0.3;
@@ -32,7 +32,7 @@ const rad = (d) => (d * Math.PI) / 180;
 
 // The oriented rectangle of a floor thing: centre, half sizes, angle (for the grid and for overlap tests)
 export function obb(room, asset, byId) {
-  const def = CATALOG_BY_ID[asset.type];
+  const def = entryFor(asset.type);
   const t = worldTransform(room, asset, byId);
   const k = (asset.scale || 1) * (def?.variants?.[asset.variant] ?? 1);
   return { x: t.x, z: t.z, hw: ((def?.footprint?.w ?? 0.5) * k) / 2, hd: ((def?.footprint?.d ?? 0.5) * k) / 2, rot: t.rot };
@@ -74,7 +74,7 @@ export function obbOverlap(a, b, gap = 0) {
 export function blockers(room, hidden = new Set()) {
   return room.assets.filter((a) => {
     if (a.hidden || hidden.has(a.id) || a.parent) return false;
-    const def = CATALOG_BY_ID[a.type];
+    const def = entryFor(a.type);
     if (!def || !def.blocksPath) return false;
     return a.slot === "floor";
   });
@@ -85,7 +85,7 @@ export function standPoint(room, asset, byId = new Map(room.assets.map((a) => [a
   let a = asset;
   let guard = 0;
   while (a && guard++ < 16) {
-    const def = CATALOG_BY_ID[a.type];
+    const def = entryFor(a.type);
     const anchor = def?.anchors?.stand;
     if (anchor) {
       const t = worldTransform(room, a, byId);
@@ -399,7 +399,7 @@ export function unreachable(room, g = buildGrid(room)) {
   const byId = new Map(room.assets.map((a) => [a.id, a]));
   for (const a of room.assets) {
     if (a.hidden) continue;
-    const def = CATALOG_BY_ID[a.type];
+    const def = entryFor(a.type);
     if (!def || def.actions.every((x) => x === "look")) continue;
     const at = standPoint(room, a, byId);
     if (!reachable(g, home, at)) out.push({ kind: "asset", id: a.id });

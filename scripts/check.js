@@ -29,6 +29,10 @@ walk(root, (file) => {
       // The page's scripts are ES modules
       execFileSync(process.execPath, ["--check", "--input-type=module"], { input: text(), stdio: ["pipe", "pipe", "pipe"] });
       scripts++;
+      // Every relative import (static or dynamic) names a file that exists: a wrong path only shows in the browser
+      for (const [, spec] of text().matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*|^\s*import\s+)["'](\.{1,2}\/[^"']+)["']/gm)) {
+        if (!fs.existsSync(path.resolve(path.dirname(file), spec))) problems.push(`${rel}: imports ${spec}, which doesn't exist`);
+      }
       if (/^\s*(import|export)\b[^;]*\bfrom\s+["']https?:/m.test(text()) || /^\s*import\s+["']https?:/m.test(text())) {
         problems.push(`${rel}: imports code from another website at start-up (the app must start offline; use a dynamic import())`);
       }

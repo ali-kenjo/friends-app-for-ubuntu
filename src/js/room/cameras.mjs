@@ -3,7 +3,7 @@
 // A relative shot is measured in its thing's own frame (it moves and turns with it) and is unavailable
 // while the thing is missing or hidden. "follow" keeps the shot's offset to the robot as it moves;
 // "auto" stays where it is and turns and zooms to keep the robot framed.
-import { CATALOG_BY_ID } from "./catalog.mjs";
+import { entryFor } from "./catalog.mjs";
 import { worldTransform } from "./model.mjs";
 
 const RAD = Math.PI / 180;
@@ -64,7 +64,7 @@ export function shotPresets(room, say = (s, v) => s.replace(/\{(\w+)\}/g, (m, k)
   const seen = new Set();
   for (const a of room.assets) {
     if (a.parent || a.hidden || a.slot !== "floor") continue;
-    const def = CATALOG_BY_ID[a.type];
+    const def = entryFor(a.type);
     if (!def || !AT_KINDS.has(def.category) || seen.has(def.category) || def.height < 0.3) continue;
     seen.add(def.category);
     const name = a.name || say(def.label);

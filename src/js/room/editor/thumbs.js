@@ -4,8 +4,9 @@
 // again). Without IndexedDB they are kept for the session; without WebGL the tiles keep their icon.
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { CATALOG_BY_ID, CATALOG_VERSION } from "../catalog.mjs";
+import { entryFor, CATALOG_VERSION } from "../catalog.mjs";
 import { buildAsset } from "../render/assets/index.js";
+import { buildModel } from "../render/custom-model.js";
 import { texturesSettled } from "../render/kit/textures.js";
 
 const SIZE = 112;
@@ -75,10 +76,12 @@ function makeStage() {
 }
 
 async function drawOne(id) {
-  const def = CATALOG_BY_ID[id];
+  const def = entryFor(id);
   if (!def) return "";
   stage ||= makeStage();
-  const built = buildAsset(def, { id }, "medium");
+  // Your own models load their file first
+  const built = def.custom ? buildModel(def, { id }, "medium") : buildAsset(def, { id }, "medium");
+  await built.ready;
   stage.scene.add(built.group);
   await texturesSettled();
   const box = new THREE.Box3().setFromObject(built.group);
@@ -95,6 +98,12 @@ async function drawOne(id) {
   return url;
 }
 
+// A built-in's picture is kept per catalog version; one of your models per its own entry (a new file draws it again)
+const keyOf = (id) => {
+  const def = entryFor(id);
+  return def?.custom ? `custom:${def.id}:${def.info?.bytes || 0}:${def.unit}:${def.stylize}` : `${CATALOG_VERSION}:${id}`;
+};
+
 function pump() {
   if (running || !queue.length) return;
   running = true;
@@ -107,7 +116,7 @@ function pump() {
     drawOne(id)
       .then((url) => {
         memory.set(id, url);
-        writeCached(`${CATALOG_VERSION}:${id}`, url);
+        writeCached(keyOf(id), url);
         for (const cb of waiting.get(id) || []) cb(url);
         waiting.delete(id);
       })
@@ -129,7 +138,7 @@ function pump() {
 // cb(url) when the picture is there (at once when it is cached)
 export async function thumbFor(id, cb) {
   if (memory.has(id)) return cb(memory.get(id));
-  const cached = await readCached(`${CATALOG_VERSION}:${id}`);
+  const cached = await readCached(keyOf(id));
   if (cached) {
     memory.set(id, cached);
     return cb(cached);

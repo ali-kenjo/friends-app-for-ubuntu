@@ -316,6 +316,97 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await done();
   });
 
+  test("my own model: the wizard reads a .glb, it's placed and drawn, a built-in can wear it, and it can be removed", async () => {
+    // A little table made in the page with three.js's exporter: a top (material c1, with a picture), four
+    // legs, and a node that says where the robot stands
+    const b64 = await page.evaluate(async () => {
+      const THREE = await import("three");
+      const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
+      const g = new THREE.Group();
+      const c = document.createElement("canvas");
+      c.width = c.height = 64;
+      const x = c.getContext("2d");
+      x.fillStyle = "#c08850";
+      x.fillRect(0, 0, 64, 64);
+      x.fillStyle = "#8a5a33";
+      x.fillRect(0, 28, 64, 8);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.7), new THREE.MeshStandardMaterial({ name: "c1", color: "#ffffff", map: new THREE.CanvasTexture(c) }));
+      top.position.y = 0.73;
+      g.add(top);
+      for (const [lx, lz] of [[-0.55, -0.3], [0.55, -0.3], [-0.55, 0.3], [0.55, 0.3]]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 0.05), new THREE.MeshStandardMaterial({ name: "metal legs", color: "#333333", metalness: 1 }));
+        leg.position.set(lx, 0.35, lz);
+        g.add(leg);
+      }
+      const stand = new THREE.Object3D();
+      stand.name = "anchor_robot_stand";
+      stand.position.set(0, 0, 0.8);
+      g.add(stand);
+      const buf = await new GLTFExporter().parseAsync(g, { binary: true });
+      return btoa(String.fromCharCode(...new Uint8Array(buf)));
+    });
+    const file = path.join(tempDir, "my-table.glb");
+    fs.writeFileSync(file, Buffer.from(b64, "base64"));
+    await page.evaluate(() => import("/js/room/editor/open.js").then((m) => m.editRoom()));
+    await editorOpen();
+    await page.evaluate(() => document.querySelector('.re-chip[data-cat="mine"]').click());
+    await page.waitForSelector(".re-add-model");
+    await click(".re-add-model");
+    await page.waitForSelector(".re-wizard input[type=file]");
+    await (await page.$(".re-wizard input[type=file]")).uploadFile(file);
+    await page.waitForSelector(".re-wiz-details:not([hidden])", { timeout: 20000 });
+    const text = await page.$eval(".re-wizard", (el) => el.textContent);
+    assert.match(text, /A flat top at 7[0-9] cm/, "the table top is found");
+    assert.match(text, /Where the robot stands/, "the anchor is read");
+    assert.match(text, /These take your colors: c1/);
+    assert.strictEqual(await page.$eval(".re-wizard input[type=text]", (el) => el.value), "my table");
+    await page.evaluate(() => [...document.querySelectorAll(".re-wizard .btn-primary")].at(-1).click());
+    await page.waitForFunction(() => !document.querySelector(".re-wizard"), { timeout: 20000 });
+    const models = await api("GET", "/api/room-assets");
+    const entry = models.assets.find((e) => e.label === "my table");
+    assert.ok(entry, "saved");
+    assert.deepStrictEqual([entry.footprint.w, entry.footprint.d], [1.2, 0.7]);
+    assert.ok(Math.abs(entry.height - 0.755) < 0.011, `height ${entry.height}`);
+    assert.ok(entry.surfaces.length >= 1 && Math.abs(entry.surfaces[0].y - 0.755) < 0.03, JSON.stringify(entry.surfaces));
+    assert.ok(entry.anchors.stand && Math.abs(entry.anchors.stand[2] - 0.8) < 0.02);
+    // Placed in the room and drawn from its file (the textured top and the legs, not a stand-in box)
+    const placed = await savedWhere((r) => r.assets.some((a) => a.type === `custom:${entry.id}`), "the model in the room");
+    const id = placed.assets.find((a) => a.type === `custom:${entry.id}`).id;
+    await page.waitForFunction((x) => {
+      const inst = window.friendsRobot.engine.rooms.instances.get(x);
+      return inst && inst.built.meshes.length >= 5;
+    }, { timeout: 20000 }, id);
+    assert.strictEqual(await page.evaluate((x) => Boolean(window.friendsRobot.engine.rooms.instances.get(x).built.meshes.find((m) => m.material.map)), id), true, "its picture loaded");
+    // A built-in thing wears it and keeps being itself
+    const desk = placed.assets.find((a) => !a.type.startsWith("custom:") && !a.parent && a.slot === "floor");
+    await page.evaluate((x) => document.querySelector(`.re-tree [data-id="${x}"]`)?.click(), desk.id);
+    await page.evaluate(() => [...document.querySelectorAll(".re-inspector [role=tab]")][3].click());
+    await page.waitForSelector('.re-inspector select[aria-label="Wear one of my models"]');
+    await page.evaluate((g) => {
+      const s = document.querySelector('.re-inspector select[aria-label="Wear one of my models"]');
+      s.value = g;
+      s.dispatchEvent(new Event("change"));
+    }, entry.id);
+    await savedWhere((r) => r.assets.find((a) => a.id === desk.id).glb === entry.id && r.assets.find((a) => a.id === desk.id).type === desk.type, "the desk wearing the model");
+    await page.evaluate((g) => {
+      const s = document.querySelector('.re-inspector select[aria-label="Wear one of my models"]');
+      s.value = "";
+      s.dispatchEvent(new Event("change"));
+    }, entry.id);
+    await savedWhere((r) => !r.assets.find((a) => a.id === desk.id).glb, "the desk's own look");
+    // Removed from my models: gone from the room and from the helper
+    await page.keyboard.press("Escape");
+    await page.evaluate(() => document.querySelector('.re-chip[data-cat="mine"]').click());
+    await page.waitForSelector(".re-del");
+    await click(".re-del");
+    await page.waitForSelector("[role=alertdialog] [data-answer=yes]");
+    await click("[role=alertdialog] [data-answer=yes]");
+    await savedWhere((r) => !r.assets.some((a) => a.type === `custom:${entry.id}`), "the model gone from the room");
+    assert.strictEqual((await api("GET", "/api/room-assets")).assets.length, 0);
+    await page.evaluate(() => document.querySelector('.re-chip[data-cat="all"]').click());
+    await done();
+  });
+
   test("in Arabic the editor is right to left and every word is translated", async () => {
     const s = await api("GET", "/api/settings");
     s.ui.language = "ar";
