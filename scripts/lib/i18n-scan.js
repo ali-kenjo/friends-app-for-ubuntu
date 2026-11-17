@@ -147,6 +147,12 @@ function serverStrings() {
   const studio = require(path.join(wb, "studio.mjs"));
   for (const x of studio.STUDIO) for (const k of ["label", "hint", "prompt"]) out.add(x[k]);
   for (const q of studio.SOURCE_QUESTIONS) out.add(q);
+  // The 1.1 room: its choices, the catalog (names, color slots, categories, search tags), templates, the
+  // permission model's spoken reasons and the words of the room summary
+  const roomDir = path.join(root, "src", "js", "room");
+  for (const mod of ["choices.mjs", "catalog.mjs", "templates.mjs", "rules.mjs", "model.mjs"]) {
+    for (const label of require(path.join(roomDir, mod)).labels()) out.add(label);
+  }
   return out;
 }
 

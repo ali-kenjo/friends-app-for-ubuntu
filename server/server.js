@@ -46,6 +46,7 @@ const missions = require("./missions");
 const specialistsApi = require("./specialists-api");
 const google = require("./google");
 const whiteboard = require("./whiteboard");
+const rooms = require("./rooms");
 const whiteboardSources = require("./whiteboard-sources");
 const whiteboardLinks = require("./whiteboard-links");
 const whiteboardTools = require("./whiteboard-tools");
@@ -765,6 +766,7 @@ backup.onRestore(() => {
     const doc = whiteboard.current();
     whiteboard.events.emit("board", { type: "replaced", id: doc.id, rev: doc.rev });
   } catch {}
+  rooms.reset();
   episodes.forget();
   mcp.stopAll();
   mcp.startAll();
@@ -832,6 +834,17 @@ const routes = [
   ["DELETE", /^\/api\/notes$/, () => notes.clear()],
 
   // Whiteboards (server/whiteboard.js): a board is changed by operations, so you and the AI can both draw at once
+  // Rooms (server/rooms.js): the documents; export/import and models are binary (below)
+  ["GET", /^\/api\/rooms$/, () => rooms.list()],
+  ["POST", /^\/api\/rooms$/, async (req) => rooms.create(await readJson(req))],
+  ["GET", /^\/api\/room-assets$/, () => rooms.listAssets()],
+  ["GET", /^\/api\/room-assets\/([\w-]+)\/info$/, (req, id) => rooms.assetInfo(id) || notFound("Model not found")],
+  ["PUT", /^\/api\/room-assets\/([\w-]+)\/info$/, async (req, id) => rooms.updateAsset(id, await readJson(req))],
+  ["DELETE", /^\/api\/room-assets\/([\w-]+)$/, (req, id) => rooms.removeAsset(id)],
+  ["GET", /^\/api\/rooms\/([\w-]+)$/, (req, id) => rooms.get(id) || notFound("Room not found")],
+  ["PUT", /^\/api\/rooms\/([\w-]+)$/, async (req, id) => rooms.save(id, await readJson(req))],
+  ["DELETE", /^\/api\/rooms\/([\w-]+)$/, (req, id) => rooms.remove(id)],
+  ["POST", /^\/api\/rooms\/([\w-]+)\/duplicate$/, async (req, id) => rooms.duplicate(id, await readJson(req))],
   ["GET", /^\/api\/whiteboards$/, (req, id, url) => whiteboard.list({ scope: url.searchParams.get("scope") || "", scopeId: url.searchParams.get("scopeId") || "", search: url.searchParams.get("q") || "" })],
   ["POST", /^\/api\/whiteboards$/, async (req) => whiteboard.create({ ...(await readJson(req)), author: "user" })],
   ["GET", /^\/api\/whiteboards\/available-sources$/, () => whiteboardSources.candidates()],
@@ -1272,6 +1285,45 @@ async function handle(req, res) {
       "Content-Length": out.buffer.length,
     }));
     return res.end(out.buffer);
+  }
+  // Rooms: a room as a .friends-room file, a file brought in, and your own models
+  const roomExport = pathname.match(/^\/api\/rooms\/([\w-]+)\/export$/);
+  if (roomExport && req.method === "GET") {
+    try {
+      const out = rooms.exportRoom(roomExport[1]);
+      res.writeHead(200, securityHeaders({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="${out.filename}"`, "Content-Length": out.buffer.length, "Cache-Control": "no-store" }));
+      return res.end(out.buffer);
+    } catch (err) {
+      return sendJson(res, err.http || 400, { error: err.message });
+    }
+  }
+  if (pathname === "/api/rooms/import" && req.method === "POST") {
+    try {
+      return sendJson(res, 200, rooms.importRoom(await readBody(req, rooms.MAX_GLB * 4), { name: url.searchParams.get("name") || "" }));
+    } catch (err) {
+      return sendJson(res, err.http || 400, { error: err.message });
+    }
+  }
+  if (pathname === "/api/room-assets" && req.method === "POST") {
+    try {
+      let meta = {};
+      try {
+        meta = JSON.parse(url.searchParams.get("meta") || "{}");
+      } catch {}
+      return sendJson(res, 200, rooms.saveAsset(await readBody(req, rooms.MAX_GLB + 1), meta));
+    } catch (err) {
+      return sendJson(res, err.http || 400, { error: err.message });
+    }
+  }
+  const roomAsset = pathname.match(/^\/api\/room-assets\/([\w-]+)$/);
+  if (roomAsset && (req.method === "GET" || req.method === "HEAD")) {
+    let buf = null;
+    try {
+      buf = rooms.getAsset(roomAsset[1]);
+    } catch {}
+    if (!buf) return sendJson(res, 404, { error: "Model not found" });
+    res.writeHead(200, securityHeaders({ "Content-Type": "model/gltf-binary", "Content-Length": buf.length, "Cache-Control": "no-store" }));
+    return res.end(req.method === "HEAD" ? undefined : buf);
   }
   const glbRoute = pathname.match(/^\/api\/studio\/asset-glb\/([\w-]+)$/);
   if (glbRoute) {
