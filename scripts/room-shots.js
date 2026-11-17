@@ -1,7 +1,7 @@
 // Screenshots of every room template in voice mode, for the README's before/after pairs and the visual review.
 //   node scripts/room-shots.js <label> [--quality low,high] [--aspects 16x9,9x16] [--themes dark,light] [--only lounge,desk]
 //   npm run design:rooms            (label "after")
-// Writes docs/design/screenshots/1.1/<label>/rooms/<room>-<quality>-<aspect>-<theme>.png and stats.json
+// Writes docs/design/screenshots/1.1/<label>/rooms/<room>-<quality>-<aspect>-<theme>.jpg and stats.json
 // (draw calls and triangles summed over every render pass of one frame, frame time on this machine).
 // Starts the real helper on a scratch data folder with software WebGL (see scripts/lib/harness.js).
 const fs = require("node:fs");
@@ -78,8 +78,8 @@ async function main() {
               out.meshes = meshes;
               return out;
             });
-            const name = `${r.id}-${quality}-${aspect}-${theme}.png`;
-            await page.screenshot({ path: path.join(outDir, name) });
+            const name = `${r.id}-${quality}-${aspect}-${theme}.jpg`;
+            await page.screenshot({ path: path.join(outDir, name), type: "jpeg", quality: 90 });
             stats[`${r.id}|${quality}|${aspect}|${theme}`] = frame;
             console.log(`  ${name}  calls ${frame.calls}  tris ${frame.triangles}  meshes ${frame.meshes}  ${frame.ms} ms`);
           }
