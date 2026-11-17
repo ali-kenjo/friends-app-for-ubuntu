@@ -26,6 +26,7 @@ import { defaultDesign, shapeKey } from "./design.mjs";
 import { springStep, clamp } from "./spring.mjs";
 import { appState } from "../core/state-store.mjs";
 import { attachV1Engine, stepV1Frame } from "../core/v1-runtime.mjs";
+import { resolveShot, shotFrame } from "../room/cameras.mjs";
 
 // What each quality level spends: pixel ratio (capped by the screen's),
 // multisampling, bloom, shadows, face texture size
@@ -697,6 +698,11 @@ export class RobotEngine {
     if (!this.active) return;
     this.measure(dt);
     if (this.designDirty) this.syncDesign();
+    // The clock moves: scheduled things, a scheduled scene or lamps that come on at dusk may change
+    if (now - (this.timeChecked || 0) > 30000) {
+      this.timeChecked = now;
+      if (this.rooms.timeChanged()) this.roomDirty = true;
+    }
     if (this.roomDirty || this.roomKey !== `${this.placeId()}|${this.level}`) this.syncRoom();
     const options = this.animator.options;
     options.reducedMotion = this.reducedMotion.matches;
@@ -1007,6 +1013,43 @@ export class RobotEngine {
     };
   }
 
+  lookThroughRoomShot(dt) {
+    const doc = this.look.roomDoc;
+    // Only where the room is the picture (voice mode, the editor's shot view), not the Studio, Home or the dock
+    if (!doc || doc.defaultCamera === "auto" || this.active?.options.world !== true || this.rooms.mode !== "doc") {
+      this.roomShot = null;
+      return false;
+    }
+    const resolved = resolveShot(doc, doc.cameras.find((c) => c.id === doc.defaultCamera), { hidden: this.rooms.hidden });
+    if (!resolved) {
+      this.roomShot = null;
+      return false;
+    }
+    const at = this.robot.root.getWorldPosition(this.tmp);
+    const home = doc.robot.home.pos;
+    const frame = shotFrame(resolved, { robot: [at.x, at.z], home: [home[0], home[2]], height: this.robot.bounds?.height || STANDARD.height });
+    // Eased towards (a cut when the shot changes); still when the camera should be steady
+    const key = doc.defaultCamera;
+    const k = this.roomShot?.key === key ? 1 - Math.exp(-4 * dt) : 1;
+    const cur = this.roomShot?.key === key ? this.roomShot : { pos: frame.pos, target: frame.target, fov: frame.fov };
+    const mix = (a, b) => a.map((v, i) => v + (b[i] - v) * k);
+    this.roomShot = { key, pos: mix(cur.pos, frame.pos), target: mix(cur.target, frame.target), fov: cur.fov + (frame.fov - cur.fov) * k };
+    this.camera.up.set(0, 1, 0);
+    this.camera.position.set(...this.roomShot.pos);
+    this.camera.lookAt(...this.roomShot.target);
+    // Previewing a picture shape inside a wider or taller stage (the editor): the shot fits the frame
+    let fov = this.roomShot.fov;
+    const want = this.active?.options.shotAspect;
+    if (want && this.camera.aspect < want) fov = (2 * Math.atan(Math.tan((fov * Math.PI) / 360) * (want / this.camera.aspect)) * 180) / Math.PI;
+    if (Math.abs(this.camera.fov - fov) > 0.01) {
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+    this.camera.clearViewOffset();
+    this.cam.ready = false;
+    return true;
+  }
+
   // The virtual camera: the shot, the robot's place in the picture (thirds),
   // a slow drift and a push-in on emphasis when "cinematic" is on
   frameCamera(dt, pose) {
@@ -1025,6 +1068,9 @@ export class RobotEngine {
       this.cam.ready = false;
       return;
     }
+    // The room's own camera shot (chosen in voice mode or the Room Editor): fixed, following the robot, or
+    // auto-framing it; one measured from a thing that's gone or hidden falls back to the robot's framing
+    if (this.lookThroughRoomShot(dt)) return;
     if (this.camera.fov !== 30) {
       this.camera.fov = 30;
       this.camera.up.set(0, 1, 0);

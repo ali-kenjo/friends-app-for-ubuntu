@@ -193,6 +193,12 @@ export function defaultRules(def) {
   return cleanRules({}, def);
 }
 
+// A lamp's own settings: brightness (× its usual), its own color, and "on by itself at dusk"
+function cleanLight(raw) {
+  const l = obj(raw);
+  return { intensity: num(l.intensity, 0, 2, 1, 0.01), color: typeof l.color === "string" && HEX.test(l.color) ? l.color.toLowerCase() : null, auto: l.auto === "dusk" ? "dusk" : "manual" };
+}
+
 function cleanSchedule(raw) {
   if (!raw || typeof raw !== "object") return null;
   const s = obj(raw);
@@ -258,6 +264,7 @@ export function sanitizeAsset(raw, { custom = {}, notes } = {}) {
     drop: num(a.drop, 0, 2, 0.4, 0.01),
     rules: cleanRules(a.rules, def),
     schedule: cleanSchedule(a.schedule),
+    light: def.light ? cleanLight(a.light) : null,
   };
 }
 
@@ -540,6 +547,7 @@ export function sanitizeRoom(input, { custom = {}, notes = [], now = Date.now() 
   }
   const camSeen = new Set();
   out.cameras = arr(r.cameras).map(cleanCamera).filter((c) => c && !camSeen.has(c.id) && camSeen.add(c.id)).slice(0, LIMITS.cameras);
+  // The shot voice mode looks through ("auto": the robot's own framing, close/medium/wide)
   out.defaultCamera = r.defaultCamera === "auto" || camSeen.has(r.defaultCamera) ? r.defaultCamera || "auto" : "auto";
   const sceneSeen = new Set();
   out.scenes = arr(r.scenes).map(cleanScene).filter((s) => s && !sceneSeen.has(s.id) && sceneSeen.add(s.id)).slice(0, LIMITS.scenes);

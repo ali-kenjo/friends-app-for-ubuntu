@@ -7,6 +7,7 @@ import { t, nf } from "../i18n.js";
 import * as D from "./design.mjs";
 import * as R from "./room.mjs";
 import { useTemplate } from "../room/client.js";
+import { usableShots } from "../room/cameras.mjs";
 import "./studio/studio.js";
 import "../room/editor/open.js";
 import { board } from "../whiteboard/store.js";
@@ -94,6 +95,27 @@ document.addEventListener("keydown", (e) => {
   choose(group, next);
   next.focus();
 });
+
+// ---------- Voice mode's camera: the robot's own framing, or one of the room's saved shots ----------
+const cameraSelect = document.getElementById("voice-scene-camera");
+function showCameras() {
+  const doc = robot.room;
+  const shots = doc ? usableShots(doc) : [];
+  cameraSelect.replaceChildren(
+    Object.assign(document.createElement("option"), { value: "auto", textContent: t("Frames the robot") }),
+    ...shots.map((c) => Object.assign(document.createElement("option"), { value: c.id, textContent: c.name || t("Shot") })),
+  );
+  cameraSelect.value = doc && shots.some((c) => c.id === doc.defaultCamera) ? doc.defaultCamera : "auto";
+  cameraSelect.disabled = !doc;
+  // The close/medium/wide choice only means something while the robot frames itself
+  document.getElementById("voice-scene-shot")?.closest(".voice-record-row")?.toggleAttribute("hidden", cameraSelect.value !== "auto");
+}
+cameraSelect.addEventListener("change", () => {
+  const doc = robot.room;
+  if (doc) robot.setRoom({ ...doc, defaultCamera: cameraSelect.value });
+});
+document.addEventListener("friends:robot-room", showCameras);
+showCameras();
 
 // ---------- The place, and a summary of the look ----------
 const placeSelects = [document.getElementById("robot-place"), document.getElementById("voice-scene-place-select")];

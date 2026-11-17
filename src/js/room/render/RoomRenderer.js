@@ -14,7 +14,7 @@ import { RoomScene } from "../../robot/room3d.js";
 import { sanitizeRoom as sanitizeLegacyRoom, resolved, activeSeason } from "../../robot/room.mjs";
 import { CATALOG_BY_ID } from "../catalog.mjs";
 import { worldTransform, footprintOf } from "../model.mjs";
-import { effectiveRoom } from "../schedule.mjs";
+import { effectiveRoom, roomHour } from "../schedule.mjs";
 import { legacyRoomOf } from "../as-legacy.mjs";
 import { MOOD_BY_ID, CHROMA } from "../choices.mjs";
 import { buildAsset, hasBuilder } from "./assets/index.js";
@@ -28,12 +28,13 @@ export const LIGHT_BUDGET = { low: 0, medium: 2, high: 4, ultra: 6 };
 // Flat things don't get a contact shadow (rugs, mats, pads), nor do wall and ceiling things
 const NO_DECAL = (def, a) => !def || def.overlap || def.height < 0.03 || a.slot === "wall" || a.slot === "ceiling";
 
-// The hour the room shows (fixed, the real clock, or the template's own)
-export function roomHour(room, now = new Date()) {
-  const a = room.atmosphere;
-  if (a.timeMode === "clock") return now.getHours() + now.getMinutes() / 60;
-  if (a.timeMode === "manual") return a.timeHour;
-  return a.timeHour ?? 14;
+// The hour the room shows lives with the schedules (pure); kept exported here for the renderer's users
+export { roomHour };
+
+// What the clock decides in a room: the scene, what's hidden, which lamps are on, the half hour shown
+function timeSignature(eff, room, now = new Date()) {
+  const lamps = eff.room.assets.filter((a) => a.light?.auto === "dusk").map((a) => (a.state?.on ? 1 : 0)).join("");
+  return `${eff.scene?.id || ""}|${[...eff.hidden].sort().join(",")}|${lamps}|${Math.floor(roomHour(room, now) * 2)}`;
 }
 
 // The mood after the clock: following the real clock moves through morning, day, golden, evening, night
@@ -74,6 +75,12 @@ export class RoomRenderer {
     this.envKey = "";
     this.envTimer = 0;
     this.hidden = new Set();
+  }
+
+  // Has the clock changed what this room shows since it was configured? (checked now and then)
+  timeChanged(now = new Date()) {
+    if (this.mode !== "doc" || !this.doc) return false;
+    return timeSignature(effectiveRoom(this.doc, { now, filming: this.filming }), this.doc, now) !== this.timeSig;
   }
 
   // ---- what the engine reads ----
@@ -119,6 +126,8 @@ export class RoomRenderer {
     const level = look.level || "high";
     const eff = effectiveRoom(room, { now: look.now || new Date(), filming: Boolean(look.filming) });
     this.hidden = eff.hidden;
+    this.filming = Boolean(look.filming);
+    this.timeSig = timeSignature(eff, room);
     const doc = eff.room;
     this.layer = room.backdrop?.layer || "full";
     const chroma = this.layer === "chroma_green" || this.layer === "chroma_blue";
@@ -342,7 +351,9 @@ export class RoomRenderer {
       const c = Math.cos(t.rot * RAD);
       const s = Math.sin(t.rot * RAD);
       const p = new THREE.Vector3(t.x + (at[0] * c + at[2] * s) * k, t.y + at[1] * k, t.z + (-at[0] * s + at[2] * c) * k);
-      candidates.push({ p, def, weight: def.light.intensity / (1 + p.distanceTo(new THREE.Vector3(0, 0.8, 0.5))) });
+      // Its own brightness and color (Inspector → Look → Light), and a scene's dimming
+      const intensity = def.light.intensity * (a.light?.intensity ?? 1) * (a.state?.intensity ?? 1);
+      candidates.push({ p, def, color: a.light?.color || def.light.color, intensity, weight: intensity / (1 + p.distanceTo(new THREE.Vector3(0, 0.8, 0.5))) });
     }
     candidates.sort((x, y) => y.weight - x.weight);
     this.lights.forEach((l, i) => {
@@ -352,9 +363,9 @@ export class RoomRenderer {
         return;
       }
       l.position.copy(c.p);
-      l.color.set(c.def.light.color);
+      l.color.set(c.color);
       // three.js lights are physical: a lamp of "1" is about a 25 W bulb at these distances
-      l.intensity = c.def.light.intensity * 1.6;
+      l.intensity = c.intensity * 1.6;
       l.distance = c.def.light.distance;
     });
   }

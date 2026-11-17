@@ -653,3 +653,27 @@
     height: 32px;
   }
 }
+
+/* The Room tab's summary of the room: its picture, name and template */
+.rs-room-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rs-room-pic {
+  inline-size: 128px;
+  aspect-ratio: 16 / 9;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.rs-room-pic[hidden] {
+  display: none;
+}
+
+.rs-room-from:empty {
+  display: none;
+}

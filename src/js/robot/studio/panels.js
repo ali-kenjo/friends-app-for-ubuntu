@@ -8,6 +8,7 @@ import * as C from "../room-catalog.mjs";
 import { BUILTIN_LOOKS } from "../looks.mjs";
 import { t, tp } from "../../i18n.js";
 import { robot as robotApi } from "../index.js";
+import { TEMPLATE_BY_ID } from "../../room/templates.mjs";
 import { h, section, hint, swatches, tiles, slider, toggle, textField, button, arrowKeys, nextId, glyph } from "./ui.js";
 
 const OUTFIT_COLORS = ["#e05a47", "#f2c14e", "#4d8a62", "#3b6fd6", "#7a5cf0", "#f06bb0", "#f4efe6", "#2b2e35", "#8a5a33", "#5eead4", "#ff8a3d"];
@@ -237,14 +238,33 @@ export function roomPanel(ctx) {
   const atmosphere = section(t("In the air"), air.el, amount.el);
   // The Room Editor is where the room is furnished; this says which room it is and opens it
   const roomName = h("p", { class: "rs-room-summary", "aria-live": "polite" });
+  const roomFrom = h("p", { class: "rs-hint rs-room-from" });
+  const roomPic = h("img", { class: "rs-room-pic", alt: "", hidden: true });
   const edit = h("button", { type: "button", class: "btn btn-primary small", "data-edit-room": "full", text: t("Edit the room…") });
   const summary = () => {
     const doc = robotApi.room;
     roomName.textContent = doc ? tp("{name}: {n} thing", "{name}: {n} things", doc.assets.filter((a) => !a.hidden).length, { name: doc.name }) : t("The room is still loading.");
+    const from = doc && TEMPLATE_BY_ID[doc.template];
+    roomFrom.textContent = from && from.kind !== "empty" ? t("Made from: {template}", { template: t(from.label) }) : "";
+  };
+  // The picture the Room Editor took when it last closed
+  const picture = () => {
+    const id = robotApi.room?.id;
+    if (!id) return;
+    fetch("/api/rooms")
+      .then((r) => r.json())
+      .then(({ rooms }) => {
+        const thumb = rooms.find((r) => r.id === id)?.thumb;
+        roomPic.hidden = !thumb;
+        if (thumb) roomPic.src = thumb;
+      })
+      .catch(() => {});
   };
   document.addEventListener("friends:robot-room", summary);
+  document.addEventListener("friends:robot-room", () => robotApi.room?.id !== roomPic.dataset.room && ((roomPic.dataset.room = robotApi.room?.id || ""), picture()));
+  document.addEventListener("friends:room-editor-closed", () => setTimeout(picture, 400));
   summary();
-  el.append(section(t("Your room"), roomName, hint(t("Place furniture and things, change the walls and the light, and say what the robot may use.")), h("div", { class: "rs-actions" }, edit)), section(t("Place"), places.el, h("div", { class: "rs-actions" }, surprise)), dynamic, lighting, ground, atmosphere);
+  el.append(section(t("Your room"), h("div", { class: "rs-room-card" }, roomPic, h("div", {}, roomName, roomFrom)), hint(t("Place furniture and things, change the walls and the light, and say what the robot may use.")), h("div", { class: "rs-actions" }, edit)), section(t("Place"), places.el, h("div", { class: "rs-actions" }, surprise)), dynamic, lighting, ground, atmosphere);
 
   let builtFor = null;
   let colorControls = {};

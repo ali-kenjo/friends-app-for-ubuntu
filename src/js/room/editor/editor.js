@@ -11,7 +11,7 @@ import { h, button } from "../../robot/studio/ui.js";
 import { History } from "./history.mjs";
 import * as ops from "./ops.mjs";
 import { Viewport } from "./viewport.js";
-import { catalogPanel, outlinePanel, inspectorPanel, newRoomDialog } from "./panels.js";
+import { catalogPanel, outlinePanel, inspectorPanel, newRoomDialog, roomPickerDialog } from "./panels.js";
 import { cancelThumbs } from "./thumbs.js";
 import { sanitizeRoom } from "../model.mjs";
 
@@ -119,6 +119,7 @@ class RoomEditor {
   close() {
     if (!this.el) return;
     this.flush();
+    this.saveThumb();
     cancelThumbs();
     this.vp?.detach();
     robot.show("editor", false);
@@ -142,6 +143,29 @@ class RoomEditor {
     robot.setRoom(clean, { save: this.prefs().autosave });
     if (!this.prefs().autosave) this.setSaveState("unsaved");
     this.refresh({ light: Boolean(coalesce) });
+  }
+
+  // The room's picture for the room picker and the Studio (16:9, from the editor's view, without handles)
+  saveThumb() {
+    const e = robot.engine;
+    if (!e?.canvas?.width || !this.vp || this.vp.view === "eyes") return;
+    try {
+      this.vp.overlay.visible = false;
+      e.renderNow();
+      const src = e.canvas;
+      const c = document.createElement("canvas");
+      c.width = 320;
+      c.height = 180;
+      const w = Math.min(src.width, (src.height * 16) / 9);
+      const hgt = (w * 9) / 16;
+      c.getContext("2d").drawImage(src, (src.width - w) / 2, (src.height - hgt) / 2, w, hgt, 0, 0, 320, 180);
+      const thumb = c.toDataURL("image/jpeg", 0.8);
+      fetch(`/api/rooms/${encodeURIComponent(this.room.id)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room: this.room, thumb }) }).catch(() => {});
+    } catch {
+      // A lost context or a tainted canvas: the room keeps its old picture
+    } finally {
+      this.vp.overlay.visible = true;
+    }
   }
 
   flush() {
@@ -313,6 +337,7 @@ class RoomEditor {
   // ---------- Rooms (the room menu) ----------
   async switchTo(id) {
     this.flush();
+    this.saveThumb();
     await updateSettings((s) => (s.robot.room = { layoutId: id }));
     const res = await fetch(`/api/rooms/${encodeURIComponent(id)}`);
     if (!res.ok) return;
@@ -328,6 +353,11 @@ class RoomEditor {
   }
 
   async roomAction(action) {
+    if (action === "rooms") {
+      const id = await roomPickerDialog({ current: this.room.id });
+      if (id) await this.switchTo(id);
+      return;
+    }
     if (action === "new" || action === "templates") {
       const choice = await newRoomDialog({ current: this.room, tab: action === "templates" ? "template" : "empty" });
       if (!choice) return;
@@ -390,7 +420,7 @@ class RoomEditor {
     const name = h("input", { class: "field re-name", type: "text", maxlength: 60, "aria-label": t("Room name"), value: this.room.name });
     name.addEventListener("change", () => this.commit({ ...this.room, name: name.value.trim().slice(0, 60) || this.room.name }, t("Rename")));
     this.nameEl = name;
-    const menu = h("select", { class: "field re-menu", "aria-label": t("Room menu") }, ...[["", t("Room…")], ["new", t("New room…")], ["duplicate", t("Duplicate")], ["templates", t("Templates…")], ["save_as", t("Save as…")], ["import", t("Import…")], ["export", t("Export…")], ["revert", t("Revert to when I opened it")], ["delete", t("Delete room")]].map(([v, l]) => h("option", { value: v, text: l })));
+    const menu = h("select", { class: "field re-menu", "aria-label": t("Room menu") }, ...[["", t("Room…")], ["rooms", t("Your rooms…")], ["new", t("New room…")], ["duplicate", t("Duplicate")], ["templates", t("Templates…")], ["save_as", t("Save as…")], ["import", t("Import…")], ["export", t("Export…")], ["revert", t("Revert to when I opened it")], ["delete", t("Delete room")]].map(([v, l]) => h("option", { value: v, text: l })));
     menu.addEventListener("change", () => {
       const v = menu.value;
       menu.value = "";
@@ -500,7 +530,7 @@ class RoomEditor {
     for (const [id, b] of Object.entries(this.viewButtons)) b.setAttribute("aria-checked", String(id === view));
     this.shotAspect.hidden = view !== "shot";
     // The shot preview: the engine frames the robot as voice mode does, inside the picture's shape
-    robot.options("editor", { editorView: view === "shot" ? null : this.vp.editorView, shot: view === "shot" ? "medium" : "wide" });
+    robot.options("editor", { editorView: view === "shot" ? null : this.vp.editorView, shot: view === "shot" ? "medium" : "wide", shotAspect: view === "shot" ? (this.shotAspect.value === "9x16" ? 9 / 16 : 16 / 9) : null });
     this.frame.hidden = view !== "shot";
     this.frame.dataset.aspect = this.shotAspect.value;
     this.say({ perspective: t("Perspective view"), top: t("Plan from above"), eyes: t("Through the robot's eyes"), shot: t("How the camera sees it") }[view]);

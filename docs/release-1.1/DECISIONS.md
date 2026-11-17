@@ -148,3 +148,10 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
 - **R23 Keys a control uses stay with it.** The editor's shortcuts ignore keys a widget already handled
   (arrow keys in tabs, tile groups and the outline), and the inspector puts focus back on the same control
   after a change rebuilds it.
+- **R24 Room camera shots apply only where the room is the picture**: hosts that set `world: true`
+  themselves (voice mode, the editor's shot view). The Studio, Home and the dock keep framing the robot
+  even when room effects are on. A shot measured from a thing falls back to the robot's framing while
+  that thing is hidden or gone. The camera math is pure (`src/js/room/cameras.mjs`).
+- **R25 The Studio's quick room controls wait for step 8.** Its 1.0 place/mood/floor/air controls, the
+  looks and character switching and the Studio's undo all still write 1.0 room objects (and the Studio
+  tests check those); replacing only the mood control now would put two "Mood" controls side by side.

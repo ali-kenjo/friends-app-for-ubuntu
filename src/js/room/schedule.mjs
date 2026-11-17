@@ -24,6 +24,21 @@ export function inWindow(from, to, now = new Date()) {
 
 const weekdayOk = (days, now) => !days?.length || days.includes(now.getDay());
 
+// The hour the room shows (fixed, the real clock, or the template's own)
+export function roomHour(room, now = new Date()) {
+  const a = room.atmosphere;
+  if (a.timeMode === "clock") return now.getHours() + now.getMinutes() / 60;
+  if (a.timeMode === "manual") return a.timeHour;
+  return a.timeHour ?? 14;
+}
+
+// Is it dark in the room? (for lamps that switch on by themselves at dusk)
+export function roomIsDark(room, now = new Date(), mood = room.atmosphere.mood) {
+  const h = roomHour(room, now);
+  if (room.atmosphere.timeMode === "clock" || room.atmosphere.timeMode === "manual") return h >= 18 || h < 7;
+  return ["evening", "night", "neon", "fireside"].includes(mood) || h >= 18 || h < 7;
+}
+
 // The scene in force: the chosen one, or (on "auto") filming → a "filming" scene, else the first
 // scheduled scene whose window and weekday match. "none" means no scene.
 export function activeScene(room, { now = new Date(), filming = false } = {}) {
@@ -67,6 +82,8 @@ export function effectiveRoom(room, ctx = {}) {
     if (o.colors?.[a.id]) patch.colors = { ...a.colors, ...o.colors[a.id] };
     if (o.lights?.[a.id]) patch.state = { ...a.state, on: o.lights[a.id].on, intensity: o.lights[a.id].intensity };
     if (o.rules?.[a.id]) patch.rules = { ...a.rules, ...o.rules[a.id] };
+    // A lamp set to come on at dusk follows the room's light (a scene's own switch wins)
+    if (a.light?.auto === "dusk" && a.state && "on" in a.state && !o.lights?.[a.id]) patch.state = { ...a.state, on: roomIsDark(room, ctx.now || new Date(), o.mood || room.atmosphere.mood) };
     if (Object.keys(patch).length) next = { ...a, ...patch };
     if (next.hidden || !scheduleAllows(next.schedule, { ...ctx, scene })) hidden.add(next.id);
     return next;

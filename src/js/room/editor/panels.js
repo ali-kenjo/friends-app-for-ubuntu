@@ -2,12 +2,13 @@
 // Built from the Robot Studio's controls (robot/studio/ui.js) and h(); every word goes through t().
 import { t, tp } from "../../i18n.js";
 import { getSettings, updateSettings } from "../../store.js";
-import { h, section, tiles, slider, swatches, toggle, textField, button, hint, arrowKeys } from "../../robot/studio/ui.js";
+import { h, section, tiles, slider, swatches, toggle, textField, button, hint, arrowKeys, glyph } from "../../robot/studio/ui.js";
 import { CATALOG, CATALOG_BY_ID, CATEGORIES } from "../catalog.mjs";
 import * as C from "../choices.mjs";
 import { TEMPLATES } from "../templates.mjs";
 import { defaultRules, displayName, worldTransform, newId } from "../model.mjs";
 import * as ops from "./ops.mjs";
+import { resolveShot, shotPresets } from "../cameras.mjs";
 import { thumbFor } from "./thumbs.js";
 
 const PALETTE = ["#f4efe6", "#ede4d6", "#d9c29c", "#c89b6e", "#b07a4a", "#8a5a33", "#5a3d2b", "#2d3038", "#c47a5a", "#e05a47", "#f2c14e", "#4d8a62", "#5b8fa8", "#6f9cf5", "#7c66dc", "#c98bb8"];
@@ -355,6 +356,17 @@ function lookTab(ed, a, def, commit) {
     else if (k === "style") states.push(tiles({ label: t("Style"), items: boardStyles().map(([id, label]) => ({ id, label })), value: a.state?.style ?? v, compact: true, columns: 4, onChange: (s) => commit((x) => ({ state: { ...x.state, style: s } }), t("Style")) }).el);
   }
   if (states.length) out.push(section(t("How it is"), ...states));
+  if (def.light) {
+    const l = a.light || { intensity: 1, color: null, auto: "manual" };
+    const setLight = (patch, label = t("Light")) => commit((x) => ({ light: { ...(x.light || l), ...patch } }), label);
+    out.push(section(
+      t("Light"),
+      slider({ label: t("Brightness"), min: 0, max: 2, step: 0.05, value: l.intensity, def: 1, onChange: (v) => ed.commit(ops.updateAsset(ed.room, a.id, { light: { ...(ed.room.assets.find((x) => x.id === a.id).light || l), intensity: v } }), t("Light"), { coalesce: `light-${a.id}` }) }).el,
+      swatches({ label: t("Light color"), colors: ["#ffc98a", "#ffe2b8", "#fff4e0", "#dfe8ff", "#9fc6ff", "#c7a6ff", "#ff9fb2", "#9fe8c0"], value: l.color || "", empty: { label: t("Its own"), title: t("The lamp's usual color") }, onChange: (v) => setLight({ color: v || null }) }).el,
+      toggle({ label: t("Switch on by itself when it gets dark"), value: l.auto === "dusk", onChange: (on) => setLight({ auto: on ? "dusk" : "manual" }) }).el,
+      l.auto === "dusk" ? hint(t("It follows the room's time and mood; a scene can still switch it.")) : null,
+    ));
+  }
   if (def.personalData) out.push(hint(t("This shows your own things only when you switch it on. It stays hidden while filming unless you allow it in Settings → Robot → Privacy, and it follows Private mode.")));
   return out;
 }
@@ -469,15 +481,45 @@ function roomPanel(ed) {
   const accentSide = h("select", { class: "field", "aria-label": t("Accent wall") }, ...[["", t("No accent wall")], ["back", t("Back wall")], ["left", t("Left wall")], ["right", t("Right wall")]].map(([v, l]) => h("option", { value: v, text: l })));
   accentSide.value = arch.accentWall?.side || "";
   accentSide.addEventListener("change", () => setArch({ accentWall: accentSide.value ? { side: accentSide.value, material: arch.accentWall?.material || "painted", color: arch.accentWall?.color || arch.palette.detail } : null }, t("Accent wall")));
-  const cams = room.cameras.map((c) => h("div", { class: "re-cam" }, h("span", { text: c.name || t("Shot") }), button(t("Look through it"), () => {
-    ed.vp.orbit.target.set(...c.target);
+  const setCams = (cameras, extra = {}) => ed.commit({ ...ed.room, cameras, ...extra }, t("Camera shots"));
+  const lookThrough = (c) => {
+    const r = resolveShot(ed.room, c);
+    if (!r) return;
     ed.vp.setView("perspective");
-    const d = Math.hypot(c.pos[0] - c.target[0], c.pos[1] - c.target[1], c.pos[2] - c.target[2]);
+    ed.vp.orbit.target.set(...r.target);
+    const d = Math.hypot(r.pos[0] - r.target[0], r.pos[1] - r.target[1], r.pos[2] - r.target[2]);
     ed.vp.orbit.dist = d;
-    ed.vp.orbit.yaw = Math.atan2(c.pos[0] - c.target[0], c.pos[2] - c.target[2]);
-    ed.vp.orbit.pitch = Math.asin((c.pos[1] - c.target[1]) / Math.max(0.01, d));
+    ed.vp.orbit.yaw = Math.atan2(r.pos[0] - r.target[0], r.pos[2] - r.target[2]);
+    ed.vp.orbit.pitch = Math.asin((r.pos[1] - r.target[1]) / Math.max(0.01, d));
     ed.vp.updateCamera();
-  }), button(t("Remove"), () => ed.commit({ ...ed.room, cameras: ed.room.cameras.filter((x) => x.id !== c.id) }, t("Camera shots")))));
+  };
+  const cams = room.cameras.map((c) => {
+    const usable = Boolean(resolveShot(room, c));
+    const follow = h("select", { class: "field", "aria-label": t("How {name} moves", { name: c.name || t("Shot") }) }, ...C.CAMERA_FOLLOW.map((f) => h("option", { value: f.id, text: t(f.label) })));
+    follow.value = c.follow;
+    follow.addEventListener("change", () => setCams(ed.room.cameras.map((x) => (x.id === c.id ? { ...x, follow: follow.value } : x))));
+    return h("div", { class: "re-cam" },
+      h("span", { class: "re-cam-name", text: c.name || t("Shot") }),
+      follow,
+      button(t("Look through it"), () => lookThrough(c), { title: usable ? "" : t("Not available now") }),
+      button(t("Remove"), () => setCams(ed.room.cameras.filter((x) => x.id !== c.id), ed.room.defaultCamera === c.id ? { defaultCamera: "auto" } : {})),
+      usable ? null : hint(t("The thing it's measured from is hidden or gone, so it isn't used for now.")),
+    );
+  });
+  const inVoice = h("select", { class: "field", "aria-label": t("In voice mode the camera") }, h("option", { value: "auto", text: t("Frames the robot (close, medium, wide)") }), ...room.cameras.map((c) => h("option", { value: c.id, text: c.name || t("Shot") })));
+  inVoice.value = room.defaultCamera || "auto";
+  inVoice.addEventListener("change", () => ed.commit({ ...ed.room, defaultCamera: inVoice.value }, t("Camera shots")));
+  const presets = shotPresets(room, (k, v) => t(k, v));
+  const addPreset = h("select", { class: "field", "aria-label": t("Add a ready-made shot") }, h("option", { value: "", text: t("Add a ready-made shot…") }), ...presets.map((p) => h("option", { value: p.key, text: p.name })));
+  addPreset.addEventListener("change", () => {
+    const p = presets.find((x) => x.key === addPreset.value);
+    if (!p) return;
+    const id = newId("shot", new Set(ed.room.cameras.map((c) => c.id)));
+    const { key, ...shot } = p;
+    void key;
+    setCams([...ed.room.cameras, { id, ...shot }]);
+    ed.say(t("Shot added: {name}", { name: p.name }));
+  });
   const saveShot = button(t("Save this view as a shot"), () => {
     const v = ed.vp.editorView;
     const taken = new Set(ed.room.cameras.map((c) => c.id));
@@ -498,7 +540,7 @@ function roomPanel(ed) {
     section(t("In the air"), tiles({ label: null, name: t("In the air"), items: C.AIRS, value: atm.air, compact: true, columns: 3, onChange: (v) => setAtm({ air: v }) }).el, slider({ label: t("How much"), min: 0.3, max: 2, step: 0.01, value: atm.airAmount, def: 1, onChange: (v) => setAtm({ airAmount: v }) }).el, slider({ label: t("Wind"), min: 0, max: 1, step: 0.01, value: atm.wind, def: 0.3, onChange: (v) => setAtm({ wind: v }) }).el, tiles({ label: t("Season"), items: C.SEASONS, value: atm.season, compact: true, columns: 2, onChange: (v) => setAtm({ season: v }) }).el, toggle({ label: t("Follow the weather outside (when connected, not in Private mode)"), value: atm.weatherSync, onChange: (on) => setAtm({ weatherSync: on }) }).el),
     section(t("Light effects"), ...[["bokeh", "Soft lights"], ["shaft", "Beam of light"], ["rings", "Rings when it talks"], ["spot", "Spotlight"]].map(([k, l]) => toggle({ label: t(l), value: Boolean(atm.effects?.[k]), onChange: (on) => setAtm({ effects: { ...(ed.room.atmosphere.effects || {}), [k]: on } }) }).el)),
     section(t("What's drawn behind the robot"), tiles({ label: null, name: t("Backdrop"), items: C.BACKDROP_LAYERS, value: room.backdrop.layer, compact: true, columns: 2, onChange: (v) => ed.commit({ ...ed.room, backdrop: { ...ed.room.backdrop, layer: v } }, t("Backdrop")) }).el, room.backdrop.layer === "solid" ? swatches({ label: t("Backdrop color"), colors: PALETTE, value: room.backdrop.color, onChange: (v) => ed.commit({ ...ed.room, backdrop: { ...ed.room.backdrop, color: v } }, t("Backdrop")) }).el : null, room.backdrop.layer === "selected" ? h("div", {}, hint(tp("{n} thing stays; select others and press the button to change them.", "{n} things stay; select others and press the button to change them.", room.backdrop.keep.length)), keepSel) : null),
-    section(t("Camera shots"), ...cams, h("div", { class: "rs-actions" }, saveShot)),
+    section(t("Camera shots"), h("div", { class: "rs-field" }, h("span", { class: "rs-label", text: t("In voice mode the camera") }), inVoice), ...cams, addPreset, h("div", { class: "rs-actions" }, saveShot)),
   ];
 }
 
@@ -553,5 +595,45 @@ export function newRoomDialog({ current, tab = "empty" } = {}) {
     document.body.append(back);
     show(tab);
     box.querySelector('[role="tab"][aria-selected="true"]')?.focus();
+  });
+}
+
+// ---------- Your rooms: pick one to edit (and to be the robot's room) ----------
+// Resolves to a room id, or null
+export function roomPickerDialog({ current } = {}) {
+  return new Promise((resolve) => {
+    const back = h("div", { class: "modal-backdrop re-new" });
+    const box = h("div", { class: "modal re-new-box", role: "dialog", "aria-modal": "true", "aria-labelledby": "re-pick-title" });
+    const list = h("div", { class: "re-rooms", role: "list", "aria-busy": "true" });
+    const finish = (value) => {
+      back.remove();
+      resolve(value);
+    };
+    box.append(h("h2", { id: "re-pick-title", text: t("Your rooms") }), hint(t("The room you pick is the one the robot lives in.")), list, h("div", { class: "rs-actions" }, button(t("Cancel"), () => finish(null))));
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        finish(null);
+      }
+    });
+    back.append(box);
+    document.body.append(back);
+    fetch("/api/rooms")
+      .then((r) => r.json())
+      .then(({ rooms }) => {
+        list.removeAttribute("aria-busy");
+        for (const r of rooms) {
+          const here = r.id === current;
+          const pic = r.thumb ? h("img", { class: "re-room-pic", src: r.thumb, alt: "" }) : h("span", { class: "re-room-pic empty", "aria-hidden": "true" }, glyph("home", 28));
+          const b = h("button", { type: "button", class: `re-room${here ? " on" : ""}`, "aria-current": here ? "true" : undefined }, pic, h("span", { class: "re-room-name", text: r.name }), h("span", { class: "re-room-meta", text: tp("{n} thing", "{n} things", r.assets) }));
+          b.addEventListener("click", () => finish(here ? null : r.id));
+          list.append(h("div", { role: "listitem" }, b));
+        }
+        list.querySelector(".re-room")?.focus();
+      })
+      .catch(() => {
+        list.removeAttribute("aria-busy");
+        list.append(h("p", { class: "rs-hint", text: t("The rooms couldn't be loaded.") }));
+      });
   });
 }

@@ -111,7 +111,9 @@ with what is left written next to it. A fresh session continues from this file a
       Robot scene menu, the voice dock ("Edit room"), Settings → Robot (overview and "Where it is"), the
       robot page's palette ("Edit the robot's room"). One opener (`editor/open.js`, `data-edit-room`); from
       the Studio, the Studio comes back after Done. (The voice request is an AI tool: step 7.)
-- [ ] Studio Room tab summary: room thumbnail, template name, quick mood/time/air.
+- [x] Studio Room tab summary: the room's picture and template name.
+- [ ] Studio Room tab: quick mood/time/air on the room document (step 8, when the tab's 1.0 place, mood,
+      floor and air controls go; until then they would be two "Mood" controls side by side).
 - [x] Catalog: categories, search in en/de/ar over labels and tags, favourites, recently used, My sets;
       thumbnails drawn from the real builders and cached in IndexedDB by catalog version; badges; click or drag.
 - [ ] Catalog: My models (with the wizard below).
@@ -125,14 +127,18 @@ with what is left written next to it. A fresh session continues from this file a
 - [x] Architecture (§5.6): New room dialog (Empty with size, walls, floor and wall finish; Template;
       Duplicate), walls, accent wall, thickness, cutaway, floor, ceiling, outside.
 - [x] Atmosphere (§5.7): mood, brightness, time of day, emotion tint, air, wind, season, weather, light effects.
-- [ ] Per-light settings and "lamps on at dusk".
+- [x] Per-light settings (brightness, own color) and "on by itself when it gets dark" (follows the room's
+      time and mood; a scene's switch wins); the engine re-checks clock-dependent things every 30 s.
 - [x] Camera shots (§5.8): save the view as a shot, look through it, remove.
-- [ ] Room-relative shot presets (hidden when their asset is missing), fixed / follow / auto-frame.
+- [x] Shot presets (the whole room, eye level, auto-frame, at the room's main things, measured from
+      them and unavailable while they're hidden or gone), fixed / follow / auto-frame, the shot voice mode
+      uses (`defaultCamera`, also chosen in voice mode's Robot scene menu); the editor's shot view fits it
+      to the picture shape.
 - [x] Backdrop layers (§5.9): full room, robot + chosen things, solid, chroma, transparent (the old
       `stageMode.backdrop` goes in step 8).
 - [x] History/saving/sharing (§5.10): command undo (≥100 steps, drags as one), autosave + "Saved",
       revert, Save as…, duplicate, export/import `.friends-room`, copy/paste between rooms (Ctrl+C/V).
-- [ ] Room picker thumbnails (the room's picture sent with the save).
+- [x] Room picker ("Your rooms…") with pictures; the editor sends the room's picture when it closes.
 - [ ] Custom models wizard (§5.11) and re-skinning built-ins; texture/triangle caps.
 - [x] Extras: per-asset schedules (Advanced tab), floor plan as a PNG.
 - [ ] Extras: scenes UI, Describe a room, ask the robot to rearrange, tidy up, plants that need care,

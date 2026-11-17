@@ -151,6 +151,22 @@ async function main() {
     await scan("room-editor-new", lang, theme);
     await page.keyboard.press("Escape");
     await sleep(200);
+    await page.evaluate(() => {
+      const menu = document.querySelector("#room-editor .re-menu");
+      menu.value = "rooms";
+      menu.dispatchEvent(new Event("change"));
+    });
+    await page.waitForSelector(".re-rooms .re-room", { timeout: 10000 });
+    await scan("room-editor-rooms", lang, theme);
+    await page.keyboard.press("Escape");
+    await sleep(200);
+    // A lamp: its light settings
+    await page.evaluate(() => {
+      const lamp = window.__robot.room.assets.find((a) => a.type.startsWith("lamp_"));
+      if (lamp) document.querySelector(`.re-tree [data-id="${lamp.id}"]`)?.click();
+    });
+    await sleep(500);
+    await scan("room-editor-lamp", lang, theme);
     await page.setViewport({ width: 420, height: 860, deviceScaleFactor: 1 });
     await sleep(800);
     await scan("room-editor-narrow", lang, theme);

@@ -253,6 +253,38 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await page.evaluate(() => (location.hash = "#home"));
   });
 
+  test("a ready-made shot becomes voice mode's camera; closing the editor keeps a picture of the room", async () => {
+    await page.evaluate(() => import("/js/room/editor/open.js").then((m) => m.editRoom()));
+    await editorOpen();
+    await page.waitForFunction(() => document.querySelector(".re-inspector .re-title")?.textContent === "The room");
+    await page.evaluate(() => {
+      const add = document.querySelector('.re-inspector select[aria-label="Add a ready-made shot"]');
+      add.value = "auto";
+      add.dispatchEvent(new Event("change"));
+    });
+    const withShot = await savedWhere((r) => r.cameras.some((c) => c.follow === "auto"), "the auto-frame shot");
+    const shot = withShot.cameras.find((c) => c.follow === "auto");
+    await page.waitForFunction(() => document.querySelector('.re-inspector select[aria-label="In voice mode the camera"]')?.options.length > 1);
+    await page.evaluate((id) => {
+      const pick = document.querySelector('.re-inspector select[aria-label="In voice mode the camera"]');
+      pick.value = id;
+      pick.dispatchEvent(new Event("change"));
+    }, shot.id);
+    await savedWhere((r) => r.defaultCamera === shot.id, "the shot chosen for voice mode");
+    // Voice mode's own camera picker offers it, chosen
+    assert.strictEqual(await page.$eval("#voice-scene-camera", (el) => el.value), shot.id);
+    await done();
+    const listed = await api("GET", "/api/rooms");
+    assert.match(listed.rooms.find((r) => r.id === roomId).thumb, /^data:image\/jpeg;base64,/);
+    // Back to the robot's own framing
+    await page.evaluate(() => {
+      const sel = document.getElementById("voice-scene-camera");
+      sel.value = "auto";
+      sel.dispatchEvent(new Event("change"));
+    });
+    await savedWhere((r) => r.defaultCamera === "auto", "the robot's own framing");
+  });
+
   test("in Arabic the editor is right to left and every word is translated", async () => {
     const s = await api("GET", "/api/settings");
     s.ui.language = "ar";
