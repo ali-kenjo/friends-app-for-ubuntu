@@ -66,7 +66,7 @@ describe("Robot settings are kept, checked and repaired", () => {
     const r = settings.set({
       robot: {
         design: { colors: { head: "gold" }, face: { eyes: "laser" } }, room: { place: "https://evil.example/bg.png" }, shot: "extreme", position: "top",
-        seat: "behind", quality: "ultra",
+        seat: "behind", quality: "extreme",
       },
     }).robot;
     assert.strictEqual(r.design.colors.head, "#ede4d6");

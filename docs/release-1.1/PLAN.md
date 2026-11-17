@@ -69,11 +69,11 @@ with what is left written next to it. A fresh session continues from this file a
       budget (0/2/4/6) by importance and distance, window sun patches by time of day, per-room environment
       PMREM (debounced), emotion tint kept, chroma free of shadows and glow.
       **Left:** CSM for big open-air rooms and VSM on High; soft-shadow setting. Done (in `scene.js` + `RoomRenderer.js`, no separate lighting.js): room-fitted key shadow, hemisphere bounce, practical light budget, sun patches, per-room environment, emotion tint, chroma free of shadow and glow.
-- [ ] `engine.js`: AO stage (half-res GTAO/SAO + blur, before bloom; excludes emissive, transparent, face;
+- [x] `engine.js`: AO stage (half-res GTAO/SAO + blur, before bloom; excludes emissive, transparent, face;
       off on Low, chroma, transparent); per-mood grading (lift/gamma/gain); optional DoF (diorama/portrait)
       on High/Ultra; SMAA when MSAA is unavailable; per-frame stats summed over all passes
       (`renderer.info.autoReset = false`).
-- [ ] Tiers Low/Medium/High/Ultra + Auto (steps down below ~50 fps for 3 s, never while filming); budgets;
+- [x] Tiers Low/Medium/High/Ultra + Auto (steps down below ~50 fps for 3 s, never while filming); budgets;
       `compileAsync` on room load.
 - [~] `src/js/room/render/RoomRenderer.js` replacing `RoomScene` (room3d.js) and `UnifiedRoomManager`.
       **Left:** it replaces RoomScene and UnifiedRoomManager in the engine, but keeps RoomScene inside for templates not rebuilt yet (DECISIONS D7); room3d.js goes in step 8.
@@ -88,7 +88,7 @@ with what is left written next to it. A fresh session continues from this file a
       books and notebook, mug, pen cup, game console with controller, TV/monitor, windows (3 kinds) with
       curtains, wall clock, picture frames, pinboard, plush toy, bouncy ball, puzzle cube.
 - [x] One template rebuilt from the hero set (Living room) with before/after shots.
-- [ ] **ART-DIRECTION CHECKPOINT** (the only planned stop): show the owner the contact sheet and the
+- [x] **ART-DIRECTION CHECKPOINT** (approved by the owner on 2026-11-17: "good for me"): show the owner the contact sheet and the
       before/after of the template; continue only after approval. Record the outcome in DECISIONS.md.
 - [ ] The rest of the existing catalog (remaining Builder props and v1 assets).
 - [ ] Every place's set pieces as catalog assets.
@@ -216,7 +216,7 @@ Filled in as each moves (step 5–8). "→ ?" means not moved yet.
 
 ## Status
 
-2026-11-17: **stopped at the art-direction checkpoint** (step 4), waiting for the owner's answer.
+2026-11-17: the owner approved the art direction at the checkpoint. Work continues with the list below.
 
 Done and committed: step 1 (baseline), step 2 (data, store, API, migration on start), the parts of step 3
 ticked above, the hero set (38 assets) plus 6 more the Living room needed (string lights, fireplace, candles,
@@ -226,8 +226,10 @@ Shown to the owner: `docs/design/screenshots/1.1/assets/hero-{low,high}.jpg` (co
 `docs/design/screenshots/1.1/{before,after}/rooms/lounge-* (before: .jpg, after: .png)`.
 
 Next, after approval (in this order):
-1. Step 3 leftovers: the AO stage, per-mood grading, depth of field, SMAA, the Ultra tier and reworked
-   budgets, `compileAsync` on room load, CSM/VSM, summed per-frame stats in `getStats()`.
+1. Step 3 leftovers: CSM for big open-air rooms and VSM on High; the graphics settings that drive
+   `engine.setPost()` (depth of field, AA, AO, grading) get their UI in step 8. Done since the checkpoint:
+   the AO stage (GTAO at half resolution), per-mood grading, depth of field (diorama, portrait), SMAA when
+   there is no multisampling, the Ultra tier, reworked budgets, `compileAsync`, per-frame stats over all passes.
 2. Step 4: the remaining 146 catalog entries, the other 26 templates and the 3 presets' missing assets.
 3. Steps 5–9 as listed.
 

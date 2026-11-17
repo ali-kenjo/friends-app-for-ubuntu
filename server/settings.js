@@ -571,7 +571,7 @@ const ROBOT = {
   shots: ["close", "medium", "wide", "orbit", "dolly", "rack_focus", "handheld", "security_cam", "cinematic"],
   positions: ["center", "left", "right"],
   seats: ["front", "left", "right"],
-  qualities: ["auto", "low", "medium", "high"],
+  qualities: ["auto", "low", "medium", "high", "ultra"],
   delays: [0, 3, 5, 10],
 };
 

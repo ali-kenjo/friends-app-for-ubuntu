@@ -157,7 +157,7 @@ export class RoomRenderer {
     this.syncLights(doc.assets.filter((a) => !this.hidden.has(a.id)), level, doc);
     if (!doc.legacy) {
       const box = this.arch?.bounds?.clone() || new THREE.Box3(new THREE.Vector3(-doc.size.w / 2, 0, -doc.size.d / 2), new THREE.Vector3(doc.size.w / 2, doc.size.h, doc.size.d / 2));
-      this.stage.setRoomBounds(box, { floorColor: doc.architecture.floor.color, mapSize: level === "low" ? 1024 : level === "medium" ? 2048 : 4096, soft: level === "high" || level === "ultra" ? 5 : 3 });
+      this.stage.setRoomBounds(box, { floorColor: doc.architecture.floor.color, mapSize: level === "low" ? 1024 : level === "medium" ? 2048 : 4096, soft: level === "ultra" ? 7 : level === "high" ? 5 : 3 });
       this.scheduleEnvironment(doc);
     }
     // Selected-things layer: only the chosen things stay

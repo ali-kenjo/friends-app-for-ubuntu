@@ -5100,4 +5100,5 @@ export default {
   "left": "يسارًا",
   "centre": "في المنتصف",
   "right": "يمينًا",
+  "Ultra": "فائق",
 };

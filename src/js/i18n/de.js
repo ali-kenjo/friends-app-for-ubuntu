@@ -5048,4 +5048,5 @@ export default {
   "left": "links",
   "centre": "mittig",
   "right": "rechts",
+  "Ultra": "Ultra",
 };

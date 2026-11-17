@@ -27,7 +27,7 @@ const resetButton = document.getElementById("robot-model-reset");
 const fileInput = document.getElementById("robot-model-file");
 
 const MAX_MODEL = 30 * 1024 * 1024;
-const LEVELS = { low: t("Low"), medium: t("Medium"), high: t("High") };
+const LEVELS = { low: t("Low"), medium: t("Medium"), high: t("High"), ultra: t("Ultra") };
 
 // ---------- The preview ----------
 robot.host("preview", preview, { priority: 2 });

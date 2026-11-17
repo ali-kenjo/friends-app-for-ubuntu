@@ -98,3 +98,15 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
   596k triangles on High per frame, summed over the main, shadow and glow passes (1.0: 181 / 49k and
   248 / 118k, without shadows from furniture). `QUALITY_BUDGETS` is reworked with the tiers in step 3's
   leftovers; segment counts already adapt to size (R4).
+- **P3 (2026-11-17) Art direction approved.** The owner saw the hero contact sheets and the Living room
+  before/after and answered "good for me". The look stands; the remaining assets and templates follow it.
+- **R12 Post stages.** AO is three.js' GTAOPass at half resolution with its output switched off: its map is
+  multiplied into the picture in the engine's own final pass, before bloom is added, so glow is never
+  darkened. Glowing, see-through and unlit things are hidden for AO's depth pass. Depth of field lives in
+  the same final pass (twelve taps): "diorama" needs no depth, "portrait" focuses on the robot using AO's
+  depth, so it is available where AO is (High, Ultra). Grading is the mood's lift/gamma/gain, off on chroma.
+  SMAA runs only when multisampling isn't available or is chosen. Verified on screen in the Living room:
+  High with AO and grading draws 370–387 calls / 0.71–0.78 M triangles per frame (budget 560 / 2.4 M).
+- **R13 Budgets are per frame over all passes** (Low 180 / 0.3 M, Medium 420 / 1.2 M, High 560 / 2.4 M,
+  Ultra 720 / 4 M draw calls / triangles); `test/robot-budget.test.js` pins them. "ultra" is a valid
+  `robot.quality` now.

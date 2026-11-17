@@ -13,6 +13,8 @@
 import * as THREE from "three";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { FullScreenQuad } from "three/addons/postprocessing/Pass.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { Face } from "./face.js";
 import { Stage } from "./scene.js";
 import { World } from "./world.js";
@@ -30,18 +32,23 @@ import { attachV1Engine, stepV1Frame } from "../core/v1-runtime.mjs";
 // Low keeps 2x multisampling (jagged, shimmering edges turn into moiré on
 // camera) but renders into an 8-bit buffer with simpler shell shaders: on a
 // built-in Intel GPU that's the difference between about 35 and 55-60 fps.
+// ao: ambient occlusion (0 off, 1 half resolution, 2 half resolution with more samples); dof: depth of
+// field may be used; lights: how many lamps really light the room (RoomRenderer LIGHT_BUDGET)
 export const QUALITY = {
-  low: { ratio: 1, samples: 2, float: false, rich: false, bloom: false, shadows: false, shadowSize: 1024, face: "low" },
-  medium: { ratio: 1.25, samples: 4, float: true, rich: true, bloom: true, shadows: true, shadowSize: 1024, face: "medium" },
-  high: { ratio: 2, samples: 4, float: true, rich: true, bloom: true, shadows: true, shadowSize: 2048, face: "high" },
+  low: { ratio: 1, samples: 2, float: false, rich: false, bloom: false, shadows: false, shadowSize: 1024, face: "low", ao: 0, dof: false },
+  medium: { ratio: 1.25, samples: 4, float: true, rich: true, bloom: true, shadows: true, shadowSize: 1024, face: "medium", ao: 1, dof: false },
+  high: { ratio: 2, samples: 4, float: true, rich: true, bloom: true, shadows: true, shadowSize: 2048, face: "high", ao: 1, dof: true },
+  ultra: { ratio: 2.5, samples: 8, float: true, rich: true, bloom: true, shadows: true, shadowSize: 4096, face: "high", ao: 2, dof: true },
 };
-// Hardware-agnostic per-tier scene budget (drawCalls, triangles, particles)
+// Per-tier budget for one frame, summed over every pass (the scene, its shadows, the glow pass, AO's
+// depth pass): a scene over budget shows in the performance overlay. Measured, not assumed (DECISIONS R11).
 export const QUALITY_BUDGETS = {
-  low: { drawCalls: 140, triangles: 60000, particles: 45 },
-  medium: { drawCalls: 220, triangles: 120000, particles: 90 },
-  high: { drawCalls: 320, triangles: 240000, particles: 160 },
+  low: { drawCalls: 180, triangles: 300000, particles: 45 },
+  medium: { drawCalls: 420, triangles: 1200000, particles: 90 },
+  high: { drawCalls: 560, triangles: 2400000, particles: 160 },
+  ultra: { drawCalls: 720, triangles: 4000000, particles: 220 },
 };
-const DOWN = { high: "medium", medium: "low" };
+const DOWN = { ultra: "high", high: "medium", medium: "low" };
 // What the built-in robot measures with its default design (model.js measure()): the camera shots are made for it
 const STANDARD = { height: 1.312, width: 0.72 };
 
@@ -85,6 +92,19 @@ const FINAL = {
     uFriendly: { value: 0 },
     uSeed: { value: 0 },
     uTransparent: { value: 0 },
+    tAO: { value: null },
+    uAO: { value: 0 },
+    uLift: { value: new THREE.Vector3(0, 0, 0) },
+    uGamma: { value: new THREE.Vector3(1, 1, 1) },
+    uGain: { value: new THREE.Vector3(1, 1, 1) },
+    uGrade: { value: 0 },
+    tDepth: { value: null },
+    uDof: { value: 0 }, // 0 off, 1 diorama (tilt-shift), 2 portrait (focus on the robot)
+    uDofStrength: { value: 0.5 },
+    uFocus: { value: 4 },
+    uNear: { value: 0.05 },
+    uFar: { value: 40 },
+    uTexel: { value: new THREE.Vector2(1 / 1280, 1 / 720) },
   },
   vertexShader: /* glsl */ `
 varying vec2 vUv;
@@ -117,6 +137,49 @@ uniform float uExposure;
 uniform float uFriendly; // camera-friendly look
 uniform float uSeed;
 uniform float uTransparent;
+uniform sampler2D tAO;
+uniform float uAO;
+uniform vec3 uLift;
+uniform vec3 uGamma;
+uniform vec3 uGain;
+uniform float uGrade;
+uniform sampler2D tDepth;
+uniform int uDof;
+uniform float uDofStrength;
+uniform float uFocus;
+uniform float uNear;
+uniform float uFar;
+uniform vec2 uTexel;
+
+float viewZ(vec2 uv) {
+  float d = texture2D(tDepth, uv).x;
+  float z = d * 2.0 - 1.0;
+  return 2.0 * uNear * uFar / (uFar + uNear - z * (uFar - uNear));
+}
+
+// How blurred a pixel is (0..1): by its row for the diorama look, by its distance from the robot for portrait
+float coc(vec2 uv) {
+  if (uDof == 1) return clamp(abs(uv.y - uCenter.y) * 2.6 - 0.22, 0.0, 1.0);
+  float z = viewZ(uv);
+  return clamp(abs(z - uFocus) / max(uFocus, 0.5) - 0.12, 0.0, 1.0);
+}
+
+// The scene, blurred by its circle of confusion (twelve taps on a disc)
+vec4 sceneAt(vec2 uv) {
+  if (uDof == 0) return texture2D(tScene, uv);
+  float c = coc(uv) * uDofStrength * 14.0;
+  if (c < 0.6) return texture2D(tScene, uv);
+  vec4 sum = texture2D(tScene, uv);
+  float total = 1.0;
+  for (int i = 0; i < 12; i++) {
+    float a = float(i) * 2.399963;
+    float r = sqrt((float(i) + 0.5) / 12.0);
+    vec2 o = vec2(cos(a), sin(a)) * r * c * uTexel;
+    sum += texture2D(tScene, uv + o);
+    total += 1.0;
+  }
+  return sum / total;
+}
 
 // Khronos PBR Neutral: keeps the shell's and the accent's colors true
 vec3 neutral(vec3 color) {
@@ -143,10 +206,14 @@ float hash(vec2 p) {
 }
 
 void main() {
-  vec4 s = texture2D(tScene, vUv);
+  vec4 s = sceneAt(vUv);
   float a = clamp(s.a, 0.0, 1.0);
   vec3 body = a > 0.0005 ? s.rgb / a : vec3(0.0);
+  // Ambient occlusion darkens creases and where things meet (never the glow: bloom is added afterwards)
+  if (uAO > 0.0) body *= mix(1.0, texture2D(tAO, vUv).r, uAO);
   vec3 lit = neutral(max(body * uExposure, 0.0));
+  // The mood's grade: lift, gamma, gain per channel
+  if (uGrade > 0.5) lit = pow(max(lit * uGain + uLift * (1.0 - lit), 0.0), 1.0 / uGamma);
   if (uFriendly > 0.5) {
     // A little brighter in the middle tones, and never a glaring white
     lit = pow(lit, vec3(0.92));
@@ -295,6 +362,15 @@ export class RobotEngine {
     this.final = new FullScreenQuad(new THREE.ShaderMaterial({ ...FINAL, uniforms: THREE.UniformsUtils.clone(FINAL.uniforms), depthTest: false, depthWrite: false }));
     this.final.material.uniforms.tScene.value = this.sceneTarget.texture;
 
+    // One frame is several passes: the counters add up over all of them and are read once a frame
+    renderer.info.autoReset = false;
+    this.frameStats = { calls: 0, triangles: 0 };
+    this.ao = null; // made the first time a tier asks for ambient occlusion
+    this.aoHidden = [];
+    this.smaa = null;
+    this.finalTarget = null;
+    this.post = { dof: "off", dofStrength: 0.5, grading: true, aa: "msaa", ao: "auto" };
+
     this.hosts = new Map(); // name → { el, priority, visible, options }
     this.active = null;
     this.size = { w: 0, h: 0, ratio: 0 };
@@ -430,6 +506,10 @@ export class RobotEngine {
     this.sceneTarget.setSize(pw, ph);
     this.glowTarget.setSize(Math.max(2, Math.round(pw / 2)), Math.max(2, Math.round(ph / 2)));
     this.bloom.setSize(pw, ph);
+    this.ao?.setSize(Math.max(2, Math.round(pw / 2)), Math.max(2, Math.round(ph / 2)));
+    this.smaa?.setSize(pw, ph);
+    this.finalTarget?.setSize(pw, ph);
+    this.final.material.uniforms.uTexel.value.set(1 / pw, 1 / ph);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.world.setPixelScale(ph, this.camera.fov);
@@ -450,7 +530,7 @@ export class RobotEngine {
   applyQuality() {
     const q = QUALITY[this.level] || QUALITY.high;
     const maxSamples = this.renderer.capabilities.isWebGL2 ? (this.renderer.capabilities.maxSamples || 4) : 0;
-    const samples = Math.min(q.samples, maxSamples);
+    const samples = this.post?.aa === "msaa" || !this.post ? Math.min(q.samples, maxSamples) : 0;
     // Float (for bloom's bright highlights) or 8-bit sRGB (Low, no bloom)
     const type = q.float ? THREE.HalfFloatType : THREE.UnsignedByteType;
     const colorSpace = q.float ? THREE.NoColorSpace : THREE.SRGBColorSpace;
@@ -472,7 +552,7 @@ export class RobotEngine {
   }
 
   getStats() {
-    const info = this.renderer.info?.render || { calls: 0, triangles: 0 };
+    const info = this.frameStats;
     const budget = QUALITY_BUDGETS[this.level] || QUALITY_BUDGETS.high;
     const particles = this.world?.particles?.geometry?.drawRange?.count || (this.look.room?.air && this.look.room.air !== "none" ? 36 : 0);
     return {
@@ -553,6 +633,8 @@ export class RobotEngine {
     else this.rooms.configure({ ...this.look.room, place }, { light: this.look.accent, level: this.level });
     this.applyPhoto();
     this.glowingFor = null;
+    // Shaders for the new room are compiled ahead, so the first frame with it (or a dropped thing) doesn't hitch
+    this.renderer.compileAsync?.(this.stage.scene, this.camera).catch(() => {});
   }
 
   // Applies the design to the robot: new shapes rebuild it, anything else repaints it
@@ -640,18 +722,130 @@ export class RobotEngine {
     stepV1Frame(this, pose, dt, pose.t);
 
     const r = this.renderer;
+    r.info.reset();
     r.setRenderTarget(this.sceneTarget);
     r.setClearColor(0x000000, 0);
     r.clear();
     r.render(this.stage.scene, this.camera);
+    const aoOn = this.renderAO(chroma);
     if (bloomOn) {
       this.renderGlow();
       this.bloom.strength = look.cameraFriendly ? 0.35 : 0.5;
       this.bloom.render(r, null, this.glowTarget, dt, false);
     }
     this.paintBackground(bloomOn, pose);
-    r.setRenderTarget(null);
-    this.final.render(r);
+    this.paintPost(aoOn, pose, chroma);
+    if (this.useSmaa()) {
+      // No multisampling here (or SMAA was chosen): the finished picture is smoothed in one more pass
+      r.setRenderTarget(this.finalTarget);
+      this.final.render(r);
+      this.smaa.renderToScreen = true;
+      this.smaa.render(r, null, this.finalTarget);
+    } else {
+      r.setRenderTarget(null);
+      this.final.render(r);
+    }
+    this.frameStats = { calls: r.info.render.calls, triangles: r.info.render.triangles };
+  }
+
+  // ---------- Ambient occlusion, grading, depth of field, SMAA ----------
+  // AO: depth and normals at half resolution, GTAO, a denoise; multiplied into the picture before bloom.
+  // Glowing and see-through things and the face screen take no part; off on Low, on chroma keys and for
+  // a transparent picture.
+  aoLevel() {
+    const tier = QUALITY[this.level]?.ao || 0;
+    const want = this.post.ao;
+    if (want === "off" || !this.renderer.capabilities.isWebGL2) return 0;
+    if (want === "low") return Math.min(1, Math.max(tier, 1)) * (tier ? 1 : 0);
+    return tier;
+  }
+
+  renderAO(chroma) {
+    const level = this.aoLevel();
+    const u = this.final.material.uniforms;
+    const layer = this.rooms.layer;
+    if (!level || chroma || u.uTransparent.value > 0.5 || layer === "transparent" || this.placeId() === "dock") {
+      u.uAO.value = 0;
+      return false;
+    }
+    if (!this.ao) {
+      const { w, h, ratio } = this.size;
+      this.ao = new GTAOPass(this.stage.scene, this.camera, Math.max(2, Math.round((w * ratio) / 2)), Math.max(2, Math.round((h * ratio) / 2)));
+      this.ao.output = GTAOPass.OUTPUT.Off;
+      this.aoSamples = 0;
+    }
+    if (this.aoSamples !== level) {
+      this.aoSamples = level;
+      this.ao.updateGtaoMaterial({ radius: 0.32, distanceExponent: 1.4, thickness: 1, scale: 1.1, samples: level === 2 ? 16 : 8, screenSpaceRadius: false });
+      this.ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: level === 2 ? 16 : 8 });
+    }
+    // Only solid, unlit-from-within things shape the occlusion
+    const hidden = this.aoHidden;
+    const glowing = this.glowing || new Set();
+    this.stage.scene.traverseVisible((o) => {
+      if (!o.isMesh && !o.isPoints && !o.isSprite) return;
+      const m = o.material;
+      if (!o.isMesh || m.transparent || m.isShadowMaterial || glowing.has(m) || m.userData?.glow || m.isMeshBasicMaterial || m.isShaderMaterial) {
+        o.visible = false;
+        hidden.push(o);
+      }
+    });
+    const r = this.renderer;
+    const shadows = r.shadowMap.enabled;
+    r.shadowMap.enabled = false;
+    this.ao.render(r, null, null);
+    r.shadowMap.enabled = shadows;
+    for (const o of hidden) o.visible = true;
+    hidden.length = 0;
+    u.tAO.value = this.ao.gtaoMap;
+    u.tDepth.value = this.ao.normalRenderTarget?.depthTexture || null;
+    u.uAO.value = 1;
+    return true;
+  }
+
+  paintPost(aoOn, pose, chroma) {
+    const u = this.final.material.uniforms;
+    // Grading follows the room's mood (none on chroma keys: their color must stay exact)
+    const mood = this.stage.mood;
+    const grade = this.post.grading && !chroma && mood?.grade && this.rooms.mode === "doc" ? mood.grade : null;
+    u.uGrade.value = grade ? 1 : 0;
+    if (grade) {
+      u.uLift.value.fromArray(grade.lift);
+      u.uGamma.value.fromArray(grade.gamma);
+      u.uGain.value.fromArray(grade.gain);
+    }
+    // Depth of field: the diorama look needs no depth; portrait focuses on the robot and needs AO's depth
+    const allowed = QUALITY[this.level]?.dof && !chroma && !this.look.cameraFriendly && this.placeId() !== "dock";
+    let dof = allowed ? { off: 0, diorama: 1, portrait: 2 }[this.post.dof] || 0 : 0;
+    if (dof === 2 && (!aoOn || !u.tDepth.value)) dof = 0;
+    u.uDof.value = dof;
+    u.uDofStrength.value = this.post.dofStrength;
+    if (dof === 2) {
+      this.tmp.set(pose.posX || 0, 0.8, pose.posZ || 0).applyMatrix4(this.camera.matrixWorldInverse);
+      u.uFocus.value = -this.tmp.z;
+      u.uNear.value = this.camera.near;
+      u.uFar.value = this.camera.far;
+    }
+  }
+
+  useSmaa() {
+    const noMsaa = !this.renderer.capabilities.isWebGL2 || !(this.renderer.capabilities.maxSamples > 0);
+    const want = this.post.aa === "smaa" || (this.post.aa === "msaa" && noMsaa);
+    if (!want || this.active?.options.fixed === undefined && this.final.material.uniforms.uTransparent.value > 0.5) return false;
+    if (!this.smaa) {
+      const pw = Math.round(this.size.w * this.size.ratio);
+      const ph = Math.round(this.size.h * this.size.ratio);
+      this.smaa = new SMAAPass();
+      this.smaa.setSize(pw, ph);
+      this.finalTarget = new THREE.WebGLRenderTarget(pw, ph, { colorSpace: THREE.SRGBColorSpace });
+    }
+    return true;
+  }
+
+  // Graphics settings beyond the tier (Settings → Robot → Graphics): { dof, dofStrength, grading, aa, ao }
+  setPost(post) {
+    Object.assign(this.post, post);
+    if (post.aa !== undefined) this.applyQuality();
   }
 
   // The scene once more, where only light shows: glowing parts as their light
@@ -1157,6 +1351,9 @@ export class RobotEngine {
     this.black.dispose();
     for (const twin of this.twins.values()) twin.dispose();
     this.bloom.dispose();
+    this.ao?.dispose();
+    this.smaa?.dispose();
+    this.finalTarget?.dispose();
     this.final.material.dispose();
     this.final.dispose();
     this.renderer.dispose();

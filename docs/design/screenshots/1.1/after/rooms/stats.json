@@ -1,33 +1,12 @@
 {
-  "when": "2026-11-16T23:29:42.652Z",
+  "when": "2026-11-17T00:17:39.565Z",
   "renderer": "SwiftShader (software WebGL)",
   "stats": {
     "lounge|high|16x9|dark": {
-      "calls": 305,
-      "triangles": 595774,
-      "ms": 1876,
+      "calls": 387,
+      "triangles": 779796,
+      "ms": 1985,
       "level": "high",
-      "meshes": 105
-    },
-    "lounge|high|9x16|dark": {
-      "calls": 249,
-      "triangles": 465640,
-      "ms": 1236,
-      "level": "high",
-      "meshes": 105
-    },
-    "lounge|low|16x9|dark": {
-      "calls": 107,
-      "triangles": 110775,
-      "ms": 1064,
-      "level": "low",
-      "meshes": 105
-    },
-    "lounge|low|9x16|dark": {
-      "calls": 75,
-      "triangles": 83797,
-      "ms": 594,
-      "level": "low",
       "meshes": 105
     }
   },

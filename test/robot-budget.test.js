@@ -25,27 +25,20 @@ describe("Robot quality levels and performance budgets", () => {
     
     // Parse through safe Function constructor
     const budgets = new Function(`return ${budgetMatch[1].replace(/;$/, "")}`)();
-    assert.ok(budgets.low && budgets.medium && budgets.high, "Must define low, medium, and high budgets");
+    assert.ok(budgets.low && budgets.medium && budgets.high && budgets.ultra, "Must define low, medium, high and ultra budgets");
 
-    // Verify low tier budget constraints
-    assert.strictEqual(budgets.low.drawCalls, 140);
-    assert.strictEqual(budgets.low.triangles, 60000);
-    assert.strictEqual(budgets.low.particles, 45);
+    // 1.1: a frame's budget counts every pass (scene, shadows, glow, AO depth), so the numbers are larger
+    // than 1.0's single-pass ones; they stay pinned so a change is deliberate
+    assert.deepStrictEqual(budgets.low, { drawCalls: 180, triangles: 300000, particles: 45 });
+    assert.deepStrictEqual(budgets.medium, { drawCalls: 420, triangles: 1200000, particles: 90 });
+    assert.deepStrictEqual(budgets.high, { drawCalls: 560, triangles: 2400000, particles: 160 });
+    assert.deepStrictEqual(budgets.ultra, { drawCalls: 720, triangles: 4000000, particles: 220 });
 
-    // Verify medium tier budget constraints
-    assert.strictEqual(budgets.medium.drawCalls, 220);
-    assert.strictEqual(budgets.medium.triangles, 120000);
-    assert.strictEqual(budgets.medium.particles, 90);
-
-    // Verify high tier budget constraints
-    assert.strictEqual(budgets.high.drawCalls, 320);
-    assert.strictEqual(budgets.high.triangles, 240000);
-    assert.strictEqual(budgets.high.particles, 160);
-
-    // Strict monotonic ordering: low < medium < high
-    assert.ok(budgets.low.drawCalls < budgets.medium.drawCalls && budgets.medium.drawCalls < budgets.high.drawCalls);
-    assert.ok(budgets.low.triangles < budgets.medium.triangles && budgets.medium.triangles < budgets.high.triangles);
-    assert.ok(budgets.low.particles < budgets.medium.particles && budgets.medium.particles < budgets.high.particles);
+    // Strict monotonic ordering: low < medium < high < ultra
+    const tiers = [budgets.low, budgets.medium, budgets.high, budgets.ultra];
+    for (const key of ["drawCalls", "triangles", "particles"]) {
+      for (let i = 1; i < tiers.length; i++) assert.ok(tiers[i - 1][key] < tiers[i][key], `${key} must grow with the tier`);
+    }
   });
 
   test("low quality disables expensive graphics features to honor budget", () => {
