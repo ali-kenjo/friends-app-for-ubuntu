@@ -65,6 +65,8 @@ export class RoomBehaviour {
     this.onLog = null;
     this.onAction = null; // ({ assetId, action }) when it uses a thing
     this.sleeping = false;
+    this.letRun = null; // "finish" | "brief" | "return": the task goes on though you're talking (interrupt policy)
+    this.paused = null; // what it was doing when you started talking (pause and resume)
     this.out = this.output();
   }
 
@@ -158,6 +160,17 @@ export class RoomBehaviour {
     if (!this.goTo(at, { why: "place", face: look ? facingTo(at, [look[0], look[2]]) + (want.kind === "sit" ? 180 : 0) : null, name: displayName(a) })) this.goHome("after");
   }
 
+  // Put down by hand (dragged in voice mode): it stays there, facing as it was, until something moves it
+  place(x, z) {
+    this.pos = [x, z];
+    this.speed = 0;
+    this.task = { kind: "hold", face: this.yaw };
+    this.why = "command";
+    this.paused = null;
+    this.letRun = null;
+    this.sleeping = false;
+  }
+
   // ---------- Commands (the AI, the voice dock, the editor's buttons) ----------
   // { kind: "home" } | { kind: "spot", id } | { kind: "asset", id, action, actor } | { kind: "route", id } | { kind: "stop" }
   command(cmd, ctx = {}) {
@@ -242,8 +255,24 @@ export class RoomBehaviour {
     const away = state === "away" || (state === "idle" && awayMin >= robot.states.away.afterMin);
     if (state !== prev && state !== "idle") this.sleeping = false;
 
+    // ---- You start talking while it's busy: the interrupt policy says what happens ----
+    const busy = ["visit", "route", "wander", "command", "place", "pace"].includes(this.why) && this.task && this.task.kind !== "hold";
+    if (busy && (state === "listening" || state === "talking") && prev !== "listening" && prev !== "talking" && !filming) this.interrupt(robot.autonomy.interrupt);
+    if (this.letRun && (!this.task || this.task.kind === "hold")) this.letRun = null;
+    // Back to idle with something paused: it carries on
+    if (state === "idle" && this.paused && !away && !night) {
+      const p = this.paused;
+      this.paused = null;
+      if (p.kind === "route") {
+        this.task = p.task;
+        this.task.leg = null;
+        this.why = "route";
+        this.say("Carrying on");
+      } else if (p.to && this.goTo(p.to, { why: p.why, face: p.face, asset: p.asset, then: p.then, name: p.name })) this.say("Carrying on");
+    }
+
     // ---- Decide (only when the current task allows it) ----
-    const commanded = this.why === "command" && this.task && this.task.kind !== "hold";
+    const commanded = (this.why === "command" || this.letRun) && this.task && this.task.kind !== "hold";
     if (!commanded) {
       if (filming) {
         if (this.task?.kind === "go" || this.task?.kind === "route") this.say("Staying put: filming");
@@ -263,6 +292,35 @@ export class RoomBehaviour {
     // ---- What it shows ----
     this.out = this.output(state, ctx, { away: away || night, filming });
     return this.out;
+  }
+
+  // What it does with what it's doing when you start talking (autonomy.interrupt)
+  interrupt(policy) {
+    const t = this.task;
+    if (policy === "finish_before_listening") {
+      this.letRun = "finish";
+      this.say("Finishing first, then listening");
+    } else if (policy === "finish_briefly") {
+      this.letRun = "brief";
+      if (t.kind === "dwell") t.until = Math.min(t.until, this.t + 1);
+      if (t.then?.kind === "dwell") t.then.dwell = Math.min(t.then.dwell, 1);
+      if (t.kind === "route") this.task = { kind: "hold", face: this.yaw };
+      this.say("Finishing briefly, then listening");
+    } else if (policy === "pause_and_resume") {
+      if (t.kind === "route") this.paused = { kind: "route", task: t };
+      else if (t.kind === "go") {
+        const end = t.points[t.points.length - 1];
+        this.paused = { kind: "go", to: end, why: this.why, face: t.face, asset: t.asset, then: t.then, name: "" };
+      }
+      this.task = { kind: "hold", face: this.yaw };
+      this.say("Pausing to listen");
+    } else {
+      // Stop at once and come back
+      this.letRun = "return";
+      this.goHome("interrupt");
+      this.why = "home";
+      this.say("Stopping, coming back");
+    }
   }
 
   decideRest(awayMin, night, ctx) {
@@ -696,6 +754,6 @@ export function labels() {
     "No path to {name}: blocked by the {by}", "No path to {name}", "Back home", "Home", "Going to {name}", "Going to the {name}", "Not doing it: {why}",
     "Following the route {name}", "Staying put: filming", "Night: resting", "You're away: going to rest", "Asleep",
     "Not visiting: the session's limit is reached", "Not visiting: {n} visits this hour already", "Skipped the {name}: Never",
-    "Slowed down: slow zone", "Using the {name}: {action}", "No path to point {n} of the route", "Skipped a step of the route: {why}", "Route done: {name}",
+    "Slowed down: slow zone", "Using the {name}: {action}", "Carrying on", "Put down by hand", "Finishing first, then listening", "Finishing briefly, then listening", "Pausing to listen", "Stopping, coming back", "No path to point {n} of the route", "Skipped a step of the route: {why}", "Route done: {name}",
   ];
 }

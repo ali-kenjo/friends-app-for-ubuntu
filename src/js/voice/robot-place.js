@@ -191,3 +191,32 @@ document.getElementById("voice-scene-reset")?.addEventListener("click", () => re
 // Leaving voice mode ends it
 new MutationObserver(() => voiceMode.hidden && stop()).observe(voiceMode, { attributes: true, attributeFilter: ["hidden"] });
 applyPlace();
+
+// ---------- Put down in its room by hand: "make this its home" ----------
+// Dragging the robot in voice mode carries it across its room's floor (robot/engine.js). Once it's put down, an
+// offer to make that spot its home stays (no time limit) until it's used, dismissed, the robot is put down
+// somewhere else, or voice mode closes.
+let homeOffer = null;
+const dropOffer = () => {
+  homeOffer?.remove();
+  homeOffer = null;
+};
+new MutationObserver(() => voiceMode.hidden && dropOffer()).observe(voiceMode, { attributes: true, attributeFilter: ["hidden"] });
+document.addEventListener("friends:robot-dropped", (e) => {
+  const { x, z } = e.detail || {};
+  dropOffer();
+  const yes = h("button", { type: "button", class: "btn small", text: t("Make this its home") });
+  const no = h("button", { type: "button", class: "icon-btn small", "aria-label": t("Dismiss"), title: t("Dismiss"), text: "✕" });
+  homeOffer = h("div", { class: "voice-home-offer", role: "status" }, h("span", { text: t("Put down here.") }), yes, no);
+  yes.addEventListener("click", () => {
+    const doc = robot.room;
+    if (!doc) return;
+    const facing = Math.round(robot.engine?.behaviour?.yaw ?? doc.robot.home.facing);
+    robot.setRoom({ ...doc, robot: { ...doc.robot, home: { pos: [Math.round(x * 1000) / 1000, 0, Math.round(z * 1000) / 1000], facing } } });
+    dropOffer();
+    announce(t("This is its home now."));
+  });
+  no.addEventListener("click", dropOffer);
+  // (on the page, above voice mode: voice mode rebuilds its own layers as its state changes)
+  document.body.append(homeOffer);
+});

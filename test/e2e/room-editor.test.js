@@ -459,6 +459,32 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await done();
   });
 
+  test("voice mode: dragging the robot carries it across its room, and it can stay there for good", async () => {
+    await page.evaluate(() => localStorage.setItem("friends.voiceTheme", "robot"));
+    await page.goto(`${base}/?robot-debug&voice=1`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.friendsRobot?.engine?.active?.name === "voice" && window.friendsRobot.engine.behaving(), { timeout: 60000 });
+    const before = (await savedRoom()).robot.home.pos;
+    const from = await page.evaluate(async () => {
+      const THREE = await import("three");
+      const e = window.friendsRobot.engine;
+      const v = new THREE.Vector3(e.base.x, 0.7, e.base.z).project(e.camera);
+      const r = e.canvas.getBoundingClientRect();
+      return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+    });
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    for (const k of [0.2, 0.5, 0.8, 1]) await page.mouse.move(from.x + 160 * k, from.y + 30 * k, { steps: 2 });
+    await page.mouse.up();
+    await page.waitForSelector(".voice-home-offer button", { timeout: 10000 });
+    await click(".voice-home-offer button");
+    const at = await page.evaluate(() => [window.friendsRobot.engine.behaviour.pos[0], window.friendsRobot.engine.behaviour.pos[1]]);
+    assert.ok(Math.hypot(at[0] - before[0], at[1] - before[2]) > 0.2, `carried: ${at}`);
+    const saved = await savedWhere((r) => Math.abs(r.robot.home.pos[0] - at[0]) < 0.01, "the new home");
+    assert.ok(Math.abs(saved.robot.home.pos[2] - at[1]) < 0.01);
+    await page.goto(`${base}/?robot-debug`, { waitUntil: "networkidle2" });
+    await page.waitForFunction(() => window.friendsRobot?.room?.id, { timeout: 60000 });
+  });
+
   test("in Arabic the editor is right to left and every word is translated", async () => {
     const s = await api("GET", "/api/settings");
     s.ui.language = "ar";

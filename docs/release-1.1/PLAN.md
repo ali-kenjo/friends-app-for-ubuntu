@@ -168,7 +168,7 @@ with what is left written next to it. A fresh session continues from this file a
       behaviour, away/night, filming and reduced-motion overrides; all in the robot's inspector.
 - [x] Routes: named, points placed and dragged in the room (numbered), inserted, reordered, removed, with
       dwell/look/action; modes, when to run; unreachable points flagged; test run in Simulate.
-- [ ] Rules UI (§6.6): permission, allowed actions, visit weight/cooldown/max/dwell/times/mood/keep-distance/
+- [x] Rules UI (§6.6): permission, allowed actions, visit weight/cooldown/max/dwell/times/mood/keep-distance/
       fragile, bulk per category, personal-data assets, global autonomy preset/quotas/interrupt/foley/reset.
 - [x] Behaviour engine (`src/js/room/behaviour.mjs`, pure, 13 unit tests) owns position and heading: home and
       facing, freedom and leash, visits by the rules (weights, moods, times, quotas, cooldowns, Never, keep
@@ -181,10 +181,13 @@ with what is left written next to it. A fresh session continues from this file a
       vignette and camera follow the robot's place in the room. The animator draws hover height, stance,
       sit, lean, rest, asleep, the gait while moving and banking, and the gaze weights, look-away and head
       limit. The v1 engine no longer moves the robot.
-- [ ] Dragging the robot in voice mode moves it in the room ("stay here" sets home).
+- [x] Dragging the robot in voice mode carries it across its room (never into furniture or a no-go zone);
+      "Make this its home" then saves it as home (offered until used, dismissed or voice mode closes).
+- [x] Interrupt policies in the behaviour (stop and come back, finish briefly, pause and resume, finish
+      first), unit-tested; mood affinity per thing in its Robot rules tab.
 - [ ] Navigation/interaction with anchors, aim IK, sit/lean, carrying the real mesh; move `core/robot/*`
       into `src/js/room/robot/`; fix id collisions, unsanitized inputs, shadow/camera bug.
-- [ ] Camera follow and auto-frame.
+- [x] Camera follow (voice mode follows the robot's place in the room) and auto-frame (room shots, step 5).
 - [x] Simulate ▶ (1×/5×, path line, nav grid, zones), event log explaining decisions (translated),
       "Try it" buttons for each interaction of a selected thing, Go there now for spots.
 

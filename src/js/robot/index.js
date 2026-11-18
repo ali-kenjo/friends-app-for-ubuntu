@@ -15,8 +15,9 @@ export const animator = new Animator();
 animator.onSound = (kind, sub) => {
   // In a quiet zone of its room it makes no sounds
   if (engine?.quiet) return;
-  const fn = robotSound[kind] || robotSound.blip;
-  if (typeof fn === "function") fn.call(robotSound, sub);
+  // (the sound module plays by kind: blip, hum, servo, giggle, sigh, chime…)
+  void sub;
+  robotSound.play(kind || "blip");
 };
 animator.onUseProp = (info) => {
   if (!info?.prop) return;
@@ -119,8 +120,8 @@ export function loadEngine() {
       hooks: {
         beforeUpdate: (dt) => director.frame(dt),
         onTouch: (zone) => {
-          if (zone === "head" || zone === "cheek") robotSound.giggle();
-          else robotSound.blip("tap");
+          if (engine?.quiet) return;
+          robotSound.play(zone === "head" || zone === "cheek" ? "giggle" : "blip");
         },
         onPropUsed: (res) => {
           // A thing that was switched (a lamp on or off) is saved with the room
@@ -128,8 +129,9 @@ export function loadEngine() {
           const id = res?.changed?.type || res?.propId || "";
           if (id === "radio" || id === "record_player") robotSound.toggleAmbience("music");
           else if (id === "fireplace" || id === "fire_pit" || id === "wood_stove") robotSound.toggleAmbience("fireplace");
-          else if (id === "plant" || id.includes("plant") || id.includes("fern")) robotSound.water();
-          else robotSound.blip("tap");
+          else if (engine?.quiet) return;
+          else if (id === "plant" || id.includes("plant") || id.includes("fern")) robotSound.play("water");
+          else robotSound.play("blip");
         },
       },
     });

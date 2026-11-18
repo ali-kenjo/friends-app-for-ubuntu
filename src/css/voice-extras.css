@@ -322,3 +322,26 @@
     bottom: 112px;
   }
 }
+
+/* "Make this its home", after the robot is put down in its room by hand */
+.voice-home-offer {
+  position: fixed;
+  z-index: calc(var(--z-voice) + 1);
+  inset-inline-start: 50%;
+  inset-block-start: 5.5rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1h) var(--space-1h) var(--space-1h) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-sidebar) 90%, transparent);
+  backdrop-filter: blur(8px);
+  font-size: var(--fs-sm);
+  box-shadow: var(--shadow-pop);
+}
+
+[dir="rtl"] .voice-home-offer {
+  transform: translateX(50%);
+}

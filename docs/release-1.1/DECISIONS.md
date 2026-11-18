@@ -176,3 +176,10 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
 - **R32 "You" are in front of the room's middle**, a little past its front edge (where the camera is):
   talking and listening turn it to there.
 - **R33 Slow zones cost more to cross**, so paths go round them when they can; inside one it moves at 45 %.
+- **R34 Dragging the robot in voice mode moves it by the pointer's movement across the floor**, not to the
+  floor point under the pointer (from a camera this high, that point is well behind the robot's body).
+- **R35 No time limit on the "Make this its home" offer** (it stays until used, dismissed, replaced or voice
+  mode closes): a message that disappears by itself can be gone before someone can reach it.
+- **R36 Found and fixed: the robot's sounds never played.** `robot/index.js` called `robotSound.giggle()`,
+  `.blip()` and `.water()` and looked sounds up as methods, but the sound module only has `play(kind)`; touching
+  the robot threw. Sounds now go through `play()`, and quiet zones silence them.

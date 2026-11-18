@@ -28,6 +28,7 @@ import { appState } from "../core/state-store.mjs";
 import { attachV1Engine, stepV1Frame } from "../core/v1-runtime.mjs";
 import { resolveShot, shotFrame } from "../room/cameras.mjs";
 import { RoomBehaviour } from "../room/behaviour.mjs";
+import { standCheck } from "../room/editor/robot-ops.mjs";
 
 // What each quality level spends: pixel ratio (capped by the screen's),
 // multisampling, bloom, shadows, face texture size
@@ -1113,6 +1114,19 @@ export class RobotEngine {
     this.quiet = out.quiet;
   }
 
+  behaving() {
+    return Boolean(this.look.roomDoc && this.rooms.mode === "doc" && this.behaviour.room && this.active?.options.behave === true);
+  }
+
+  // The point of the floor under the pointer
+  floorUnder(e) {
+    const r = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1));
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const hit = new THREE.Vector3();
+    return this.raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit) ? hit : null;
+  }
+
   // The behaviour engine uses a thing: switching it goes through the room (and is saved), the rest shows
   behaviourAction({ assetId, action, gesture }) {
     if (gesture) return this.animator.gesture(gesture);
@@ -1383,6 +1397,25 @@ export class RobotEngine {
         this.drag.yaw = clamp((e.clientX - p.sx) * -0.0016, -0.5, 0.5);
         this.drag.pitch = clamp((e.clientY - p.sy) * 0.0008, -0.12, 0.2);
         this.drag.until = performance.now() + 3000;
+      } else if (p.onRobot && p.moved > 10 && this.behaving()) {
+        // In its room: carried across the floor, never into furniture or a no-go zone
+        clearTimeout(p.timer);
+        p.draggingRobot = true;
+        // It moves as far across the floor as the pointer does (from a high camera the floor under the
+        // pointer is well behind the robot's body, so not that point itself)
+        if (!p.floor0) {
+          p.floor0 = this.floorUnder({ clientX: p.sx, clientY: p.sy });
+          p.base0 = [...this.behaviour.pos];
+        }
+        const now = this.floorUnder(e);
+        if (now && p.floor0) {
+          const x = p.base0[0] + (now.x - p.floor0.x);
+          const z = p.base0[1] + (now.z - p.floor0.z);
+          if (standCheck(this.look.roomDoc, x, z).ok) {
+            this.behaviour.place(x, z);
+            p.dropped = [x, z];
+          }
+        }
       } else if (p.onRobot && p.moved > 10) {
         clearTimeout(p.timer);
         p.draggingRobot = true;
@@ -1398,7 +1431,7 @@ export class RobotEngine {
     if (this.look.cameraFriendly || this.look.interactive === false || (e.pointerType === "mouse" && e.button !== 0)) return;
     const p = this.pointer;
     const { hit, rel, zone } = this.trackPointer(e);
-    Object.assign(p, { down: true, onRobot: hit, moved: 0, held: false, draggingRobot: false, sx: e.clientX, sy: e.clientY, rel: rel.x, zone });
+    Object.assign(p, { down: true, onRobot: hit, moved: 0, held: false, draggingRobot: false, sx: e.clientX, sy: e.clientY, rel: rel.x, zone, floor0: null, base0: null, dropped: null });
     this.listening.el.setPointerCapture?.(e.pointerId);
     clearTimeout(p.timer);
     if (hit) p.timer = setTimeout(() => {
@@ -1419,6 +1452,9 @@ export class RobotEngine {
     if (p.draggingRobot) {
       p.draggingRobot = false;
       this.animator.drag(0, 0, false);
+      // Put down in its room: voice mode offers to make it its home
+      if (p.dropped) this.emit("dropped", { x: p.dropped[0], z: p.dropped[1] });
+      p.dropped = null;
       return;
     }
     if (p.onRobot && !p.held && p.moved < 10) {

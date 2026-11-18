@@ -208,3 +208,46 @@ describe("Behaviour in the room", () => {
     assert.equal(partOfDay(2), "night");
   });
 });
+
+describe("When you start talking while it's busy (interrupt policy)", () => {
+  // It is on its way to a far spot when you start talking
+  function busyRobot(policy) {
+    const b = new RoomBehaviour({ random: seeded() });
+    b.setRoom(room((r) => withRobot(r, { autonomy: { ...r.robot.autonomy, interrupt: policy }, movement: { ...r.robot.movement, freedom: "free" } })));
+    b.goTo([2.4, -2], { why: "visit", name: "the corner", then: { kind: "dwell", asset: null, action: "look", dwell: 6 } });
+    run(b, 1);
+    return b;
+  }
+  test("stop at once and come back", () => {
+    const b = busyRobot("immediate_return");
+    run(b, 0.2, { state: "listening" });
+    assert.ok(keys(b).includes("Stopping, coming back"));
+    const out = run(b, 15, { state: "listening" });
+    assert.ok(near([out.x, out.z], [0, 0], 0.1), `at ${out.x}, ${out.z}`);
+  });
+  test("finish first: it gets there and stays its time before turning to you", () => {
+    const b = busyRobot("finish_before_listening");
+    run(b, 12, { state: "listening" });
+    assert.ok(keys(b).includes("Finishing first, then listening"));
+    assert.ok(near([b.out.x, b.out.z], [2.4, -2], 0.12));
+  });
+  test("finish briefly: it stays one second instead of six", () => {
+    const b = busyRobot("finish_briefly");
+    run(b, 0.2, { state: "listening" });
+    let dwell = 0;
+    for (let i = 0; i < 200; i++) {
+      b.tick(0.1, { now: NOON, state: "listening" });
+      if (b.task?.kind === "dwell") dwell = Math.max(dwell, b.task.until - b.t);
+    }
+    assert.ok(dwell <= 1.01, `stayed ${dwell}`);
+  });
+  test("pause and resume: it stops, and carries on when you're done", () => {
+    const b = busyRobot("pause_and_resume");
+    const at = [b.out.x, b.out.z];
+    run(b, 3, { state: "listening" });
+    assert.ok(near([b.out.x, b.out.z], at, 0.15), "it stayed where it paused");
+    run(b, 15, { state: "idle" });
+    assert.ok(keys(b).includes("Carrying on"));
+    assert.ok(near([b.out.x, b.out.z], [2.4, -2], 0.15), `at ${b.out.x}, ${b.out.z}`);
+  });
+});
