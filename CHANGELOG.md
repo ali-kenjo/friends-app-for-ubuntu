@@ -22,7 +22,7 @@
 - **Voice mode's toolbar**: Tab reaches it, arrow keys move along it, Alt + arrow moves a button, Enter or Space presses it, its menus close with Escape. Keys of your own (R home, H clean stage, B whiteboard, P roaming by default; M, F, Escape and Space stay voice mode's); in clean stage the first Escape brings the controls back.
 
 ### Changed
-- The live voice service (Gemini Live, OpenAI Realtime, on this computer, typing only), its keys and the local pipeline's addresses moved from 1.0's studio drawer to Settings → Characters → Voice conversation; the robot and voice setup export to Data & backups.
+- The live voice service (Gemini Live, OpenAI Realtime, on this computer, typing only), its keys and the local pipeline's addresses moved from 1.0's studio drawer to Settings → Characters → Voice conversation; the robot and voice setup export moved to Data & backups and now carries your rooms with their models and photos (imported as new rooms).
 - The robot's shading is Soft or Cel-shaded; 1.0's "Realistic" and "Minimalist" looked like Soft on the new robot and are gone (a saved one reads as Soft). 1.0's lighting presets are the room's moods.
 - 1.0's dock switches "VAD / PTT" and "Vision" did nothing and are gone.
 

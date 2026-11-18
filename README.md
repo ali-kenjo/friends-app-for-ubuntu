@@ -22,7 +22,7 @@ How it's built: [docs/design/room.md](docs/design/room.md). Decisions and measur
 
 - **Voice your way**: Gemini Live (with "think longer"), OpenAI Realtime, a pipeline on your own computer (speech recognition, a local AI such as Ollama or LM Studio, Piper or Kokoro to speak), or typing only with no microphone or key. Settings → Characters → Voice conversation → Live voice service.
 - **Clean stage and backdrops for streaming**: hide everything but the robot (H), and put it on a solid color, an exact green or blue screen, or a transparent background (the room's "Behind the robot").
-- **Robot and voice setup as one file** to keep or move to another computer (Data & backups), without your keys.
+- **Robot and voice setup as one file** to keep or move to another computer (Data & backups): the robot, its rooms with your models and photos, voice mode's toolbar and live voice settings, without your keys.
 
 ## Packaging a release
 

@@ -202,6 +202,37 @@ describe("Rooms over HTTP", () => {
     assert.equal((await raw("GET", `/api/room-photos/${frame.state.photo}`)).status, 404);
   });
 
+  test("the robot and voice setup file carries the rooms with their photos; importing it brings them in as new rooms, with the robot in the one it was in", async () => {
+    const bundle = require("../server/storage/studio-bundle");
+    const settings = require("../server/settings");
+    const ops = require("../src/js/room/editor/ops.mjs");
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40, 3)]);
+    const photo = (await (await fetch(`${base}/api/room-photos`, { method: "POST", headers: { "Content-Type": "image/png" }, body: png })).json()).id;
+    const made = (await api("GET", `/api/rooms/${(await api("POST", "/api/rooms", { template: "empty", name: "Setup room" })).data.id}`)).data;
+    const res = ops.addAsset(made, "photo_frame", { pos: [0, 1.4, -1.9], slot: "wall" });
+    await api("PUT", `/api/rooms/${made.id}`, ops.updateAsset(res.room, res.id, { state: { showPhotos: true, photo } }));
+    settings.patch({ robot: { room: { layoutId: made.id } } });
+    for (const format of ["zip", "json"]) {
+      const out = bundle.exportBundleBuffer(format);
+      const before = (await api("GET", "/api/rooms")).data.rooms.length;
+      const result = bundle.importStudioBundle(out.buffer);
+      assert.ok(result.importedRooms >= 1, format);
+      const after = (await api("GET", "/api/rooms")).data.rooms.length;
+      assert.equal(after - before, result.importedRooms, `${format}: every room came in as a new one`);
+      const now = settings.get().robot.room.layoutId;
+      assert.notEqual(now, made.id, `${format}: the robot is in the imported copy`);
+      const copy = (await api("GET", `/api/rooms/${now}`)).data;
+      assert.equal(copy.name.startsWith("Setup room"), true);
+      const frame = copy.assets.find((a) => a.type === "photo_frame");
+      assert.ok(frame.state.photo && frame.state.photo !== photo, "its own copy of the photo");
+      assert.ok((await raw("GET", `/api/room-photos/${frame.state.photo}`)).buffer.equals(png));
+      // (the next round imports from the room it's in now; clean up so the room limit isn't reached)
+      for (const r of (await api("GET", "/api/rooms")).data.rooms) if (r.id !== made.id && r.id !== now && r.name.startsWith("Setup room")) await api("DELETE", `/api/rooms/${r.id}`);
+      settings.patch({ robot: { room: { layoutId: made.id } } });
+    }
+    assert.equal(bundle.BUNDLE_VERSION, 2);
+  });
+
   test("there is a limit on how many rooms are kept", async () => {
     const rooms = require("../server/rooms");
     const have = rooms.list().rooms.length;

@@ -262,6 +262,70 @@ function importRoom(buffer, { name } = {}) {
   return create({ room: doc, name: model.text(name, model.LIMITS.name, "") || model.text(doc.name, model.LIMITS.name, "") || "Imported room" });
 }
 
+// ---------- Every room, with its models and photos (the robot and voice setup file: storage/studio-bundle.js) ----------
+function exportAll() {
+  const out = { rooms: [], models: {}, photos: {} };
+  const custom = customCatalog();
+  for (const r of list().rooms) {
+    const doc = get(r.id);
+    if (!doc) continue;
+    out.rooms.push(doc);
+    for (const a of doc.assets) {
+      const gid = a.glb || (a.type.startsWith(model.CUSTOM_PREFIX) ? a.type.slice(model.CUSTOM_PREFIX.length) : null);
+      if (gid && !out.models[gid]) {
+        const file = path.join(assetsDir(), `${gid}.glb`);
+        if (fs.existsSync(file)) out.models[gid] = { glb: fs.readFileSync(file), entry: custom[gid] || {} };
+      }
+      const pid = a.state?.photo;
+      if (pid && !out.photos[pid]) {
+        const p = getPhoto(pid);
+        if (p) out.photos[pid] = { buffer: p.buffer, ext: p.ext };
+      }
+    }
+  }
+  return out;
+}
+
+// Its rooms come in as new rooms (new ids for rooms, models and photos); returns { old room id → new id }
+function importAll({ rooms = [], models = {}, photos = {} } = {}) {
+  const modelMap = {};
+  for (const [oldId, m] of Object.entries(models)) {
+    try {
+      modelMap[oldId] = saveAsset(m.glb, { ...(m.entry || {}), id: undefined }).id;
+    } catch (err) {
+      logger.warn?.(`A model in the setup file was left out: ${err.message}`);
+    }
+  }
+  const photoMap = {};
+  for (const [oldId, p] of Object.entries(photos)) {
+    try {
+      photoMap[oldId] = savePhoto(p.buffer).id;
+    } catch (err) {
+      logger.warn?.(`A photo in the setup file was left out: ${err.message}`);
+    }
+  }
+  const roomMap = {};
+  for (const doc of rooms) {
+    if (!doc || typeof doc !== "object") continue;
+    try {
+      const assets = (Array.isArray(doc.assets) ? doc.assets : []).map((a) => {
+        const next = { ...a };
+        if (next.glb && modelMap[next.glb]) next.glb = modelMap[next.glb];
+        if (typeof next.type === "string" && next.type.startsWith(model.CUSTOM_PREFIX)) {
+          const gid = next.type.slice(model.CUSTOM_PREFIX.length);
+          if (modelMap[gid]) next.type = model.CUSTOM_PREFIX + modelMap[gid];
+        }
+        if (next.state?.photo) next.state = { ...next.state, photo: photoMap[next.state.photo] || "" };
+        return next;
+      });
+      roomMap[doc.id] = create({ room: { ...doc, assets }, name: doc.name }).id;
+    } catch (err) {
+      logger.warn?.(`A room in the setup file was left out: ${err.message}`);
+    }
+  }
+  return roomMap;
+}
+
 function parseJson(text) {
   try {
     return JSON.parse(text);
@@ -549,5 +613,5 @@ module.exports = {
   fromLegacy,
   list, get, create, save, remove, duplicate, exportRoom, importRoom,
   saveAsset, updateAsset, getAsset, assetInfo, removeAsset, listAssets, customCatalog,
-  migrateOnStart, ensure, reset, readGlb, inspect, MAX_GLB, savePhoto, getPhoto, removePhoto, MAX_PHOTO,
+  migrateOnStart, ensure, reset, readGlb, inspect, MAX_GLB, savePhoto, getPhoto, removePhoto, MAX_PHOTO, exportAll, importAll,
 };

@@ -5748,7 +5748,6 @@ export default {
   "Shimmer": "Shimmer",
   "Verse": "Verse",
   "Robot and voice setup": "Roboter- und Spracheinrichtung",
-  "The robot's look, its settings, voice mode's toolbar and live voice settings, as one file to keep or move to another computer (no keys inside). Rooms have their own Export in the Room Editor.": "Das Aussehen des Roboters, seine Einstellungen, die Werkzeugleiste des Sprachmodus und die Live-Spracheinstellungen als eine Datei zum Aufbewahren oder Umziehen auf einen anderen Computer (ohne Schlüssel). Räume haben ihren eigenen Export im Raum-Editor.",
   "Couldn't export: {error}": "Export nicht möglich: {error}",
   "Imported. Reloading…": "Importiert. Wird neu geladen…",
   "Couldn't import: {error}": "Import nicht möglich: {error}",
@@ -5786,4 +5785,5 @@ export default {
   "Put the {name} back": "{name} zurückgestellt",
   "Tidying up: the {name}": "Räumt auf: {name}",
   "Tidy up: what it carried goes back to its place after a while": "Aufräumen: Was er getragen hat, kommt nach einer Weile an seinen Platz zurück",
+  "The robot's look and settings, its rooms (with your models and photos in them), voice mode's toolbar and live voice settings, as one file to keep or move to another computer (no keys inside). Imported rooms come in as new rooms.": "Aussehen und Einstellungen des Roboters, seine Räume (mit deinen Modellen und Fotos darin), die Werkzeugleiste des Sprachmodus und die Live-Spracheinstellungen als eine Datei zum Aufbewahren oder Umziehen auf einen anderen Computer (ohne Schlüssel). Importierte Räume kommen als neue Räume hinzu.",
 };

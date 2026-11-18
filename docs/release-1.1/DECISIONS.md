@@ -326,3 +326,8 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
   for the owner's machine: Settings → Robot → Graphics → Performance overlay shows the frame rate and the
   counts against the budget live. Auto steps down below about 50 fps for 3 seconds (unit-tested), never while
   filming.
+- **R62 The setup file carries the rooms.** "Robot and voice setup" (Data & backups, `storage/studio-bundle.js`)
+  now holds every room with its own models and photos (`bundleVersion: 2`; files in a .zip, base64 in a .json).
+  Importing brings them in as new rooms (new ids for rooms, models and photos, so nothing on the other computer is
+  overwritten), and the robot is put in the copy of the room it was in. A 1.0 file has no rooms and imports as
+  before. The studio state keeps its own `schemaVersion` (its migrations are unchanged).

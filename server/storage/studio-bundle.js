@@ -11,7 +11,10 @@ const { dataDir, version } = require("../config");
 const settings = require("../settings");
 const logger = require("../logger");
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 1; // the studio state's own version (migrateState)
+// The setup file's format: 2 carries every room with its models and photos (1.1); a 1.0 file has none
+const BUNDLE_VERSION = 2;
+const rooms = () => require("../rooms"); // (rooms.js uses this module's zip helpers: loaded when needed)
 const SAFE_ASSET_ID = /^[a-z0-9_-]{1,64}$/i;
 const MAX_GLB_BYTES = 25 * 1024 * 1024;
 const GLB_MAGIC = 0x46546c67; // "glTF"
@@ -313,6 +316,7 @@ function exportStudioBundle({ includeGlbs = true } = {}) {
   return {
     format: "friends-studio-bundle",
     schemaVersion: SCHEMA_VERSION,
+    bundleVersion: BUNDLE_VERSION,
     appVersion: version,
     exportedAt: new Date().toISOString(),
     settings: {
@@ -328,17 +332,35 @@ function exportStudioBundle({ includeGlbs = true } = {}) {
     },
     studioState,
     glbAssets,
+    // 1.1: the rooms (as JSON) with their models and photos (base64 in a .json file, files in a .zip)
+    ...roomsPart(),
   };
+}
+
+function roomsPart() {
+  try {
+    const all = rooms().exportAll();
+    return {
+      rooms: all.rooms,
+      roomModels: Object.fromEntries(Object.entries(all.models).map(([id, m]) => [id, { glb: m.glb.toString("base64"), entry: m.entry }])),
+      roomPhotos: Object.fromEntries(Object.entries(all.photos).map(([id, p]) => [id, { data: p.buffer.toString("base64"), ext: p.ext }])),
+    };
+  } catch (err) {
+    logger.warn("The rooms were left out of the setup file:", err.message);
+    return {};
+  }
 }
 
 function exportBundleBuffer(format = "json") {
   const bundle = exportStudioBundle({ includeGlbs: true });
   if (format === "zip") {
-    const manifest = { ...bundle, glbAssets: Object.keys(bundle.glbAssets) };
+    const manifest = { ...bundle, glbAssets: Object.keys(bundle.glbAssets), roomModels: Object.fromEntries(Object.entries(bundle.roomModels || {}).map(([id, m]) => [id, { entry: m.entry }])), roomPhotos: Object.fromEntries(Object.entries(bundle.roomPhotos || {}).map(([id, p]) => [id, { ext: p.ext }])) };
     const entries = [{ name: "studio-bundle.json", data: Buffer.from(JSON.stringify(manifest, null, 2), "utf8") }];
     for (const [id, b64] of Object.entries(bundle.glbAssets)) {
       entries.push({ name: `assets/${id}.glb`, data: Buffer.from(b64, "base64") });
     }
+    for (const [id, m] of Object.entries(bundle.roomModels || {})) entries.push({ name: `room-assets/${id}.glb`, data: Buffer.from(m.glb, "base64") });
+    for (const [id, p] of Object.entries(bundle.roomPhotos || {})) entries.push({ name: `room-photos/${id}.${p.ext}`, data: Buffer.from(p.data, "base64") });
     return {
       mime: "application/zip",
       filename: `friends-studio-bundle-${new Date().toISOString().slice(0, 10)}.zip`,
@@ -355,6 +377,7 @@ function exportBundleBuffer(format = "json") {
 function importStudioBundle(inputBufferOrObj) {
   let bundle = null;
   const glbMap = new Map();
+  const roomFiles = { models: {}, photos: {} };
 
   if (Buffer.isBuffer(inputBufferOrObj)) {
     if (inputBufferOrObj.length >= 4 && inputBufferOrObj.readUInt32LE(0) === 0x04034b50) {
@@ -365,6 +388,10 @@ function importStudioBundle(inputBufferOrObj) {
       for (const [name, data] of files.entries()) {
         const m = name.match(/^assets\/([a-z0-9_-]{1,64})\.glb$/i);
         if (m) glbMap.set(m[1], data);
+        const rm = name.match(/^room-assets\/([\w-]{1,40})\.glb$/);
+        if (rm) roomFiles.models[rm[1]] = data;
+        const rp = name.match(/^room-photos\/([\w-]{1,40})\.(png|jpg|webp)$/);
+        if (rp) roomFiles.photos[rp[1]] = data;
       }
     } else {
       bundle = JSON.parse(inputBufferOrObj.toString("utf8"));
@@ -409,15 +436,36 @@ function importStudioBundle(inputBufferOrObj) {
     settings.patch(allowedPatch);
   }
 
+  // 1.1: its rooms come in as new rooms, and the robot is in the one it was in
+  let importedRooms = 0;
+  if (Array.isArray(bundle.rooms) && bundle.rooms.length) {
+    const models = {};
+    for (const [id, m] of Object.entries(bundle.roomModels || {})) {
+      const glb = roomFiles.models[id] || (typeof m.glb === "string" ? Buffer.from(m.glb, "base64") : null);
+      if (glb) models[id] = { glb, entry: m.entry || {} };
+    }
+    const photos = {};
+    for (const [id, p] of Object.entries(bundle.roomPhotos || {})) {
+      const buffer = roomFiles.photos[id] || (typeof p.data === "string" ? Buffer.from(p.data, "base64") : null);
+      if (buffer) photos[id] = { buffer };
+    }
+    const map = rooms().importAll({ rooms: bundle.rooms, models, photos });
+    importedRooms = Object.keys(map).length;
+    const was = bundle.settings?.robot?.room?.layoutId;
+    if (was && map[was]) settings.patch({ robot: { room: { layoutId: map[was] } } });
+  }
+
   return {
     ok: true,
     importedGlbs: [...glbMap.keys()],
     schemaVersion: Number(bundle.schemaVersion || 1),
+    importedRooms,
   };
 }
 
 module.exports = {
   SCHEMA_VERSION,
+  BUNDLE_VERSION,
   ubuntuStudioDir,
   activeStorageDir,
   loadStudioState,

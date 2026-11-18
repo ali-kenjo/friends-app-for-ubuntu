@@ -5840,7 +5840,6 @@ export default {
   "Shimmer": "Shimmer",
   "Verse": "Verse",
   "Robot and voice setup": "إعداد الروبوت والصوت",
-  "The robot's look, its settings, voice mode's toolbar and live voice settings, as one file to keep or move to another computer (no keys inside). Rooms have their own Export in the Room Editor.": "مظهر الروبوت وإعداداته وشريط أدوات وضع الصوت وإعدادات الصوت المباشر في ملف واحد للاحتفاظ به أو نقله إلى حاسوب آخر (بلا مفاتيح). للغرف تصديرها الخاص في محرر الغرفة.",
   "Couldn't export: {error}": "تعذّر التصدير: {error}",
   "Imported. Reloading…": "تم الاستيراد. جارٍ إعادة التحميل…",
   "Couldn't import: {error}": "تعذّر الاستيراد: {error}",
@@ -5878,4 +5877,5 @@ export default {
   "Put the {name} back": "أعاد {name} إلى مكانه",
   "Tidying up: the {name}": "يرتّب: {name}",
   "Tidy up: what it carried goes back to its place after a while": "الترتيب: ما حمله يعود إلى مكانه بعد فترة",
+  "The robot's look and settings, its rooms (with your models and photos in them), voice mode's toolbar and live voice settings, as one file to keep or move to another computer (no keys inside). Imported rooms come in as new rooms.": "مظهر الروبوت وإعداداته وغرفه (مع نماذجك وصورك فيها) وشريط أدوات وضع الصوت وإعدادات الصوت المباشر في ملف واحد للاحتفاظ به أو نقله إلى حاسوب آخر (بلا مفاتيح). الغرف المستوردة تُضاف كغرف جديدة.",
 };

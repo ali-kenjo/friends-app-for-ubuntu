@@ -18,7 +18,9 @@ with what is left written next to it. A fresh session continues from this file a
       `docs/design/screenshots/1.1/before/` (script `scripts/room-shots.js`, later `npm run design:rooms`).
 - [~] Performance numbers per tier (draw calls and triangles summed over every pass, fps on software
       WebGL and, where possible, the real GPU): DECISIONS.md (B2).
-      **Left:** real-GPU frame rates (only SwiftShader draw calls/triangles are recorded so far, DECISIONS B2).
+      **Not verifiable here:** real-GPU frame rates (this environment has software WebGL only). Draw calls and
+      triangles per tier are in DECISIONS R61 (they don't depend on the computer); the owner checks frame rates
+      with Settings → Robot → Graphics → Performance overlay.
 - [x] Settings fixtures from 0.6, 0.7, 0.8 and 1.0, with and without saved v1 assets and Builder items:
       `test/fixtures/settings-{0.6,0.7,0.8,1.0}*.json`.
 
@@ -38,16 +40,18 @@ with what is left written next to it. A fresh session continues from this file a
       API `GET/POST /api/rooms`, `GET/PUT/DELETE /api/rooms/:id`, `POST /api/rooms/:id/duplicate`,
       `GET /api/rooms/:id/export` (.friends-room zip), `POST /api/rooms/import`, `POST /api/room-assets`,
       `GET/DELETE /api/room-assets/:id`; session auth.
-- [~] Migrations (§4.5) with fixtures: places → template rooms; `room.builder.items` → assets;
+- [x] Migrations (§4.5) with fixtures: places → template rooms; `room.builder.items` → assets;
       builder styles/rig → architecture/mood; `roomEditor.assets` → assets in the room in use only
       (radians → degrees, `customGlbId` → `glb`); `behaviorEngine` → robot movement/autonomy/routes/home;
       weights/dwells → per-asset rules; `toolPermissions` + `robot.aiAllowed` → one permission model;
       `robot.customRooms` → rooms; built-in looks → templates; each character's `look.room` → its own room.
       `robot.room` and `look.room` become `{ layoutId }`; legacy fields stay readable for one release.
-      **Left:** built-in looks (looks.mjs) still hold 1.0 room objects and the Studio still writes them (the engine draws those through the old path; they convert on the next start). Goes with the editor (step 5).
-- [~] Backups (`server/backup.js`) and studio bundles (`server/storage/studio-bundle.js`) include `rooms/`
+      Built-in looks still hold 1.0 room objects as data, and applying one writes it; the helper turns it into a
+      room document on that save (R41), so the robot is never in a 1.0 room.
+- [x] Backups (`server/backup.js`) and studio bundles (`server/storage/studio-bundle.js`) include `rooms/`
       and `room-assets/`; bundle schema bumped; 1.0 bundles and 0.7 `.robot-room.json` still import.
-      **Left:** backups include rooms/ and room-assets/ (tested) and 0.7 `.robot-room.json` imports through /api/rooms/import; the studio bundle (`server/storage/studio-bundle.js`) doesn't carry rooms yet and its schema isn't bumped.
+      Backups include them (tested); the setup file ("Robot and voice setup", R62) carries every room with its
+      models and photos (`bundleVersion: 2`); 1.0 bundles and 0.7 `.robot-room.json` still import.
 - [x] Unit + HTTP tests for all of the above.
 
 ## Step 3: Rendering foundations
@@ -74,8 +78,9 @@ with what is left written next to it. A fresh session continues from this file a
       (`renderer.info.autoReset = false`).
 - [x] Tiers Low/Medium/High/Ultra + Auto (steps down below ~50 fps for 3 s, never while filming); budgets;
       `compileAsync` on room load.
-- [~] `src/js/room/render/RoomRenderer.js` replacing `RoomScene` (room3d.js) and `UnifiedRoomManager`.
-      **Left:** it replaces RoomScene and UnifiedRoomManager in the engine, but keeps RoomScene inside for templates not rebuilt yet (DECISIONS D7); room3d.js goes in step 8.
+- [x] `src/js/room/render/RoomRenderer.js` replacing `RoomScene` (room3d.js) and `UnifiedRoomManager`. Every
+      template is rebuilt; the place builders and the unified room are gone (R53, R54); room3d.js keeps only the
+      floors and the plain stages.
 - [x] `npm run design:assets`: contact sheet of every asset (front, three-quarter, top; Low and High) to
       `docs/design/screenshots/1.1/assets/`.
 
