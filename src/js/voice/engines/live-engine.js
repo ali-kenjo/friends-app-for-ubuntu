@@ -160,7 +160,6 @@ export class LiveEngine {
         addTranscript(role, text);
         robot.director.caption(role, text);
         if (role === "user") {
-          document.dispatchEvent(new CustomEvent("friends:user-speech", { detail: { active: true } }));
           this.userLine += text;
           captions.show("You", this.userLine.trim(), true);
           if (status.state !== "speaking") {
@@ -178,13 +177,11 @@ export class LiveEngine {
         else if (interactionStatus === "IDLE" && status.state === "thinking") status.set("listening");
       },
       onInterrupted: () => {
-        document.dispatchEvent(new CustomEvent("friends:user-speech", { detail: { active: false } }));
         spoken.add(this.aiLine); // what it got to say is still what the mic may hear
         this.aiLine = "";
         this.echoTurn = false;
       },
       onTurnComplete: () => {
-        document.dispatchEvent(new CustomEvent("friends:user-speech", { detail: { active: false } }));
         spoken.add(this.aiLine);
         this.echoTurn = false;
         endTurn();

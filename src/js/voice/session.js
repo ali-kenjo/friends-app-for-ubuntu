@@ -41,7 +41,6 @@ import { recording } from "./recording.js";
 import { spoken } from "./spoken.js";
 import { hooks as stageHooks, stage, syncRobot, resizeCanvas, setVoiceTheme, isRobotStyle } from "./stage.js";
 import { status } from "./status.js";
-import { bus, EVENTS } from "../core/event-bus.mjs";
 import { voiceDock } from "./dock.js";
 
 export { setVoiceTheme };
@@ -281,10 +280,11 @@ setVoiceHooks({
 // so the microphone isn't left open and Gemini isn't left listening
 document.addEventListener("friends:window-hidden", () => closeVoice());
 
-bus.on(EVENTS.DOCK_ACTION, (ev) => {
+// The voice toolbar's microphone and "stop talking" (voice/dock.js)
+document.addEventListener("friends:voice-action", (e) => {
   if (voiceMode.hidden) return;
-  if (ev?.action === "mic_mute") toggleMute();
-  else if (ev?.action === "interrupt") interrupt();
+  if (e.detail?.action === "mic_mute") toggleMute();
+  else if (e.detail?.action === "interrupt") interrupt();
 });
 
 // ---------- Filming mode (filming.js) ----------

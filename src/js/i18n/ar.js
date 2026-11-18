@@ -5848,4 +5848,11 @@ export default {
   "Soft, or cel-shaded with ink outlines like a cartoon": "ناعم، أو بتظليل كرتوني مع خطوط حبر كالرسوم المتحركة",
   "Cel-shaded": "تظليل كرتوني",
   "In voice mode it walks about its room on its own, closer while you talk. Off: it stays where it is unless you send it somewhere (also off while filming)": "في وضع الصوت يتجول في غرفته من تلقاء نفسه، ويقترب حين تتكلم. عند الإيقاف: يبقى حيث هو ما لم ترسله إلى مكان ما (ويتوقف أيضًا أثناء التصوير)",
+  "All of this is in Settings later: Characters → Voice conversation, Robot → Graphics, and the Room Editor.": "كل هذا موجود لاحقًا في الإعدادات: الشخصيات ← محادثة صوتية، الروبوت ← الرسوميات، وفي محرر الغرفة.",
+  "Its room to start with": "غرفته في البداية",
+  "Keep this one": "أبقِ هذه",
+  "Live voice": "الصوت المباشر",
+  "That room couldn't be made. Try again.": "تعذّر إنشاء تلك الغرفة. حاول مرة أخرى.",
+  "The robot's room: {name}": "غرفة الروبوت: {name}",
+  "Voice and the robot": "الصوت والروبوت",
 };

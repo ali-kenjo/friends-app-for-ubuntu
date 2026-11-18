@@ -1,5 +1,4 @@
 // ---------- Frontend Studio Bundle & Asset Upload Client (storage/bundle-client.mjs) ----------
-import { bus, EVENTS } from "../core/event-bus.mjs";
 
 export async function downloadStudioBundle(format = "zip") {
   const url = `/api/studio/bundle/export?format=${encodeURIComponent(format)}`;
@@ -27,7 +26,6 @@ export async function importStudioBundleFile(file) {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Import failed");
-  bus.emit(EVENTS.BUNDLE_IMPORTED, data);
   return data;
 }
 

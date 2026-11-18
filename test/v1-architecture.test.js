@@ -48,144 +48,99 @@ describe("friends-app-for-ubuntu v1.0 Architecture", () => {
     } catch {}
   });
 
-  test("EventBus, ReactiveStateStore & UndoStack manage typed events and room-context serialization", async () => {
-    const { EventBus, EVENTS } = await import("../src/js/core/event-bus.mjs");
-    const { ReactiveStateStore, UndoStack } = await import("../src/js/core/state-store.mjs");
-
-    const bus = new EventBus();
-    const seen = [];
-    const off = bus.on(EVENTS.ROOM_CHANGED, (p) => seen.push(p));
-    bus.emit(EVENTS.ROOM_CHANGED, { count: 2 });
-    off();
-    bus.emit(EVENTS.ROOM_CHANGED, { count: 3 });
-    assert.deepEqual(seen, [{ count: 2 }]);
-
-    const store = new ReactiveStateStore();
-    store.set("roomMeta", { whiteboardText: "Sprint Plan", flowerState: "vibrant_bloom", notebookNotes: ["Note A"] });
-    store.set("roomAssets", [
-      { id: "whiteboard", kind: "whiteboard", name: "Whiteboard", visible: true, x: 0, y: 0, z: -1.4 },
-      { id: "vase_flowers", kind: "vase_flowers", name: "Flowers", visible: true, x: 0.6, y: 0.78, z: -0.6 },
-      { id: "rubiks_cube", kind: "rubiks_cube", category: "toy", name: "Rubik's Cube", visible: true, x: 0.2, y: 0.78, z: -0.5 },
-    ]);
-    const ctx = store.buildRoomContextSummary();
-    assert.equal(ctx.whiteboardText, "Sprint Plan");
-    assert.equal(ctx.flowerHydration, "vibrant_bloom");
-    assert.deepEqual(ctx.notebookNotes, ["Note A"]);
-    assert.ok(ctx.availableToys.some((t) => t.id === "rubiks_cube"));
-
-    const undo = new UndoStack();
-    let v = 1;
-    undo.push({ label: "set2", undo: () => (v = 1), redo: () => (v = 2) });
-    v = 2;
-    assert.equal(undo.undo(), true);
-    assert.equal(v, 1);
-    assert.equal(undo.redo(), true);
-    assert.equal(v, 2);
-  });
-
-  test("NavMeshGrid avoids furniture colliders and computes valid A* obstacle-free paths", async () => {
-    const { NavMeshGrid } = await import("../src/js/core/robot/pathfinding.mjs");
-    const grid = new NavMeshGrid();
-    // Place large desk obstacle right between (-1.2, 0) and (1.2, 0)
-    grid.rebuild([{ id: "desk_table", x: 0, z: 0, y: 0, colliderRadius: 0.55, visible: true }]);
-    assert.equal(grid.isWalkableCell(grid.colFor(0), grid.rowFor(0)), false);
-
-    const path = grid.findPath(-1.2, 0, 1.2, 0);
-    assert.ok(path.length >= 2, "Path should route around center desk obstacle");
-    for (const pt of path) {
-      const d = Math.hypot(pt.x, pt.z);
-      assert.ok(d > 0.5, `Waypoint (${pt.x}, ${pt.z}) too close to blocked obstacle`);
+  // 1.1: 1.0's event bus, state store and undo stack, its A* grid and its behaviour engine were replaced by the room
+  // system (src/js/room/: editor/history.mjs, ai.mjs, nav.mjs, behaviour.mjs). These three tests check the same
+  // things on the modules that do them now (step 8, DECISIONS R53).
+  test("Undo and redo, and the room as the AI is told it (whiteboard, flowers, a toy)", async () => {
+    const templates = await import("../src/js/room/templates.mjs");
+    const ops = await import("../src/js/room/editor/ops.mjs");
+    const { History } = await import("../src/js/room/editor/history.mjs");
+    const AI = await import("../src/js/room/ai.mjs");
+    let room = templates.templateRoom("empty", { size: "medium", walls: "corner" });
+    const h = new History();
+    for (const [type, pos] of [["whiteboard", [0, 0, -1.4]], ["vase_flowers", [0.6, 0, -0.6]], ["puzzle_cube", [0.2, 0, -0.5]]]) {
+      const before = room;
+      room = ops.addAsset(room, type, { pos }).room;
+      h.push(`Add ${type}`, before, room);
     }
-    const last = path[path.length - 1];
-    assert.equal(last.x, 1.2);
-    assert.equal(last.z, 0);
+    const block = AI.roomBlock(room, { state: { where: "at home" } });
+    for (const words of [/whiteboard/i, /flowers/i, /cube/i]) assert.match(block, words);
+    const back = h.undo(room);
+    assert.equal(back.room.assets.length, room.assets.length - 1);
+    assert.equal(h.redo(back.room).room.assets.length, room.assets.length);
   });
 
-  test("BehaviorEngine enforces state machine, quotas/cooldowns, emotion weights, waypoint routes, 4 interrupt policies, and all 9 choreography tools", async () => {
-    const { BehaviorEngine } = await import("../src/js/core/robot/behavior-engine.mjs");
-    const engine = new BehaviorEngine();
-    const assets = [
-      { id: "whiteboard", kind: "whiteboard", category: "furniture", x: 0, z: -1.4, rotY: 0, colliderRadius: 0.4, approachOffset: [0, 0.7], visible: true },
-      { id: "books_notebook", kind: "books_notebook", category: "desk_prop", x: -0.4, z: -0.6, rotY: 0, colliderRadius: 0.25, approachOffset: [0, 0.55], visible: true },
-      { id: "vase_flowers", kind: "vase_flowers", category: "flower", x: 0.6, z: -0.6, rotY: 0, colliderRadius: 0.25, approachOffset: [0, 0.55], visible: true },
-      { id: "rubiks_cube", kind: "rubiks_cube", category: "toy", x: 0.2, z: -0.5, rotY: 0, colliderRadius: 0.2, approachOffset: [0, 0.5], visible: true },
-      { id: "desk_table", kind: "desk_table", category: "furniture", x: 0, z: -0.7, rotY: 0, colliderRadius: 0.45, approachOffset: [0, 0.75], visible: true },
-    ];
+  test("The nav grid keeps the robot clear of furniture and finds a path around it", async () => {
+    const templates = await import("../src/js/room/templates.mjs");
+    const ops = await import("../src/js/room/editor/ops.mjs");
+    const nav = await import("../src/js/room/nav.mjs");
+    let room = templates.templateRoom("empty", { size: "medium", walls: "corner" });
+    room = ops.addAsset(room, "desk_writing", { pos: [0, 0, 0] }).room;
+    const g = nav.buildGrid(room);
+    const [ci, cj] = nav.cellOf(g, 0, 0);
+    assert.equal(nav.isFree(g, ci, cj), false, "the desk's middle is blocked");
+    const found = nav.findPath(g, [-1.4, 0], [1.4, 0]);
+    assert.ok(found.ok && found.points.length >= 2, "a path round the desk");
+    const path = found.points;
+    const desk = room.assets.at(-1);
+    const box = nav.obb(room, desk);
+    for (const p of path) assert.equal(nav.inObb(box, p[0], p[1]), false, `waypoint ${p} is inside the desk`);
+    const last = path.at(-1);
+    assert.ok(Math.hypot(last[0] - 1.4, last[1]) < 0.15);
+  });
 
-    // Quotas & cooldowns
-    const t0 = 1_000_000;
-    engine.configure({ quotas: { maxPerSession: 2, maxPerHour: 2, perAssetPerHour: 1, globalCooldownSec: 5, perAssetCooldownSec: 30 } });
-    assert.equal(engine.canInteractWithAsset("rubiks_cube", t0), true);
-    engine.recordInteraction("rubiks_cube", t0);
-    assert.equal(engine.canInteractWithAsset("vase_flowers", t0 + 1000), false, "global cooldown blocks immediate repeat");
-    assert.equal(engine.canInteractWithAsset("rubiks_cube", t0 + 6000), false, "per-asset cooldown/quota blocks same asset");
-    assert.equal(engine.canInteractWithAsset("vase_flowers", t0 + 6000), true);
-    engine.recordInteraction("vase_flowers", t0 + 6000);
-    assert.equal(engine.canInteractWithAsset("whiteboard", t0 + 12000), false, "session quota reached");
-
-    // Reset session & test weighted emotion bias
-    engine.sessionCount = 0;
-    engine.lastGlobalInteractionTs = 0;
-    const playfulCube = engine.effectiveWeight(assets[3], "playful");
-    const curiousCube = engine.effectiveWeight(assets[3], "curious");
-    assert.ok(curiousCube > playfulCube, "curious emotion should boost rubiks_cube weight");
-
-    // Test all 9 AI choreography tools
-    const res1 = engine.handleChoreographyTool({ tool: "set_emotion", args: { emotion: "excited" } }, assets);
-    assert.equal(res1.ok, true);
-    assert.equal(res1.emotion, "excited");
-
-    const res2 = engine.handleChoreographyTool({ tool: "explain_on_whiteboard", args: { title: "Demo", bullets: ["A"] } }, assets);
-    assert.equal(res2.ok, true);
-    assert.equal(engine.state, "CHOREOGRAPHY_TOOL");
-
-    const res3 = engine.handleChoreographyTool({ tool: "clear_whiteboard" }, assets);
-    assert.equal(res3.ok, true);
-
-    const res4 = engine.handleChoreographyTool({ tool: "write_in_notebook", args: { note: "Takeaway" } }, assets);
-    assert.equal(res4.ok, true);
-
-    const res5 = engine.handleChoreographyTool({ tool: "water_flowers" }, assets);
-    assert.equal(res5.ok, true);
-
-    const res6 = engine.handleChoreographyTool({ tool: "play_with_toy", args: { toyId: "rubiks_cube" } }, assets);
-    assert.equal(res6.ok, true);
-
-    const res7 = engine.handleChoreographyTool({ tool: "move_to_asset", args: { assetId: "desk_table" } }, assets);
-    assert.equal(res7.ok, true);
-
-    const res8 = engine.handleChoreographyTool({ tool: "follow_route", args: { mode: "ping_pong" } }, assets);
-    assert.equal(res8.ok, true);
-    assert.equal(engine.state, "ROAM_WAYPOINT");
-
-    const res9 = engine.handleChoreographyTool({ tool: "return_home" }, assets);
-    assert.equal(res9.ok, true);
-    assert.equal(engine.state, "MOVING_TO_ASSET");
-
-    // Test all 4 interrupt policies
-    engine.setState("INTERACTING_WITH_ASSET");
-    engine.activeAssetId = "rubiks_cube";
-    engine.dwellRemaining = 5;
-
-    engine.configure({ interruptPolicy: "finish_before_listening" });
-    engine.onUserSpeechStart(assets);
-    assert.equal(engine.state, "INTERACTING_WITH_ASSET");
-
-    engine.configure({ interruptPolicy: "finish_briefly" });
-    engine.onUserSpeechStart(assets);
-    assert.ok(engine.dwellRemaining <= 0.9);
-
-    engine.configure({ interruptPolicy: "pause_and_resume" });
-    engine.onUserSpeechStart(assets);
-    assert.equal(engine.state, "FOLLOWING_USER");
-    engine.onUserSpeechEnd(assets);
-    assert.equal(engine.state, "INTERACTING_WITH_ASSET");
-
-    engine.configure({ interruptPolicy: "immediate_return" });
-    engine.onUserSpeechStart(assets);
-    assert.equal(engine.state, "FOLLOWING_USER");
-    engine.onUserSpeechEnd(assets);
-    assert.equal(engine.state, "IDLE_HOME");
+  test("The robot's behaviour: quotas, mood affinity, routes, the four interrupt policies, and 1.0's nine choreography tools as aliases", async () => {
+    const templates = await import("../src/js/room/templates.mjs");
+    const ops = await import("../src/js/room/editor/ops.mjs");
+    const model = await import("../src/js/room/model.mjs");
+    const { RoomBehaviour } = await import("../src/js/room/behaviour.mjs");
+    const AI = await import("../src/js/room/ai.mjs");
+    const C = await import("../src/js/room/choices.mjs");
+    let seed = 11;
+    const random = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+    const run = (b, sec, ctx = {}) => {
+      for (let t = 0; t < sec; t += 0.1) b.tick(0.1, { now: new Date(2026, 10, 16, 12), ...ctx });
+      return b.out;
+    };
+    let room = templates.templateRoom("empty", { size: "medium", walls: "three" });
+    room = { ...room, size: { w: 6, d: 5, h: 2.7 }, robot: { ...room.robot, home: { pos: [0, 0, 0], facing: 0 } } };
+    let r = ops.addAsset(room, "desk_writing", { pos: [-1.5, 0, -1.6] });
+    const desk = r.id;
+    r = ops.addAsset(r.room, "puzzle_cube", { pos: [1.5, 0, -1.6] });
+    const cube = r.id;
+    // Sleepy: the cube is never chosen (its mood affinity is 0); quotas: two visits an hour
+    room = ops.updateAsset(r.room, cube, { rules: { ...r.room.assets.find((a) => a.id === cube).rules, moods: { sleepy: 0 } } });
+    room = model.sanitizeRoom({ ...room, robot: { ...room.robot, autonomy: { ...room.robot.autonomy, preset: "custom", quotas: { ...room.robot.autonomy.quotas, maxPerHour: 2, globalCooldownSec: 0, perAssetCooldownSec: 0 } }, states: { ...room.robot.states, idle: "visit" }, movement: { ...room.robot.movement, freedom: "free" } } });
+    const used = [];
+    const b = new RoomBehaviour({ random });
+    b.onAction = (a) => used.push(a.assetId);
+    b.setRoom(room);
+    run(b, 400, { mood: "sleepy" });
+    assert.equal(b.visits.all.length, 2, "two visits an hour");
+    assert.ok(used.length && used.every((id) => id === desk), `visited: ${used}`);
+    // A ping-pong route between two points
+    const rb = new RoomBehaviour({ random });
+    rb.setRoom(model.sanitizeRoom({ ...room, robot: { ...room.robot, routes: [{ id: "r1", name: "Pace", mode: "ping_pong", points: [{ pos: [-1, 0], dwell: 0 }, { pos: [1, 0], dwell: 0 }], when: { kind: "manual" } }] } }));
+    assert.equal(rb.command({ kind: "route", id: "r1" }).ok, true);
+    assert.equal(rb.task.kind, "route");
+    // The four interrupt policies are all known to the engine
+    assert.deepEqual(C.INTERRUPT_POLICIES.map((p) => p.id).sort(), ["finish_before_listening", "finish_briefly", "immediate_return", "pause_and_resume"]);
+    for (const policy of C.INTERRUPT_POLICIES.map((p) => p.id)) {
+      const ib = new RoomBehaviour({ random });
+      ib.setRoom(model.sanitizeRoom({ ...room, robot: { ...room.robot, autonomy: { ...room.robot.autonomy, interrupt: policy } } }));
+      ib.goTo([2.2, -1.8], { why: "visit", name: "the corner", then: { kind: "dwell", asset: null, action: "look", dwell: 6 } });
+      run(ib, 1);
+      run(ib, 0.3, { state: "listening" });
+      assert.ok(ib.log.length > 0, policy);
+    }
+    // 1.0's nine choreography tools still work: each is one of the 1.1 robot tools
+    const nine = ["set_emotion", "explain_on_whiteboard", "clear_whiteboard", "write_in_notebook", "water_flowers", "play_with_toy", "move_to_asset", "follow_route", "return_home"];
+    for (const name of nine) {
+      const [now] = AI.aliasCall(name, { emotion: "excited", toyId: cube, assetId: desk, mode: "ping_pong", note: "Takeaway" });
+      assert.ok(["robot_mood", "robot_go_to", "robot_use", "robot_route"].includes(now), `${name} → ${now}`);
+    }
+    assert.deepEqual(AI.aliasCall("set_emotion", { emotion: "excited" }), ["robot_mood", { mood: "excited" }]);
+    assert.equal(AI.robotCommand(room, ...AI.aliasCall("move_to_asset", { assetId: desk })).ok, true);
   });
 
   test("Studio Bundle persistence: schema migration, 0600 secret mode, .glb socket inspection, .zip & .json export/import", () => {

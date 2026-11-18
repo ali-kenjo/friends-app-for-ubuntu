@@ -215,10 +215,15 @@ with what is left written next to it. A fresh session continues from this file a
       (DECISIONS R43–R47). Per-room robot rules stay in the editor, reached from Behaviour.
 - [x] Voice-dock actions mapped onto the new system (DECISIONS R48–R52); the 1.0 studio drawer, dock and clean
       stage removed, their settings moved.
-- [ ] Remove old code once unused: `src/js/ui/{studio-drawer,room-editor,behavior-studio}.js`,
-      `src/css/v1-studio.css`, `src/js/core/world/*`, `src/js/core/robot/*`, `src/js/robot/room-catalog.mjs`,
-      `src/js/robot/places/props3d.js`; `room3d.js` and the legacy place builders once every template is rebuilt.
-- [ ] Every old control mapped (table below) and verified.
+- [x] Remove old code once unused: `src/js/ui/{studio-drawer,room-editor,behavior-studio}.js`,
+      `src/css/v1-studio.css`, `src/js/core/world/*`, `src/js/core/robot/*`, `src/js/robot/places/props3d.js` and
+      the place builders (R53, R54). Kept on purpose: `robot/room-catalog.mjs` and `room.mjs` as 1.0 readers (R42),
+      `room3d.js` as the floors and the plain stages, `places/kit.js`, `places/whiteboard3d.js`.
+- [ ] Things that show your own things must show them when switched on (found in step 8: the switches only
+      change what the AI may do): your board on the whiteboard (whiteboard3d's page drawing), your notes in the
+      notebook, your photos in the frame, your calendar, your inbox on the tablet; blank while filming unless
+      "Show them while filming" is on.
+- [x] Every old control mapped (table below) and verified (the e2e suite drives the new homes; 155 tests).
 
 ## Step 9: Polish
 
@@ -254,8 +259,8 @@ Filled in as each moves (step 5–8). "→ ?" means not moved yet.
 | Room Builder: enable, wall/floor/ceiling/window style, lighting rig | Studio → Room Builder (removed) | Editor → Walls, Floor, Ceiling, Outside; windows from the catalog; Light and mood, lamps |
 | Builder: add prop (104), X/Y/Z, rotate, scale, c1/c2, animated, interactive, delete | Studio → Room Builder (removed) | Editor → Catalog (194 things), handles, Placement tab, Look → Colors, Robot rules, Remove |
 | Custom rooms: name, save, export, import | Studio → Room Builder (removed) | Editor → Room menu: name, Your rooms…, Duplicate, Save as…, Export…, Import… (old custom rooms were moved on first start) |
-| v1 Room: presets, spawn 15 assets, move/rotate/scale, attach/clear .glb, duplicate, remove, reset pose, undo/redo, debug overlays | v1 drawer → Room | → ? |
-| v1 Behavior: autonomy, focus lock, home X/Z/yaw, return delay, quotas, kinematics, gaze weights, foley, interrupt policy, category multipliers, per-asset weights/dwells, waypoint route builder, AI tool permissions | v1 drawer → Behavior | → ? |
+| v1 Room: presets, spawn 15 assets, move/rotate/scale, attach/clear .glb, duplicate, remove, reset pose, undo/redo, debug overlays | v1 drawer → Room | Room Editor: the three presets are templates (also in the first-run guide), the 15 things are in the catalog; handles, Placement tab, Add my model (.glb), Duplicate, Remove, undo/redo; nav grid and zones: the robot's tools and Settings → Robot → Editor → Show where the robot can't go |
+| v1 Behavior: autonomy, focus lock, home X/Z/yaw, return delay, quotas, kinematics, gaze weights, foley, interrupt policy, category multipliers, per-asset weights/dwells, waypoint route builder, AI tool permissions | v1 drawer → Behavior | Room Editor → the robot: Where it lives (home, facing), Posture, Gaze (head/eye weights), Movement (speed, acceleration, turn), Zones and routes (route builder), On its own (autonomy, return delay, quotas, interrupt policy); each thing → Robot rules (weight, cooldown, dwell, mood affinity); sounds: Settings → Robot → Sound; AI permissions: Settings → Robot → Behaviour |
 | v1 Visual: shader theme, lighting preset, emotion tint, desk-lamp glow, shadow quality, GPU stats | v1 drawer → Visual | Shadows, smooth edges, GPU stats (performance overlay), throttle: Settings → Robot → Graphics; emotion tint: Settings → Robot → Room → Tint with the robot's feelings (the room's own switch); shader theme: Settings → Robot → Graphics → The robot's shading (soft or cel); lighting preset and desk-lamp glow: the room's mood and each lamp's light (R50) |
 | v1 Clean stage & backdrops (full/solid/chroma/transparent) | v1 drawer, clean-stage | Voice toolbar → Clean stage (H, Escape, the pill); backdrops: the room's backdrop layer (Settings → Robot → Room → Behind the robot, the editor), carried over once |
 | v1 AI & Data: provider adapter, keys, local endpoint/model, VAD threshold, text sandbox tester, bundle export/import | v1 drawer → AI & Data | Settings → Characters → Voice conversation → Live voice service; Data & backups → Robot and voice setup; local servers: AI & privacy → AI on this computer; sandbox: the "Typing only" service (R51) |

@@ -24,7 +24,6 @@ import { buildRobot, loadRobot, applyPose, applyLook, setMaterialDetail, dispose
 import { userGlowFor } from "./presets.mjs";
 import { defaultDesign, shapeKey } from "./design.mjs";
 import { springStep, clamp } from "./spring.mjs";
-import { attachV1Engine, stepV1Frame } from "../core/v1-runtime.mjs";
 import { resolveShot, shotFrame } from "../room/cameras.mjs";
 import { resolveGraphics, buildKey } from "./graphics.mjs";
 import { styleRobot } from "./robot-style.js";
@@ -395,7 +394,6 @@ export class RobotEngine {
     this.projected = new THREE.Vector3();
 
     this.observer = new ResizeObserver(() => this.resize());
-    attachV1Engine(this);
     this.onVisibility = () => this.update();
     document.addEventListener("visibilitychange", this.onVisibility);
     this.canvas.addEventListener("webglcontextlost", (e) => {
@@ -786,7 +784,6 @@ export class RobotEngine {
     this.face.render(pose, { face: look.design.face, largerFace: look.largerFace, color: look.faceColor || look.accent });
 
     this.frameCamera(dt, pose);
-    stepV1Frame(this, pose, dt, pose.t);
 
     const r = this.renderer;
     r.info.reset();

@@ -41,8 +41,7 @@ export const director = new Director(animator, {
   smartMood,
   onToolEvent: (ev) => {
     if (typeof document === "undefined" || !ev) return;
-    if (ev.choreography) document.dispatchEvent(new CustomEvent("friends:choreography", { detail: ev }));
-    if (ev.emotion || ev.mood) document.dispatchEvent(new CustomEvent("friends:robot-emotion", { detail: { emotion: ev.emotion || ev.mood } }));
+    if (ev.emotion || ev.mood) tintFor(ev.emotion || ev.mood);
     if (ev.room) roomCommand(ev.room);
     if (ev.roomChanged) roomChangedByAI(ev.roomChanged);
     // A rearrangement waiting for your yes: shown (not saved) until you decide
@@ -52,6 +51,14 @@ export const director = new Director(animator, {
     if (ev.gesture === "board_write" || ev.gesture === "board_erase" || ev.lookAt?.target === "board") goToBoard();
   },
 });
+
+// The robot's feeling tints the room's bounce light a little, when the room's "Tint with the robot's feelings"
+// is on (the room's mood owns every other light)
+const TINTS = { happy: "#ffd57a", curious: "#67e8f9", thinking: "#a78bfa", excited: "#fb7185", calm: "#86efac", playful: "#f472b6", proud: "#fbbf24", surprised: "#38bdf8" };
+function tintFor(mood) {
+  const on = roomDoc?.atmosphere?.emotionTint !== false;
+  engine?.stage?.setEmotionTint?.(on && TINTS[mood] ? TINTS[mood] : null);
+}
 
 // The AI's robot tools (checked by the helper against the room): its behaviour engine carries them out
 function roomCommand(cmd) {

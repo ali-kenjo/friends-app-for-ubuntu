@@ -255,3 +255,17 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
 - **R52 The robot had no head in voice mode** (since step 6): before its room was known the behaviour engine's
   gaze had no weights, the animator multiplied by undefined, and the NaN stayed in its springs. The gaze now
   always carries its weights, and the animator treats a missing weight as the usual one.
+- **R53 1.0's unified-room code is gone** (`src/js/core/world/*`, `core/robot/*`, `core/state-store.mjs`,
+  `core/event-bus.mjs`, `core/v1-runtime.mjs`). It still ticked 1.0's behaviour engine on an invisible copy of
+  1.0's desk room and could put a marker or a pen in the robot's hand. What it still did for 1.1 moved: the room
+  context bridge (and the live session's socket) to `core/ai/room-context-bridge.mjs`, the mood tint to
+  `robot/index.js`; the toolbar and "stop talking" talk through a `friends:voice-action` event. The three
+  `v1-architecture` tests about it now check the same things on the room system (undo and the AI's room block;
+  the nav grid round furniture; quotas, mood affinity, routes, the four interrupt policies and 1.0's nine
+  choreography tools as aliases). The first-run guide's 1.0 wizard (untranslated, 1.0 room presets) is a
+  translated "Voice and the robot" fold-out: live voice service, shading, and the room to start with (a template).
+- **R54 1.0's place builders and prop catalog are gone** (`robot/places/*` but `kit.js` and `whiteboard3d.js`,
+  `room/as-legacy.mjs`): every place is a rebuilt template, and a room still marked as a 1.0 place is rebuilt
+  from its template when read. `room3d.js` keeps the floors a room can ask for (the glossy pool, the grid), the
+  chat dock's plain stage, and a quiet stage while a room document loads. `whiteboard3d.js` stays for showing your
+  board on the room's whiteboard (open item below); the whiteboard test now builds the catalog's whiteboard.

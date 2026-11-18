@@ -989,3 +989,28 @@ kbd {
   font-size: 0.9em;
 }
 
+
+/* First run: "Voice and the robot", folded under the AI choice */
+.onboarding-more {
+  margin-block-start: var(--space-3);
+}
+.onboarding-more > summary {
+  cursor: pointer;
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+.onboarding-more-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+}
+.onboarding-choice {
+  display: grid;
+  gap: var(--space-1);
+}
+.onboarding-more-body .onboarding-help {
+  grid-column: 1 / -1;
+}

@@ -48,12 +48,16 @@ describe("Robot Room 3D Whiteboard Prop & Interaction", () => {
     });
   });
 
-  it("integrates into props3d catalog and places correctly", async () => {
-    const { buildPropMesh } = await import("../src/js/robot/places/props3d.js");
-    const built = buildPropMesh("whiteboard", { keep: (x) => x, colors: {}, level: "high" });
-    assert.ok(built.group);
-    assert.strictEqual(built.group.userData.propId, "whiteboard");
-    assert.ok(built.whiteboard);
+  // 1.1: the whiteboard you place is the catalog's (src/js/room/render/assets); 1.0's prop catalog is gone
+  it("is a thing in the room catalog, built in each of its seven styles", async () => {
+    const { entryFor } = await import("../src/js/room/catalog.mjs");
+    const { buildAsset } = await import("../src/js/room/render/assets/index.js");
+    const def = entryFor("whiteboard");
+    assert.ok(def && def.actions.includes("write"));
+    for (const style of ["classic", "glass", "chalk", "cork", "dark", "paper", "neon"]) {
+      const built = buildAsset(def, { id: "whiteboard", state: { style } }, "high");
+      assert.ok(built.group && built.group.children.length > 0, style);
+    }
   });
 
   it("supports whiteboard synthesized sounds in sound engine", async () => {

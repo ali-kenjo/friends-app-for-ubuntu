@@ -88,6 +88,9 @@ export async function pushRoomContextNow() {
 // Every two seconds: sent only when it changed
 export function initRoomContextBridge() {
   if (timer) return;
+  // A live voice session's socket (live.js): the AI there gets the same updates
+  document.addEventListener("friends:live-ws-open", (e) => attachLiveContextSocket(e.detail?.send));
+  document.addEventListener("friends:live-ws-close", () => detachLiveContextSocket());
   timer = setInterval(() => {
     if (document.visibilityState !== "hidden") pushRoomContextNow();
   }, 2000);

@@ -1,13 +1,12 @@
-// ---------- The room around the robot, in 3D ----------
-// Turns the room settings (room.mjs) into what's drawn: a backdrop painted behind everything (the
-// engine's last pass), the set pieces of the place (places/*.js), the floor, the light, and the
-// air that drifts through. The World (world.js) does the mirror image, the particles, the bokeh and the rings.
+// ---------- The floors and the plain stage under the room (robot/room3d.js) ----------
+// 1.1: the room itself is a room document drawn by RoomRenderer. What's left here: the three floors a room can
+// ask for that aren't architecture (1.0's glossy pool that fades into the backdrop, a glowing grid, a matte floor
+// for an open stage), the chat dock's plain stage, the green/blue screens, and a quiet studio stage while a room
+// document is still loading (a 1.0 room object: its floor, light and air, no set; 1.0's place builders are gone).
 import * as THREE from "three";
 import { PLACE_BY_ID, LIGHT_MOODS, resolved, activeSeason } from "./room.mjs";
 import { radialTexture } from "./scene.js";
 import { Kept, canvasTexture } from "./places/kit.js";
-import { PLACE_BUILDERS } from "./places/index.js";
-import { augmentPlaceProps, buildCompanions, buildSeasonalSet, buildCustomBuilderItems } from "./places/props3d.js";
 
 const FLOOR_SIZE = 18;
 
@@ -140,28 +139,14 @@ export class RoomScene {
     if (key !== this.key) {
       this.key = key;
       this.clear();
-      const keep = (x) => this.placeKept.add(x);
-      const build = PLACE_BUILDERS[room.place];
-      this.built = build ? build({ THREE, group: this.group, room, place, colors, glow, props: room.props, sign: room.sign, mood: info.light, light: look.light, level: look.level, keep, stage: this.stage }) : null;
-      this.glowing = new Set(this.built?.glow || []);
-      this.backdrop = this.built?.backdrop || this.backdrop;
-      this.extraUpdaters = [];
-      if (!place.chroma && room.place !== "photo") {
-        const aug = augmentPlaceProps(room.place, room.props, this.group, { keep, colors, glow, level: look.level });
-        const comp = buildCompanions(room.companions, { group: this.group, keep, glow, level: look.level });
-        const seas = buildSeasonalSet(room.season, { group: this.group, keep, level: look.level });
-        const bld = buildCustomBuilderItems(room.builder, { group: this.group, keep, colors, glow, level: look.level });
-        for (const m of [...aug.glow, ...comp.glow, ...seas.glow, ...bld.glow]) this.glowing.add(m);
-        this.extraUpdaters.push(...aug.updaters, ...comp.updaters, ...seas.updaters, ...bld.updaters);
-      }
+      this.backdrop = { mode: "vignette", bg: colors.wall.clone().multiplyScalar(0.5), edge: colors.wall.clone().multiplyScalar(0.18), glow: 0, glowColor: glow.clone(), blobs: [] };
+      if (place.chroma) this.backdrop = { mode: "flat", bg: colors.wall.clone(), edge: colors.wall.clone(), glow: 0, glowColor: new THREE.Color(), blobs: [] };
     }
-    // The floor: the one asked for, unless the place makes its own
-    const kind = this.built?.ownFloor ? "none" : info.floor;
+    // The floor the room asks for
+    const kind = info.floor;
     this.floorKind = kind;
     for (const [k, mesh] of Object.entries(this.floors)) mesh.visible = k === kind;
-    // A place can ask for a smaller floor (a few clouds underfoot, not a ground to the horizon)
-    const scale = this.built?.floorScale ?? 1;
-    this.floors.matte.scale.set(scale, scale, 1);
+    this.floors.matte.scale.set(1, 1, 1);
     this.floors.glossy.material.color.copy(colors.floor);
     this.floors.matte.material.color.copy(colors.floor);
     const grid = this.floors.grid.material.uniforms;
@@ -254,7 +239,6 @@ export class RoomScene {
   }
 
   clear() {
-    this.built?.dispose?.();
     this.placeKept.dispose();
     for (const child of [...this.group.children]) {
       if (Object.values(this.floors).includes(child)) continue;
@@ -269,10 +253,9 @@ export class RoomScene {
     }
     this.built = null;
     this.glowing = new Set();
-    this.extraUpdaters = [];
   }
 
-  update(dt, pose, fx) {
+  update(dt, pose) {
     this.time += dt;
     const x = pose.posX || 0;
     const z = pose.posZ || 0;
@@ -282,11 +265,6 @@ export class RoomScene {
       mesh.position.z = z;
     }
     this.floors.grid.material.uniforms.uTime.value = this.time;
-    const fxObj = fx || {};
-    this.built?.update?.(dt, this.time, pose, fxObj);
-    if (this.extraUpdaters?.length) {
-      for (const fn of this.extraUpdaters) fn(dt, this.time, fxObj);
-    }
   }
 
   dispose() {

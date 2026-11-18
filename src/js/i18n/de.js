@@ -5756,4 +5756,11 @@ export default {
   "Soft, or cel-shaded with ink outlines like a cartoon": "Weich oder im Cel-Shading mit Tuschekonturen wie ein Zeichentrick",
   "Cel-shaded": "Cel-Shading",
   "In voice mode it walks about its room on its own, closer while you talk. Off: it stays where it is unless you send it somewhere (also off while filming)": "Im Sprachmodus geht er von selbst durch seinen Raum, näher heran, während du sprichst. Aus: Er bleibt, wo er ist, bis du ihn irgendwohin schickst (auch beim Filmen aus)",
+  "All of this is in Settings later: Characters → Voice conversation, Robot → Graphics, and the Room Editor.": "All das findest du später in den Einstellungen: Figuren → Sprachgespräch, Roboter → Grafik, und im Raum-Editor.",
+  "Its room to start with": "Sein Raum für den Anfang",
+  "Keep this one": "Diesen behalten",
+  "Live voice": "Live-Sprache",
+  "That room couldn't be made. Try again.": "Dieser Raum ließ sich nicht anlegen. Versuch es noch einmal.",
+  "The robot's room: {name}": "Der Raum des Roboters: {name}",
+  "Voice and the robot": "Sprache und der Roboter",
 };

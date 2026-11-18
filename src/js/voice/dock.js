@@ -11,7 +11,6 @@ import { t } from "../i18n.js";
 import { iconEl } from "../icons.js";
 import { announce } from "../a11y.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
-import { bus, EVENTS } from "../core/event-bus.mjs";
 import { robot } from "../robot/index.js";
 import { newId } from "../room/model.mjs";
 import * as M from "./dock-model.mjs";
@@ -154,7 +153,7 @@ function run(id, anchor = null) {
   const m = M.DOCK_MODULES.find((x) => x.id === id);
   if (m?.menu) return openMenu(id, anchor || el?.querySelector(`[data-module="${id}"]`));
   closeMenu();
-  if (id === "mic_mute" || id === "interrupt") bus.emit(EVENTS.DOCK_ACTION, { action: id });
+  if (id === "mic_mute" || id === "interrupt") document.dispatchEvent(new CustomEvent("friends:voice-action", { detail: { action: id } }));
   else if (id === "summon_home") command({ kind: "home" }, t("Going home"));
   else if (id === "toggle_whiteboard") document.getElementById("voice-board-btn")?.click();
   else if (id === "roam_toggle") {

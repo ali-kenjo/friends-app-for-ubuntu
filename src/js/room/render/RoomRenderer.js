@@ -16,7 +16,6 @@ import { entryFor, customEntries } from "../catalog.mjs";
 import { buildModel } from "./custom-model.js";
 import { worldTransform, footprintOf } from "../model.mjs";
 import { effectiveRoom, roomHour } from "../schedule.mjs";
-import { legacyRoomOf } from "../as-legacy.mjs";
 import { MOOD_BY_ID, CHROMA } from "../choices.mjs";
 import { buildAsset, hasBuilder } from "./assets/index.js";
 import { recolor } from "./kit/build.js";
@@ -104,7 +103,7 @@ export class RoomRenderer {
     return this.legacy.place;
   }
   get built() {
-    return this.mode === "doc" && !this.doc?.legacy ? { roam: 1 } : this.legacy.built;
+    return this.mode === "doc" ? { roam: 1 } : this.legacy.built;
   }
   set weatherState(v) {
     this.legacy.weatherState = v;
@@ -152,38 +151,30 @@ export class RoomRenderer {
       return this;
     }
     this.assetGroup.visible = true;
-    if (doc.legacy) {
-      this.legacy.configure(legacyRoomOf(doc), look);
-      this.clearArchitecture();
-      this.ownBackdrop = null;
-      if (!["studio", "day", "golden", "evening", "night", "neon", "fireside"].includes(roomMood(doc))) this.stage.setMood(roomMood(doc), doc.atmosphere.brightness);
-      this.stage.setRoomBounds(null);
-    } else {
-      this.legacy.clear();
-      this.legacy.key = "";
-      this.legacy.place = null;
-      for (const mesh of Object.values(this.legacy.floors)) mesh.visible = false;
-      if (doc.architecture.floor.material === "grid") this.legacy.floors.grid.visible = true;
-      // A glossy floor in the open is 1.0's dark reflective pool, fading into the backdrop
-      if (doc.architecture.floor.material === "glossy") {
-        const pool = this.legacy.floors.glossy;
-        pool.visible = true;
-        pool.material.color.set(doc.architecture.floor.color);
-        if (!doc.architecture.openAir) pool.scale.set(0.6, 0.6, 1);
-        else pool.scale.set(0.28, 0.28, 1);
-      }
-      this.buildArchitecture(doc, level);
-      this.stage.setMood(roomMood(doc), doc.atmosphere.brightness);
-      this.stage.setChroma(false);
-      this.configureAir(doc);
-      this.lookLight = look.light;
-      this.ownBackdrop = this.backdropFor(doc);
+    this.legacy.clear();
+    this.legacy.key = "";
+    this.legacy.place = null;
+    for (const mesh of Object.values(this.legacy.floors)) mesh.visible = false;
+    if (doc.architecture.floor.material === "grid") this.legacy.floors.grid.visible = true;
+    // A glossy floor in the open is 1.0's dark reflective pool, fading into the backdrop
+    if (doc.architecture.floor.material === "glossy") {
+      const pool = this.legacy.floors.glossy;
+      pool.visible = true;
+      pool.material.color.set(doc.architecture.floor.color);
+      if (!doc.architecture.openAir) pool.scale.set(0.6, 0.6, 1);
+      else pool.scale.set(0.28, 0.28, 1);
     }
+    this.buildArchitecture(doc, level);
+    this.stage.setMood(roomMood(doc), doc.atmosphere.brightness);
+    this.stage.setChroma(false);
+    this.configureAir(doc);
+    this.lookLight = look.light;
+    this.ownBackdrop = this.backdropFor(doc);
     this.syncAssets(doc, level);
     this.syncDecals(doc);
     if (this.decalMaterial) this.decalMaterial.visible = this.detail.contact !== false;
     this.syncLights(doc.assets.filter((a) => !this.hidden.has(a.id)), level, doc);
-    if (!doc.legacy) {
+    {
       const box = this.arch?.bounds?.clone() || new THREE.Box3(new THREE.Vector3(-doc.size.w / 2, 0, -doc.size.d / 2), new THREE.Vector3(doc.size.w / 2, doc.size.h, doc.size.d / 2));
       const soft = level === "ultra" ? 7 : level === "high" ? 5 : 3;
       this.stage.setRoomBounds(box, { floorColor: doc.architecture.floor.color, mapSize: this.detail.shadowSize || (level === "low" ? 1024 : level === "medium" ? 2048 : 4096), soft: shadowRadius(this.detail.shadows, soft) });
@@ -485,4 +476,4 @@ function disposeOwned(root) {
   });
 }
 
-export { wallOf, WALL_FACING, resolved, legacyRoomOf };
+export { wallOf, WALL_FACING, resolved };

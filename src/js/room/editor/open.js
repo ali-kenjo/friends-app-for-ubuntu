@@ -4,7 +4,6 @@
 // helpers) load the first time it opens. Coming from the Robot Studio, the Studio comes back after.
 import { t } from "../../i18n.js";
 import { announce } from "../../a11y.js";
-import { bus, EVENTS } from "../../core/event-bus.mjs";
 import { isStudioOpen, closeStudio, openStudio } from "../../robot/studio/studio.js";
 
 let opening = null;
@@ -47,7 +46,3 @@ document.addEventListener("click", (e) => {
   editRoom({ mode: opener.dataset.editRoom || undefined, robot: opener.hasAttribute("data-edit-robot") });
 });
 
-// The voice dock's "Edit room" button
-bus.on(EVENTS.DOCK_ACTION, (ev) => {
-  if (ev?.action === "edit_room") editRoom();
-});

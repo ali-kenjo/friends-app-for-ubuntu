@@ -237,6 +237,40 @@
             </form>
           </div>
 
+          <details class="onboarding-more" id="onb-robot">
+            <summary>Voice and the robot</summary>
+            <div class="onboarding-more-body">
+              <label class="onboarding-choice">
+                <span class="row-label">Live voice</span>
+                <select class="field" data-setting="aiVoice.provider">
+                  <option value="gemini-live">Gemini Live (Google)</option>
+                  <option value="openai-realtime">OpenAI Realtime</option>
+                  <option value="local-pipeline">On this computer (speech, a local AI, a voice)</option>
+                  <option value="text-sandbox">Typing only, no microphone (for trying things out)</option>
+                </select>
+              </label>
+              <label class="onboarding-choice">
+                <span class="row-label">The robot's shading</span>
+                <select class="field" data-setting="visualStyle.shaderTheme">
+                  <option value="cozy_stylized">Soft</option>
+                  <option value="anime_cel">Cel-shaded</option>
+                </select>
+              </label>
+              <label class="onboarding-choice">
+                <span class="row-label">Its room to start with</span>
+                <select class="field" id="onb-room">
+                  <option value="">Keep this one</option>
+                  <option value="creator_studio_desk">Creator studio desk</option>
+                  <option value="cozy_study_corner">Cozy study corner</option>
+                  <option value="minimalist_open_stage">Minimalist open stage</option>
+                  <option value="lounge">Living room</option>
+                  <option value="podcast">Podcast studio</option>
+                </select>
+              </label>
+              <p class="onboarding-help">All of this is in Settings later: Characters → Voice conversation, Robot → Graphics, and the Room Editor.</p>
+            </div>
+          </details>
+
           <div class="onboarding-foot">
             <label class="onboarding-private">
               <input type="checkbox" class="toggle" data-setting="privacy.localOnly">

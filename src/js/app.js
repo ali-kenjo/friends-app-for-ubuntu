@@ -40,7 +40,7 @@ import "./whiteboard/bridge.js";
 import "./whiteboard/role-pill.js";
 import { initSubtitlesUI } from "./subtitles.js";
 import { initSession } from "./session.js";
-import { initV1Runtime } from "./core/v1-runtime.mjs";
+import { initRoomContextBridge } from "./core/ai/room-context-bridge.mjs";
 
 // Exchange launch token for session cookie if present
 await initSession();
@@ -49,7 +49,7 @@ await initSession();
 initSubtitlesUI();
 
 // Initialize v1.0 Studio / Behavior / World / AI Runtime
-initV1Runtime();
+initRoomContextBridge();
 
 // The address (#today, #missions, #voice, #chat/<id>) says where to start
 startViews();
