@@ -58,6 +58,7 @@ export function whiteboard(b) {
   // The writing surface (its own mesh, so the live board can be drawn onto it) and a rounded frame
   const surface = b.moving(style.surface, b.box(W - 0.06, H - 0.06, 0.012, 0.005), style.spec, "canvas");
   surface.position.set(0, cy, 0.008);
+  b.named.display = surface; // your board, when "Show my whiteboard on it" is on (RoomRenderer applyPersonal)
   const frame = b.rrect(W, H, 0.04);
   frame.holes.push(new THREE.Path(b.rrect(W - 0.06, H - 0.06, 0.02).getPoints(32).reverse()));
   b.part("c1", at(b.extrude(frame, 0.03, 0.01), 0, cy, -0.012), SATIN);
@@ -106,6 +107,14 @@ export function notebook(b) {
   b.part("#f4efe2", nb.pages, PAPER);
   b.part("#2d3038", at(turn(b.box(0.008, 0.024, 0.205, 0.003), 0, 0.12, 0), 0.08, 0.046, 0.005), { family: "rubber" });
   b.part("#f2c14e", at(turn(b.capsule(0.005, 0.16), 0, 0.4, Math.PI / 2), -0.02, 0.064, 0.06), PAINTED);
+  // With "Show my notes" on: an open page on top with your latest notes (RoomRenderer applyPersonal)
+  if (b.state.showNotes) {
+    const page = new THREE.Mesh(new THREE.PlaneGeometry(0.19, 0.25), new THREE.MeshStandardMaterial({ color: "#f4efe2", roughness: 0.9 }));
+    page.rotation.set(-Math.PI / 2, 0, 0.12);
+    page.position.set(0.01, 0.0585, 0.005);
+    b.extra.add(page);
+    b.named.display = page;
+  }
 }
 
 export function pen_cup(b) {

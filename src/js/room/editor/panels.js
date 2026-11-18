@@ -399,6 +399,39 @@ function numberRow(label, value, onChange, { min = -9999, max = 9999, step = 1, 
   return h("div", { class: "re-num-row" }, h("label", { for: id, text: label }), input, suffix ? h("span", { class: "re-unit", text: suffix }) : null);
 }
 
+// A photo frame's picture: chosen from your files, kept on this computer (the rooms' photo store); it shows only
+// with "Show my photos" on
+function photoPicker(ed, a, commit) {
+  const input = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true });
+  const status = h("p", { class: "rs-hint", role: "status" });
+  const has = Boolean(a.state?.photo);
+  status.textContent = has ? (a.state?.showPhotos ? t("Your photo is in the frame.") : t("Your photo is chosen; switch on \"Show my photos\" to see it.")) : t("No photo chosen yet.");
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    status.textContent = t("Adding the photo…");
+    try {
+      const res = await fetch("/api/room-photos", { method: "POST", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      commit((x) => ({ state: { ...x.state, photo: data.id, showPhotos: true } }), t("Photo"));
+      ed.say(t("Photo added"));
+    } catch (err) {
+      status.textContent = t("Couldn't add the photo: {error}", { error: err.message });
+    }
+  });
+  return h("div", { class: "rs-field" },
+    h("span", { class: "rs-label", text: t("The photo") }),
+    status,
+    h("div", { class: "rs-actions" },
+      button(has ? t("Choose another photo…") : t("Choose a photo…"), () => input.click(), { icon: "image" }),
+      has ? button(t("Take the photo out"), () => commit((x) => ({ state: { ...x.state, photo: "" } }), t("Photo")), { icon: "trash" }) : null,
+    ),
+    input,
+  );
+}
+
 function lookTab(ed, a, def, commit) {
   const out = [];
   const colors = def.colors.map((c) => swatches({ label: t(c.label), colors: PALETTE, value: a.colors?.[c.key] || c.def, onChange: (v) => commit((x) => ({ colors: { ...x.colors, [c.key]: v } }), t("Color")) }).el);
@@ -408,6 +441,7 @@ function lookTab(ed, a, def, commit) {
   for (const [k, v] of Object.entries(def.states || {})) {
     if (typeof v === "boolean") states.push(toggle({ label: stateLabels()[k] || k, value: a.state?.[k] ?? v, onChange: (on) => commit((x) => ({ state: { ...x.state, [k]: on } }), t("Switch")) }).el);
     else if (k === "text") states.push(textField({ label: t("Words on the sign"), max: 16, value: a.state?.text ?? v, onChange: (val) => commit((x) => ({ state: { ...x.state, text: val } }), t("Sign")) }).el);
+    else if (k === "photo") states.push(photoPicker(ed, a, commit));
     else if (k === "style") states.push(tiles({ label: t("Style"), items: boardStyles().map(([id, label]) => ({ id, label })), value: a.state?.style ?? v, compact: true, columns: 4, onChange: (s) => commit((x) => ({ state: { ...x.state, style: s } }), t("Style")) }).el);
   }
   if (states.length) out.push(section(t("How it is"), ...states));

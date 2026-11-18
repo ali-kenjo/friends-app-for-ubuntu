@@ -719,6 +719,48 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await closeSettings();
   });
 
+  test("things that show your own things: on when switched on, blank while filming unless allowed; a photo of your own in the frame", async () => {
+    const displays = () => page.evaluate(() => [...window.friendsRobot.engine.rooms.instances.entries()].filter(([, i]) => i.built.named?.display).map(([id, i]) => [id, Boolean(i.built.named.display.material.userData.personal)]));
+    // A wall calendar with "Show my calendar" and a photo frame
+    await page.evaluate(() => import("/js/room/editor/ops.mjs").then((ops) => {
+      let r = window.friendsRobot.room;
+      const res = ops.addAsset(r, "photo_frame", { pos: [0.6, 1.4, -r.size.d / 2 + 0.05], slot: "wall" });
+      r = res.room;
+      const cal = ops.addAsset(r, "calendar_wall", { pos: [-0.6, 1.3, -r.size.d / 2 + 0.05], slot: "wall" });
+      r = ops.updateAsset(cal.room, cal.id, { state: { ...cal.room.assets.find((a) => a.id === cal.id).state, showEvents: true } });
+      window.friendsRobot.setRoom(r);
+    }));
+    // (the Settings preview draws the room itself; Home's robot stands on a plain stage)
+    await openRobotSettings("rb-privacy");
+    await page.waitForFunction(() => [...window.friendsRobot.engine.rooms.instances.values()].some((i) => i.built.named?.display?.material.userData.personal), { timeout: 20000 });
+    // Filming: blank (the privacy switch was turned on by the previous test, so turn it off first)
+    await page.evaluate(() => window.friendsSettings.updateSettings((s) => (s.robot.privacy.personalInFilming = false)));
+    await page.evaluate(() => window.friendsRobot.setFilming(true));
+    await page.waitForFunction(() => ![...window.friendsRobot.engine.rooms.instances.values()].some((i) => i.built.named?.display?.material.userData.personal), { timeout: 15000 });
+    // …unless allowed
+    await page.evaluate(() => window.friendsSettings.updateSettings((s) => (s.robot.privacy.personalInFilming = true)));
+    await page.waitForFunction(() => [...window.friendsRobot.engine.rooms.instances.values()].some((i) => i.built.named?.display?.material.userData.personal), { timeout: 15000 });
+    await page.evaluate(() => window.friendsRobot.setFilming(false));
+    await closeSettings();
+    // The frame: a photo chosen in the editor (kept on this computer) goes in, and "Show my photos" switches on
+    await page.evaluate(() => import("/js/room/editor/open.js").then((m) => m.editRoom()));
+    await editorOpen();
+    await click("#re-tab-outline");
+    await page.evaluate(() => [...document.querySelectorAll(".re-tree [data-id]")].find((r) => /Photo frame/.test(r.textContent)).click());
+    await page.evaluate(() => [...document.querySelectorAll(".re-inspector [role=tab]")].find((tb) => /Look/.test(tb.textContent)).click());
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32, 7)]);
+    const file = path.join(tempDir, "photo.png");
+    fs.writeFileSync(file, png);
+    const input = await page.$('.re-inspector input[type=file][accept^="image"]');
+    await input.uploadFile(file);
+    const saved = await savedWhere((r) => r.assets.some((a) => a.type === "photo_frame" && a.state.photo && a.state.showPhotos), "the photo in the frame");
+    const pid = saved.assets.find((a) => a.type === "photo_frame").state.photo;
+    assert.strictEqual((await fetch(`${base}/api/room-photos/${pid}`)).status, 200);
+    assert.ok((await displays()).length >= 2);
+    await done();
+    await api("PATCH", "/api/settings", { robot: { privacy: { personalInFilming: false } } });
+  });
+
   test("in Arabic the editor is right to left and every word is translated", async () => {
     const s = await api("GET", "/api/settings");
     s.ui.language = "ar";

@@ -640,7 +640,10 @@ export class RobotEngine {
   // the light unless the design has its own. Colors change at once; a new shape (size, ears,
   // clothes…) rebuilds the robot at the start of the next frame, however many changes came in.
   setLook(look) {
+    // Filming, recording or the privacy switch changed: the things that show your own things are redone
+    const personal = ["filming", "recording", "personalInFilming"].some((k) => k in look && look[k] !== this.look[k]);
     Object.assign(this.look, look);
+    if (personal) this.roomDirty = true;
     if (look.design || look.accent) {
       const d = this.look.design;
       const app = look.accent || this.appAccent || "#6f9cf5";
@@ -672,7 +675,7 @@ export class RobotEngine {
     const detail = { geometry: g.geometry, textures: g.textures, lights: g.lights, contact: g.contact, shadows: g.shadows, shadowSize: g.shadowSize, reflections: g.reflections, sway: g.sway, key: buildKey(g) };
     if (place === "dock") this.rooms.configureDock();
     else if (this.look.roomDoc && place?.startsWith("room:")) {
-      this.rooms.configure(this.look.roomDoc, { light: this.look.accent, level: this.level, filming: this.look.cameraFriendly, detail });
+      this.rooms.configure(this.look.roomDoc, { light: this.look.accent, level: this.level, filming: this.look.cameraFriendly, detail, personal: { source: this.personalSource || null, blank: Boolean(this.look.filming || this.look.recording) && !this.look.personalInFilming } });
       this.behaviour.setRoom(this.look.roomDoc, { filming: Boolean(this.look.filming) });
     }
     else this.rooms.configure({ ...this.look.room, place }, { light: this.look.accent, level: this.level });

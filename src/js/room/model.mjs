@@ -222,6 +222,8 @@ function cleanState(raw, def) {
     else if (typeof v === "number") out[k] = num(s[k], 0, 1, v, 0.01);
     else if (typeof v === "string") {
       if (k === "style" && def.styles) out[k] = def.styles.includes(s[k]) ? s[k] : v;
+      // A photo frame's picture: the id of a photo in the rooms' photo store (or none)
+      else if (k === "photo") out[k] = typeof s[k] === "string" && /^[\w-]{1,40}$/.test(s[k]) ? s[k] : "";
       else out[k] = text(s[k], 24, v) || v;
     }
   }

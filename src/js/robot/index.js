@@ -10,6 +10,7 @@ import { FaceTracker } from "./facetrack.js";
 import { robotSound } from "./sound.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
 import { onHello, onServerEvent } from "../events.js";
+import { personalTexture } from "../room/personal.js";
 import { loadCustomModels } from "../room/custom.js";
 import { canDo } from "../room/rules.mjs";
 import { standPoint } from "../room/nav.mjs";
@@ -186,6 +187,8 @@ export function loadEngine() {
     });
     engine = e;
     e.setPower(power);
+    e.personalSource = personalTexture;
+    e.setLook({ recording });
     applySettings(getSettings());
     for (const [name, h] of hosts) {
       e.attach(name, h.el, h.options);
@@ -258,6 +261,8 @@ function applySettings(s) {
     cameraFriendly: filming.on && filming.cameraFriendly,
     largerFace: filming.on && filming.largerFace,
     filming: filming.on,
+    // Things that show your own things: blank while filming or recording unless Settings → Robot → Privacy allows
+    personalInFilming: s.robot.privacy?.personalInFilming === true,
     theme: { bg: themeBackground(), glow: document.documentElement.dataset.theme === "light" ? 0.06 : 0.08 },
   });
   const gk = JSON.stringify(r.graphics || {});
@@ -268,6 +273,11 @@ function applySettings(s) {
   if (engine.look.quality !== r.quality) engine.setQuality(r.quality);
 }
 let graphicsKey = "";
+let recording = false;
+document.addEventListener("friends:recording", (e) => {
+  recording = e.detail?.on === true;
+  engine?.setLook({ recording });
+});
 
 // ---------- The battery saver, and a window that isn't in front (Settings → Robot → Graphics) ----------
 // On battery: the desktop app says (Electron powerMonitor, through the helper); in a browser, the Battery API.

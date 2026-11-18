@@ -168,6 +168,40 @@ describe("Rooms over HTTP", () => {
     assert.ok(paths.some((p) => /^room-assets\/[\w-]+\.json$/.test(p)));
   });
 
+  test("photos for photo frames: told by their bytes, served back, carried in a room's export and import", async () => {
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64, 1)]);
+    const up = await fetch(`${base}/api/room-photos`, { method: "POST", headers: { "Content-Type": "image/png" }, body: png });
+    assert.equal(up.status, 200);
+    const { id, type } = await up.json();
+    assert.match(id, /^ph_[0-9a-f]{12}$/);
+    assert.equal(type, "image/png");
+    const got = await raw("GET", `/api/room-photos/${id}`);
+    assert.equal(got.status, 200);
+    assert.equal(got.headers.get("content-type"), "image/png");
+    assert.ok(got.buffer.equals(png));
+    // Not a picture, whatever its name says; too big; a path in the id
+    const text = await fetch(`${base}/api/room-photos`, { method: "POST", headers: { "Content-Type": "image/png" }, body: Buffer.from("<svg onload=alert(1)>") });
+    assert.equal(text.status, 400);
+    const big = await fetch(`${base}/api/room-photos`, { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(8 * 1024 * 1024)]) });
+    assert.ok(big.status === 400 || big.status === 413);
+    assert.equal((await raw("GET", "/api/room-photos/..%2Fsettings")).status, 404);
+    // A room with the photo in a frame: exported with it, imported with a new copy
+    const made = (await api("GET", `/api/rooms/${(await api("POST", "/api/rooms", { template: "empty", name: "Photo room" })).data.id}`)).data;
+    const ops = require("../src/js/room/editor/ops.mjs");
+    const res = ops.addAsset(made, "photo_frame", { pos: [0, 1.4, -1.9], slot: "wall" });
+    const withPhoto = ops.updateAsset(res.room, res.id, { state: { showPhotos: true, photo: id } });
+    assert.equal((await api("PUT", `/api/rooms/${made.id}`, withPhoto)).status, 200);
+    const zip = await raw("GET", `/api/rooms/${made.id}/export`);
+    assert.equal(zip.status, 200);
+    const back = await fetch(`${base}/api/rooms/import`, { method: "POST", body: zip.buffer });
+    const imported = await back.json();
+    const frame = imported.assets.find((a) => a.type === "photo_frame");
+    assert.ok(frame.state.photo && frame.state.photo !== id, "a copy under its own id");
+    assert.ok((await raw("GET", `/api/room-photos/${frame.state.photo}`)).buffer.equals(png));
+    assert.equal((await api("DELETE", `/api/room-photos/${frame.state.photo}`)).data.ok, true);
+    assert.equal((await raw("GET", `/api/room-photos/${frame.state.photo}`)).status, 404);
+  });
+
   test("there is a limit on how many rooms are kept", async () => {
     const rooms = require("../server/rooms");
     const have = rooms.list().rooms.length;

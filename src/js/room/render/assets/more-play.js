@@ -136,6 +136,13 @@ export function tablet_stand(b) {
   b.part("c1", at(turn(b.box(0.24, 0.17, 0.012, 0.005), -0.3, 0, 0), 0, 0.14, 0.0), SATIN);
   // Its screen shows a calm home screen (your inbox only when you switch it on)
   lit(b, "#8fb4e8", at(turn(b.box(0.22, 0.15, 0.003, 0.0012), -0.3, 0, 0), 0, 0.142, 0.007), 0.8);
+  if (b.state.showInbox && on(b)) {
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.14), new THREE.MeshBasicMaterial({ color: "#8fb4e8", toneMapped: false }));
+    screen.rotation.x = -0.3;
+    screen.position.set(0, 0.142, 0.0095);
+    b.extra.add(screen);
+    b.named.display = screen;
+  }
 }
 
 export function microphone(b) {

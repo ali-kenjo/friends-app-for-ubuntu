@@ -8,6 +8,7 @@
 //   POST /api/room-assets (a .glb, ?meta=<json>)   GET/DELETE /api/room-assets/:id   GET /api/room-assets/:id/info
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { dataDir, writeJson } = require("./config");
 const logger = require("./logger");
 const model = require("../src/js/room/model.mjs");
@@ -18,6 +19,9 @@ const { buildZip, parseZip } = require("./storage/studio-bundle");
 
 const roomsDir = () => path.join(dataDir, "rooms");
 const assetsDir = () => path.join(dataDir, "room-assets");
+const photosDir = () => path.join(dataDir, "room-photos");
+const MAX_PHOTO = 8 * 1024 * 1024;
+const PHOTO_TYPES = { png: "image/png", jpg: "image/jpeg", webp: "image/webp" };
 const MAX_GLB = 25 * 1024 * 1024;
 const GLB_MAGIC = 0x46546c67;
 const JSON_CHUNK = 0x4e4f534a;
@@ -176,6 +180,11 @@ function exportRoom(id) {
     entries.push({ name: `models/${gid}.glb`, data: fs.readFileSync(glb) });
     if (custom[gid]) entries.push({ name: `models/${gid}.json`, data: Buffer.from(JSON.stringify(custom[gid])) });
   }
+  // The photos in its photo frames
+  for (const pid of new Set(doc.assets.map((a) => a.state?.photo).filter(Boolean))) {
+    const p = getPhoto(pid);
+    if (p) entries.push({ name: `photos/${pid}.${p.ext}`, data: p.buffer });
+  }
   return { buffer: buildZip(entries), filename: `${slug(doc.name) || "room"}.friends-room` };
 }
 
@@ -184,6 +193,7 @@ function importRoom(buffer, { name } = {}) {
   if (!Buffer.isBuffer(buffer) || !buffer.length) throw bad("That file is empty.");
   let roomData = null;
   const models = new Map();
+  const photos = new Map();
   if (buffer.readUInt32LE(0) === 0x04034b50) {
     let files;
     try {
@@ -195,6 +205,8 @@ function importRoom(buffer, { name } = {}) {
     if (!json) throw bad("That file isn't a Friends room.");
     roomData = parseJson(json.toString("utf8"));
     for (const [file, data] of files) {
+      const ph = file.match(/^photos\/([\w-]{1,40})\.(png|jpg|webp)$/);
+      if (ph) photos.set(ph[1], data);
       const m = file.match(/^models\/([\w-]{1,40})\.(glb|json)$/);
       if (!m) continue;
       const entry = models.get(m[1]) || {};
@@ -235,6 +247,18 @@ function importRoom(buffer, { name } = {}) {
       return next;
     });
   }
+  // Its photos come in under new ids too
+  const photoMap = {};
+  for (const [oldId, data] of photos) {
+    try {
+      photoMap[oldId] = savePhoto(data).id;
+    } catch (err) {
+      logger.warn?.(`A photo in an imported room was left out: ${err.message}`);
+    }
+  }
+  if (Array.isArray(doc.assets)) {
+    doc.assets = doc.assets.map((a) => (a?.state?.photo ? { ...a, state: { ...a.state, photo: photoMap[a.state.photo] || "" } } : a));
+  }
   return create({ room: doc, name: model.text(name, model.LIMITS.name, "") || model.text(doc.name, model.LIMITS.name, "") || "Imported room" });
 }
 
@@ -244,6 +268,49 @@ function parseJson(text) {
   } catch {
     return null;
   }
+}
+
+// ---------- Photos for photo frames ----------
+// PNG, JPEG or WebP (told by their first bytes, not their name), up to 8 MB; kept in room-photos/ (in backups)
+function photoKind(buf) {
+  if (buf.length > 8 && buf.readUInt32BE(0) === 0x89504e47) return "png";
+  if (buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpg";
+  if (buf.length > 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") return "webp";
+  return null;
+}
+
+function savePhoto(buffer) {
+  if (!Buffer.isBuffer(buffer) || !buffer.length) throw bad("That file is empty.");
+  if (buffer.length > MAX_PHOTO) throw bad("The photo is bigger than 8 MB.");
+  const ext = photoKind(buffer);
+  if (!ext) throw bad("That isn't a PNG, JPEG or WebP picture.");
+  fs.mkdirSync(photosDir(), { recursive: true, mode: 0o700 });
+  const id = `ph_${crypto.randomBytes(6).toString("hex")}`;
+  const tmp = path.join(photosDir(), `${id}.${ext}.tmp`);
+  fs.writeFileSync(tmp, buffer, { mode: 0o600 });
+  fs.renameSync(tmp, path.join(photosDir(), `${id}.${ext}`));
+  return { id, type: PHOTO_TYPES[ext] };
+}
+
+function getPhoto(id) {
+  if (!/^[\w-]{1,40}$/.test(String(id))) return null;
+  for (const ext of Object.keys(PHOTO_TYPES)) {
+    const file = path.join(photosDir(), `${id}.${ext}`);
+    if (fs.existsSync(file)) return { buffer: fs.readFileSync(file), ext, type: PHOTO_TYPES[ext] };
+  }
+  return null;
+}
+
+function removePhoto(id) {
+  if (!/^[\w-]{1,40}$/.test(String(id))) return false;
+  let gone = false;
+  for (const ext of Object.keys(PHOTO_TYPES)) {
+    try {
+      fs.unlinkSync(path.join(photosDir(), `${id}.${ext}`));
+      gone = true;
+    } catch {}
+  }
+  return gone;
 }
 
 // ---------- Your own models: upload, validate, clean ----------
@@ -482,5 +549,5 @@ module.exports = {
   fromLegacy,
   list, get, create, save, remove, duplicate, exportRoom, importRoom,
   saveAsset, updateAsset, getAsset, assetInfo, removeAsset, listAssets, customCatalog,
-  migrateOnStart, ensure, reset, readGlb, inspect, MAX_GLB,
+  migrateOnStart, ensure, reset, readGlb, inspect, MAX_GLB, savePhoto, getPhoto, removePhoto, MAX_PHOTO,
 };

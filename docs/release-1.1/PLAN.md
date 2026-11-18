@@ -218,11 +218,10 @@ with what is left written next to it. A fresh session continues from this file a
 - [x] Remove old code once unused: `src/js/ui/{studio-drawer,room-editor,behavior-studio}.js`,
       `src/css/v1-studio.css`, `src/js/core/world/*`, `src/js/core/robot/*`, `src/js/robot/places/props3d.js` and
       the place builders (R53, R54). Kept on purpose: `robot/room-catalog.mjs` and `room.mjs` as 1.0 readers (R42),
-      `room3d.js` as the floors and the plain stages, `places/kit.js`, `places/whiteboard3d.js`.
-- [ ] Things that show your own things must show them when switched on (found in step 8: the switches only
-      change what the AI may do): your board on the whiteboard (whiteboard3d's page drawing), your notes in the
-      notebook, your photos in the frame, your calendar, your inbox on the tablet; blank while filming unless
-      "Show them while filming" is on.
+      `room3d.js` as the floors and the plain stages, `places/kit.js`.
+- [x] Things that show your own things show them when switched on (found in step 8; R55): your board on the
+      whiteboard, your notes in the notebook, your notifications on the tablet, today on the wall calendar, a photo
+      you choose in the frame; blank while filming or recording unless allowed.
 - [x] Every old control mapped (table below) and verified (the e2e suite drives the new homes; 155 tests).
 
 ## Step 9: Polish

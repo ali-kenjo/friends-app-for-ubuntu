@@ -171,6 +171,7 @@ export class RoomRenderer {
     this.lookLight = look.light;
     this.ownBackdrop = this.backdropFor(doc);
     this.syncAssets(doc, level);
+    this.applyPersonal(doc, look.personal);
     this.syncDecals(doc);
     if (this.decalMaterial) this.decalMaterial.visible = this.detail.contact !== false;
     this.syncLights(doc.assets.filter((a) => !this.hidden.has(a.id)), level, doc);
@@ -333,6 +334,32 @@ export class RoomRenderer {
     this.group.add(this.decals);
   }
 
+  // ---- Things that show your own things (room/personal.js draws them): on their display while switched on,
+  // their own face otherwise and while filming or recording (unless allowed) ----
+  applyPersonal(doc, personal = {}) {
+    for (const a of doc.assets) {
+      const display = this.instances.get(a.id)?.built?.named?.display;
+      if (!display) continue;
+      const def = entryFor(a.type);
+      const tex = def?.personalData && !personal.blank && !this.hidden.has(a.id) ? personal.source?.(a) || null : null;
+      const ud = display.userData;
+      if (tex) {
+        ud.ownMaterial ||= display.material;
+        if (ud.personalMat?.map !== tex) {
+          ud.personalMat?.dispose();
+          ud.personalMat = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false });
+          ud.personalMat.userData.personal = true;
+        }
+        display.material = ud.personalMat;
+      } else if (ud.ownMaterial) {
+        display.material = ud.ownMaterial;
+        ud.ownMaterial = null;
+        ud.personalMat?.dispose();
+        ud.personalMat = null;
+      }
+    }
+  }
+
   // ---- Practical lights: a fixed number per tier (no shader recompiles), given to the strongest nearest lamps ----
   syncLights(assets, level, doc) {
     const budget = this.detail?.lights ?? LIGHT_BUDGET[level] ?? 4;
@@ -468,7 +495,8 @@ export class RoomRenderer {
 function disposeOwned(root) {
   root.traverse((o) => {
     o.geometry?.dispose?.();
-    for (const m of [].concat(o.material || [])) {
+    // (a display showing your own things keeps its own face aside: room/personal.js)
+    for (const m of [].concat(o.material || [], o.userData?.ownMaterial || [])) {
       if (!m || m.userData?.shared) continue;
       for (const k of ["map", "alphaMap", "emissiveMap"]) if (m[k] && !m[k].userData?.shared) m[k].dispose();
       m.dispose();

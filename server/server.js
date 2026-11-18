@@ -1345,6 +1345,22 @@ async function handle(req, res) {
       return sendJson(res, err.http || 400, { error: err.message });
     }
   }
+  // Photos for photo frames (rooms.js savePhoto): sent as the file itself
+  if (pathname === "/api/room-photos" && req.method === "POST") {
+    try {
+      return sendJson(res, 200, rooms.savePhoto(await readBody(req, rooms.MAX_PHOTO + 1)));
+    } catch (err) {
+      return sendJson(res, err.http || 400, { error: err.message });
+    }
+  }
+  const roomPhoto = pathname.match(/^\/api\/room-photos\/([\w-]+)$/);
+  if (roomPhoto && (req.method === "GET" || req.method === "HEAD")) {
+    const p = rooms.getPhoto(roomPhoto[1]);
+    if (!p) return sendJson(res, 404, { error: "Photo not found" });
+    res.writeHead(200, securityHeaders({ "Content-Type": p.type, "Content-Length": p.buffer.length, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }));
+    return res.end(req.method === "HEAD" ? undefined : p.buffer);
+  }
+  if (roomPhoto && req.method === "DELETE") return sendJson(res, 200, { ok: rooms.removePhoto(roomPhoto[1]) });
   const roomAsset = pathname.match(/^\/api\/room-assets\/([\w-]+)$/);
   if (roomAsset && (req.method === "GET" || req.method === "HEAD")) {
     let buf = null;

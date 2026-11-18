@@ -477,7 +477,9 @@ export function calendar_wall(b) {
       ctx.fillText(String(d), x, y);
     }
   });
-  face(b, W - 0.04, H - 0.12, tex).position.set(0, (H - 0.08) / 2, 0.0125);
+  const page = face(b, W - 0.04, H - 0.12, tex);
+  page.position.set(0, (H - 0.08) / 2, 0.0125);
+  b.named.display = page;
 }
 
 export function photo_frame(b) {
@@ -506,7 +508,9 @@ export function photo_frame(b) {
       ctx.fill();
     }
   });
-  face(b, W - 0.11, H - 0.11, tex).position.set(0, H / 2, 0.0135);
+  const pic = face(b, W - 0.11, H - 0.11, tex);
+  pic.position.set(0, H / 2, 0.0135);
+  b.named.display = pic;
 }
 
 export function panels_acoustic(b) {

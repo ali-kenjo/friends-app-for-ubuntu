@@ -68,6 +68,8 @@ function start() {
     return status.note(err.message, 4000);
   }
   recorder = next;
+  // (things in the room that show your own things go blank while a video is recorded: room/personal.js)
+  document.dispatchEvent(new CustomEvent("friends:recording", { detail: { on: true } }));
   autoOnAir("recording", true);
   setFrame(options.frame);
   voiceMode.classList.add("recording");
@@ -83,6 +85,7 @@ async function stop() {
   const current = recorder;
   if (!current) return;
   recorder = null;
+  document.dispatchEvent(new CustomEvent("friends:recording", { detail: { on: false } }));
   autoOnAir("recording", false);
   clearInterval(timer);
   voiceMode.classList.remove("recording", "canvas-captions");

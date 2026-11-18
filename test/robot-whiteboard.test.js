@@ -2,28 +2,22 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert");
 
 describe("Robot Room 3D Whiteboard Prop & Interaction", () => {
-  it("builds 3D whiteboard meshes in all 7 styles", async () => {
-    const { buildWhiteboard3D, WHITEBOARD_STYLES } = await import("../src/js/robot/places/whiteboard3d.js");
-    assert.strictEqual(WHITEBOARD_STYLES.length, 7);
-
-    for (const style of WHITEBOARD_STYLES) {
-      const wb = buildWhiteboard3D({ style });
-      assert.ok(wb.group, `Group missing for ${style}`);
-      assert.strictEqual(wb.style, style);
-      assert.ok(wb.face, `Face mesh missing for ${style}`);
-      assert.ok(typeof wb.renderDocument === "function");
-      assert.ok(typeof wb.pointAt === "function");
-      assert.ok(typeof wb.update === "function");
-
-      // Verify spotlight pointAt mechanics
-      wb.pointAt(800, 500);
-      wb.update(0.1, 1.0);
+  // 1.1: the whiteboard in the room is the catalog's; its writing surface shows your board when switched on
+  it("has a writing surface for your board in all 7 styles", async () => {
+    const { entryFor } = await import("../src/js/room/catalog.mjs");
+    const { buildAsset } = await import("../src/js/room/render/assets/index.js");
+    for (const style of ["classic", "glass", "chalk", "cork", "dark", "paper", "neon"]) {
+      const built = buildAsset(entryFor("whiteboard"), { id: "wb", state: { style, mirror: true } }, "high");
+      assert.ok(built.named.display?.isMesh, `display surface for ${style}`);
     }
   });
 
   it("renders vector whiteboard document items to 2D texture canvas", async () => {
-    const { buildWhiteboard3D } = await import("../src/js/robot/places/whiteboard3d.js");
-    const wb = buildWhiteboard3D({ style: "chalkboard" });
+    // (drawn by the whiteboard's own page renderer, as your board on the room's whiteboard is: room/personal.js)
+    const { renderPageTo } = await import("../src/js/whiteboard/render.mjs");
+    const noop = () => {};
+    const ctx = new Proxy({ measureText: (text) => ({ width: String(text).length * 8 }), createLinearGradient: () => ({ addColorStop: noop }), createRadialGradient: () => ({ addColorStop: noop }), createPattern: () => null, getImageData: () => ({ data: new Uint8ClampedArray(4) }) }, { get: (target, key) => (key in target ? target[key] : noop), set: () => true });
+    const canvas = { width: 1024, height: 640, getContext: () => ctx };
 
     const doc = {
       title: "Chalkboard Demo",
@@ -44,7 +38,7 @@ describe("Robot Room 3D Whiteboard Prop & Interaction", () => {
     };
 
     assert.doesNotThrow(() => {
-      wb.renderDocument(doc);
+      renderPageTo(canvas, doc.pages[0], { region: { x: 0, y: 0, width: 1600, height: 1000 }, theme: "chalkboard", pattern: "grid" });
     });
   });
 

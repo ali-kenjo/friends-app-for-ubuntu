@@ -264,8 +264,17 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
   the nav grid round furniture; quotas, mood affinity, routes, the four interrupt policies and 1.0's nine
   choreography tools as aliases). The first-run guide's 1.0 wizard (untranslated, 1.0 room presets) is a
   translated "Voice and the robot" fold-out: live voice service, shading, and the room to start with (a template).
-- **R54 1.0's place builders and prop catalog are gone** (`robot/places/*` but `kit.js` and `whiteboard3d.js`,
+- **R54 1.0's place builders and prop catalog are gone** (`robot/places/*` but `kit.js`,
   `room/as-legacy.mjs`): every place is a rebuilt template, and a room still marked as a 1.0 place is rebuilt
   from its template when read. `room3d.js` keeps the floors a room can ask for (the glossy pool, the grid), the
-  chat dock's plain stage, and a quiet stage while a room document loads. `whiteboard3d.js` stays for showing your
-  board on the room's whiteboard (open item below); the whiteboard test now builds the catalog's whiteboard.
+  chat dock's plain stage, and a quiet stage while a room document loads; the whiteboard tests now build the
+  catalog's whiteboard.
+- **R55 Things that show your own things show them now** (`src/js/room/personal.js`; each builder marks its display
+  surface, `RoomRenderer.applyPersonal` swaps it). Before, the switches only changed what the AI may do. The
+  whiteboard shows your board's current page (drawn by the whiteboard's own page renderer, so `whiteboard3d.js`
+  went too: R54's exception is gone), the notebook an open page with your latest notes, the tablet your recent
+  notifications, the wall calendar today's events, reminders and tasks, and the photo frame a photo you choose in
+  the editor (kept in `room-photos/`, PNG/JPEG/WebP told by their bytes, at most 8 MB; carried in a room's export
+  and import; in backups like everything else you keep). All of it is drawn on this computer from what the page
+  already has. While filming or recording each goes back to its own face, unless Settings → Robot → Privacy →
+  "Show them while filming and recording" is on (recording now tells the robot it started and stopped).

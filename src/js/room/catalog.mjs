@@ -365,7 +365,7 @@ export const CATALOG = [
   wall("mirror_wall", "Arched brass mirror", "wall", 0.6, 0.04, 0.9, [["Frame", BRASS]], { builder: ["wall_mirror"], tags: ["glass", "wall"], extra: { mount: 1.1 } }),
   wall("macrame", "Woven wall hanging", "wall", 0.6, 0.04, 0.85, [["Cord", CREAM], ["Rod", WOOD]], { builder: ["macrame_hang"], tags: ["art", "wall", "soft"], extra: { mount: 1.3 } }),
   wall("calendar_wall", "Wall calendar", "wall", 0.36, 0.02, 0.5, [["Paper", "#f8f5ee"], ["Accent", "#e5484d"]], { builder: ["calendar_wall"], tags: ["wall", "paper", "personal"], personalData: true, states: { showEvents: false }, extra: { mount: 1.4 } }),
-  wall("photo_frame", "Photo frame (your photos)", "wall", 0.4, 0.035, 0.32, [["Frame", "#2d3038"], ["Mat", "#f8f5ee"]], { slots: ["wall", "surface"], tags: ["picture", "wall", "personal"], personalData: true, states: { showPhotos: false }, extra: { mount: 1.45 } }),
+  wall("photo_frame", "Photo frame (your photos)", "wall", 0.4, 0.035, 0.32, [["Frame", "#2d3038"], ["Mat", "#f8f5ee"]], { slots: ["wall", "surface"], tags: ["picture", "wall", "personal"], personalData: true, states: { showPhotos: false, photo: "" }, extra: { mount: 1.45 } }),
   wall("panels_acoustic", "Sound panels", "wall", 1.2, 0.06, 1.0, [["Fabric", "#3b2f5c"], ["Frame", "#1d1a26"]], { tags: ["music", "wall", "soft"], extra: { mount: 0.9 } }),
   wall("scroll_hanging", "Hanging calligraphy", "wall", 0.45, 0.03, 1.2, [["Paper", "#f1e7cf"], ["Rod", "#6b4a34"]], { tags: ["art", "paper", "wall"], extra: { mount: 0.8 } }),
   wall("posters", "Retro posters", "wall", 1.2, 0.02, 0.8, [["Poster A", "#f472b6"], ["Poster B", "#5eead4"]], { tags: ["art", "retro", "wall"], extra: { mount: 1.2 } }),
