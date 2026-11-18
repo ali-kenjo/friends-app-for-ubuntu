@@ -5,7 +5,11 @@ const path = require("path");
 
 const version = process.argv[2] || require("../package.json").version;
 const text = fs.readFileSync(path.join(__dirname, "..", "CHANGELOG.md"), "utf8");
-const start = text.indexOf(`## ${version}`);
+// "## 1.1.0" or "## [1.1.0] - 2026-11-18"
+const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const heading = new RegExp(`^## \\[?${escaped}\\]?(?:\\s|$)`, "m");
+const found = heading.exec(text);
+const start = found ? found.index : -1;
 if (start < 0) {
   console.log(`Friends ${version}`);
 } else {

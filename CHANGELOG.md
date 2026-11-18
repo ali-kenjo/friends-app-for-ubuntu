@@ -1,6 +1,8 @@
 # Changelog
 
-## [1.1.0] - unreleased
+## [1.1.0] - 2026-11-18
+
+The first release since 0.8.0. It also brings the work of 1.0, which was never released on its own.
 
 ### The Room: one room for the robot, a room editor, and a robot you can direct
 - **One room system.** The 27 places, the 0.7 Room Builder and 1.0's "unified room" were three systems that could show props from each other. Now the robot's room is one room document, called Room everywhere: its walls, floor, ceiling and view outside, its light and air, its things, how the robot behaves in it, camera shots and scenes. Every place, every Room Builder room, 1.0's three presets, your custom rooms, your looks and each character's room were moved over on first start, looking as close as possible to before.
