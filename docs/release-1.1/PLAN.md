@@ -262,7 +262,7 @@ with what is left written next to it. A fresh session continues from this file a
      `test/v1-architecture.test.js`).
   11. All five checks pass (the last run is in the final report); contact sheets and room shots in
      `docs/design/screenshots/1.1/`.
-- [ ] Final report.
+- [x] Final report (to the owner, 2026-11-18; commits up to 255a7f5).
 
 ---
 
