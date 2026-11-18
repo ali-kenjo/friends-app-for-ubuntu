@@ -407,6 +407,58 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await done();
   });
 
+  test("the robot: its inspector, home dragged in the room, a zone drawn, a route added and test-run in Simulate", async () => {
+    await page.evaluate(() => import("/js/room/editor/open.js").then((m) => m.editRoom()));
+    await editorOpen();
+    await click("#re-tab-outline");
+    await page.evaluate(() => document.querySelector(".re-tree [data-robot]").click());
+    await page.waitForFunction(() => document.querySelector(".re-inspector .re-title")?.textContent === "The robot");
+    assert.deepStrictEqual(await page.$$eval(".re-inspector [role=tab]", (els) => els.map((e) => e.textContent)), ["Where it lives", "Posture", "Gaze", "Movement", "Zones and routes", "On its own"]);
+    const before = (await savedRoom()).robot.home.pos;
+    // Drag the robot: from where it is on screen, a little to the side
+    const from = await page.evaluate(async () => {
+      const THREE = await import("three");
+      const e = window.friendsRobot.engine;
+      const h = window.friendsRobot.room.robot.home.pos;
+      const v = new THREE.Vector3(h[0], 0.65, h[2]).project(e.camera);
+      const r = e.canvas.getBoundingClientRect();
+      return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+    });
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    for (const k of [0.3, 0.6, 1]) await page.mouse.move(from.x - 70 * k, from.y + 10 * k, { steps: 2 });
+    await page.mouse.up();
+    const moved = await savedWhere((r) => Math.abs(r.robot.home.pos[0] - before[0]) > 0.1, "the home moved");
+    assert.ok(moved.robot.home.pos[0] < before[0], "to the left");
+    // A rectangle zone, drawn in the plan from above
+    await page.evaluate(() => [...document.querySelectorAll(".re-inspector [role=tab]")][4].click());
+    await page.evaluate(() => [...document.querySelectorAll(".re-inspector button")].find((b) => b.textContent.trim() === "Draw: Rectangle").click());
+    await page.waitForFunction(() => document.querySelector('.re-views [data-view="top"]').getAttribute("aria-checked") === "true");
+    const st = await (await page.$("#room-editor .re-stage")).boundingBox();
+    await page.mouse.move(st.x + st.width * 0.65, st.y + st.height * 0.3);
+    await page.mouse.down();
+    for (const k of [0.4, 1]) await page.mouse.move(st.x + st.width * (0.65 + 0.1 * k), st.y + st.height * (0.3 + 0.08 * k), { steps: 2 });
+    await page.mouse.up();
+    const zoned = await savedWhere((r) => r.robot.zones.length === 1, "the zone");
+    assert.equal(zoned.robot.zones[0].kind, "nogo");
+    // A route of three points
+    await page.evaluate(() => [...document.querySelectorAll(".re-inspector button")].find((b) => b.textContent.trim() === "New route").click());
+    for (const [fx, fy] of [[0.4, 0.62], [0.5, 0.74], [0.6, 0.62]]) await page.mouse.click(st.x + st.width * fx, st.y + st.height * fy);
+    await savedWhere((r) => r.robot.routes.length === 1 && r.robot.routes[0].points.length === 3, "three route points");
+    await page.keyboard.press("Escape");
+    // Simulate: a test run of the route, explained in the log
+    await page.evaluate(() => [...document.querySelectorAll(".re-tools button")].find((b) => b.textContent.trim() === "Simulate").click());
+    await page.waitForSelector(".re-simpanel:not([hidden])");
+    await page.waitForFunction(() => [...document.querySelectorAll(".re-inspector button")].some((b) => b.textContent.trim() === "Test run"));
+    await page.evaluate(() => [...document.querySelectorAll(".re-inspector button")].find((b) => b.textContent.trim() === "Test run").click());
+    await page.waitForFunction(() => [...document.querySelectorAll(".re-simlog > div")].some((l) => /Following the route Route 1/.test(l.textContent)), { timeout: 10000 });
+    await page.waitForFunction(() => window.friendsRobot.engine.behaviour.out.moving || window.friendsRobot.engine.behaviour.task?.dwellUntil >= 0, { timeout: 20000 });
+    await page.evaluate(() => [...document.querySelectorAll(".re-simpanel button")].find((b) => b.textContent.trim() === "Stop").click());
+    await page.waitForSelector(".re-simpanel[hidden]", { hidden: true }).catch(() => {});
+    assert.strictEqual(await page.evaluate(() => window.friendsRobot.engine.active.options.behave), false);
+    await done();
+  });
+
   test("in Arabic the editor is right to left and every word is translated", async () => {
     const s = await api("GET", "/api/settings");
     s.ui.language = "ar";

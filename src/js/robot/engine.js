@@ -1089,7 +1089,9 @@ export class RobotEngine {
     const prevYaw = this.base.yaw;
     const ctx = { state, filming: Boolean(this.look.filming), reducedMotion: this.reducedMotion.matches, mood: a.pose.mood, awaySec: Math.max(0, a.t - a.lastActivity) };
     let out = b.out;
-    for (let left = dt; left > 1e-4; left -= 0.1) out = b.tick(Math.min(0.1, left), ctx);
+    // (the editor's Simulate can run it faster)
+    const fast = dt * Math.min(10, Math.max(1, this.active?.options.behaveSpeed || 1));
+    for (let left = fast; left > 1e-4; left -= 0.1) out = b.tick(Math.min(0.1, left), ctx);
     // Sitting puts it on the seat (its anchor), lower; everything else on the floor where it is
     const seat = out.posture.kind === "sit" && out.posture.point;
     this.base = { x: seat ? out.posture.point[0] : out.x, z: seat ? out.posture.point[2] : out.z, yaw: out.yaw, y: seat ? Math.max(0, out.posture.point[1] - 0.3) : 0 };

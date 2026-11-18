@@ -14,6 +14,7 @@ import { defaultRules, displayName, worldTransform, newId } from "../model.mjs";
 import * as ops from "./ops.mjs";
 import { resolveShot, shotPresets } from "../cameras.mjs";
 import * as SC from "./scenes.mjs";
+import { robotPanel } from "./robot-panel.js";
 import { thumbFor } from "./thumbs.js";
 
 const PALETTE = ["#f4efe6", "#ede4d6", "#d9c29c", "#c89b6e", "#b07a4a", "#8a5a33", "#5a3d2b", "#2d3038", "#c47a5a", "#e05a47", "#f2c14e", "#4d8a62", "#5b8fa8", "#6f9cf5", "#7c66dc", "#c98bb8"];
@@ -298,7 +299,14 @@ export function outlinePanel(ed) {
   function refresh() {
     const focusedId = document.activeElement?.closest?.(".re-tree [data-id]")?.dataset.id;
     tree.replaceChildren();
-    const robotRow = h("li", { role: "treeitem", tabindex: "0", class: "re-row robot", "aria-level": "1" }, h("span", { class: "re-row-name", text: t("The robot (its home)") }));
+    const robotRow = h("li", { role: "treeitem", tabindex: "0", class: `re-row robot${ed.robotSelected ? " on" : ""}`, "aria-level": "1", "aria-selected": String(ed.robotSelected), "data-robot": "" }, h("span", { class: "re-row-name", text: t("The robot (its home)") }));
+    robotRow.addEventListener("click", () => ed.selectRobot());
+    robotRow.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        ed.selectRobot();
+      }
+    });
     tree.append(robotRow);
     const add = (parent, depth) => {
       for (const a of ed.room.assets.filter((x) => (x.parent || null) === parent)) {
@@ -326,7 +334,7 @@ export function inspectorPanel(ed) {
 
   const FOCUSABLE = "button, input, select, textarea, [tabindex]";
   function refresh() {
-    const key = `${ed.selected.join(",")}|${tab}`;
+    const key = `${ed.robotSelected ? `robot:${ed.robotTab}:${ed.simulating}` : ed.selected.join(",")}|${tab}`;
     const focused = el.contains(document.activeElement) ? document.activeElement : null;
     // Don't rebuild under the user's hands while they drag a slider or type in a field
     if (focused && key === shownFor && (focused.tagName === "INPUT" || focused.tagName === "SELECT")) return update();
@@ -344,6 +352,7 @@ export function inspectorPanel(ed) {
 
   function build() {
     el.replaceChildren();
+    if (ed.robotSelected) return el.append(...robotPanel(ed, ed));
     if (!ed.selected.length) return el.append(...roomPanel(ed));
     if (ed.selected.length > 1) return el.append(...manyPanel(ed));
     const a = ed.room.assets.find((x) => x.id === ed.selected[0]);
@@ -474,6 +483,8 @@ function rulesTab(ed, a, def, commit) {
     section(t("Visiting on its own"), slider({ label: t("How much it likes it"), min: 0, max: 100, step: 1, value: r.weight, def: 50, format: (v) => `${Math.round(v)}`, onChange: (v) => set({ weight: v }) }).el, slider({ label: t("Wait before the next visit"), min: 0, max: 600, step: 5, value: r.cooldown, def: 45, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ cooldown: v }) }).el, slider({ label: t("At most per hour"), min: 0, max: 60, step: 1, value: r.maxPerHour, def: 6, format: (v) => `${Math.round(v)}`, onChange: (v) => set({ maxPerHour: v }) }).el, slider({ label: t("Stays at least"), min: 0, max: 120, step: 1, value: r.dwell[0], def: 3, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ dwell: [v, Math.max(v, r.dwell[1])] }) }).el, slider({ label: t("Stays at most"), min: 0, max: 300, step: 1, value: r.dwell[1], def: 8, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ dwell: [Math.min(v, r.dwell[0]), v] }) }).el, slider({ label: t("Keeps its distance"), min: 0, max: 200, step: 5, value: r.keepDistance, def: 0, format: (v) => t("{n} cm", { n: Math.round(v) }), onChange: (v) => set({ keepDistance: v }) }).el, toggle({ label: t("Fragile: careful and slow, never carried"), value: r.fragile, onChange: (on) => set({ fragile: on }) }).el),
     section(t("When it likes to visit"), ...times, hint(t("None chosen: any time."))),
     h("div", { class: "rs-actions" }, bulk),
+    // While simulating: try each thing it can do with it, rules or not
+    ed.simulating ? section(t("Try it"), hint(t("The robot does it now, in the simulation (your buttons may try what its rules don't allow on its own).")), h("div", { class: "rs-actions re-wrap" }, ...def.actions.map((act) => button(t(C.ACTIONS.find((x) => x.id === act)?.label || act), () => ed.sim.command({ kind: "asset", id: a.id, action: act, actor: "user" }), { icon: "play" })))) : null,
   ];
 }
 

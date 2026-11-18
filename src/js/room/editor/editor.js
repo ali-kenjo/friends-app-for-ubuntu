@@ -13,7 +13,21 @@ import * as ops from "./ops.mjs";
 import { Viewport } from "./viewport.js";
 import { catalogPanel, outlinePanel, inspectorPanel, newRoomDialog, roomPickerDialog } from "./panels.js";
 import { cancelThumbs } from "./thumbs.js";
+import { RobotTools } from "./robot-tools.js";
+import { explain } from "../rules.mjs";
+import { ACTIONS } from "../choices.mjs";
 import { sanitizeRoom, roomSummary } from "../model.mjs";
+
+// A log entry's words in the interface language: names and actions, and a refusal's reason
+function translateVars(vars = {}) {
+  const out = {};
+  for (const [k, v] of Object.entries(vars)) {
+    if (v && typeof v === "object" && v.reason) out[k] = explain({ ok: false, reason: v.reason }, { name: t(v.name || ""), action: v.action, say: (s, x) => t(s, x) });
+    else if (k === "action") out[k] = t(ACTIONS.find((a) => a.id === v)?.label || String(v)).toLowerCase();
+    else out[k] = typeof v === "string" ? t(v) : v;
+  }
+  return out;
+}
 
 export const DEFAULT_PREFS = {
   grid: 0.1,
@@ -66,6 +80,12 @@ class RoomEditor {
     this.clipboard = null;
     this.saveState = "saved";
     this.leftTab = "catalog";
+    // The robot: selected (its own inspector), which of its tabs, a tool in the room, simulating
+    this.robotSelected = false;
+    this.robotTab = "where";
+    this.routeTool = null;
+    this.simulating = false;
+    this.sim = { command: (cmd) => this.simCommand(cmd) };
   }
 
   prefs() {
@@ -107,6 +127,9 @@ class RoomEditor {
     }
     this.vp.engine = robot.engine;
     this.vp.attach();
+    this.tools = new RobotTools(this.vp, this);
+    this.vp.ctx.tools = this.tools;
+    this.tools.attach();
     this.onKey = (e) => this.key(e);
     this.el.addEventListener("keydown", this.onKey);
     this.onSaved = () => this.setSaveState("saved");
@@ -121,6 +144,8 @@ class RoomEditor {
     this.flush();
     this.saveThumb();
     cancelThumbs();
+    this.stopSim();
+    this.tools?.detach();
     this.vp?.detach();
     robot.show("editor", false);
     robot.unhost("editor");
@@ -192,12 +217,85 @@ class RoomEditor {
   }
 
   select(ids) {
+    if (ids.length) this.robotSelected = false;
     this.selected = [...new Set(ids)].filter((id) => this.room.assets.some((a) => a.id === id));
     this.refresh({ light: true });
     if (this.selected.length === 1) {
       const a = this.room.assets.find((x) => x.id === this.selected[0]);
       this.say(t("{name} selected", { name: a.name || t(ops.defOf(a)?.label || a.type) }));
     }
+  }
+
+  // ---------- The robot ----------
+  selectRobot() {
+    this.selected = [];
+    this.robotSelected = true;
+    this.refresh();
+    this.say(t("The robot selected. Drag it to move its home; its ring turns it."));
+  }
+
+  // tool: "spot" | "zone-rect" | "zone-circle" | "zone-poly" | "route:<id>" | null
+  robotTool(tool) {
+    if (!this.tools) return;
+    this.robotSelected = true;
+    this.routeTool = tool?.startsWith("route:") ? tool.slice(6) : null;
+    if (tool?.startsWith("zone") && this.vp.view !== "top") this.setView("top");
+    this.tools.setTool(tool);
+    this.refresh();
+    const words = { spot: t("Click in the room where the spot goes."), "zone-rect": t("Drag in the plan to draw the zone."), "zone-circle": t("Drag from the middle of the zone outwards."), "zone-poly": t("Click its corners; Enter or a click on the first corner closes it.") };
+    if (tool) this.say(tool.startsWith("route:") ? t("Click in the room to add points to the route; Escape when done.") : words[tool]);
+  }
+
+  // ---------- Simulate: the behaviour runs in the editor, with its path, the nav grid and why ----------
+  toggleSim(on = !this.simulating) {
+    if (on) this.startSim();
+    else this.stopSim();
+  }
+
+  startSim() {
+    const e = robot.engine;
+    if (!e || this.simulating) return;
+    this.simulating = true;
+    this.robotSelected = true;
+    this.simLog.replaceChildren();
+    this.simPanel.hidden = false;
+    e.behaviour.onLog = (entry) => {
+      const line = h("div", { text: `${entry.t.toFixed(1)} s · ${t(entry.key, translateVars(entry.vars))}` });
+      this.simLog.append(line);
+      while (this.simLog.children.length > 40) this.simLog.firstElementChild.remove();
+      this.simLog.scrollTop = this.simLog.scrollHeight;
+    };
+    robot.options("editor", { behave: true, behaveSpeed: Number(this.simSpeed.value) || 1 });
+    const loop = () => {
+      if (!this.simulating) return;
+      this.tools.showSim(e.behaviour.out.path, e.behaviour.grid);
+      this.simRaf = requestAnimationFrame(loop);
+    };
+    loop();
+    this.simBtn.setAttribute("aria-pressed", "true");
+    this.say(t("Simulating: the robot does what it would in voice mode."));
+    this.refresh();
+  }
+
+  stopSim() {
+    if (!this.simulating) return;
+    this.simulating = false;
+    cancelAnimationFrame(this.simRaf);
+    const e = robot.engine;
+    if (e) e.behaviour.onLog = null;
+    robot.options("editor", { behave: false });
+    this.tools?.hideSim();
+    this.simPanel.hidden = true;
+    this.simBtn.setAttribute("aria-pressed", "false");
+    this.say(t("Simulation stopped"));
+    this.refresh();
+  }
+
+  simCommand(cmd) {
+    const e = robot.engine;
+    if (!e || !this.simulating) return;
+    const res = e.behaviour.command(cmd);
+    if (!res.ok && res.text) this.say(res.text);
   }
 
   setSaveState(state) {
@@ -237,7 +335,18 @@ class RoomEditor {
     const tag = e.target.tagName;
     const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable;
     const mod = e.ctrlKey || e.metaKey;
+    if (this.tools?.key(e)) {
+      this.routeTool = null;
+      this.refresh();
+      return e.preventDefault();
+    }
     if (e.key === "Escape") {
+      if (this.robotSelected && !this.vp.measure && !this.vp.ghost) {
+        this.robotSelected = false;
+        this.refresh();
+        e.preventDefault();
+        return;
+      }
       if (this.vp.measure) {
         this.toggleMeasure(false);
       } else if (this.vp.ghost) {
@@ -491,7 +600,14 @@ class RoomEditor {
     this.hintsEl = h("p", { class: "re-hints" });
     this.measureBtn = button(t("Measure"), () => this.toggleMeasure(!this.vp.measure), { icon: "ruler" });
     this.measureBtn.setAttribute("aria-pressed", "false");
-    const bottom = h("footer", { class: "re-bottom" }, h("div", { class: "re-tools", role: "toolbar", "aria-label": t("Tools") }, button(t("Select"), () => this.say(t("Select: click a thing, Shift-click to add more")), { icon: "target" }), button(t("Frame the room"), () => this.vp.frameRoom(), { icon: "eye" }), this.measureBtn, button(t("Describe the room"), () => this.describe(), { icon: "chat" }), button(t("Plan as a picture"), () => this.exportPlan(), { icon: "image" })), this.hintsEl);
+    this.simBtn = button(t("Simulate"), () => this.toggleSim(), { icon: "play", title: t("Run what the robot would do, with its path and why") });
+    this.simBtn.setAttribute("aria-pressed", "false");
+    this.simSpeed = h("select", { class: "field re-sim-speed", "aria-label": t("Simulation speed") }, h("option", { value: "1", text: "1×" }), h("option", { value: "5", text: "5×" }));
+    this.simSpeed.addEventListener("change", () => this.simulating && robot.options("editor", { behaveSpeed: Number(this.simSpeed.value) }));
+    this.simLog = h("div", { class: "re-simlog", role: "log", "aria-label": t("What the robot decided") });
+    this.simPanel = h("div", { class: "re-simpanel", hidden: true }, h("div", { class: "re-simpanel-head" }, h("span", { text: t("What it decided, and why") }), this.simSpeed, button(t("Stop"), () => this.stopSim(), { icon: "stop" })), this.simLog);
+    this.stage.append(this.simPanel);
+    const bottom = h("footer", { class: "re-bottom" }, h("div", { class: "re-tools", role: "toolbar", "aria-label": t("Tools") }, button(t("Select"), () => this.say(t("Select: click a thing, Shift-click to add more")), { icon: "target" }), button(t("Frame the room"), () => this.vp.frameRoom(), { icon: "eye" }), this.measureBtn, this.simBtn, button(t("Describe the room"), () => this.describe(), { icon: "chat" }), button(t("Plan as a picture"), () => this.exportPlan(), { icon: "image" })), this.hintsEl);
     this.live = h("div", { class: "sr-only", "aria-live": "polite" });
     this.el.append(top, h("div", { class: "re-body" }, left, this.stage, right), bottom, this.live);
   }
@@ -606,6 +722,7 @@ class RoomEditor {
 
   refresh({ light = false } = {}) {
     this.refreshTop();
+    this.tools?.sync();
     this.el.classList.toggle("has-selection", this.selected.length > 0);
     this.vp?.syncSelection({ focused: document.activeElement === this.stage });
     this.outline.refresh();

@@ -392,9 +392,7 @@
 }
 
 .re-row.robot {
-  color: var(--text-muted);
   font-style: italic;
-  cursor: default;
 }
 
 /* Hidden things: muted and slanted (not faded, which would fail contrast in the light theme) */
@@ -1046,4 +1044,114 @@
     position: static;
     order: -1;
   }
+}
+
+/* ----- The robot: its inspector, the Simulate log ----- */
+.re-rb-item {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2h);
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--zone, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+}
+
+.re-rb-zone-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+}
+
+.re-rb-zone-head > span:nth-child(2) {
+  flex: 1;
+}
+
+.re-rb-swatch {
+  inline-size: 14px;
+  block-size: 14px;
+  border-radius: 4px;
+  background: var(--zone);
+}
+
+.re-rb-points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.re-rb-points > li {
+  display: grid;
+  gap: var(--space-1h);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+}
+
+.re-rb-points > li.blocked {
+  outline: 1px solid var(--danger);
+}
+
+.re-rb-point-n {
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
+.re-simpanel {
+  position: absolute;
+  z-index: var(--z-float);
+  inset-inline-start: var(--space-2);
+  inset-block-end: var(--space-2);
+  inline-size: min(360px, calc(100% - var(--space-4)));
+  max-block-size: 45%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-sidebar) 92%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-pop);
+}
+
+.re-simpanel[hidden] {
+  display: none;
+}
+
+.re-simpanel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1h) var(--space-2);
+  border-block-end: 1px solid var(--hairline);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.re-simpanel-head > span {
+  flex: 1;
+}
+
+.re-simlog {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-y: auto;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.re-simlog > div:last-child {
+  color: var(--text);
+}
+
+/* The robot's six tabs wrap rather than hide */
+.re-inspector .re-tabs:has(> :nth-child(5)) {
+  flex-wrap: wrap;
+  overflow-x: visible;
 }

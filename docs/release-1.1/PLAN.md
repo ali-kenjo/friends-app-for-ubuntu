@@ -158,14 +158,16 @@ with what is left written next to it. A fresh session continues from this file a
 
 ## Step 6: Robot
 
-- [ ] Home + facing ring (snaps to floor; invalid inside furniture or no-go), named spots with facing.
-- [ ] Postures (new animator poses): hover height, idle stance, sit (`sit`), lean (`lean`), rest/dock on
-      charging pad; per state (idle, talking, listening, away).
-- [ ] Gaze modes and per-mode weights/look-away/don't-stare/head limits; per state.
-- [ ] Movement: freedom modes, leash, zones (rect/circle/polygon; no-go, allowed, slow, quiet, stage, rest),
-      clearance, speed/accel/turn, gait, path style, banking, per-state behaviour, away/night, filming and
-      reduced-motion overrides.
-- [ ] Routes: named, points with dwell/look/action, modes, when to run, preview + test run.
+- [x] Home + facing ring (drag the robot in the editor; invalid outside the room, inside furniture or in a
+      no-go zone: it goes back, with the reason), named spots with facing (placed in the room, dragged).
+- [x] Postures (new animator poses): hover height, idle stance, sit (`sit`), lean (`lean`), rest/dock on
+      charging pad; per state (idle, talking, listening, away); the idle seat or desk is its idle place.
+- [x] Gaze modes and per-mode weights/look-away/don't-stare/head limits; per state.
+- [x] Movement: freedom modes, leash, zones (rect/circle/polygon drawn in the plan, corner handles; no-go,
+      allowed, slow, quiet, stage, rest), clearance, speed/accel/turn, gait, path style, banking, per-state
+      behaviour, away/night, filming and reduced-motion overrides; all in the robot's inspector.
+- [x] Routes: named, points placed and dragged in the room (numbered), inserted, reordered, removed, with
+      dwell/look/action; modes, when to run; unreachable points flagged; test run in Simulate.
 - [ ] Rules UI (§6.6): permission, allowed actions, visit weight/cooldown/max/dwell/times/mood/keep-distance/
       fragile, bulk per category, personal-data assets, global autonomy preset/quotas/interrupt/foley/reset.
 - [x] Behaviour engine (`src/js/room/behaviour.mjs`, pure, 13 unit tests) owns position and heading: home and
@@ -183,7 +185,8 @@ with what is left written next to it. A fresh session continues from this file a
 - [ ] Navigation/interaction with anchors, aim IK, sit/lean, carrying the real mesh; move `core/robot/*`
       into `src/js/room/robot/`; fix id collisions, unsanitized inputs, shadow/camera bug.
 - [ ] Camera follow and auto-frame.
-- [ ] Simulate ▶ (1×/5×, path lines, nav grid, zones), event log explaining decisions, per-interaction buttons.
+- [x] Simulate ▶ (1×/5×, path line, nav grid, zones), event log explaining decisions (translated),
+      "Try it" buttons for each interaction of a selected thing, Go there now for spots.
 
 ## Step 7: AI
 

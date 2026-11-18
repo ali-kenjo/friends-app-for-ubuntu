@@ -151,6 +151,20 @@ async function main() {
     await page.evaluate(() => document.getElementById("re-tab-outline")?.click());
     await sleep(300);
     await scan("room-editor-outline", lang, theme);
+    // The robot: each tab of its inspector, and Simulate with its log
+    await page.evaluate(() => document.querySelector(".re-tree [data-robot]")?.click());
+    await sleep(400);
+    for (let i = 0; i < 6; i++) {
+      await page.evaluate((n) => document.querySelectorAll(".re-inspector [role=tab]")[n]?.click(), i);
+      await sleep(250);
+      await scan(`room-editor-robot-${i + 1}`, lang, theme);
+    }
+    await page.evaluate(() => document.querySelector('.re-tools [aria-pressed][title]')?.click());
+    await sleep(1500);
+    await scan("room-editor-simulate", lang, theme);
+    await page.evaluate(() => document.querySelector(".re-simpanel button:last-child")?.click());
+    await page.keyboard.press("Escape");
+    await sleep(200);
     await page.evaluate(() => {
       const menu = document.querySelector("#room-editor .re-menu");
       menu.value = "new";

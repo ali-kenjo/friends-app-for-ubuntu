@@ -399,6 +399,8 @@ export class Viewport {
     }
     if (this.ghost) return;
     if (this.measure && e.button === 0) return this.measureClick(e);
+    // The robot, its home, spots, zones and routes (robot-tools.js)
+    if (this.ctx.tools?.down(e)) return;
     const room = this.ctx.getRoom();
     const sel = this.ctx.selection();
     const pan = e.button === 2 || e.button === 1 || (e.shiftKey && e.button === 0 && !this.pickAsset(e));
@@ -429,6 +431,7 @@ export class Viewport {
   move(e) {
     if (this.pointers.has(e.pointerId)) this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.ghost) return this.updateGhost(e);
+    if (this.ctx.tools?.move(e)) return;
     if (this.measure && this.measure.a && !this.measure.b && !this.drag) return this.measureTo(this.measurePoint(e), e);
     const d = this.drag;
     if (!d) {
@@ -469,6 +472,7 @@ export class Viewport {
   up(e) {
     this.pointers.delete(e.pointerId);
     this.host.releasePointerCapture?.(e.pointerId);
+    if (this.ctx.tools?.up(e)) return;
     if (this.ghost) {
       this.dropGhost(e);
       return;

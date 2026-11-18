@@ -191,7 +191,7 @@ export class RoomBehaviour {
       const a = this.eff.room.assets.find((x) => x.id === cmd.id);
       const name = a ? displayName(a) : "";
       if (!res.ok) {
-        this.say("Not doing it: {why}", { why: explain(res, { name, action }) });
+        this.say("Not doing it: {why}", { why: { reason: res.reason, name, action } });
         return { ...res, text: explain(res, { name, action }) };
       }
       return this.visit(a, action, "command") ? { ok: true } : { ok: false, reason: "no_path" };
@@ -590,7 +590,7 @@ export class RoomBehaviour {
       if (pt.action?.asset && pt.action.action) {
         const ok = canDo(this.room, "auto", pt.action.asset, pt.action.action, { ...ctx, hidden: this.eff.hidden });
         if (ok.ok) this.onAction?.({ assetId: pt.action.asset, action: pt.action.action });
-        else this.say("Skipped a step of the route: {why}", { why: explain(ok, { name: displayName(this.eff.room.assets.find((a) => a.id === pt.action.asset) || { type: "" }), action: pt.action.action }) });
+        else this.say("Skipped a step of the route: {why}", { why: { reason: ok.reason, name: displayName(this.eff.room.assets.find((a) => a.id === pt.action.asset) || { type: "" }), action: pt.action.action } });
       }
       if (pt.action?.gesture) this.onAction?.({ gesture: pt.action.gesture });
       return;
