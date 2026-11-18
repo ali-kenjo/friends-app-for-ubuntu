@@ -13,6 +13,8 @@ import { loadCustomModels } from "../room/custom.js";
 
 export const animator = new Animator();
 animator.onSound = (kind, sub) => {
+  // In a quiet zone of its room it makes no sounds
+  if (engine?.quiet) return;
   const fn = robotSound[kind] || robotSound.blip;
   if (typeof fn === "function") fn.call(robotSound, sub);
 };
@@ -201,6 +203,7 @@ function applySettings(s) {
     interactive: r.interactive !== false,
     cameraFriendly: filming.on && filming.cameraFriendly,
     largerFace: filming.on && filming.largerFace,
+    filming: filming.on,
     theme: { bg: themeBackground(), glow: document.documentElement.dataset.theme === "light" ? 0.06 : 0.08 },
   });
   if (engine.look.quality !== r.quality) engine.setQuality(r.quality);

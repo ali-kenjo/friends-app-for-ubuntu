@@ -167,3 +167,12 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
   model's embedded pictures from blob URLs it makes itself; without it a model loaded but lost its textures.
 - **R29 `npm run check` checks every relative import of the page's code**: a wrong path passed lint and
   parsing and only failed in the browser.
+- **R30 One behaviour engine, pure, on the room document** (`room/behaviour.mjs`). It replaces the v1
+  engine's moving of the robot (that engine still ticks for its remaining v1 users until step 8). It runs
+  only where the room is the scene and the robot may act (voice mode: host option `behave`); the editor
+  shows the robot at home as set, the Studio, Home and the dock at home facing you.
+- **R31 On its own the robot never switches your things.** Autonomous visits touch, play, read, water, sit,
+  lean, write or tidy; "use" (switching, which is saved) happens only when you or the AI ask.
+- **R32 "You" are in front of the room's middle**, a little past its front edge (where the camera is):
+  talking and listening turn it to there.
+- **R33 Slow zones cost more to cross**, so paths go round them when they can; inside one it moves at 45 %.

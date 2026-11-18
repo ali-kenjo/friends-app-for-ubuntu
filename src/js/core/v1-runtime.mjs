@@ -65,13 +65,8 @@ export function stepV1Frame(engine, pose, dt, time) {
   const assets = appState.get("roomAssets") || [];
   behaviorEngine.tick(dt, assets);
 
-  // Reflect behavior navigation coordinates seamlessly onto the robot root
-  const bp = behaviorEngine.position;
-  if (engine.robot?.nodes?.Root && behaviorEngine.state !== "IDLE_HOME") {
-    engine.robot.nodes.Root.position.x = bp.x;
-    engine.robot.nodes.Root.position.z = bp.z;
-    engine.robot.nodes.Root.rotation.y = bp.rotY;
-  }
+  // 1.1: where the robot is belongs to the room's behaviour engine (room/behaviour.mjs, engine.stepBehaviour);
+  // the v1 engine's own position is no longer applied to the robot (it goes in step 8)
 
   // Smoothly apply active IK arm reach + weighted head gaze
   ikSockets.applyPostPose(engine.robot, dt);

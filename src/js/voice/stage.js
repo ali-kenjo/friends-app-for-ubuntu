@@ -43,7 +43,7 @@ export const isRobotStyle = robotStyle;
 // The robot is (or is about to be) on screen, so the AI may be offered its tools
 export const robotOnScreen = () => robotStyle() && !robot.unavailable && !voiceMode.hidden;
 
-robot.host("voice", document.getElementById("voice-robot"), { priority: 3, onFrame: compositeRobot, roomBelow: true, interactive: true, roam: true, world: true });
+robot.host("voice", document.getElementById("voice-robot"), { priority: 3, onFrame: compositeRobot, roomBelow: true, interactive: true, roam: true, world: true, behave: true });
 
 // ---------- The style ----------
 function updateThemeButtons() {

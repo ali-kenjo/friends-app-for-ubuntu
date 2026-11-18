@@ -98,6 +98,9 @@ export class Animator {
     this.boardSide = 1; // which side of it the board is on: +1 the viewer's right, -1 the left
     this.lookTarget = null; // { target, x, y, until } from robot_look_at or prop use
     this.dragState = { active: false, x: 0, z: 0 };
+    // From the room's behaviour (room/behaviour.mjs): how it stands, moves and looks there (null outside a room)
+    this.roomPose = null;
+    this.glance = { until: -1, next: 4, x: 0 };
     this.lastPropUse = null;
     this.pointer = null; // { x, y, at } the mouse or finger, relative to the robot
     this.pokes = { count: 0, last: -100, hover: -100, zoneCounts: {} };
@@ -488,6 +491,7 @@ export class Animator {
     this.idle(o, dt, mood);
     this.stepIdleActivity(o, dt, mood);
     this.roam(o);
+    this.roomPoseOffsets(o, dt, rm);
     this.maybeIdleGesture(mood);
 
     // 4: the gesture playing now
@@ -506,7 +510,7 @@ export class Animator {
     this.boardOffsets(o, rm);
 
     // 6: attention; and reacting to you while you talk
-    this.gaze(o, state.gaze);
+    this.gaze(o, this.roomGazeMode() || state.gaze);
     this.listen(o, dt);
     m.add(o, 1);
 
@@ -773,6 +777,91 @@ export class Animator {
     }
   }
 
+  // The room's behaviour says how it stands and moves: { hover, stance, posture: { kind }, sleeping, gait,
+  // speed, turnRate (deg/s), banking, gaze: { mode, headWeight, eyeWeight, lookAway, dontStare, headLimit } }
+  setRoomPose(r) {
+    this.roomPose = r || null;
+  }
+
+  roomGazeMode() {
+    const g = this.roomPose?.gaze;
+    if (!g) return null;
+    return { you: "user", camera: "audience", pointer: "user", natural: null, task: null, asset: null, point: null }[g.mode] ?? null;
+  }
+
+  // Hover height, stance, sitting, leaning, resting and sleeping, the gait while it moves, banking into turns
+  roomPoseOffsets(o, dt, rm) {
+    const r = this.roomPose;
+    if (!r) return;
+    const t = this.t;
+    o.hoverY += r.hover || 0;
+    if (r.stance === "relaxed") {
+      o.bodyPitch -= 0.05;
+      o.headPitch += 0.05;
+      o.armLRaise -= 0.12;
+      o.armRRaise -= 0.12;
+      o.finL -= 0.15;
+      o.finR -= 0.15;
+    } else if (r.stance === "playful") {
+      o.headRoll += 0.08 + (rm ? 0 : Math.sin(t * 1.3) * 0.04);
+      o.bodyRoll += rm ? 0 : Math.sin(t * 0.9) * 0.03;
+      o.finL += 0.2;
+      o.finR += 0.2;
+    }
+    const kind = r.posture?.kind || "stand";
+    if (kind === "sit") {
+      // Settled on the seat: lower, a little squashed, hands in the lap, the hover ring tucked in
+      o.hoverY -= 0.16;
+      o.squash -= 0.08;
+      o.bodyPitch += 0.05;
+      o.armLFwd += 0.35;
+      o.armRFwd += 0.35;
+      o.armLIn += 0.25;
+      o.armRIn += 0.25;
+      o.ringGlow -= 0.45;
+    } else if (kind === "lean") {
+      // Leaning on the desk or wall in front of it: forward, arms resting on it
+      o.bodyPitch += 0.16;
+      o.headPitch -= 0.06;
+      o.armLFwd += 0.55;
+      o.armRFwd += 0.55;
+    } else if (kind === "rest") {
+      // Down on its pad, dimmed, its light breathing slowly
+      const breathe = rm ? 0 : Math.sin(t * 0.8) * 0.12;
+      o.hoverY -= 0.2;
+      o.squash -= 0.06;
+      o.glow -= 0.45 - breathe;
+      o.ringGlow -= 0.4 - breathe;
+      o.finGlowL -= 0.2;
+      o.finGlowR -= 0.2;
+      o.lidTopL += 0.35;
+      o.lidTopR += 0.35;
+      o.armLRaise -= 0.2;
+      o.armRRaise -= 0.2;
+    }
+    if (r.sleeping) {
+      o.lidTopL += 0.55;
+      o.lidTopR += 0.55;
+      o.glow -= 0.25;
+      o.headPitch += 0.12;
+    }
+    // Moving: the gait shows
+    if ((r.speed || 0) > 0.02 && !rm) {
+      const k = Math.min(1, r.speed / 0.6);
+      if (r.gait === "walk") o.hoverY += Math.abs(Math.sin(t * 8)) * 0.025 * k;
+      else if (r.gait === "hop") {
+        o.hoverY += Math.max(0, Math.sin(t * 6)) * 0.08 * k;
+        o.squash += Math.max(0, -Math.sin(t * 6)) * -0.08 * k;
+      } else if (r.gait === "glide") o.bodyPitch += 0.06 * k;
+      else if (r.gait === "zip") {
+        o.bodyPitch += 0.12 * k;
+        o.ringGlow += 0.3 * k;
+      } else o.hoverY += Math.sin(t * 3) * 0.012 * k;
+    }
+    // Banking into a turn
+    if (r.turnRate && !rm) o.bodyRoll -= clamp(r.turnRate * (r.banking ?? 0.4) * 0.0025, -0.25, 0.25);
+  }
+
   // Where it goes in the room. It keeps to a small stage (about +-0.4 m
   // sideways, a little nearer or further), choosing a new spot every few
   // seconds, and the state decides where: closer and turned to you while you
@@ -861,10 +950,25 @@ export class Animator {
     let eyesOnly = null;
     if (mode === "audience" && this.face && !this.lookTarget) eyesOnly = [this.face.x * 0.5, this.face.y * 0.5];
 
+    // The room's gaze settings: glancing away now and then (don't stare), head against eyes, how far the head turns
+    const rg = this.roomPose?.gaze;
+    if (rg && (rg.dontStare || rg.lookAway > 0) && !this.options.reducedMotion) {
+      const gl = this.glance;
+      if (this.t >= gl.next) {
+        gl.next = this.t + 3 + this.random() * 5;
+        if (this.random() < (rg.dontStare ? Math.max(0.25, rg.lookAway) : rg.lookAway)) {
+          gl.until = this.t + 0.6 + this.random() * 0.8;
+          gl.x = (this.random() < 0.5 ? -1 : 1) * (0.35 + this.random() * 0.3);
+        }
+      }
+      if (this.t < gl.until) x += gl.x;
+    }
     const body = this.options.reducedMotion ? 0.5 : 1;
-    o.headYaw += x * 0.42 * body;
-    o.headPitch += -y * 0.22 * body;
-    o.bodyYaw += x * 0.15 * body;
+    const hw = rg ? rg.headWeight : 1;
+    const limit = rg ? (rg.headLimit * Math.PI) / 180 : Infinity;
+    o.headYaw += clamp(x * 0.42 * body * hw, -limit, limit);
+    o.headPitch += clamp(-y * 0.22 * body * hw, -limit, limit);
+    o.bodyYaw += x * 0.15 * body * hw;
 
     const s = this.saccade;
     if (this.t >= s.next) {
@@ -880,7 +984,11 @@ export class Animator {
         s.next = this.t + 1.2 + this.random() * 2.8;
       }
     }
-    const [ex, ey] = eyesOnly || [x, y];
+    let [ex, ey] = eyesOnly || [x, y];
+    if (rg) {
+      ex *= rg.eyeWeight;
+      ey *= rg.eyeWeight;
+    }
     o.lookX += ex * 0.55 + s.x;
     o.lookY += ey * 0.5 + s.y;
     o.pupilX += clamp(ex * 0.7 + s.x * 1.2, -1, 1);

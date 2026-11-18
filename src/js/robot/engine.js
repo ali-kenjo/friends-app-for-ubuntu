@@ -27,6 +27,7 @@ import { springStep, clamp } from "./spring.mjs";
 import { appState } from "../core/state-store.mjs";
 import { attachV1Engine, stepV1Frame } from "../core/v1-runtime.mjs";
 import { resolveShot, shotFrame } from "../room/cameras.mjs";
+import { RoomBehaviour } from "../room/behaviour.mjs";
 
 // What each quality level spends: pixel ratio (capped by the screen's),
 // multisampling, bloom, shadows, face texture size
@@ -315,6 +316,10 @@ export class RobotEngine {
     this.world = new World(this.stage);
     this.world.setRobot(this.robot);
     this.rooms = new RoomRenderer(this.stage, this.world);
+    // Where the robot is in its room and what it does there (room/behaviour.mjs): voice mode lets it act
+    this.behaviour = new RoomBehaviour();
+    this.behaviour.onAction = (a) => this.behaviourAction(a);
+    this.base = { x: 0, z: 0, yaw: 0, y: 0 };
     this.roomKey = "";
     this.roomDirty = true;
     this.photo = { texture: null, aspect: 1, source: null, blur: -1 };
@@ -630,7 +635,10 @@ export class RobotEngine {
     this.roomDirty = false;
     this.roomKey = `${place}|${this.level}`;
     if (place === "dock") this.rooms.configureDock();
-    else if (this.look.roomDoc && place?.startsWith("room:")) this.rooms.configure(this.look.roomDoc, { light: this.look.accent, level: this.level, filming: this.look.cameraFriendly });
+    else if (this.look.roomDoc && place?.startsWith("room:")) {
+      this.rooms.configure(this.look.roomDoc, { light: this.look.accent, level: this.level, filming: this.look.cameraFriendly });
+      this.behaviour.setRoom(this.look.roomDoc, { filming: Boolean(this.look.filming) });
+    }
     else this.rooms.configure({ ...this.look.room, place }, { light: this.look.accent, level: this.level });
     this.applyPhoto();
     this.glowingFor = null;
@@ -693,7 +701,8 @@ export class RobotEngine {
   // ---------- Each frame ----------
   frame(now) {
     this.raf = requestAnimationFrame(this.frame);
-    const dt = Math.min(0.1, Math.max(0, (now - this.last) / 1000));
+    const real = Math.max(0, (now - this.last) / 1000);
+    const dt = Math.min(0.1, real);
     this.last = now;
     if (!this.active) return;
     this.measure(dt);
@@ -708,6 +717,8 @@ export class RobotEngine {
     options.reducedMotion = this.reducedMotion.matches;
     options.cameraFriendly = this.look.cameraFriendly;
     options.roam = this.roamAmount();
+    // The room's behaviour keeps real time (cooldowns, dwell, "away for N minutes") even when frames are slow
+    this.stepBehaviour(Math.min(real, 1));
     this.hooks.beforeUpdate?.(dt);
     const pose = this.animator.update(dt);
     this.draw(pose, dt);
@@ -719,7 +730,15 @@ export class RobotEngine {
     const chroma = this.rooms.isChroma;
     const bloomOn = QUALITY[this.level].bloom && !chroma;
     applyPose(this.robot, pose, { accent: look.accent, user: look.user, cameraFriendly: look.cameraFriendly, glowBoost: bloomOn ? 1 : 1.3, time: pose.t });
-    this.stage.follow(pose.hoverY, pose.posX, pose.posZ);
+    // Where it is in the room (the behaviour engine), with the animator's small moves turned with it
+    const b = this.base;
+    const root = this.robot.nodes.Root || this.robot.root;
+    root.position.set(b.x, b.y, b.z);
+    root.rotation.y = (b.yaw * Math.PI) / 180;
+    const ry = (b.yaw * Math.PI) / 180;
+    pose.worldX = b.x + pose.posX * Math.cos(ry) + pose.posZ * Math.sin(ry);
+    pose.worldZ = b.z - pose.posX * Math.sin(ry) + pose.posZ * Math.cos(ry);
+    this.stage.follow(pose.hoverY + b.y, pose.worldX, pose.worldZ);
     this.updateWorld(dt, pose);
     this.rooms.update(dt, pose, { friendly: look.cameraFriendly, reduced: this.reducedMotion.matches }, this.camera);
     this.face.render(pose, { face: look.design.face, largerFace: look.largerFace, color: look.faceColor || look.accent });
@@ -827,7 +846,7 @@ export class RobotEngine {
     u.uDof.value = dof;
     u.uDofStrength.value = this.post.dofStrength;
     if (dof === 2) {
-      this.tmp.set(pose.posX || 0, 0.8, pose.posZ || 0).applyMatrix4(this.camera.matrixWorldInverse);
+      this.tmp.set(pose.worldX ?? pose.posX ?? 0, 0.8 + this.base.y, pose.worldZ ?? pose.posZ ?? 0).applyMatrix4(this.camera.matrixWorldInverse);
       u.uFocus.value = -this.tmp.z;
       u.uNear.value = this.camera.near;
       u.uFar.value = this.camera.far;
@@ -892,7 +911,7 @@ export class RobotEngine {
     u.uFriendly.value = this.look.cameraFriendly ? 1 : 0;
     u.uSeed.value = (u.uSeed.value + 17.13) % 1000;
     // Where the robot is on screen, for the vignette and the glow
-    this.projected.set(pose.posX || 0, 0.72, pose.posZ || 0).project(this.camera);
+    this.projected.set(pose.worldX ?? pose.posX ?? 0, 0.72 + this.base.y, pose.worldZ ?? pose.posZ ?? 0).project(this.camera);
     u.uCenter.value.set(this.projected.x * 0.5 + 0.5, this.projected.y * 0.5 + 0.5);
     const stageBackdrop = appState.get("stageBackdrop") || "full_room";
     if (this.rooms?.group) this.rooms.group.visible = stageBackdrop === "full_room";
@@ -1050,6 +1069,59 @@ export class RobotEngine {
     return true;
   }
 
+  // ---------- The robot in its room ----------
+  // In voice mode (a host with behave: true) the behaviour engine moves and turns it, and says how it stands
+  // and looks; the Room Editor shows it at home as set; everywhere else it stands at home facing you.
+  stepBehaviour(dt) {
+    const b = this.behaviour;
+    const doc = this.look.roomDoc;
+    const inRoom = doc && this.rooms.mode === "doc" && b.room;
+    const behave = inRoom && this.active?.options.behave === true;
+    if (!behave) {
+      this.animator.setRoomPose(null);
+      const h = doc?.robot?.home;
+      this.base = { x: h ? h.pos[0] : 0, z: h ? h.pos[2] : 0, yaw: inRoom && this.active?.options.world === true ? h.facing : 0, y: 0 };
+      return;
+    }
+    const a = this.animator;
+    const s = a.state;
+    const state = ["speaking", "streaming"].includes(s) ? "talking" : ["listening", "hearing"].includes(s) ? "listening" : ["thinking", "waiting", "busy", "connecting"].includes(s) ? "thinking" : "idle";
+    const prevYaw = this.base.yaw;
+    const ctx = { state, filming: Boolean(this.look.filming), reducedMotion: this.reducedMotion.matches, mood: a.pose.mood, awaySec: Math.max(0, a.t - a.lastActivity) };
+    let out = b.out;
+    for (let left = dt; left > 1e-4; left -= 0.1) out = b.tick(Math.min(0.1, left), ctx);
+    // Sitting puts it on the seat (its anchor), lower; everything else on the floor where it is
+    const seat = out.posture.kind === "sit" && out.posture.point;
+    this.base = { x: seat ? out.posture.point[0] : out.x, z: seat ? out.posture.point[2] : out.z, yaw: out.yaw, y: seat ? Math.max(0, out.posture.point[1] - 0.3) : 0 };
+    const turnRate = dt > 0 ? ((((out.yaw - prevYaw + 540) % 360) - 180) / dt) : 0;
+    a.setRoomPose({ ...out, turnRate });
+    a.options.roam = out.moving || !out.roam ? 0 : Math.min(0.35, a.options.roam);
+    // A point to look at (what it's doing, a chosen thing, a marker): turned into the animator's look
+    if (out.gaze.point) {
+      const dx = out.gaze.point[0] - out.x;
+      const dz = out.gaze.point[2] - out.z;
+      const dy = out.gaze.point[1] - 1.0 - this.base.y;
+      const r = (-out.yaw * Math.PI) / 180;
+      const lx = dx * Math.cos(r) + dz * Math.sin(r);
+      const lz = -dx * Math.sin(r) + dz * Math.cos(r);
+      const yaw = Math.atan2(lx, Math.max(0.05, lz));
+      const pitch = Math.atan2(dy, Math.hypot(lx, lz));
+      a.lookAt({ x: clamp(yaw / 0.9, -1.2, 1.2), y: clamp(pitch / 0.6, -1, 1), duration: 0.3 });
+    }
+    this.quiet = out.quiet;
+  }
+
+  // The behaviour engine uses a thing: switching it goes through the room (and is saved), the rest shows
+  behaviourAction({ assetId, action, gesture }) {
+    if (gesture) return this.animator.gesture(gesture);
+    if (action === "use") {
+      this.animator.gesture("point_right");
+      return this.triggerProp(assetId, "toggle");
+    }
+    const g = { read: "tilt", look: "nod", sit: null, lean: null }[action];
+    if (g !== null) this.animator.gesture(g || "point_right");
+  }
+
   // The virtual camera: the shot, the robot's place in the picture (thirds),
   // a slow drift and a push-in on emphasis when "cinematic" is on
   frameCamera(dt, pose) {
@@ -1145,7 +1217,9 @@ export class RobotEngine {
       else this.spinAngle = 0;
       yaw += (view.yaw || 0) + (this.spinAngle || 0);
     }
-    const follow = (pose.posX || 0) * 0.55;
+    // It follows the robot: its small moves partly (a little parallax), its place in the room fully
+    const follow = this.base.x + (pose.posX || 0) * 0.55;
+    const followZ = this.base.z;
     const place = portrait ? "center" : this.hostOption("position");
     let shift = place === "left" ? 1 / 6 : place === "right" ? -1 / 6 : 0;
     // Where you put it yourself (voice mode): a fraction of the picture sideways (right is positive), up and down
@@ -1165,6 +1239,7 @@ export class RobotEngine {
       c.yaw = { x: yaw, v: 0 };
       c.pitch = { x: pitch, v: 0 };
       c.follow = { x: follow, v: 0 };
+      c.followZ = { x: followZ, v: 0 };
       c.ready = true;
     } else {
       springStep(c.dist, dist, 4, dt);
@@ -1174,12 +1249,13 @@ export class RobotEngine {
       springStep(c.yaw, yaw, 3.2, dt);
       springStep(c.pitch, pitch, 3.2, dt);
       springStep(c.follow, follow, 2.4, dt);
+      springStep(c.followZ, followZ, 2.4, dt);
     }
     const d = c.dist.x + (pose.posZ || 0) * 0.55; // it comes nearer, mostly by getting bigger, a little by the camera backing off
     const angle = orbit + c.yaw.x;
     const y = c.center.x + d * (0.1 + c.pitch.x) + rise; // a touch from above
-    this.camera.position.set(Math.sin(angle) * d + c.follow.x, y, Math.cos(angle) * d);
-    this.camera.lookAt(c.follow.x, c.center.x, 0);
+    this.camera.position.set(Math.sin(angle) * d + c.follow.x, y + this.base.y, Math.cos(angle) * d + c.followZ.x);
+    this.camera.lookAt(c.follow.x, c.center.x + this.base.y, c.followZ.x);
     // Moves the picture sideways without turning the camera, so the robot sits on a third
     const { w, h } = this.size;
     if ((Math.abs(c.shift.x) > 1e-4 || Math.abs(c.shiftY.x) > 1e-4) && w && h) this.camera.setViewOffset(w, h, c.shift.x * w, c.shiftY.x * h, w, h);
@@ -1242,7 +1318,7 @@ export class RobotEngine {
     p.y = -(((e.clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1);
     p.inside = true;
     const pose = this.animator.pose;
-    this.hitSphere.center.set(pose.posX || 0, 0.72 + (pose.hoverY || 0), pose.posZ || 0);
+    this.hitSphere.center.set(pose.worldX ?? pose.posX ?? 0, 0.72 + (pose.hoverY || 0) + this.base.y, pose.worldZ ?? pose.posZ ?? 0);
     this.raycaster.setFromCamera({ x: p.x, y: p.y }, this.camera);
     const hitPoint = new THREE.Vector3();
     const hit = this.raycaster.ray.intersectSphere(this.hitSphere, hitPoint) !== null;

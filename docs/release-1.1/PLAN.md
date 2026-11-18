@@ -168,9 +168,18 @@ with what is left written next to it. A fresh session continues from this file a
 - [ ] Routes: named, points with dwell/look/action, modes, when to run, preview + test run.
 - [ ] Rules UI (§6.6): permission, allowed actions, visit weight/cooldown/max/dwell/times/mood/keep-distance/
       fragile, bulk per category, personal-data assets, global autonomy preset/quotas/interrupt/foley/reset.
-- [ ] Behaviour engine owns position+heading; `animator.setBase({x,z,yaw})`; everything follows the final
-      world position (stage follow, contact shadow, floor glow, key shadow centre, mirror, camera);
-      dragging the robot in voice mode moves it in the room ("stay here" sets home).
+- [x] Behaviour engine (`src/js/room/behaviour.mjs`, pure, 13 unit tests) owns position and heading: home and
+      facing, freedom and leash, visits by the rules (weights, moods, times, quotas, cooldowns, Never, keep
+      distance, fragile), paths round no-go zones (and what blocks them), slow and quiet zones, per-state
+      choices (talking: stage/closer/stay; listening: turn/closer; thinking: stay/pace/look up; idle:
+      stay/wander/route/visit), away → rest → asleep, night, filming and reduced motion, routes (loop,
+      back and forth, random, once; dwell, look, action), commands (home, spot, thing, route, stop),
+      postures and gaze out, and an event log of why. The engine places and turns the robot's root from it
+      in voice mode (`behave: true`, real time even when frames are slow); the stage shadow, hit test, focus,
+      vignette and camera follow the robot's place in the room. The animator draws hover height, stance,
+      sit, lean, rest, asleep, the gait while moving and banking, and the gaze weights, look-away and head
+      limit. The v1 engine no longer moves the robot.
+- [ ] Dragging the robot in voice mode moves it in the room ("stay here" sets home).
 - [ ] Navigation/interaction with anchors, aim IK, sit/lean, carrying the real mesh; move `core/robot/*`
       into `src/js/room/robot/`; fix id collisions, unsanitized inputs, shadow/camera bug.
 - [ ] Camera follow and auto-frame.
