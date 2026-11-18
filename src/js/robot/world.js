@@ -292,9 +292,11 @@ export class World {
   }
 
   // on: draw the room's effects at all (in a place that wants them, in a host that shows them)
-  setActive(on, level = "high") {
+  // extra (Settings → Robot → Graphics): { particles: 0–1.5 of the level's, reflection: the mirror image at all }
+  setActive(on, level = "high", extra = {}) {
     this.on = on;
-    this.detail = WORLD_DETAIL[level] || WORLD_DETAIL.high;
+    const d = WORLD_DETAIL[level] || WORLD_DETAIL.high;
+    this.detail = { ...d, air: d.air * (extra.particles ?? 1), reflection: d.reflection && extra.reflection !== false };
     this.apply();
   }
 

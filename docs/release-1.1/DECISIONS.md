@@ -194,3 +194,34 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
 - **R39 "Ask first" shows the proposed room on screen while it asks** (nothing saved until Apply); "Describe a
   room" applies at once as one step with Keep it / Undo, since you asked for it in the editor.
 - **R40 The text sandbox adapter reads the live room** for "what's in the room" and for going to a thing named.
+- **R41 `robot.room` is always a reference to a room document.** A 1.0 room arriving in settings (a built-in look,
+  an older look file, a character's look) becomes a room document once (`rooms.fromLegacy`, remembered by its
+  content in `rooms/.legacy-map.json`) and settings keep `{ layoutId }`. The Studio's Room tab now picks a place
+  (its template room, made once and reused) and changes the room document's light and air; the Room Builder tab
+  and the Studio's custom rooms are gone (the Room Editor does both).
+- **R42 `src/js/robot/room.mjs` and `room-catalog.mjs` stay as readers of 1.0 rooms** (migration, old look files,
+  character defaults); nothing draws or edits 1.0 rooms any more.
+- **R43 Graphics settings are one group, `robot.graphics`, resolved against the quality tier**
+  (`src/js/robot/graphics.mjs`). "Like the quality" follows the tier; each choice overrides only its part
+  (geometry and texture detail are separate levels in the kit, lamps override `LIGHT_BUDGET`, shadow softness
+  is the key light's blur radius, so no shader recompiles). The battery saver draws one level lower and caps at
+  30 fps while on battery: Electron's `powerMonitor` in the desktop app (through the helper's event stream), the
+  Battery API in a browser. "Slower in the background" is a separate cap (30 fps) the engine uses while another
+  window is in front, never while filming (creators record with OBS in front). The frame rate is measured in real
+  time (it was the animation's capped step, so a slow machine read 10 fps at worst). The v1 drawer's
+  anti-aliasing, shadows-off and throttle seed the group once when there's none yet.
+- **R44 The Room Editor's preferences are saved settings now (`robot.editor`, `room/editor/prefs.mjs`).** Before,
+  the helper dropped them on save (they weren't in its defaults), so they lasted until a reload. Units (cm or
+  inches) apply to the editor's fields, hints, tooltips and spoken moves; the model wizard keeps its own unit
+  choice (the file's units). "Show where the robot can't go" draws the nav grid whenever the robot's tools show.
+- **R45 Settings → Robot → Room edits the room document, not settings** (name, mood, brightness, time, tint, air,
+  season, weather, wind, the voice-mode camera, the backdrop), saved like the editor saves it. Its reset puts back
+  the template's light and air. The tint switch is now the one the renderer reads (it read the v1 drawer's
+  `visualStyle.emotionLightingTint`).
+- **R46 Reset per group asks the helper for its defaults** (`GET /api/settings/defaults`: no secrets, those are
+  empty) so a reset is exactly a fresh install's values. Behaviour's reset covers the app-wide switches; the
+  per-room robot rules (home, gaze, movement, routes, interactions) live with the room and are reached from
+  Behaviour → "Edit its rules in the room…" (the editor opens on the robot).
+- **R47 The Settings preview outranks Home's robot** (priority 2.5): both were 2 and Home, registered first, kept
+  the canvas under the Settings window, so the preview showed nothing (since 0.6). Voice mode (3) still wins, so
+  opening Settings while filming doesn't take the picture from the recording.

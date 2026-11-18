@@ -12,6 +12,7 @@ import * as C from "../choices.mjs";
 import { TEMPLATES } from "../templates.mjs";
 import { defaultRules, displayName, worldTransform, newId } from "../model.mjs";
 import * as ops from "./ops.mjs";
+import { toUnits, fromUnits } from "./prefs.mjs";
 import { resolveShot, shotPresets } from "../cameras.mjs";
 import * as SC from "./scenes.mjs";
 import { robotPanel } from "./robot-panel.js";
@@ -33,7 +34,6 @@ const stateLabels = () => ({
   showInbox: t("Show my inbox (your own things)"),
 });
 const boardStyles = () => [["classic", t("Classic")], ["glass", t("Glass")], ["chalk", t("Chalkboard")], ["cork", t("Cork")], ["dark", t("Dark")], ["paper", t("Paper roll")], ["neon", t("Neon")]];
-const cm = (m) => Math.round(m * 100);
 
 const editorPrefs = () => getSettings()?.robot?.editor || {};
 const setEditorPref = (key, value) => updateSettings((s) => (s.robot.editor = { ...(s.robot.editor || {}), [key]: value }));
@@ -97,7 +97,7 @@ export function catalogPanel(ed) {
     if (a.personalData) badges.push(h("span", { class: "re-badge personal", text: t("Your own things") }));
     const img = h("img", { class: "re-thumb", alt: "", "data-id": a.id, width: 96, height: 96, draggable: false });
     seenThumbs.observe(img);
-    const b = h("button", { type: "button", class: "re-item", title: t("{name}: {w} × {d} × {h} cm · goes on: {slots}", { name: t(a.label), w: cm(a.footprint.w), d: cm(a.footprint.d), h: cm(a.height), slots }) }, img, h("span", { class: "re-item-name", text: t(a.label) }), h("span", { class: "re-item-slots", text: slots }), ...badges);
+    const b = h("button", { type: "button", class: "re-item", title: t("{name}: {size} · goes on: {slots}", { name: t(a.label), size: sizeWords(ed, a.footprint.w, a.footprint.d, a.height), slots }) }, img, h("span", { class: "re-item-name", text: t(a.label) }), h("span", { class: "re-item-slots", text: slots }), ...badges);
     b.addEventListener("click", () => {
       if (b.dataset.dragged) return void delete b.dataset.dragged;
       ed.vp.placeNearCentre(a.id);
@@ -377,10 +377,16 @@ export function inspectorPanel(ed) {
   function update() {
     const a = ed.room.assets.find((x) => x.id === ed.selected[0]);
     if (!a) return;
-    for (const input of el.querySelectorAll("[data-axis]")) if (document.activeElement !== input) input.value = String(cm(a.pos[Number(input.dataset.axis)]));
+    for (const input of el.querySelectorAll("[data-axis]")) if (document.activeElement !== input) input.value = String(toUnits(a.pos[Number(input.dataset.axis)], ed.prefs().units));
   }
 
   return { el, refresh };
+}
+
+// "120 × 60 × 75 cm" (or inches, as Settings → Robot → Editor says)
+function sizeWords(ed, w, d, ht) {
+  const units = ed.prefs().units;
+  return units === "in" ? t("{w} × {d} × {h} in", { w: toUnits(w, units), d: toUnits(d, units), h: toUnits(ht, units) }) : t("{w} × {d} × {h} cm", { w: toUnits(w, units), d: toUnits(d, units), h: toUnits(ht, units) });
 }
 
 function numberRow(label, value, onChange, { min = -9999, max = 9999, step = 1, suffix = "", axis = null } = {}) {
@@ -418,20 +424,22 @@ function lookTab(ed, a, def, commit) {
   }
   // One of your models (or a thing wearing one) that is too detailed for this graphics level
   const model = def.custom ? def : a.glb ? customModels()[a.glb] : null;
-  if (model && tooDetailed(model, robot.engine?.level || "high")) out.push(hint(t("This model is too detailed for the graphics level in use, so it's shown as a box of its size. A higher Quality in Settings → Robot → Performance and model shows it.")));
+  if (model && tooDetailed(model, robot.engine?.level || "high")) out.push(hint(t("This model is too detailed for the graphics level in use, so it's shown as a box of its size. A higher Quality in Settings → Robot → Graphics shows it.")));
   if (def.personalData) out.push(hint(t("This shows your own things only when you switch it on. It stays hidden while filming unless you allow it in Settings → Robot → Privacy, and it follows Private mode.")));
   return out;
 }
 
 function placeTab(ed, a, def, commit) {
   const rel = a.parent ? t("on the {name}", { name: displayName(ed.room.assets.find((x) => x.id === a.parent)) }) : t("in the room");
+  const units = ed.prefs().units;
   const pos = (i) => (v) => commit((x) => {
     const p = [...x.pos];
-    p[i] = v / 100;
+    p[i] = Math.round(fromUnits(v, units) * 1000) / 1000;
     return { pos: p };
   }, t("Move"));
+  const u = units === "in" ? { suffix: t("in"), step: 0.5 } : { suffix: t("cm") };
   const out = [
-    section(t("Where"), hint(t("Measured {rel}, in centimetres.", { rel })), numberRow(t("Across (X)"), cm(a.pos[0]), pos(0), { suffix: "cm", axis: 0 }), numberRow(t("Height (Y)"), cm(a.pos[1]), pos(1), { min: 0, suffix: "cm", axis: 1 }), numberRow(t("Depth (Z)"), cm(a.pos[2]), pos(2), { suffix: "cm", axis: 2 })),
+    section(t("Where"), hint(units === "in" ? t("Measured {rel}, in inches.", { rel }) : t("Measured {rel}, in centimetres.", { rel })), numberRow(t("Across (X)"), toUnits(a.pos[0], units), pos(0), { ...u, axis: 0 }), numberRow(t("Height (Y)"), toUnits(a.pos[1], units), pos(1), { min: 0, ...u, axis: 1 }), numberRow(t("Depth (Z)"), toUnits(a.pos[2], units), pos(2), { ...u, axis: 2 })),
     section(t("Turn and size"), numberRow(t("Turn"), Math.round(a.rot), (v) => commit(() => ({ rot: v }), t("Turn")), { min: -180, max: 180, suffix: "°" }), slider({ label: t("Size"), min: def.scale[0], max: def.scale[1], step: 0.01, value: a.scale, def: 1, onChange: (v) => ed.commit(ops.scaleTo(ed.room, a.id, v), t("Size"), { coalesce: `size-${a.id}` }) }).el),
   ];
   const moves = [];
@@ -480,7 +488,7 @@ function rulesTab(ed, a, def, commit) {
   return [
     section(t("What the robot may do with it"), tiles({ label: null, name: t("Permission"), items: C.PERMISSIONS, value: r.permission, columns: 2, onChange: (v) => set({ permission: v }) }).el),
     section(t("Allowed actions"), ...actionToggles),
-    section(t("Visiting on its own"), slider({ label: t("How much it likes it"), min: 0, max: 100, step: 1, value: r.weight, def: 50, format: (v) => `${Math.round(v)}`, onChange: (v) => set({ weight: v }) }).el, slider({ label: t("Wait before the next visit"), min: 0, max: 600, step: 5, value: r.cooldown, def: 45, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ cooldown: v }) }).el, slider({ label: t("At most per hour"), min: 0, max: 60, step: 1, value: r.maxPerHour, def: 6, format: (v) => `${Math.round(v)}`, onChange: (v) => set({ maxPerHour: v }) }).el, slider({ label: t("Stays at least"), min: 0, max: 120, step: 1, value: r.dwell[0], def: 3, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ dwell: [v, Math.max(v, r.dwell[1])] }) }).el, slider({ label: t("Stays at most"), min: 0, max: 300, step: 1, value: r.dwell[1], def: 8, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ dwell: [Math.min(v, r.dwell[0]), v] }) }).el, slider({ label: t("Keeps its distance"), min: 0, max: 200, step: 5, value: r.keepDistance, def: 0, format: (v) => t("{n} cm", { n: Math.round(v) }), onChange: (v) => set({ keepDistance: v }) }).el, toggle({ label: t("Fragile: careful and slow, never carried"), value: r.fragile, onChange: (on) => set({ fragile: on }) }).el),
+    section(t("Visiting on its own"), slider({ label: t("How much it likes it"), min: 0, max: 100, step: 1, value: r.weight, def: 50, format: (v) => `${Math.round(v)}`, onChange: (v) => set({ weight: v }) }).el, slider({ label: t("Wait before the next visit"), min: 0, max: 600, step: 5, value: r.cooldown, def: 45, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ cooldown: v }) }).el, slider({ label: t("At most per hour"), min: 0, max: 60, step: 1, value: r.maxPerHour, def: 6, format: (v) => `${Math.round(v)}`, onChange: (v) => set({ maxPerHour: v }) }).el, slider({ label: t("Stays at least"), min: 0, max: 120, step: 1, value: r.dwell[0], def: 3, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ dwell: [v, Math.max(v, r.dwell[1])] }) }).el, slider({ label: t("Stays at most"), min: 0, max: 300, step: 1, value: r.dwell[1], def: 8, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ dwell: [Math.min(v, r.dwell[0]), v] }) }).el, slider({ label: t("Keeps its distance"), min: 0, max: 200, step: 5, value: r.keepDistance, def: 0, format: (v) => ed.len(v / 100), onChange: (v) => set({ keepDistance: v }) }).el, toggle({ label: t("Fragile: careful and slow, never carried"), value: r.fragile, onChange: (on) => set({ fragile: on }) }).el),
     section(t("When it likes to visit"), ...times, hint(t("None chosen: any time."))),
     section(t("By mood"), hint(t("How much more (or less) it likes the thing in each mood: ×1 is as usual.")), ...C.MOOD_AFFINITIES.map((m) => slider({ label: t(m.label), min: 0, max: 3, step: 0.05, value: r.moods?.[m.id] ?? 1, def: 1, format: (v) => `×${v.toFixed(2)}`, onChange: (v) => ed.commit(ops.updateAsset(ed.room, a.id, { rules: { ...defaultRules(def), ...(ed.room.assets.find((x) => x.id === a.id).rules || {}), moods: { ...(ed.room.assets.find((x) => x.id === a.id).rules?.moods || {}), [m.id]: v } } }), t("Rule"), { coalesce: `mood-${a.id}-${m.id}` }) }).el)),
     h("div", { class: "rs-actions" }, bulk),
@@ -598,7 +606,7 @@ function roomPanel(ed) {
     h("h2", { class: "re-title", text: t("The room") }),
     hint(t("Nothing is selected: these are the room's own settings. Click a thing to change it.")),
     section(t("Size"), slider({ label: t("Width"), min: 2, max: 14, step: 0.05, value: room.size.w, def: 5, format: (v) => t("{n} m", { n: v.toFixed(2) }), onChange: setSize("w") }).el, slider({ label: t("Depth"), min: 2, max: 12, step: 0.05, value: room.size.d, def: 4, format: (v) => t("{n} m", { n: v.toFixed(2) }), onChange: setSize("d") }).el, slider({ label: t("Height"), min: 2.2, max: 5, step: 0.05, value: room.size.h, def: 2.7, format: (v) => t("{n} m", { n: v.toFixed(2) }), onChange: setSize("h") }).el),
-    section(t("Walls"), ...wallToggles, tiles({ label: t("Walls in front of the robot"), items: C.CUTAWAYS, value: arch.cutaway, compact: true, columns: 2, onChange: (v) => setArch({ cutaway: v }) }).el, tiles({ label: t("Wall finish"), items: C.WALL_MATERIALS, value: arch.wall.material, compact: true, columns: 3, onChange: (v) => setArch({ wall: { ...ed.room.architecture.wall, material: v, color: C.WALL_MATERIALS.find((m) => m.id === v).def } }) }).el, swatches({ label: t("Wall color"), colors: PALETTE, value: arch.wall.color, onChange: (v) => setArch({ wall: { ...ed.room.architecture.wall, color: v } }) }).el, toggle({ label: t("Skirting board"), value: arch.wall.trim, onChange: (on) => setArch({ wall: { ...ed.room.architecture.wall, trim: on } }) }).el, swatches({ label: t("Trim color"), colors: PALETTE, value: arch.wall.trimColor, onChange: (v) => setArch({ wall: { ...ed.room.architecture.wall, trimColor: v } }) }).el, h("div", { class: "rs-field" }, h("span", { class: "rs-label", text: t("Accent wall") }), accentSide), arch.accentWall ? swatches({ label: t("Accent color"), colors: PALETTE, value: arch.accentWall.color, onChange: (v) => setArch({ accentWall: { ...ed.room.architecture.accentWall, color: v } }) }).el : null, slider({ label: t("Wall thickness"), min: 0.05, max: 0.4, step: 0.01, value: arch.thickness, def: 0.12, format: (v) => t("{n} cm", { n: cm(v) }), onChange: (v) => setArch({ thickness: v }) }).el),
+    section(t("Walls"), ...wallToggles, tiles({ label: t("Walls in front of the robot"), items: C.CUTAWAYS, value: arch.cutaway, compact: true, columns: 2, onChange: (v) => setArch({ cutaway: v }) }).el, tiles({ label: t("Wall finish"), items: C.WALL_MATERIALS, value: arch.wall.material, compact: true, columns: 3, onChange: (v) => setArch({ wall: { ...ed.room.architecture.wall, material: v, color: C.WALL_MATERIALS.find((m) => m.id === v).def } }) }).el, swatches({ label: t("Wall color"), colors: PALETTE, value: arch.wall.color, onChange: (v) => setArch({ wall: { ...ed.room.architecture.wall, color: v } }) }).el, toggle({ label: t("Skirting board"), value: arch.wall.trim, onChange: (on) => setArch({ wall: { ...ed.room.architecture.wall, trim: on } }) }).el, swatches({ label: t("Trim color"), colors: PALETTE, value: arch.wall.trimColor, onChange: (v) => setArch({ wall: { ...ed.room.architecture.wall, trimColor: v } }) }).el, h("div", { class: "rs-field" }, h("span", { class: "rs-label", text: t("Accent wall") }), accentSide), arch.accentWall ? swatches({ label: t("Accent color"), colors: PALETTE, value: arch.accentWall.color, onChange: (v) => setArch({ accentWall: { ...ed.room.architecture.accentWall, color: v } }) }).el : null, slider({ label: t("Wall thickness"), min: 0.05, max: 0.4, step: 0.01, value: arch.thickness, def: 0.12, format: (v) => ed.len(v), onChange: (v) => setArch({ thickness: v }) }).el),
     section(t("Floor"), tiles({ label: null, name: t("Floor"), items: C.FLOOR_MATERIALS, value: arch.floor.material, compact: true, columns: 3, onChange: (v) => setArch({ floor: { material: v, color: C.FLOOR_MATERIALS.find((m) => m.id === v).def } }) }).el, swatches({ label: t("Floor color"), colors: PALETTE, value: arch.floor.color, onChange: (v) => setArch({ floor: { ...ed.room.architecture.floor, color: v } }) }).el),
     section(t("Ceiling"), tiles({ label: null, name: t("Ceiling"), items: C.CEILINGS, value: arch.ceiling.kind, compact: true, columns: 3, onChange: (v) => setArch({ ceiling: { ...ed.room.architecture.ceiling, kind: v } }) }).el),
     section(t("Outside"), tiles({ label: null, name: t("Outside"), items: C.OUTSIDES, value: arch.outside, compact: true, columns: 2, onChange: (v) => setArch({ outside: v }) }).el),

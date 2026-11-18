@@ -143,6 +143,7 @@ export const api = {
     get: () => call("GET", "/api/settings"),
     save: (settings) => call("PUT", "/api/settings", settings),
     patch: (changes) => call("PATCH", "/api/settings", changes),
+    defaults: () => call("GET", "/api/settings/defaults"),
   },
   notes: {
     list: () => call("GET", "/api/notes"),

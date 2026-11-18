@@ -14,7 +14,8 @@ const voiceOpen = () => {
   return Boolean(v && !v.hidden);
 };
 
-export async function editRoom({ mode } = {}) {
+// robot: open with the robot selected (its home, gaze, movement, routes and rules)
+export async function editRoom({ mode, robot = false } = {}) {
   if (opening) return opening;
   const fromStudio = isStudioOpen();
   if (fromStudio) closeStudio();
@@ -24,6 +25,7 @@ export async function editRoom({ mode } = {}) {
     try {
       const m = await import("./editor.js");
       const ed = await m.openRoomEditor({ mode: mode || (voiceOpen() ? "overlay" : "full") });
+      if (ed && robot) ed.selectRobot();
       if (ed && fromStudio) document.addEventListener("friends:room-editor-closed", () => openStudio("room"), { once: true });
       return ed;
     } catch (err) {
@@ -42,7 +44,7 @@ document.addEventListener("click", (e) => {
   const opener = e.target.closest?.("[data-edit-room]");
   if (!opener) return;
   e.preventDefault();
-  editRoom({ mode: opener.dataset.editRoom || undefined });
+  editRoom({ mode: opener.dataset.editRoom || undefined, robot: opener.hasAttribute("data-edit-robot") });
 });
 
 // The voice dock's "Edit room" button

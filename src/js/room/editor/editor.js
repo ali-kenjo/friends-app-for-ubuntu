@@ -9,6 +9,7 @@ import { announce, trapModal, releaseModal } from "../../a11y.js";
 import { confirmDialog } from "../../dialogs.js";
 import { h, button } from "../../robot/studio/ui.js";
 import { History } from "./history.mjs";
+import { DEFAULT_PREFS, PREF_OPTIONS, sanitizePrefs, lengthText } from "./prefs.mjs";
 import * as ops from "./ops.mjs";
 import { Viewport } from "./viewport.js";
 import { catalogPanel, outlinePanel, inspectorPanel, newRoomDialog, roomPickerDialog, describeDialog } from "./panels.js";
@@ -29,23 +30,7 @@ function translateVars(vars = {}) {
   return out;
 }
 
-export const DEFAULT_PREFS = {
-  grid: 0.1,
-  snapGrid: true,
-  snapAngle: true,
-  angle: 15,
-  snapGuides: true,
-  snapWalls: true,
-  snapSurfaces: true,
-  showMeasurements: true,
-  handleSize: 1,
-  orbitSpeed: 1,
-  invertOrbit: false,
-  units: "cm",
-  matchColors: false,
-  confirmDelete: true,
-  autosave: true,
-};
+export { DEFAULT_PREFS };
 
 let editor = null;
 
@@ -89,7 +74,12 @@ class RoomEditor {
   }
 
   prefs() {
-    return { ...DEFAULT_PREFS, ...(getSettings()?.robot?.editor || {}) };
+    return sanitizePrefs(getSettings()?.robot?.editor);
+  }
+
+  // A length in the units chosen in Settings → Robot → Editor ("120 cm", "47 in")
+  len(m) {
+    return lengthText(m, this.prefs().units, t);
   }
 
   setPref(key, value) {
@@ -396,7 +386,7 @@ class RoomEditor {
       const dz = (-sx * Math.sin(yaw) + sz * Math.cos(yaw)) * step;
       const next = ops.nudge(this.room, sel, Math.round(dx * 1000) / 1000, Math.round(dz * 1000) / 1000);
       this.commit(next, t("Move"), { coalesce: `key-${e.key}` });
-      this.say(ops.moveWords(next, sel[0], dx, dz, (s, v) => t(s, v)));
+      this.say(ops.moveWords(next, sel[0], dx, dz, (s, v) => t(s, v), this.prefs().units));
       return;
     }
     if (!sel.length && !mod && !["a"].includes(e.key.toLowerCase())) return;
@@ -658,9 +648,9 @@ class RoomEditor {
       h("summary", { class: "btn small", text: t("Snapping") }),
       h("div", { class: "re-snap-body" },
         toggleRow("snapGrid", t("Snap to the grid")),
-        select("grid", t("Grid size"), [0.05, 0.1, 0.25, 0.5], (v) => t("{n} cm", { n: Math.round(v * 100) })),
+        select("grid", t("Grid size"), PREF_OPTIONS.grid, (v) => this.len(v)),
         toggleRow("snapAngle", t("Snap angles")),
-        select("angle", t("Angle step"), [15, 45, 90], (v) => `${v}°`),
+        select("angle", t("Angle step"), PREF_OPTIONS.angle, (v) => `${v}°`),
         toggleRow("snapGuides", t("Guides to other things")),
         toggleRow("snapWalls", t("Against walls")),
         toggleRow("snapSurfaces", t("Middle of surfaces")),

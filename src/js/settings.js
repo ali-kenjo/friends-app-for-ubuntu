@@ -2,7 +2,9 @@
 // "friends:settings" tells others whether it's open and which section shows (the Robot section's
 // preview draws only then).
 import { t } from "./i18n.js";
-import { retrySave } from "./store.js";
+import { retrySave, resetSettings } from "./store.js";
+import { confirmDialog } from "./dialogs.js";
+import { announce as speak } from "./a11y.js";
 import { revealSubpane } from "./subtabs.js";
 
 const settingsModal = document.getElementById("settings-modal");
@@ -83,6 +85,22 @@ settingsModal.addEventListener("click", (e) => {
   if (!link) return;
   e.preventDefault();
   openSettings(link.dataset.openTab, { section: link.dataset.openSection });
+});
+
+// ----- Reset one group: <button data-reset-settings="robot.graphics robot.quality" data-group="Graphics"> -----
+settingsModal.addEventListener("click", async (e) => {
+  const button = e.target.closest("[data-reset-settings]");
+  if (!button) return;
+  const group = button.dataset.group ? t(button.dataset.group) : "";
+  const ok = await confirmDialog({ title: t("Reset {group}?", { group }), message: t("Everything in {group} goes back to how it was when Friends was new.", { group }), confirm: t("Reset") });
+  if (!ok) return;
+  try {
+    await resetSettings(button.dataset.resetSettings.split(/\s+/).filter(Boolean));
+    speak(t("{group}: back to the usual settings", { group }));
+  } catch {
+    speak(t("Couldn't reset that. Try again."));
+  }
+  button.focus();
 });
 
 // ----- Find a setting -----

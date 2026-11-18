@@ -82,8 +82,15 @@ float macroNoise(vec2 p) {
   return mat;
 }
 
+// Settings → Robot → Graphics → Texture detail: a level for the texture size alone (null: the quality's own)
+let textureLevel = null;
+export function setTextureDetail(level) {
+  textureLevel = TEXTURE_SIZE[level] ? level : null;
+}
+const textureSize = (level) => TEXTURE_SIZE[textureLevel || level] || 512;
+
 function texturesFor(kind, level, scale, seed) {
-  const maps = surfaceMaps(kind, { size: TEXTURE_SIZE[level] || 512, seed });
+  const maps = surfaceMaps(kind, { size: textureSize(level), seed });
   // Each material has its own texture objects (they share the image), so repeat can differ
   const out = {};
   for (const k of ["albedo", "normal", "rough"]) {
@@ -109,7 +116,7 @@ export function material(spec, color = "#cccccc", level = "high") {
   const fam = FAMILIES[spec.family] || FAMILIES.plastic;
   const fin = spec.finish ? FINISHES[`${spec.family}:${spec.finish}`] || {} : {};
   const lowTier = level === "low";
-  const key = JSON.stringify([spec, color, lowTier ? "low" : level === "medium" ? "medium" : "high"]);
+  const key = JSON.stringify([spec, color, lowTier ? "low" : level === "medium" ? "medium" : "high", textureSize(level)]);
   let mat = cache.get(key);
   if (mat) return mat;
   const rough = spec.rough ?? fin.rough ?? fam.rough;

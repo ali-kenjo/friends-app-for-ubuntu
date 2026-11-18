@@ -150,10 +150,16 @@ describe("The robot's look: design, room and saved looks", () => {
     const room = R.sanitizeRoom({ place: "podcast", sign: "HELLO", props: { mic: false } });
     const saved = settings.set({ robot: { design, room } }).robot;
     assert.deepStrictEqual(saved.design, design);
-    assert.deepStrictEqual(saved.room, room);
+    // 1.1: the room becomes a room document (made once), and settings keep a reference to it
+    assert.strictEqual(typeof saved.room.layoutId, "string");
     const again = JSON.parse(fs.readFileSync(path.join(tempDir, "settings.json"), "utf8")).robot;
-    assert.deepStrictEqual(again.room, room);
-    assert.strictEqual(again.room.props.mic, false);
+    assert.deepStrictEqual(again.room, saved.room);
+    const doc = require("../server/rooms").get(saved.room.layoutId);
+    assert.strictEqual(doc.template, "podcast");
+    assert.ok(doc.assets.some((a) => a.type === "neon_sign" && a.state.text === "HELLO"), "the sign's words");
+    assert.ok(doc.assets.some((a) => a.type === "microphone" && a.hidden), "the microphone switched off");
+    // The same 1.0 room again: the same document
+    assert.deepStrictEqual(settings.set({ robot: { design, room } }).robot.room, saved.room);
   });
 
   test("saved looks: at most 24, names kept short, ids unique, junk dropped", () => {

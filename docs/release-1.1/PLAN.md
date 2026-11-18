@@ -211,7 +211,8 @@ with what is left written next to it. A fresh session continues from this file a
 
 ## Step 8: Consolidation
 
-- [ ] Settings → Robot pages: Graphics, Room, Behaviour (§9 table), searchable, reset per group.
+- [x] Settings → Robot pages: Graphics, Room, Behaviour (§9 table), Editor, Privacy; searchable; reset per group
+      (DECISIONS R43–R47). Per-room robot rules stay in the editor, reached from Behaviour.
 - [ ] Voice-dock actions mapped onto the new system.
 - [ ] Remove old code once unused: `src/js/ui/{studio-drawer,room-editor,behavior-studio}.js`,
       `src/css/v1-studio.css`, `src/js/core/world/*`, `src/js/core/robot/*`, `src/js/robot/room-catalog.mjs`,
@@ -239,22 +240,22 @@ Filled in as each moves (step 5–8). "→ ?" means not moved yet.
 
 | Old control | Where it was | Where it lives now |
 |---|---|---|
-| Place picker (27 places), Surprise me | Studio → Room | → ? (New room → Template; Room tab summary) |
-| Mood, Brightness | Studio → Room | → ? (Editor atmosphere; Room tab quick controls) |
-| Floor kind (glossy/matte/grid/none) | Studio → Room | → ? (Editor architecture → floor) |
-| In the air, How much | Studio → Room | → ? (Editor atmosphere; Room tab quick controls) |
-| Place colors (wall/floor/glow/detail), Back to usual colors | Studio → Room | → ? (Editor architecture + asset Look) |
-| What's in the room (per-place prop toggles) | Studio → Room | → ? (assets in the room: hide/show in Outline) |
-| Words on the sign | Studio → Room | → ? (neon sign asset → Look → text) |
-| Your picture: blur, dim | Studio → Room | → ? (Outside view "photo") |
-| Companions | Studio → Room | → ? (catalog companions) |
-| Time mode/hour, weather sync, season | Studio → Room | → ? (Editor atmosphere) |
-| Room Builder: enable, wall/floor/ceiling/window style, lighting rig | Studio → Room Builder | → ? (Editor architecture + mood) |
-| Builder: add prop (104), X/Y/Z, rotate, scale, c1/c2, animated, interactive, delete | Studio → Room Builder | → ? (Editor catalog, handles, inspector) |
-| Custom rooms: name, save, export, import | Studio → Room Builder | → ? (Editor room menu) |
+| Place picker (27 places), Surprise me | Studio → Room | Studio → Room → Start from a place (each place is its own room document); editor → Room menu → New room → From a template |
+| Mood, Brightness | Studio → Room | Studio → Room → Light and mood; editor → the room's settings → Light and mood |
+| Floor kind (glossy/matte/grid/none) | Studio → Room | Editor → the room's settings → Floor |
+| In the air, How much | Studio → Room | Studio → Room → In the air; editor → In the air |
+| Place colors (wall/floor/glow/detail), Back to usual colors | Studio → Room | Editor → Walls/Floor colors, accent wall; each thing → Look → Colors, Back to its own colors |
+| What's in the room (per-place prop toggles) | Studio → Room | Editor → In the room (outline): show/hide each thing; scenes |
+| Words on the sign | Studio → Room | Editor → the sign → Look → Words on the sign; the AI's robot_use text |
+| Your picture: blur, dim | Studio → Room | Studio → Room → Your picture (when the outside view is your picture) |
+| Companions | Studio → Room | Editor → Catalog → Companions |
+| Time mode/hour, weather sync, season | Studio → Room | Studio → Room → Light and mood (time); editor → Light and mood, In the air (weather, season) |
+| Room Builder: enable, wall/floor/ceiling/window style, lighting rig | Studio → Room Builder (removed) | Editor → Walls, Floor, Ceiling, Outside; windows from the catalog; Light and mood, lamps |
+| Builder: add prop (104), X/Y/Z, rotate, scale, c1/c2, animated, interactive, delete | Studio → Room Builder (removed) | Editor → Catalog (194 things), handles, Placement tab, Look → Colors, Robot rules, Remove |
+| Custom rooms: name, save, export, import | Studio → Room Builder (removed) | Editor → Room menu: name, Your rooms…, Duplicate, Save as…, Export…, Import… (old custom rooms were moved on first start) |
 | v1 Room: presets, spawn 15 assets, move/rotate/scale, attach/clear .glb, duplicate, remove, reset pose, undo/redo, debug overlays | v1 drawer → Room | → ? |
 | v1 Behavior: autonomy, focus lock, home X/Z/yaw, return delay, quotas, kinematics, gaze weights, foley, interrupt policy, category multipliers, per-asset weights/dwells, waypoint route builder, AI tool permissions | v1 drawer → Behavior | → ? |
-| v1 Visual: shader theme, lighting preset, emotion tint, desk-lamp glow, shadow quality, GPU stats | v1 drawer → Visual | → ? |
+| v1 Visual: shader theme, lighting preset, emotion tint, desk-lamp glow, shadow quality, GPU stats | v1 drawer → Visual | Shadows, smooth edges, GPU stats (performance overlay), throttle: Settings → Robot → Graphics; emotion tint: Settings → Robot → Room → Tint with the robot's feelings (the room's own switch); shader theme, lighting preset, desk-lamp glow → ? (8d) |
 | v1 Clean stage & backdrops (full/solid/chroma/transparent) | v1 drawer, clean-stage | → ? (backdrop layers) |
 | v1 AI & Data: provider adapter, keys, local endpoint/model, VAD threshold, text sandbox tester, bundle export/import | v1 drawer → AI & Data | → ? (Settings → AI / Data & backups) |
 | v1 Dock: position, toolbar presets, visible modules and shortcuts | v1 drawer → Dock | → ? (Settings → Voice) |

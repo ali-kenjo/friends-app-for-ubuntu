@@ -9,6 +9,7 @@ import { Director } from "./director.mjs";
 import { FaceTracker } from "./facetrack.js";
 import { robotSound } from "./sound.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
+import { onHello, onServerEvent } from "../events.js";
 import { loadCustomModels } from "../room/custom.js";
 import { canDo } from "../room/rules.mjs";
 import { standPoint } from "../room/nav.mjs";
@@ -177,6 +178,7 @@ export function loadEngine() {
       },
     });
     engine = e;
+    e.setPower(power);
     applySettings(getSettings());
     for (const [name, h] of hosts) {
       e.attach(name, h.el, h.options);
@@ -249,8 +251,41 @@ function applySettings(s) {
     filming: filming.on,
     theme: { bg: themeBackground(), glow: document.documentElement.dataset.theme === "light" ? 0.06 : 0.08 },
   });
+  const gk = JSON.stringify(r.graphics || {});
+  if (gk !== graphicsKey) {
+    graphicsKey = gk;
+    engine.setGraphics(r.graphics);
+  }
   if (engine.look.quality !== r.quality) engine.setQuality(r.quality);
 }
+let graphicsKey = "";
+
+// ---------- The battery saver, and a window that isn't in front (Settings → Robot → Graphics) ----------
+// On battery: the desktop app says (Electron powerMonitor, through the helper); in a browser, the Battery API.
+const power = { onBattery: false, focused: document.hasFocus() };
+let desktopPower = false;
+function setPower(change) {
+  Object.assign(power, change);
+  engine?.setPower(power);
+}
+onHello((hello) => {
+  if (!hello?.power) return;
+  desktopPower = true;
+  setPower({ onBattery: hello.power.onBattery === true });
+});
+onServerEvent("power", (p) => {
+  desktopPower = true;
+  setPower({ onBattery: p?.onBattery === true });
+});
+navigator.getBattery?.()
+  .then((battery) => {
+    const read = () => !desktopPower && setPower({ onBattery: !battery.charging });
+    read();
+    battery.addEventListener("chargingchange", read);
+  })
+  .catch(() => {});
+window.addEventListener("focus", () => setPower({ focused: true }));
+window.addEventListener("blur", () => setPower({ focused: false }));
 
 onSettings(applySettings);
 

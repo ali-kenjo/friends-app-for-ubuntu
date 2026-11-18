@@ -7,7 +7,7 @@ const path = require("path");
 const fs = require("fs");
 const net = require("net");
 
-const { app, BrowserWindow, Menu, Tray, Notification, nativeImage, session, shell, dialog } = require("electron");
+const { app, BrowserWindow, Menu, Tray, Notification, nativeImage, session, shell, dialog, powerMonitor } = require("electron");
 const config = require("../server/config");
 const policy = require("./policy");
 const desktop = require("./desktop");
@@ -48,10 +48,15 @@ function portFree(port) {
 
 async function startHelper() {
   const port = (await portFree(PREFERRED_PORT)) ? PREFERRED_PORT : 0;
-  const { start, setNativeNotify } = require("../server/server");
+  const { start, setNativeNotify, setPower } = require("../server/server");
   const server = start(port, HOST);
   // Reminders and the morning briefing as the system's own notifications
   setNativeNotify(notify);
+  // On battery or plugged in: the graphics' battery saver (Settings → Robot → Graphics)
+  const power = () => setPower({ onBattery: powerMonitor.isOnBatteryPower() });
+  power();
+  powerMonitor.on("on-battery", power);
+  powerMonitor.on("on-ac", power);
   await new Promise((resolve) => (server.listening ? resolve() : server.once("listening", resolve)));
   // The page is opened as "localhost" (the helper only listens on 127.0.0.1): Firebase accepts
   // localhost for Google sign-in in every project, but an IP address has to be added by hand

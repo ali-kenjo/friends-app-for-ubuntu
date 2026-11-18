@@ -520,6 +520,119 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     }
   });
 
+  // ---------- Settings → Robot: Room, Graphics, Editor, Privacy (step 8) ----------
+  const openRobotSettings = async (sub) => {
+    if (await page.evaluate(() => document.getElementById("settings-modal").hidden)) await click("#settings-btn");
+    await click("#tab-robot");
+    await click(`#subtab-${sub}`);
+  };
+  const closeSettings = async () => {
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => document.getElementById("settings-modal").hidden);
+  };
+  const setControl = (selector, value) =>
+    page.evaluate((sel, v) => {
+      const el = document.querySelector(sel);
+      if (el.type === "checkbox") el.checked = v;
+      else el.value = String(v);
+      el.dispatchEvent(new Event(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", { bubbles: true }));
+      if (el.tagName === "SELECT" || el.type === "checkbox") el.dispatchEvent(new Event("input", { bubbles: true }));
+    }, selector, value);
+  const savedSettings = async (check, what) => {
+    const until = Date.now() + 10000;
+    while (Date.now() < until) {
+      const s = await api("GET", "/api/settings");
+      if (check(s)) return s;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    assert.fail(`Not saved: ${what}`);
+  };
+
+  test("Settings → Robot → Room changes the room itself; Reset light and air brings the template's back", async () => {
+    await openRobotSettings("rb-room");
+    assert.strictEqual(await page.$eval("#rb-room-name", (el) => el.value), (await savedRoom()).name);
+    const mood = (await savedRoom()).atmosphere.mood;
+    await setControl("#rb-room-mood", "night");
+    await savedWhere((r) => r.atmosphere.mood === "night", "the mood from Settings");
+    assert.strictEqual(await page.$eval("#rb-room-hour-row", (el) => el.hidden), true, "the hour shows only for a fixed hour");
+    await setControl("#rb-room-time", "manual");
+    await page.waitForFunction(() => !document.getElementById("rb-room-hour-row").hidden);
+    await setControl("#rb-room-wind", 0);
+    await savedWhere((r) => r.atmosphere.timeMode === "manual" && r.atmosphere.wind === 0, "time and wind");
+    await click("#rb-room-reset");
+    await savedWhere((r) => r.atmosphere.mood === mood && r.atmosphere.wind !== 0, "the template's light and air");
+    // "Where it is" moved here from Scene and camera
+    assert.ok(await page.$("#subpane-rb-room #robot-place"));
+    await closeSettings();
+  });
+
+  test("Settings → Robot → Graphics: the engine follows each setting; Reset brings the defaults back", async () => {
+    await openRobotSettings("rb-perf");
+    await setControl('[data-setting="robot.graphics.renderScale"]', 50);
+    await setControl('[data-setting="robot.graphics.lights"]', "0");
+    await setControl('[data-setting="robot.graphics.shadows"]', "off");
+    await setControl('[data-setting="robot.graphics.bloom"]', 0);
+    await setControl('[data-setting="robot.graphics.overlay"]', true);
+    await savedSettings((s) => s.robot.graphics.renderScale === 50 && s.robot.graphics.lights === "0" && s.robot.graphics.overlay === true, "graphics");
+    const e = await page.evaluate(() => {
+      const g = window.friendsRobot.engine;
+      return { scale: g.gfx.scale, lights: g.gfx.lights, bloom: g.gfx.bloom, shadows: g.stage.key.castShadow };
+    });
+    assert.deepStrictEqual(e, { scale: 0.5, lights: 0, bloom: 0, shadows: false });
+    // The overlay, over the preview's corner, with the numbers against the level's budget
+    await page.waitForFunction(() => /Draw calls \d/.test(document.querySelector(".robot-perf-overlay")?.textContent || ""), { timeout: 15000 });
+    // Searchable
+    await page.type("#settings-search", "battery");
+    await page.waitForFunction(() => [...document.querySelectorAll("#settings-results .settings-result")].some((li) => /Battery saver/.test(li.textContent)));
+    await page.evaluate(() => {
+      const box = document.getElementById("settings-search");
+      box.value = "";
+      box.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    // Reset (asks first)
+    await click('[data-reset-settings^="robot.quality"]');
+    await page.waitForSelector(".confirm-modal");
+    await click('.confirm-modal [data-answer="yes"]');
+    const s = await savedSettings((x) => x.robot.graphics.renderScale === 100 && x.robot.graphics.overlay === false, "reset");
+    assert.strictEqual(s.robot.graphics.lights, "auto");
+    assert.strictEqual(s.robot.quality, "auto");
+    await page.waitForFunction(() => !document.querySelector(".robot-perf-overlay"));
+    await closeSettings();
+    // (the other tests here run on Low)
+    await api("PATCH", "/api/settings", { robot: { quality: "low" } });
+    await page.evaluate(() => window.friendsSettings.updateSettings((x) => (x.robot.quality = "low")));
+  });
+
+  test("Settings → Robot → Editor: inches in the editor; Behaviour opens the editor on the robot", async () => {
+    await openRobotSettings("rb-editor");
+    await setControl('[data-setting="robot.editor.units"]', "in");
+    await savedSettings((s) => s.robot.editor.units === "in", "units");
+    await click("#subtab-rb-behaviour");
+    await click("#subpane-rb-behaviour [data-edit-robot]");
+    await editorOpen();
+    await page.waitForFunction(() => document.querySelector("#room-editor .re-inspector .re-title")?.textContent === "The robot");
+    // Its home in inches
+    assert.deepStrictEqual(await page.$$eval("#room-editor .re-inspector .re-unit", (els) => [...new Set(els.map((el) => el.textContent))]), ["in"]);
+    await done();
+    await page.evaluate(() => window.friendsSettings.updateSettings((x) => (x.robot.editor.units = "cm")));
+    await savedSettings((s) => s.robot.editor.units === "cm", "units back");
+    if (!(await page.evaluate(() => document.getElementById("settings-modal").hidden))) await closeSettings();
+  });
+
+  test("Settings → Robot → Privacy lists the things that can show your own things, each off until switched on", async () => {
+    await openRobotSettings("rb-privacy");
+    assert.match(await page.$eval("#rb-privacy-none", (el) => el.textContent), /Nothing in this room/);
+    await page.evaluate(() => import("/js/room/editor/ops.mjs").then((m) => window.friendsRobot.setRoom(m.addAsset(window.friendsRobot.room, "notebook", { pos: [0.5, 0, 0.8] }).room)));
+    await page.waitForSelector("#rb-privacy-things input");
+    const box = await page.$eval("#rb-privacy-things .row", (el) => ({ name: el.querySelector(".row-label").textContent, on: el.querySelector("input").checked }));
+    assert.strictEqual(box.on, false);
+    await click("#rb-privacy-things input");
+    await savedWhere((r) => r.assets.some((a) => a.type === "notebook" && a.state?.showNotes === true), "the notebook switched on");
+    await setControl('[data-setting="robot.privacy.personalInFilming"]', true);
+    await savedSettings((s) => s.robot.privacy.personalInFilming === true, "filming switch");
+    await closeSettings();
+  });
+
   test("in Arabic the editor is right to left and every word is translated", async () => {
     const s = await api("GET", "/api/settings");
     s.ui.language = "ar";

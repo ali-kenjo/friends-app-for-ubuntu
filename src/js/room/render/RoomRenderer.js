@@ -21,6 +21,9 @@ import { MOOD_BY_ID, CHROMA } from "../choices.mjs";
 import { buildAsset, hasBuilder } from "./assets/index.js";
 import { recolor } from "./kit/build.js";
 import { contactShadowTexture } from "./kit/textures.js";
+import { setTextureDetail } from "./kit/materials.js";
+import { setGeometryDetail } from "./kit/geometry.js";
+import { shadowRadius } from "../../robot/graphics.mjs";
 import { buildArchitecture, updateCutaway, wallOf, WALL_FACING } from "./architecture.js";
 import { outsideTexture } from "./outside.js";
 
@@ -125,6 +128,11 @@ export class RoomRenderer {
     this.mode = "doc";
     this.doc = room;
     const level = look.level || "high";
+    // Settings → Robot → Graphics: { geometry, textures, lights, contact, shadows, shadowSize, reflections, sway, key }
+    this.detail = look.detail || {};
+    this.detailKey = this.detail.key || "";
+    setGeometryDetail(this.detail.geometry);
+    setTextureDetail(this.detail.textures);
     const eff = effectiveRoom(room, { now: look.now || new Date(), filming: Boolean(look.filming) });
     this.hidden = eff.hidden;
     this.filming = Boolean(look.filming);
@@ -173,10 +181,12 @@ export class RoomRenderer {
     }
     this.syncAssets(doc, level);
     this.syncDecals(doc);
+    if (this.decalMaterial) this.decalMaterial.visible = this.detail.contact !== false;
     this.syncLights(doc.assets.filter((a) => !this.hidden.has(a.id)), level, doc);
     if (!doc.legacy) {
       const box = this.arch?.bounds?.clone() || new THREE.Box3(new THREE.Vector3(-doc.size.w / 2, 0, -doc.size.d / 2), new THREE.Vector3(doc.size.w / 2, doc.size.h, doc.size.d / 2));
-      this.stage.setRoomBounds(box, { floorColor: doc.architecture.floor.color, mapSize: level === "low" ? 1024 : level === "medium" ? 2048 : 4096, soft: level === "ultra" ? 7 : level === "high" ? 5 : 3 });
+      const soft = level === "ultra" ? 7 : level === "high" ? 5 : 3;
+      this.stage.setRoomBounds(box, { floorColor: doc.architecture.floor.color, mapSize: this.detail.shadowSize || (level === "low" ? 1024 : level === "medium" ? 2048 : 4096), soft: shadowRadius(this.detail.shadows, soft) });
       this.scheduleEnvironment(doc);
     }
     // Selected-things layer: only the chosen things stay
@@ -226,7 +236,7 @@ export class RoomRenderer {
   // ---- Architecture ----
   buildArchitecture(doc, level) {
     const openings = doc.assets.filter((a) => a.slot === "wall" && entryFor(a.type)?.opening && !this.hidden.has(a.id)).map((a) => [a.id, a.pos, a.scale, a.variant]);
-    const key = JSON.stringify([doc.size, doc.architecture, openings, level, Math.floor(roomHour(doc) * 2)]);
+    const key = JSON.stringify([doc.size, doc.architecture, openings, level, this.detailKey, Math.floor(roomHour(doc) * 2)]);
     if (key === this.archKey && this.arch) return;
     this.clearArchitecture();
     this.arch = buildArchitecture(doc, { level, hidden: this.hidden });
@@ -257,7 +267,7 @@ export class RoomRenderer {
       if (!def || !(model || hasBuilder(def))) continue;
       seen.add(a.id);
       // A model is drawn as its file says: its colors and its slot rebuild it (no kit recolor)
-      const shapeKey = JSON.stringify([a.type, a.state, level, a.glb, model ? [a.colors, a.slot, model.unit, model.stylize, model.info?.triangles] : ""]);
+      const shapeKey = JSON.stringify([a.type, a.state, level, this.detailKey, a.glb, model ? [a.colors, a.slot, model.unit, model.stylize, model.info?.triangles] : ""]);
       let inst = this.instances.get(a.id);
       if (!inst || inst.shapeKey !== shapeKey) {
         if (inst) this.dropInstance(a.id);
@@ -334,8 +344,8 @@ export class RoomRenderer {
 
   // ---- Practical lights: a fixed number per tier (no shader recompiles), given to the strongest nearest lamps ----
   syncLights(assets, level, doc) {
-    const budget = LIGHT_BUDGET[level] ?? 4;
-    if (this.lightLevel !== level) {
+    const budget = this.detail?.lights ?? LIGHT_BUDGET[level] ?? 4;
+    if (this.lightLevel !== `${level}|${budget}`) {
       for (const l of this.lights) l.removeFromParent(), l.dispose?.();
       this.lights = Array.from({ length: budget }, () => {
         const l = new THREE.PointLight("#ffc98a", 0, 3, 2);
@@ -343,7 +353,7 @@ export class RoomRenderer {
         this.group.add(l);
         return l;
       });
-      this.lightLevel = level;
+      this.lightLevel = `${level}|${budget}`;
     }
     const byId = doc ? new Map(doc.assets.map((a) => [a.id, a])) : new Map();
     const candidates = [];
@@ -388,6 +398,14 @@ export class RoomRenderer {
       light: (MOOD_BY_ID[roomMood(doc)] || MOOD_BY_ID.studio).key[0],
       windows: wins.map((a) => ({ x: a.pos[0], y: a.pos[1] + 0.8, z: a.pos[2] + 0.05, w: 1, h: 1.2, color: roomHour(doc) > 19 || roomHour(doc) < 6 ? "#3a4a7a" : "#dff0ff" })),
     };
+    // Settings → Robot → Graphics → Room reflections off: a neutral studio's
+    if (this.detail?.reflections === false) {
+      if (this.envKey === "neutral") return;
+      this.envKey = "neutral";
+      clearTimeout(this.envTimer);
+      this.stage.makeEnvironment();
+      return;
+    }
     const key = JSON.stringify(spec);
     if (key === this.envKey) return;
     this.envKey = key;
@@ -439,7 +457,7 @@ export class RoomRenderer {
   update(dt, pose, fx = {}, camera = null) {
     this.legacy.update(dt, pose, fx);
     if (this.mode !== "doc") return;
-    const wind = this.doc?.atmosphere?.wind ?? 0.3;
+    const wind = this.detail?.sway === false ? 0 : this.doc?.atmosphere?.wind ?? 0.3;
     const f = { ...fx, wind };
     for (const inst of this.instances.values()) inst.built.update?.(dt, this.legacy.time, f);
     if (this.arch && camera) updateCutaway(this.arch.walls, camera, this.doc.architecture.cutaway, dt);

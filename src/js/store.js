@@ -118,6 +118,19 @@ function write(path, value) {
   keys.reduce((o, k) => o[k], settings)[last] = value;
 }
 
+// "Reset" on one group of Settings: each path back to what a fresh install has
+export async function resetSettings(paths) {
+  if (!settings) return false;
+  const defaults = await api.settings.defaults();
+  updateSettings(() => {
+    for (const path of paths) {
+      const value = path.split(".").reduce((o, k) => o?.[k], defaults);
+      if (value !== undefined) write(path, clone(value));
+    }
+  });
+  return true;
+}
+
 // Simple controls bind themselves: <input data-setting="personality.name">
 function syncControls() {
   document.querySelectorAll("[data-setting]").forEach((el) => {

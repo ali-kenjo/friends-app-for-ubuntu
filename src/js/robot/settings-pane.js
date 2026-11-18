@@ -10,6 +10,7 @@ import { useTemplate } from "../room/client.js";
 import { usableShots } from "../room/cameras.mjs";
 import "./studio/studio.js";
 import "../room/editor/open.js";
+import "../room/settings-room.js";
 import { board } from "../whiteboard/store.js";
 import { characterName } from "../characters.js";
 
@@ -32,7 +33,9 @@ const MAX_MODEL = 30 * 1024 * 1024;
 const LEVELS = { low: t("Low"), medium: t("Medium"), high: t("High"), ultra: t("Ultra") };
 
 // ---------- The preview ----------
-robot.host("preview", preview, { priority: 2 });
+// Above Home's robot (which stays live under the Settings window), below voice mode's (Settings opened while
+// filming must not take the picture away from the recording)
+robot.host("preview", preview, { priority: 2.5 });
 
 document.addEventListener("friends:settings", (e) => {
   const showing = e.detail.open && e.detail.tab === "robot";
@@ -180,16 +183,63 @@ function accentHue(hex) {
 }
 
 document.addEventListener("friends:robot-quality", (e) => {
-  const { setting, level } = e.detail;
-  qualityStatus.textContent = setting === "auto" ? t("Auto is using {level} now (it steps down if it gets slow)", { level: LEVELS[level] }) : `${LEVELS[level]}`;
+  const { setting, level, saving } = e.detail;
+  qualityStatus.textContent = saving ? t("On battery: {level}, to save power", { level: LEVELS[level] }) : setting === "auto" ? t("Auto is using {level} now (it steps down if it gets slow)", { level: LEVELS[level] }) : `${LEVELS[level]}`;
 });
 
 const fpsStatus = document.getElementById("robot-fps-status");
 document.addEventListener("friends:robot-stats", (e) => {
   const { fps, level, drawCalls, triangles } = e.detail;
   if (fpsStatus) {
-    fpsStatus.textContent = `${fps} FPS · ${LEVELS[level] || level} (${drawCalls} draws, ${triangles} tris)`;
+    fpsStatus.textContent = t("{fps} frames a second · {level} ({draws} draw calls, {tris} triangles)", { fps: nf(fps), level: LEVELS[level] || level, draws: nf(drawCalls), tris: nf(triangles) });
   }
+  showOverlay(e.detail);
+});
+
+// ---------- The performance overlay (Settings → Robot → Graphics) ----------
+// Over the corner of the robot's picture, wherever it shows: frames a second, the level, and what one frame
+// costs against the level's budget (over budget shows in the warning color). For you, never in recordings
+// (it's a page element, not part of the picture).
+let overlay = null;
+let overlayTimer = 0;
+function hideOverlay() {
+  overlay?.remove();
+  overlay = null;
+}
+function showOverlay(stats) {
+  // (the numbers come once a second while the robot is drawn; without them it has gone)
+  clearTimeout(overlayTimer);
+  overlayTimer = setTimeout(hideOverlay, 2500);
+  const on = getSettings()?.robot?.graphics?.overlay === true;
+  const canvas = robot.engine?.canvas;
+  const rect = canvas?.isConnected ? canvas.getBoundingClientRect() : null;
+  if (!on || !rect || rect.width < 2) return hideOverlay();
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.className = "robot-perf-overlay";
+    overlay.setAttribute("aria-hidden", "true"); // the same numbers are read out in Settings → Robot → Graphics
+  }
+  if (!overlay.isConnected) document.body.append(overlay);
+  const b = stats.budget || {};
+  const line = (label, value, max) => {
+    const row = document.createElement("div");
+    row.textContent = max ? `${label} ${nf(value)} / ${nf(max)}` : `${label} ${value}`;
+    if (max && value > max) row.className = "over";
+    return row;
+  };
+  overlay.replaceChildren(
+    line(t("Frames a second"), nf(stats.fps)),
+    line(t("Level"), LEVELS[stats.level] || stats.level),
+    line(t("Draw calls"), stats.drawCalls, b.drawCalls),
+    line(t("Triangles"), stats.triangles, b.triangles),
+    line(t("Particles"), stats.particles, b.particles),
+  );
+  overlay.style.insetInlineStart = "auto";
+  overlay.style.left = `${Math.round(rect.left + 8)}px`;
+  overlay.style.top = `${Math.round(rect.top + 8)}px`;
+}
+onSettings((s) => {
+  if (!s?.robot?.graphics?.overlay) hideOverlay();
 });
 
 // ---------- "Follow my face" ----------

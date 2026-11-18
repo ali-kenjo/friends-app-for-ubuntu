@@ -9,9 +9,9 @@ import { announce } from "../../a11y.js";
 import { confirmDialog } from "../../dialogs.js";
 import * as D from "../design.mjs";
 import * as R from "../room.mjs";
-import { asLegacy } from "../../room/as-legacy.mjs";
+import { listRooms, useTemplate } from "../../room/client.js";
 import { lookFile, readLookFile } from "../looks.mjs";
-import { colorsPanel, shapePanel, facePanel, outfitPanel, roomPanel, behaviorsPanel, builderPanel, looksPanel } from "./panels.js";
+import { colorsPanel, shapePanel, facePanel, outfitPanel, roomPanel, behaviorsPanel, looksPanel } from "./panels.js";
 import { h, button, slider, arrowKeys, glyph } from "./ui.js";
 
 const modal = document.getElementById("robot-studio");
@@ -23,14 +23,18 @@ const undoBtn = document.getElementById("rs-undo");
 const redoBtn = document.getElementById("rs-redo");
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
-// The Room tab still edits a 1.0 room object: a room document is read as one (src/js/room/as-legacy.mjs),
-// and a change here writes that object (the Room Editor replaces this tab; PLAN step 5)
+// settings.robot.room is a reference to a room document ({ layoutId }); the Room tab changes that document
 const rawRobot = () => getSettings()?.robot;
-const robotSettings = () => {
-  const r = rawRobot();
-  return r && { ...r, room: asLegacy(r.room, robot.room) };
-};
-const legacyFirst = (s) => (s.robot.room = asLegacy(s.robot.room, robot.room));
+const robotSettings = () => rawRobot();
+// The names of the rooms (for the looks that name one)
+let roomNames = new Map();
+const loadRoomNames = () =>
+  listRooms()
+    .then(({ rooms }) => {
+      roomNames = new Map(rooms.map((r) => [r.id, r.name]));
+      refreshAll();
+    })
+    .catch(() => {});
 
 // ---------- Undo ----------
 // A change within a second of the last one (a dragged slider) counts as one step
@@ -79,29 +83,18 @@ const ctx = {
       s.robot.design = D.sanitizeDesign(s.robot.design, s.robot.design);
     });
   },
-  room(fn) {
+  // A place: its template room (the one made from it before, or a new one); undo goes back to the room before
+  async place(id) {
     remember();
-    updateSettings((s) => {
-      legacyFirst(s);
-      fn(s.robot.room);
-      s.robot.room = R.sanitizeRoom(s.robot.room);
-    });
+    await useTemplate(id);
+    loadRoomNames();
   },
-  place(id) {
-    remember();
-    updateSettings((s) => (s.robot.room = R.changePlace(legacyFirst(s), id)));
-  },
-  randomRoom() {
-    const place = pickOther(R.PLACES.filter((p) => !p.chroma && p.id !== "photo"), robotSettings().room.place);
-    remember();
-    updateSettings((s) => {
-      s.robot.room = R.changePlace(legacyFirst(s), place.id);
-      const lights = R.LIGHTS.filter((l) => l.id !== "auto");
-      s.robot.room.air = pickOther(R.AIRS, s.robot.room.air).id;
-      s.robot.room.light = lights[Math.floor(Math.random() * lights.length)].id;
-    });
+  async randomRoom() {
+    const place = pickOther(R.PLACES.filter((p) => !p.chroma && p.id !== "photo"), robot.room?.template);
+    await ctx.place(place.id);
     announce(t("{name} is the new place", { name: t(place.label) }));
   },
+  roomName: (id) => roomNames.get(id) || t("A room"),
   randomLook() {
     remember();
     updateSettings((s) => (s.robot.design = D.randomDesign(Math.floor(Math.random() * 2 ** 31))));
@@ -154,52 +147,6 @@ const ctx = {
     document.body.append(input);
     input.click();
   },
-  saveCustomRoom(name) {
-    const cleaned = String(name || "").replace(/\s+/g, " ").trim().slice(0, 40) || t("My room");
-    const s = robotSettings();
-    if (s.customRooms && s.customRooms.length >= 24) return announce(t("You can keep 24 rooms. Delete one first."), { urgent: true });
-    remember();
-    updateSettings((all) => {
-      if (!all.robot.customRooms) all.robot.customRooms = [];
-      all.robot.customRooms.push({ id: `room-${Date.now().toString(36)}`, name: cleaned, room: clone(all.robot.room) });
-    });
-    announce(t("Saved as {name}", { name: cleaned }));
-  },
-  async deleteCustomRoom(entry) {
-    const ok = await confirmDialog({ title: t("Delete this room?"), message: t("“{name}” will be removed.", { name: entry.name }), confirm: t("Delete"), danger: true });
-    if (ok) updateSettings((all) => (all.robot.customRooms = (all.robot.customRooms || []).filter((r) => r.id !== entry.id)));
-  },
-  applyCustomRoom(entry) {
-    remember();
-    updateSettings((s) => {
-      s.robot.room = clone(entry.room);
-    });
-    announce(t("{name} is on", { name: entry.name }));
-  },
-  exportCustomRoom(name) {
-    const s = robotSettings();
-    const label = String(name || "").trim().slice(0, 40) || t("My room");
-    const blob = new Blob([R.roomFile({ name: label, room: s.room })], { type: "application/json" });
-    const a = h("a", { href: URL.createObjectURL(blob), download: `${label.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || "robot-room"}.robot-room.json` });
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  },
-  importCustomRoom() {
-    const input = h("input", { type: "file", accept: ".json,application/json", hidden: true });
-    input.addEventListener("change", async () => {
-      const file = input.files[0];
-      input.remove();
-      if (!file) return;
-      if (file.size > 200_000) return announce(t("That file is too big to be a room."), { urgent: true });
-      const imported = R.readRoomFile(await file.text());
-      if (!imported) return announce(t("That isn't a room from Friends."), { urgent: true });
-      ctx.applyCustomRoom({ ...imported, name: imported.name || t("Imported room") });
-    });
-    document.body.append(input);
-    input.click();
-  },
   refresh: () => refreshAll(),
   photoControls: () => photoControls(),
 };
@@ -210,6 +157,12 @@ function pickOther(list, currentId) {
 }
 
 // ---------- Your own picture as the backdrop ----------
+// Your own picture as the view outside (its blur and dimming are the room's)
+function setPhoto(patch) {
+  const d = robot.room;
+  if (d) robot.setRoom({ ...d, architecture: { ...d.architecture, photo: { ...d.architecture.photo, ...patch } } });
+}
+
 function photoControls() {
   const status = h("div", { class: "rs-note", "aria-live": "polite", text: t("No picture yet") });
   const file = h("input", { type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true });
@@ -218,14 +171,14 @@ function photoControls() {
     try {
       await fetch("/api/robot/background", { method: "DELETE" });
       await robot.useBackground(null);
-      refresh(robotSettings().room);
+      refresh(robot.room);
     } catch (err) {
       status.textContent = err.message;
     }
   });
   remove.hidden = true;
-  const blur = slider({ label: t("Blur"), min: R.RANGES.blur[0], max: R.RANGES.blur[1], step: 0.01, def: R.RANGES.blur[2], value: R.RANGES.blur[2], onChange: (v) => ctx.room((r) => (r.photo.blur = v)), format: (v) => `${Math.round(v * 100)}%` });
-  const dim = slider({ label: t("Dim it"), min: R.RANGES.dim[0], max: R.RANGES.dim[1], step: 0.01, def: R.RANGES.dim[2], value: R.RANGES.dim[2], onChange: (v) => ctx.room((r) => (r.photo.dim = v)), format: (v) => `${Math.round(v * 100)}%` });
+  const blur = slider({ label: t("Blur"), min: R.RANGES.blur[0], max: R.RANGES.blur[1], step: 0.01, def: R.RANGES.blur[2], value: R.RANGES.blur[2], onChange: (v) => setPhoto({ blur: v }), format: (v) => `${Math.round(v * 100)}%` });
+  const dim = slider({ label: t("Dim it"), min: R.RANGES.dim[0], max: R.RANGES.dim[1], step: 0.01, def: R.RANGES.dim[2], value: R.RANGES.dim[2], onChange: (v) => setPhoto({ dim: v }), format: (v) => `${Math.round(v * 100)}%` });
   file.addEventListener("change", async () => {
     const picked = file.files[0];
     file.value = "";
@@ -237,7 +190,7 @@ function photoControls() {
       const info = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(info.error || t("Upload failed."));
       await robot.useBackground(info);
-      refresh(robotSettings().room);
+      refresh(robot.room);
     } catch (err) {
       status.textContent = err.message;
     }
@@ -247,10 +200,11 @@ function photoControls() {
     const info = robot.backgroundInfo;
     remove.hidden = !info?.custom;
     status.textContent = info?.custom ? t("{name} is the backdrop.", { name: info.name }) : t("No picture yet");
-    blur.set(room.photo.blur);
-    dim.set(room.photo.dim);
+    const p = room?.architecture?.photo || { blur: 0.25, dim: 0.15 };
+    blur.set(p.blur);
+    dim.set(p.dim);
   }
-  document.addEventListener("friends:robot-background", () => refresh(robotSettings().room));
+  document.addEventListener("friends:robot-background", () => refresh(robot.room));
   return { el, refresh };
 }
 
@@ -261,7 +215,6 @@ const TABS = [
   { id: "face", label: "Face", icon: "smile", build: facePanel },
   { id: "outfit", label: "Outfit", icon: "hat", build: outfitPanel },
   { id: "room", label: "Room", icon: "home", build: roomPanel },
-  { id: "builder", label: "Room Builder", icon: "cube", build: builderPanel },
   { id: "behaviors", label: "Behaviors", icon: "sliders", build: behaviorsPanel },
   { id: "looks", label: "Looks", icon: "sparkles", build: looksPanel },
 ];
@@ -303,6 +256,8 @@ function refreshAll() {
 }
 
 onSettings(() => refreshAll());
+// The room document changed (another room, the editor, a quick change here)
+document.addEventListener("friends:robot-room", () => refreshAll());
 
 // Your own model replaces the built-in robot: clothes and shapes only apply to the built-in one
 function updateNote() {
@@ -376,6 +331,7 @@ document.addEventListener("friends:robot-unavailable", (e) => {
 
 // ---------- Opening and closing ----------
 export function openStudio(tab = current) {
+  loadRoomNames();
   history.undo.length = history.redo.length = 0;
   history.at = 0;
   syncHistory();

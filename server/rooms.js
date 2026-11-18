@@ -421,6 +421,25 @@ function removeAsset(id) {
 
 const listAssets = () => ({ assets: Object.values(customCatalog()) });
 
+// ---------- A 1.0 room object (an older look, a character, a look file) as a room document ----------
+// Made once and reused: rooms/.legacy-map.json remembers which 1.0 room (by its content) became which document.
+const legacyMapFile = () => path.join(roomsDir(), ".legacy-map.json"); // (a dot: not a room file)
+function fromLegacy(legacyObject) {
+  const clean = legacyRoom.sanitizeRoom(legacyObject);
+  const key = require("crypto").createHash("sha1").update(JSON.stringify(clean)).digest("hex").slice(0, 16);
+  let map = {};
+  try {
+    map = JSON.parse(fs.readFileSync(legacyMapFile(), "utf8")) || {};
+  } catch {}
+  if (map[key] && readRoom(map[key])) return map[key];
+  const doc = migrate.roomFromLegacy(clean, { now: Date.now() });
+  const made = create({ room: doc, name: doc.name });
+  map[key] = made.id;
+  fs.mkdirSync(roomsDir(), { recursive: true, mode: 0o700 });
+  writeJson(legacyMapFile(), map);
+  return made.id;
+}
+
 // ---------- On start: 0.6–1.0 settings become rooms ----------
 // stored: the settings file as read. Returns the settings to keep (with references), or null when nothing changed.
 function migrateOnStart(stored) {
@@ -460,6 +479,7 @@ const reset = () => {
 
 module.exports = {
   events,
+  fromLegacy,
   list, get, create, save, remove, duplicate, exportRoom, importRoom,
   saveAsset, updateAsset, getAsset, assetInfo, removeAsset, listAssets, customCatalog,
   migrateOnStart, ensure, reset, readGlb, inspect, MAX_GLB,

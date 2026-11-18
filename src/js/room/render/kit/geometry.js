@@ -16,7 +16,12 @@ export const TIERS = {
   medium: { curve: 32, bevel: 3, detail: 0.75 },
   low: { curve: 16, bevel: 2, detail: 0.5 },
 };
-export const tierOf = (level) => TIERS[level] || TIERS.high;
+// Settings → Robot → Graphics → Geometry detail: how round curved things are (null: the quality's own)
+let geometryLevel = null;
+export function setGeometryDetail(level) {
+  geometryLevel = TIERS[level] ? level : null;
+}
+export const tierOf = (level) => TIERS[geometryLevel || level] || TIERS.high;
 
 const CREASE = (35 * Math.PI) / 180;
 export const MIN_RADIUS = 0.004;

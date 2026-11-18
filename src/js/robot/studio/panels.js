@@ -4,15 +4,14 @@
 // so dragging a slider and the settings staying in step never fight.
 import * as D from "../design.mjs";
 import * as R from "../room.mjs";
-import * as C from "../room-catalog.mjs";
 import { BUILTIN_LOOKS } from "../looks.mjs";
 import { t, tp } from "../../i18n.js";
 import { robot as robotApi } from "../index.js";
-import { TEMPLATE_BY_ID } from "../../room/templates.mjs";
+import { TEMPLATE_BY_ID, TEMPLATES } from "../../room/templates.mjs";
+import * as C from "../../room/choices.mjs";
 import { h, section, hint, swatches, tiles, slider, toggle, textField, button, arrowKeys, nextId, glyph } from "./ui.js";
 
 const OUTFIT_COLORS = ["#e05a47", "#f2c14e", "#4d8a62", "#3b6fd6", "#7a5cf0", "#f06bb0", "#f4efe6", "#2b2e35", "#8a5a33", "#5eead4", "#ff8a3d"];
-const ROOM_COLORS = ["#0b0b0d", "#26272c", "#3a4ea8", "#5aa6f2", "#7a5cf0", "#c0507f", "#f3a469", "#4a7a4a", "#6b4a3a", "#eaf4ff", "#ffd9b0", "#ff3ea5"];
 const BLUSH_COLORS = ["#ff6f91", "#f472b6", "#ff8a3d", "#c084fc", "#5eead4"];
 const percent = (v) => `${Math.round(v * 100)}%`;
 
@@ -223,33 +222,22 @@ export function outfitPanel(ctx) {
 }
 
 // ---------- Room ----------
+// The room it's in (a room document): which one, a place to start from, and its light and air. Everything
+// else (furniture, walls, the robot's rules) is in the Room Editor.
 export function roomPanel(ctx) {
   const el = h("div", { class: "rs-panel-body" });
-  const places = tiles({ label: null, name: t("Place"), items: R.PLACES, onChange: (id) => ctx.place(id), columns: 3 });
-  const dynamic = h("div", { class: "rs-room-dynamic" });
-  const light = tiles({ label: t("Mood"), items: R.LIGHTS, onChange: (v) => ctx.room((r) => (r.light = v)), compact: true, columns: 4 });
-  const brightness = slider({ label: t("Brightness"), min: R.RANGES.brightness[0], max: R.RANGES.brightness[1], step: 0.01, def: 1, value: 1, onChange: (v) => ctx.room((r) => (r.brightness = v)), format: percent });
-  const floor = tiles({ label: null, name: t("Floor"), items: R.FLOORS, onChange: (v) => ctx.room((r) => (r.floor = v)), compact: true, columns: 5 });
-  const air = tiles({ label: null, name: t("In the air"), items: R.AIRS, onChange: (v) => ctx.room((r) => (r.air = v)), compact: true, columns: 5 });
-  const amount = slider({ label: t("How much"), min: R.RANGES.airAmount[0], max: R.RANGES.airAmount[1], step: 0.01, def: 1, value: 1, onChange: (v) => ctx.room((r) => (r.airAmount = v)), format: percent });
-  const surprise = button(t("Surprise me"), () => ctx.randomRoom(), { icon: "dice" });
-  const lighting = section(t("Lighting"), light.el, brightness.el);
-  const ground = section(t("Floor"), floor.el);
-  const atmosphere = section(t("In the air"), air.el, amount.el);
-  // The Room Editor is where the room is furnished; this says which room it is and opens it
+  const doc = () => robotApi.room;
+  const setAtm = (patch) => {
+    const d = doc();
+    if (d) robotApi.setRoom({ ...d, atmosphere: { ...d.atmosphere, ...patch } });
+  };
+  // Your room
   const roomName = h("p", { class: "rs-room-summary", "aria-live": "polite" });
   const roomFrom = h("p", { class: "rs-hint rs-room-from" });
   const roomPic = h("img", { class: "rs-room-pic", alt: "", hidden: true });
   const edit = h("button", { type: "button", class: "btn btn-primary small", "data-edit-room": "full", text: t("Edit the room…") });
-  const summary = () => {
-    const doc = robotApi.room;
-    roomName.textContent = doc ? tp("{name}: {n} thing", "{name}: {n} things", doc.assets.filter((a) => !a.hidden).length, { name: doc.name }) : t("The room is still loading.");
-    const from = doc && TEMPLATE_BY_ID[doc.template];
-    roomFrom.textContent = from && from.kind !== "empty" ? t("Made from: {template}", { template: t(from.label) }) : "";
-  };
-  // The picture the Room Editor took when it last closed
   const picture = () => {
-    const id = robotApi.room?.id;
+    const id = doc()?.id;
     if (!id) return;
     fetch("/api/rooms")
       .then((r) => r.json())
@@ -260,76 +248,55 @@ export function roomPanel(ctx) {
       })
       .catch(() => {});
   };
-  document.addEventListener("friends:robot-room", summary);
-  document.addEventListener("friends:robot-room", () => robotApi.room?.id !== roomPic.dataset.room && ((roomPic.dataset.room = robotApi.room?.id || ""), picture()));
+  // A place to start from: its template room (made the first time, then the same one)
+  const placeItems = TEMPLATES.filter((x) => x.kind === "place");
+  const places = tiles({ label: null, name: t("Place"), items: placeItems, onChange: (id) => ctx.place(id), columns: 3 });
+  const surprise = button(t("Surprise me"), () => ctx.randomRoom(), { icon: "dice" });
+  // Light and air (the room's atmosphere)
+  const mood = tiles({ label: t("Mood"), items: C.MOODS, onChange: (v) => setAtm({ mood: v }), compact: true, columns: 4 });
+  const brightness = slider({ label: t("Brightness"), min: 0.5, max: 1.5, step: 0.01, def: 1, value: 1, onChange: (v) => setAtm({ brightness: v }), format: percent });
+  const time = tiles({ label: t("Time of day"), items: C.TIME_MODES, onChange: (v) => setAtm({ timeMode: v }), compact: true, columns: 3 });
+  const hour = slider({ label: t("Hour"), min: 0, max: 24, step: 0.25, def: 14, value: 14, onChange: (v) => setAtm({ timeHour: v }), format: (v) => `${String(Math.floor(v)).padStart(2, "0")}:${String(Math.round((v % 1) * 60)).padStart(2, "0")}` });
+  const air = tiles({ label: null, name: t("In the air"), items: C.AIRS, onChange: (v) => setAtm({ air: v }), compact: true, columns: 5 });
+  const amount = slider({ label: t("How much"), min: 0.3, max: 2, step: 0.01, def: 1, value: 1, onChange: (v) => setAtm({ airAmount: v }), format: percent });
+  const photo = ctx.photoControls();
+  const photoSection = section(t("Your picture"), photo.el);
+  el.append(
+    section(t("Your room"), h("div", { class: "rs-room-card" }, roomPic, h("div", {}, roomName, roomFrom)), hint(t("Place furniture and things, change the walls and the light, and say what the robot may use.")), h("div", { class: "rs-actions" }, edit)),
+    section(t("Start from a place"), hint(t("Each place is a room of its own: what you change in one stays there.")), places.el, h("div", { class: "rs-actions" }, surprise)),
+    section(t("Light and mood"), mood.el, brightness.el, time.el, hour.el),
+    section(t("In the air"), air.el, amount.el),
+    photoSection,
+  );
   document.addEventListener("friends:room-editor-closed", () => setTimeout(picture, 400));
-  summary();
-  el.append(section(t("Your room"), h("div", { class: "rs-room-card" }, roomPic, h("div", {}, roomName, roomFrom)), hint(t("Place furniture and things, change the walls and the light, and say what the robot may use.")), h("div", { class: "rs-actions" }, edit)), section(t("Place"), places.el, h("div", { class: "rs-actions" }, surprise)), dynamic, lighting, ground, atmosphere);
-
-  let builtFor = null;
-  let colorControls = {};
-  let propControls = {};
-  let sign = null;
-  let photo = null;
-
-  function build(room) {
-    const place = R.PLACE_BY_ID[room.place];
-    builtFor = room.place;
-    colorControls = {};
-    propControls = {};
-    sign = null;
-    photo = null;
-    dynamic.replaceChildren();
-    const colors = [];
-    if (!place.chroma) {
-      for (const key of R.COLOR_KEYS) {
-        if (!place.names[key]) continue;
-        const c = swatches({
-          label: t(place.names[key]), colors: ROOM_COLORS, empty: key === "glow" ? { label: t("Light"), title: t("Like the robot's light color") } : null,
-          onChange: (v) => ctx.room((r) => (r.colors[key] = v)),
-        });
-        colorControls[key] = c;
-        colors.push(c.el);
-      }
-    }
-    if (colors.length) dynamic.append(section(t("Colors"), ...colors, h("div", { class: "rs-actions" }, button(t("Back to the usual colors"), () => ctx.room((r) => (r.colors = { ...place.colors })), { icon: "undo" }))));
-    if (place.props.length || place.sign) {
-      const list = [];
-      for (const prop of place.props) {
-        const c = toggle({ label: t(prop.label), onChange: (on) => ctx.room((r) => (r.props[prop.id] = on)) });
-        propControls[prop.id] = c;
-        list.push(c.el);
-      }
-      if (place.sign) {
-        sign = textField({ label: t("Words on the sign"), max: 16, placeholder: t("ON AIR"), onChange: (v) => ctx.room((r) => (r.sign = v)) });
-        list.push(sign.el);
-      }
-      dynamic.append(section(t("What's in the room"), ...list));
-    }
-    if (place.photo) {
-      photo = ctx.photoControls();
-      dynamic.append(section(t("Your picture"), photo.el));
-    }
-    el.classList.toggle("is-chroma", Boolean(place.chroma));
-    lighting.hidden = atmosphere.hidden = Boolean(place.chroma);
-    ground.hidden = Boolean(place.chroma || place.ownFloor);
-  }
+  let shownFor = "";
   return {
     el,
-    refresh(robot) {
-      const room = robot.room;
-      if (builtFor !== room.place) build(room);
-      places.set(room.place);
-      for (const [key, c] of Object.entries(colorControls)) c.set(room.colors[key]);
-      for (const [id, c] of Object.entries(propControls)) c.set(room.props[id]);
-      sign?.set(room.sign);
-      photo?.refresh(room);
-      light.set(room.light);
-      brightness.set(room.brightness);
-      floor.set(room.floor);
-      air.set(room.air);
-      amount.set(room.airAmount);
-      amount.el.hidden = room.air === "none";
+    refresh() {
+      const d = doc();
+      if (!d) {
+        roomName.textContent = t("The room is still loading.");
+        return;
+      }
+      roomName.textContent = tp("{name}: {n} thing", "{name}: {n} things", d.assets.filter((a) => !a.hidden).length, { name: d.name });
+      const from = TEMPLATE_BY_ID[d.template];
+      roomFrom.textContent = from && from.kind !== "empty" ? t("Made from: {template}", { template: t(from.label) }) : "";
+      if (shownFor !== d.id) {
+        shownFor = d.id;
+        picture();
+      }
+      places.set(d.template);
+      const a = d.atmosphere;
+      mood.set(a.mood);
+      brightness.set(a.brightness);
+      time.set(a.timeMode);
+      hour.set(a.timeHour);
+      hour.el.hidden = a.timeMode !== "manual";
+      air.set(a.air);
+      amount.set(a.airAmount);
+      amount.el.hidden = a.air === "none";
+      photoSection.hidden = d.architecture.outside !== "photo";
+      photo.refresh(d);
     },
   };
 }
@@ -405,272 +372,6 @@ export function behaviorsPanel(ctx) {
   };
 }
 
-// ---------- Room Builder ----------
-export function builderPanel(ctx) {
-  const el = h("div", { class: "rs-panel-body" });
-
-  const enableTog = toggle({
-    label: t("Use custom room build"),
-    note: t("Replaces the standard set with your custom walls, floor and placed props."),
-    onChange: (on) => ctx.room((r) => {
-      r.builder.enabled = on;
-    }),
-  });
-
-  const wallTile = tiles({
-    label: t("Walls style"),
-    items: C.WALL_STYLES,
-    onChange: (id) => ctx.room((r) => (r.builder.wallStyle = id)),
-    compact: true,
-    columns: 4,
-  });
-
-  const floorTile = tiles({
-    label: t("Floor style"),
-    items: C.FLOOR_STYLES,
-    onChange: (id) => ctx.room((r) => (r.builder.floorStyle = id)),
-    compact: true,
-    columns: 4,
-  });
-
-  const ceilingTile = tiles({
-    label: t("Ceiling style"),
-    items: C.CEILING_STYLES,
-    onChange: (id) => ctx.room((r) => (r.builder.ceilingStyle = id)),
-    compact: true,
-    columns: 3,
-  });
-
-  const windowTile = tiles({
-    label: t("Window style"),
-    items: C.WINDOW_STYLES,
-    onChange: (id) => ctx.room((r) => (r.builder.windowStyle = id)),
-    compact: true,
-    columns: 4,
-  });
-
-  const lightingTile = tiles({
-    label: t("Lighting rig"),
-    items: C.LIGHTING_RIGS,
-    onChange: (id) => ctx.room((r) => (r.builder.lightingRig = id)),
-    compact: true,
-    columns: 4,
-  });
-
-  let selectedCategory = "all";
-  let searchQuery = "";
-  let selectedItemId = null;
-
-  const catalogGrid = h("div", { class: "rs-tiles compact", style: "--cols:4" });
-
-  function renderCatalog() {
-    const q = searchQuery.toLowerCase().trim();
-    const filtered = C.BUILDER_CATALOG.filter((p) => {
-      if (selectedCategory !== "all" && p.category !== selectedCategory) return false;
-      if (q && !t(p.label).toLowerCase().includes(q) && !p.id.toLowerCase().includes(q) && !p.slot.toLowerCase().includes(q)) return false;
-      return true;
-    });
-    catalogGrid.replaceChildren(
-      ...filtered.map((item) => {
-        const b = h(
-          "button",
-          {
-            type: "button",
-            class: "rs-tile",
-            title: `${t(item.label)} (${t(item.slot)})`,
-            role: "button",
-          },
-          h("span", { class: "rs-tile-icon", text: item.shape === "sofa" ? "🛋" : item.slot === "wall" ? "🖼" : item.slot === "ceiling" ? "💡" : "📦" }),
-          h("span", { class: "rs-tile-label", text: t(item.label) })
-        );
-        b.addEventListener("click", () => {
-          ctx.room((r) => {
-            if (r.builder.items.length >= C.MAX_BUILDER_ITEMS) return;
-            const created = C.sanitizeBuilderItem({ propId: item.id }, r.builder.items.length);
-            if (created) {
-              r.builder.enabled = true;
-              r.builder.items.push(created);
-              selectedItemId = created.id;
-            }
-          });
-        });
-        return b;
-      })
-    );
-  }
-
-  const categoryItems = [{ id: "all", label: "All" }, ...C.BUILDER_CATEGORIES];
-  const categoryTile = tiles({
-    label: t("Catalog category"),
-    items: categoryItems,
-    value: "all",
-    onChange: (cat) => {
-      selectedCategory = cat;
-      renderCatalog();
-    },
-    compact: true,
-    columns: 4,
-  });
-
-  const searchBox = textField({
-    label: t("Search props"),
-    placeholder: t("Search 100+ props…"),
-    onChange: (val) => {
-      searchQuery = val;
-      renderCatalog();
-    },
-  });
-
-  renderCatalog();
-
-  const placedList = h("div", { class: "rs-actions", style: "flex-wrap:wrap;margin-block-end:var(--space-2);" });
-  const editorEl = h("div", { class: "rs-indent" });
-  editorEl.hidden = true;
-
-  const slotTile = tiles({
-    label: t("Snap slot"),
-    items: [
-      { id: "floor", label: "Floor" },
-      { id: "wall", label: "Wall" },
-      { id: "shelf", label: "Shelf" },
-      { id: "ceiling", label: "Ceiling" },
-    ],
-    onChange: (slot) => ctx.room((r) => {
-      const it = r.builder.items.find((x) => x.id === selectedItemId);
-      if (it) {
-        it.slot = slot;
-        const snaps = C.SNAP_SLOTS[slot] || C.SNAP_SLOTS.floor;
-        const snap = snaps[0];
-        it.x = snap[0];
-        it.y = snap[1];
-        it.z = snap[2];
-      }
-    }),
-    compact: true,
-    columns: 4,
-  });
-
-  const posX = slider({ label: t("Position X"), min: -2.2, max: 2.2, step: 0.05, def: 0, value: 0, onChange: (v) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.x = v; }), format: (v) => `${v.toFixed(2)}m` });
-  const posY = slider({ label: t("Height Y"), min: 0, max: 2.6, step: 0.05, def: 0, value: 0, onChange: (v) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.y = v; }), format: (v) => `${v.toFixed(2)}m` });
-  const posZ = slider({ label: t("Position Z"), min: -1.5, max: 1.2, step: 0.05, def: 0, value: 0, onChange: (v) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.z = v; }), format: (v) => `${v.toFixed(2)}m` });
-  const rotY = slider({ label: t("Rotate Y"), min: -180, max: 180, step: 5, def: 0, value: 0, onChange: (v) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.rotY = v; }), format: (v) => `${v}°` });
-  const scale = slider({ label: t("Scale"), min: 0.4, max: 2.2, step: 0.05, def: 1, value: 1, onChange: (v) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.scale = v; }), format: percent });
-
-  const c1Picker = swatches({ label: t("Primary color"), colors: ROOM_COLORS, onChange: (c) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.c1 = c; }) });
-  const c2Picker = swatches({ label: t("Secondary color"), colors: ROOM_COLORS, onChange: (c) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.c2 = c; }) });
-
-  const animTog = toggle({ label: t("Animated"), onChange: (on) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.animated = on; }) });
-  const interTog = toggle({ label: t("Interactive"), onChange: (on) => ctx.room((r) => { const it = r.builder.items.find((x) => x.id === selectedItemId); if (it) it.interactive = on; }) });
-
-  const dupBtn = button(t("Duplicate"), () => {
-    ctx.room((r) => {
-      const it = r.builder.items.find((x) => x.id === selectedItemId);
-      if (!it || r.builder.items.length >= C.MAX_BUILDER_ITEMS) return;
-      const copy = { ...it, id: `item-${Date.now().toString(36)}`, x: Math.min(2.2, it.x + 0.2) };
-      r.builder.items.push(copy);
-      selectedItemId = copy.id;
-    });
-  }, { icon: "copy" });
-
-  const delBtn = button(t("Delete prop"), () => {
-    ctx.room((r) => {
-      r.builder.items = r.builder.items.filter((x) => x.id !== selectedItemId);
-      selectedItemId = r.builder.items[0]?.id || null;
-    });
-  }, { icon: "trash" });
-
-  editorEl.append(
-    slotTile.el,
-    posX.el, posY.el, posZ.el, rotY.el, scale.el,
-    c1Picker.el, c2Picker.el,
-    animTog.el, interTog.el,
-    h("div", { class: "rs-actions" }, dupBtn, delBtn)
-  );
-
-  const roomNameField = textField({ label: t("Name this custom room"), max: 40, value: "", placeholder: t("My custom room"), onChange: () => {} });
-  const saveRoomBtn = button(t("Save custom room"), () => ctx.saveCustomRoom(roomNameField.input.value), { primary: true, icon: "save" });
-  const exportRoomBtn = button(t("Export room…"), () => ctx.exportCustomRoom(roomNameField.input.value), { icon: "download", title: t("Save room as .robot-room.json") });
-  const importRoomBtn = button(t("Import room…"), () => ctx.importCustomRoom(), { icon: "upload", title: t("Open .robot-room.json") });
-  const myRoomsList = h("div", { class: "rs-looks" });
-  const emptyRooms = hint(t("No custom rooms saved yet. Design your room above, then save it here."));
-
-  el.append(
-    section(t("Room Builder"), enableTog.el),
-    section(t("Room Architecture"), wallTile.el, floorTile.el, ceilingTile.el, windowTile.el, lightingTile.el),
-    section(t("Add Props"), searchBox.el, categoryTile.el, catalogGrid),
-    section(t("Placed Props"), placedList, editorEl),
-    section(t("Save & Share Custom Rooms"), h("div", { class: "rs-save" }, roomNameField.el, saveRoomBtn), h("div", { class: "rs-actions" }, exportRoomBtn, importRoomBtn), myRoomsList, emptyRooms)
-  );
-
-  return {
-    el,
-    refresh(robot) {
-      const bld = robot.room?.builder || C.DEFAULT_BUILDER;
-      enableTog.set(bld.enabled);
-      wallTile.set(bld.wallStyle);
-      floorTile.set(bld.floorStyle);
-      ceilingTile.set(bld.ceilingStyle);
-      windowTile.set(bld.windowStyle);
-      lightingTile.set(bld.lightingRig);
-
-      if (!bld.items.some((x) => x.id === selectedItemId)) {
-        selectedItemId = bld.items[0]?.id || null;
-      }
-      placedList.replaceChildren(
-        ...bld.items.map((it) => {
-          const def = C.CATALOG_BY_ID[it.propId];
-          const isSel = it.id === selectedItemId;
-          const b = h("button", {
-            type: "button",
-            class: `btn small${isSel ? " btn-primary" : ""}`,
-            text: def ? t(def.label) : it.id,
-          });
-          b.addEventListener("click", () => {
-            selectedItemId = it.id;
-            ctx.refresh();
-          });
-          return b;
-        })
-      );
-
-      const sel = bld.items.find((x) => x.id === selectedItemId);
-      if (sel) {
-        editorEl.hidden = false;
-        slotTile.set(sel.slot);
-        posX.set(sel.x);
-        posY.set(sel.y);
-        posZ.set(sel.z);
-        rotY.set(sel.rotY);
-        scale.set(sel.scale);
-        c1Picker.set(sel.c1);
-        c2Picker.set(sel.c2);
-        animTog.set(sel.animated);
-        interTog.set(sel.interactive);
-      } else {
-        editorEl.hidden = true;
-      }
-
-      const customRooms = robot.customRooms || [];
-      emptyRooms.hidden = customRooms.length > 0;
-      myRoomsList.replaceChildren(
-        ...customRooms.map((cr) => {
-          const btn = h("button", { type: "button", class: "rs-look", "data-id": cr.id },
-            h("span", { class: "rs-look-swatch", "aria-hidden": "true", style: `--a:${cr.room.colors?.wall || "#3a4ea8"};--b:${cr.room.colors?.floor || "#26272c"};--c:${cr.room.colors?.glow || "#ffd4a6"}` }),
-            h("span", { class: "rs-look-name", text: cr.name }),
-            h("span", { class: "rs-look-things", text: `${cr.room.builder?.items?.length || 0} props` })
-          );
-          btn.addEventListener("click", () => ctx.applyCustomRoom(cr));
-          const wrap = h("div", { class: "rs-look-wrap" }, btn);
-          const del = h("button", { type: "button", class: "rs-look-del", "aria-label": t("Delete {name}", { name: cr.name }), title: t("Delete this room") }, glyph("close", 14));
-          del.addEventListener("click", () => ctx.deleteCustomRoom(cr));
-          wrap.append(del);
-          return wrap;
-        })
-      );
-    },
-  };
-}
-
 // ---------- Looks ----------
 export function looksPanel(ctx) {
   const el = h("div", { class: "rs-panel-body" });
@@ -692,7 +393,7 @@ export function looksPanel(ctx) {
   const card = (look, { saved = false } = {}) => {
     const d = look.design;
     const worn = Object.keys(d.outfit).filter((k) => d.outfit[k].item !== "none").map((k) => t(D.ITEMS[k][d.outfit[k].item].label));
-    const place = R.PLACE_BY_ID[look.room.place] || R.PLACE_BY_ID.studio;
+    const place = look.room?.layoutId ? { label: ctx.roomName(look.room.layoutId) } : R.PLACE_BY_ID[look.room?.place] || R.PLACE_BY_ID.studio;
     const b = h(
       "button", { type: "button", class: "rs-look", "data-id": look.id, title: look.about ? t(look.about) : "" },
       h("span", { class: "rs-look-swatch", "aria-hidden": "true", style: `--a:${d.colors.head};--b:${d.colors.body};--c:${d.colors.light || "var(--accent)"}` }, h("span", { class: "rs-look-eyes" }, h("i"), h("i"))),

@@ -9,6 +9,7 @@ import { entryFor } from "../catalog.mjs";
 import { worldTransform, footprintOf } from "../model.mjs";
 import { buildAsset } from "../render/assets/index.js";
 import * as ops from "./ops.mjs";
+import { lengthOf } from "./prefs.mjs";
 import { nearestWall, WALL_FACING } from "./walls.mjs";
 
 const RAD = Math.PI / 180;
@@ -524,7 +525,9 @@ export class Viewport {
     const check = ops.placementCheck(next, a.id, { checkPath: false });
     const moved = next.assets.find((x) => x.id === a.id);
     const dist = moved.slot === "floor" && this.ctx.prefs().showMeasurements ? ops.wallDistances(next, moved) : null;
-    this.ctx.onHint?.(check.level === "ok" ? (dist ? this.ctx.say("{left} cm from the left wall, {back} cm from the back", { left: Math.round(dist.left * 100), back: Math.round(dist.back * 100) }) : "") : this.reasonWords(check), e);
+    const inch = this.ctx.prefs().units === "in";
+    const far = dist && { left: lengthOf(dist.left, this.ctx.prefs().units).n, back: lengthOf(dist.back, this.ctx.prefs().units).n };
+    this.ctx.onHint?.(check.level === "ok" ? (dist ? this.ctx.say(inch ? "{left} in from the left wall, {back} in from the back" : "{left} cm from the left wall, {back} cm from the back", far) : "") : this.reasonWords(check), e);
   }
 
   dragRotate(d, e) {
@@ -558,7 +561,7 @@ export class Viewport {
     const max = a.slot === "wall" ? room.size.h - (ops.defOf(a)?.height || 0) : 3;
     const y = Math.max(0, Math.min(max, d.y0 + dy));
     this.ctx.commit(ops.updateAsset(room, d.id, a.slot === "ceiling" ? { drop: Math.max(0, Math.min(2, (a.drop || 0) - dy)) } : { pos: [a.pos[0], Math.round(y * 1000) / 1000, a.pos[2]] }), this.ctx.say("Lift"), { coalesce: d.key });
-    this.ctx.onHint?.(`${Math.round(y * 100)} cm`, e);
+    this.ctx.onHint?.(this.lengthWords(y), e);
   }
 
   // ---------- Measuring: two clicks, the distance between them ----------
@@ -625,10 +628,15 @@ export class Viewport {
     m.dots[1].visible = true;
     m.line.geometry.setFromPoints([m.a, p]);
     m.line.visible = true;
-    const cm = Math.round(m.a.distanceTo(p) * 100);
-    const text = this.ctx.say("{n} cm", { n: cm });
-    this.ctx.onHint?.(text, e);
-    if (done) this.ctx.announce(this.ctx.say("{n} cm between the two points", { n: cm }));
+    const len = lengthOf(m.a.distanceTo(p), this.ctx.prefs().units);
+    this.ctx.onHint?.(this.lengthWords(m.a.distanceTo(p)), e);
+    if (done) this.ctx.announce(this.ctx.say(len.unit === "in" ? "{n} in between the two points" : "{n} cm between the two points", { n: len.n }));
+  }
+
+  // "120 cm" or "47 in", as Settings → Robot → Editor → Units says
+  lengthWords(m) {
+    const len = lengthOf(m, this.ctx.prefs().units);
+    return this.ctx.say(len.unit === "in" ? "{n} in" : "{n} cm", { n: len.n });
   }
 
   // ---------- Marquee (in the plan from above) ----------

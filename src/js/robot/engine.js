@@ -27,6 +27,7 @@ import { springStep, clamp } from "./spring.mjs";
 import { appState } from "../core/state-store.mjs";
 import { attachV1Engine, stepV1Frame } from "../core/v1-runtime.mjs";
 import { resolveShot, shotFrame } from "../room/cameras.mjs";
+import { resolveGraphics, buildKey } from "./graphics.mjs";
 import { RoomBehaviour } from "../room/behaviour.mjs";
 import { standCheck } from "../room/editor/robot-ops.mjs";
 
@@ -377,6 +378,11 @@ export class RobotEngine {
     this.smaa = null;
     this.finalTarget = null;
     this.post = { dof: "off", dofStrength: 0.5, grading: true, aa: "msaa", ao: "auto" };
+    // Settings → Robot → Graphics (graphics.mjs), and what the computer is doing (on battery, window in front)
+    this.gfxRaw = {};
+    this.power = { onBattery: false, focused: true };
+    this.baseLevel = "high"; // the quality chosen (Auto may step it down); the battery saver draws one lower
+    this.gfx = resolveGraphics(this.baseLevel, this.gfxRaw, this.power);
 
     this.hosts = new Map(); // name → { el, priority, visible, options }
     this.active = null;
@@ -502,7 +508,7 @@ export class RobotEngine {
       const rect = host.el.getBoundingClientRect();
       w = Math.max(2, Math.round(rect.width));
       h = Math.max(2, Math.round(rect.height));
-      ratio = Math.min(window.devicePixelRatio || 1, q.ratio);
+      ratio = Math.max(0.5, Math.min(window.devicePixelRatio || 1, q.ratio) * (this.gfx?.scale ?? 1));
     }
     if (w === this.size.w && h === this.size.h && ratio === this.size.ratio) return;
     this.size = { w, h, ratio };
@@ -525,8 +531,27 @@ export class RobotEngine {
 
   setQuality(setting) {
     this.look.quality = setting;
-    this.level = setting === "auto" ? this.autoStart() : setting;
+    this.baseLevel = setting === "auto" ? this.autoStart() : setting;
     this.applyQuality();
+  }
+
+  // Settings → Robot → Graphics (graphics.mjs GRAPHICS_DEFAULTS)
+  setGraphics(raw) {
+    this.gfxRaw = raw || {};
+    this.applyQuality();
+  }
+
+  // { onBattery, focused }: the battery saver and "slower while the window isn't in front"
+  setPower(power) {
+    const next = { ...this.power, ...power };
+    const battery = next.onBattery !== this.power.onBattery;
+    this.power = next;
+    if (battery) this.applyQuality();
+  }
+
+  // What the room is built for: the place, the level and the graphics settings that change its build
+  roomKeyNow() {
+    return `${this.placeId()}|${this.level}|${buildKey(this.gfx)}`;
   }
 
   // Auto starts high on a big screen, medium on a very dense one
@@ -535,6 +560,10 @@ export class RobotEngine {
   }
 
   applyQuality() {
+    const gfx = resolveGraphics(this.baseLevel, this.gfxRaw, this.power);
+    this.gfx = gfx;
+    this.level = gfx.level;
+    Object.assign(this.post, { aa: gfx.aa, ao: gfx.ao, grading: gfx.grading, dof: gfx.dof, dofStrength: gfx.dofStrength });
     const q = QUALITY[this.level] || QUALITY.high;
     const maxSamples = this.renderer.capabilities.isWebGL2 ? (this.renderer.capabilities.maxSamples || 4) : 0;
     const samples = this.post?.aa === "msaa" || !this.post ? Math.min(q.samples, maxSamples) : 0;
@@ -549,12 +578,14 @@ export class RobotEngine {
       tex.colorSpace = colorSpace;
     }
     setMaterialDetail(this.robot, q.rich);
-    this.stage.setShadows(q.shadows, q.shadowSize);
+    this.stage.setShadows(gfx.shadows === "auto" ? q.shadows : gfx.shadows !== "off", gfx.shadowSize || q.shadowSize);
+    this.stage.contact.material.visible = gfx.contact;
+    this.worldKey = "";
     if (this.face.configure({ quality: q.face })) this.useFaceTexture();
     this.size = { w: 0, h: 0, ratio: 0 };
     this.resize();
     this.fps = { frames: 0, time: 0, warm: 0 };
-    this.emit("quality", { setting: this.look.quality, level: this.level });
+    this.emit("quality", { setting: this.look.quality, level: this.level, saving: gfx.saving });
     this.emit("stats", this.getStats());
   }
 
@@ -573,6 +604,7 @@ export class RobotEngine {
     };
   }
 
+  // dt: the real time since the last frame (not the animation's capped step, or a slow machine reads fast)
   // Auto: below about 50 frames a second for 3 seconds steps down one level
   // (not while filming: the look must not change in the middle of a shot)
   measure(dt) {
@@ -586,7 +618,7 @@ export class RobotEngine {
         this.emit("stats", this.getStats());
       }
     }
-    if (this.look.quality !== "auto" || !DOWN[this.level] || this.look.cameraFriendly || this.qualityLocked) return;
+    if (this.look.quality !== "auto" || !DOWN[this.baseLevel] || this.look.cameraFriendly || this.qualityLocked) return;
     const f = this.fps;
     if (f.warm < 2) {
       f.warm += dt;
@@ -597,8 +629,10 @@ export class RobotEngine {
     if (f.time < 3) return;
     const rate = f.frames / f.time;
     this.fps = { frames: 0, time: 0, warm: 0 };
-    if (rate < 50) {
-      this.level = DOWN[this.level];
+    // (with a frame-rate cap, "slow" is well under the cap)
+    const cap = this.power.focused === false && !this.look.filming ? this.gfx.idleFps : this.gfx.fps;
+    if (rate < (cap ? Math.min(50, cap * 0.8) : 50)) {
+      this.baseLevel = DOWN[this.baseLevel];
       this.applyQuality();
     }
   }
@@ -634,10 +668,12 @@ export class RobotEngine {
   syncRoom() {
     const place = this.placeId();
     this.roomDirty = false;
-    this.roomKey = `${place}|${this.level}`;
+    this.roomKey = this.roomKeyNow();
+    const g = this.gfx;
+    const detail = { geometry: g.geometry, textures: g.textures, lights: g.lights, contact: g.contact, shadows: g.shadows, shadowSize: g.shadowSize, reflections: g.reflections, sway: g.sway, key: buildKey(g) };
     if (place === "dock") this.rooms.configureDock();
     else if (this.look.roomDoc && place?.startsWith("room:")) {
-      this.rooms.configure(this.look.roomDoc, { light: this.look.accent, level: this.level, filming: this.look.cameraFriendly });
+      this.rooms.configure(this.look.roomDoc, { light: this.look.accent, level: this.level, filming: this.look.cameraFriendly, detail });
       this.behaviour.setRoom(this.look.roomDoc, { filming: Boolean(this.look.filming) });
     }
     else this.rooms.configure({ ...this.look.room, place }, { light: this.look.accent, level: this.level });
@@ -702,18 +738,21 @@ export class RobotEngine {
   // ---------- Each frame ----------
   frame(now) {
     this.raf = requestAnimationFrame(this.frame);
+    // A frame-rate cap (Settings → Robot → Graphics, the battery saver, a window that isn't in front)
+    const cap = this.power.focused === false && !this.look.filming ? this.gfx.idleFps : this.gfx.fps;
+    if (cap && now - this.last < 1000 / cap - 2) return;
     const real = Math.max(0, (now - this.last) / 1000);
     const dt = Math.min(0.1, real);
     this.last = now;
     if (!this.active) return;
-    this.measure(dt);
+    this.measure(Math.min(real, 1));
     if (this.designDirty) this.syncDesign();
     // The clock moves: scheduled things, a scheduled scene or lamps that come on at dusk may change
     if (now - (this.timeChecked || 0) > 30000) {
       this.timeChecked = now;
       if (this.rooms.timeChanged()) this.roomDirty = true;
     }
-    if (this.roomDirty || this.roomKey !== `${this.placeId()}|${this.level}`) this.syncRoom();
+    if (this.roomDirty || this.roomKey !== this.roomKeyNow()) this.syncRoom();
     const options = this.animator.options;
     options.reducedMotion = this.reducedMotion.matches;
     options.cameraFriendly = this.look.cameraFriendly;
@@ -729,7 +768,7 @@ export class RobotEngine {
   draw(pose, dt) {
     const look = this.look;
     const chroma = this.rooms.isChroma;
-    const bloomOn = QUALITY[this.level].bloom && !chroma;
+    const bloomOn = QUALITY[this.level].bloom && !chroma && this.gfx.bloom > 0;
     applyPose(this.robot, pose, { accent: look.accent, user: look.user, cameraFriendly: look.cameraFriendly, glowBoost: bloomOn ? 1 : 1.3, time: pose.t });
     // Where it is in the room (the behaviour engine), with the animator's small moves turned with it
     const b = this.base;
@@ -756,7 +795,7 @@ export class RobotEngine {
     const aoOn = this.renderAO(chroma);
     if (bloomOn) {
       this.renderGlow();
-      this.bloom.strength = look.cameraFriendly ? 0.35 : 0.5;
+      this.bloom.strength = (look.cameraFriendly ? 0.35 : 0.5) * this.gfx.bloom;
       this.bloom.render(r, null, this.glowTarget, dt, false);
     }
     this.paintBackground(bloomOn, pose);
@@ -782,7 +821,8 @@ export class RobotEngine {
     const tier = QUALITY[this.level]?.ao || 0;
     const want = this.post.ao;
     if (want === "off" || !this.renderer.capabilities.isWebGL2) return 0;
-    if (want === "low") return Math.min(1, Math.max(tier, 1)) * (tier ? 1 : 0);
+    if (want === "low") return 1;
+    if (want === "high") return 2;
     return tier;
   }
 
@@ -841,7 +881,8 @@ export class RobotEngine {
       u.uGain.value.fromArray(grade.gain);
     }
     // Depth of field: the diorama look needs no depth; portrait focuses on the robot and needs AO's depth
-    const allowed = QUALITY[this.level]?.dof && !chroma && !this.look.cameraFriendly && this.placeId() !== "dock";
+    // (chosen in Settings → Robot → Graphics; never on chroma keys, camera-friendly filming or the chat dock)
+    const allowed = !chroma && !this.look.cameraFriendly && this.placeId() !== "dock";
     let dof = allowed ? { off: 0, diorama: 1, portrait: 2 }[this.post.dof] || 0 : 0;
     if (dof === 2 && (!aoOn || !u.tDepth.value)) dof = 0;
     u.uDof.value = dof;
@@ -866,12 +907,6 @@ export class RobotEngine {
       this.finalTarget = new THREE.WebGLRenderTarget(pw, ph, { colorSpace: THREE.SRGBColorSpace });
     }
     return true;
-  }
-
-  // Graphics settings beyond the tier (Settings → Robot → Graphics): { dof, dofStrength, grading, aa, ao }
-  setPost(post) {
-    Object.assign(this.post, post);
-    if (post.aa !== undefined) this.applyQuality();
   }
 
   // The scene once more, where only light shows: glowing parts as their light
@@ -1298,7 +1333,7 @@ export class RobotEngine {
     const key = `${on}|${this.level}`;
     if (key !== this.worldKey) {
       this.worldKey = key;
-      this.world.setActive(on, this.level);
+      this.world.setActive(on, this.level, { particles: this.gfx.particles, reflection: this.gfx.reflections });
     }
     if (on) this.world.update(dt, pose, { accent: this.look.accent, user: this.look.user });
   }
@@ -1483,7 +1518,7 @@ export class RobotEngine {
   renderNow() {
     if (!this.active || this.lost) return;
     if (this.designDirty) this.syncDesign();
-    if (this.roomDirty || this.roomKey !== `${this.placeId()}|${this.level}`) this.syncRoom();
+    if (this.roomDirty || this.roomKey !== this.roomKeyNow()) this.syncRoom();
     this.draw(this.animator.pose, 0);
   }
 
@@ -1491,7 +1526,7 @@ export class RobotEngine {
   capturePhoto({ transparent = false } = {}) {
     if (!this.active || this.lost) return "";
     if (this.designDirty) this.syncDesign();
-    if (this.roomDirty || this.roomKey !== `${this.placeId()}|${this.level}`) this.syncRoom();
+    if (this.roomDirty || this.roomKey !== this.roomKeyNow()) this.syncRoom();
     const u = this.final.material.uniforms;
     u.uTransparent.value = transparent && !this.rooms.isChroma ? 1 : 0;
     this.draw(this.animator.pose, 0);

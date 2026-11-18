@@ -1869,10 +1869,13 @@
             <button type="button" class="subtab" role="tab" id="subtab-rb-roles" data-subtab="rb-roles" aria-controls="subpane-rb-roles" aria-selected="false" tabindex="-1">Roles</button>
             <button type="button" class="subtab" role="tab" id="subtab-rb-board" data-subtab="rb-board" aria-controls="subpane-rb-board" aria-selected="false" tabindex="-1">Whiteboard</button>
             <button type="button" class="subtab" role="tab" id="subtab-rb-behaviour" data-subtab="rb-behaviour" aria-controls="subpane-rb-behaviour" aria-selected="false" tabindex="-1">Behaviour</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-room" data-subtab="rb-room" aria-controls="subpane-rb-room" aria-selected="false" tabindex="-1">Room</button>
             <button type="button" class="subtab" role="tab" id="subtab-rb-scene" data-subtab="rb-scene" aria-controls="subpane-rb-scene" aria-selected="false" tabindex="-1">Scene and camera</button>
             <button type="button" class="subtab" role="tab" id="subtab-rb-sound" data-subtab="rb-sound" aria-controls="subpane-rb-sound" aria-selected="false" tabindex="-1">Sound and reactions</button>
             <button type="button" class="subtab" role="tab" id="subtab-rb-film" data-subtab="rb-film" aria-controls="subpane-rb-film" aria-selected="false" tabindex="-1">Filming</button>
-            <button type="button" class="subtab" role="tab" id="subtab-rb-perf" data-subtab="rb-perf" aria-controls="subpane-rb-perf" aria-selected="false" tabindex="-1">Performance and model</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-perf" data-subtab="rb-perf" aria-controls="subpane-rb-perf" aria-selected="false" tabindex="-1">Graphics</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-editor" data-subtab="rb-editor" aria-controls="subpane-rb-editor" aria-selected="false" tabindex="-1">Editor</button>
+            <button type="button" class="subtab" role="tab" id="subtab-rb-privacy" data-subtab="rb-privacy" aria-controls="subpane-rb-privacy" aria-selected="false" tabindex="-1">Privacy</button>
           </div>
 
           <!-- Overview -->
@@ -2217,7 +2220,7 @@
           <div class="subhead"><div>
             <div class="subhead-title">The AI moves it</div>
             <p class="hint">Without these, the robot still reads the mood from the words.</p>
-          </div></div>
+          </div><button type="button" class="btn small" data-reset-settings="robot.aiGestures robot.smartMoods robot.ai robot.seat robot.followFace robot.eyesFollowCursor robot.interactive" data-group="Behaviour" aria-label="Reset Behaviour">Reset</button></div>
           <label class="row">
             <div><div class="row-label">In voice mode</div><div class="row-desc">The AI can choose moods and gestures itself</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.aiGestures.voice">
@@ -2301,7 +2304,72 @@
             <input type="checkbox" class="toggle" data-setting="robot.interactive">
           </label>
 
+          <div class="row"><div><div class="row-label">In this room</div><div class="row-desc">Its home and spots, how it stands and where it looks, how it moves, its routes and what it does with each thing: each room keeps its own, in the Room Editor</div></div><button type="button" class="btn small" data-edit-room="" data-edit-robot="">Edit its rules in the room…</button></div>
           <div class="row"><div><div class="row-label">Personality and idle life</div><div class="row-desc">Energy, curiosity, playfulness… and what it does when it's quiet, in the Robot Studio</div></div><button type="button" class="btn small" data-open-studio="behaviors">Open behavior</button></div>
+          </div>
+
+          <!-- Room: the room the robot is in (its own settings, saved with the room) -->
+          <div class="subpane" id="subpane-rb-room" data-subpane="rb-room" role="tabpanel" aria-labelledby="subtab-rb-room">
+          <div class="subhead"><div>
+            <div class="subhead-title">The room it is in</div>
+            <p class="hint">Saved with the room: another room keeps its own. Everything else about it (its size, walls, floor, ceiling, the view outside, scenes and schedules) is in the Room Editor.</p>
+          </div><button type="button" class="btn small" id="rb-room-reset">Reset light and air</button></div>
+          <div class="row">
+            <div><div class="row-label">Where it is</div><div class="row-desc" id="robot-bg-hint">The room it is in. Furnish it, light it and set the robot's rules in the Room Editor.</div><button type="button" class="btn small" data-edit-room="">Edit the room…</button></div>
+            <select class="field" id="robot-place" aria-label="Where it is"></select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Name</div><div class="row-desc">How the room is called in your list of rooms</div></div>
+            <input type="text" class="field" id="rb-room-name" maxlength="60" aria-label="Name" autocomplete="off">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Mood</div><div class="row-desc">The light's color and how it falls</div></div>
+            <select class="field" id="rb-room-mood" aria-label="Mood"></select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Brightness</div><div class="row-desc" id="rb-room-brightness-value"></div></div>
+            <input type="range" class="field range" id="rb-room-brightness" min="50" max="150" step="1" aria-label="Brightness">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Time of day</div><div class="row-desc">The light through the windows and the sky outside</div></div>
+            <select class="field" id="rb-room-time" aria-label="Time of day"></select>
+          </div>
+          <div class="row" id="rb-room-hour-row">
+            <div><div class="row-label">Hour</div><div class="row-desc" id="rb-room-hour-value"></div></div>
+            <input type="range" class="field range" id="rb-room-hour" min="0" max="24" step="0.25" aria-label="Hour">
+          </div>
+          <label class="row">
+            <div><div class="row-label">Tint with the robot's feelings</div><div class="row-desc">The light takes a little of the color of how it feels</div></div>
+            <input type="checkbox" class="toggle" id="rb-room-tint">
+          </label>
+          <div class="row">
+            <div><div class="row-label">In the air</div><div class="row-desc">What drifts through the room</div></div>
+            <select class="field" id="rb-room-air" aria-label="In the air"></select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">How much</div><div class="row-desc" id="rb-room-amount-value"></div></div>
+            <input type="range" class="field range" id="rb-room-amount" min="30" max="200" step="1" aria-label="How much">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Season</div><div class="row-desc">Seasonal things in the room</div></div>
+            <select class="field" id="rb-room-season" aria-label="Season"></select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Weather from outside</div><div class="row-desc">Rain or snow in the window when it rains or snows where you are (not in Private mode)</div></div>
+            <input type="checkbox" class="toggle" id="rb-room-weather">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Wind</div><div class="row-desc">How much plants and curtains move</div></div>
+            <input type="range" class="field range" id="rb-room-wind" min="0" max="100" step="1" aria-label="Wind">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Camera</div><div class="row-desc">Which of the room's shots voice mode starts with</div></div>
+            <select class="field" id="rb-room-camera" aria-label="Camera"></select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Behind the robot</div><div class="row-desc">The whole room, the robot alone on a color or a green screen, or a transparent picture for streaming</div></div>
+            <select class="field" id="rb-room-backdrop" aria-label="Behind the robot"></select>
+          </div>
           </div>
 
           <!-- Scene and camera -->
@@ -2311,10 +2379,6 @@
             <p class="hint">How voice mode shows it, on screen and in recordings.</p>
           </div></div>
 
-          <div class="row">
-            <div><div class="row-label">Where it is</div><div class="row-desc" id="robot-bg-hint">The room it is in. Furnish it, light it and set the robot's rules in the Room Editor.</div><button type="button" class="btn small" data-edit-room="">Edit the room…</button></div>
-            <select class="field" id="robot-place" aria-label="Where it is"></select>
-          </div>
           <div class="row">
             <div><div class="row-label" id="robot-shot-label">Camera shot</div><div class="row-desc">How close the camera is</div></div>
             <div class="seg" role="radiogroup" aria-labelledby="robot-shot-label" data-choice="robot.shot">
@@ -2452,7 +2516,8 @@
           <div class="subpane" id="subpane-rb-perf" data-subpane="rb-perf" role="tabpanel" aria-labelledby="subtab-rb-perf">
           <div class="subhead"><div>
             <div class="subhead-title">Quality and performance</div>
-          </div></div>
+            <p class="hint">For every room and every place the robot shows.</p>
+          </div><button type="button" class="btn small" data-reset-settings="robot.quality robot.graphics" data-group="Graphics" aria-label="Reset Graphics">Reset</button></div>
 
           <div class="row">
             <div><div class="row-label">Quality</div><div class="row-desc" id="robot-quality-status">Auto starts high and steps down if it gets slow</div></div>
@@ -2467,6 +2532,152 @@
           <div class="row">
             <div><div class="row-label">Performance and FPS</div><div class="row-desc" id="robot-fps-status">Measuring performance…</div></div>
           </div>
+          <label class="row">
+            <div><div class="row-label">Performance overlay</div><div class="row-desc">Frames a second and what each frame costs, over the corner of the robot&#x27;s picture (never in recordings)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.graphics.overlay">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Render scale</div><div class="row-desc">Fewer pixels draw faster; 100 % is sharpest</div></div>
+            <input type="range" min="50" max="100" step="5" class="field range" data-setting="robot.graphics.renderScale" data-type="number" aria-label="Render scale">
+          </div>
+          <div class="row">
+            <div><div class="row-label">Frame rate</div><div class="row-desc">At most this many frames a second</div></div>
+            <select class="field" data-setting="robot.graphics.fps" aria-label="Frame rate">
+              <option value="30">30</option>
+              <option value="60">60</option>
+              <option value="display">As fast as the screen</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Battery saver</div><div class="row-desc">On battery: one quality level lower and at most 30 frames a second</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.graphics.batterySaver">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Slower in the background</div><div class="row-desc">At most 30 frames a second while another window is in front (not while filming)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.graphics.throttleHidden">
+          </label>
+          <div class="subhead"><div>
+            <div class="subhead-title">Detail</div>
+            
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Smooth edges</div><div class="row-desc">Anti-aliasing: multisampling is sharpest, SMAA is lighter</div></div>
+            <select class="field" data-setting="robot.graphics.aa" aria-label="Smooth edges">
+              <option value="msaa">Multisampling (MSAA)</option>
+              <option value="smaa">SMAA</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Geometry detail</div><div class="row-desc">How round curved things are</div></div>
+            <select class="field" data-setting="robot.graphics.geometry" aria-label="Geometry detail">
+              <option value="auto">Like the quality</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="ultra">Ultra</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Texture detail</div><div class="row-desc">How fine wood, fabric and stone look up close</div></div>
+            <select class="field" data-setting="robot.graphics.textures" aria-label="Texture detail">
+              <option value="auto">Like the quality</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="ultra">Ultra</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Lamps that light the room</div><div class="row-desc">How many lamps, candles and screens really cast light</div></div>
+            <select class="field" data-setting="robot.graphics.lights" aria-label="Lamps that light the room">
+              <option value="auto">Like the quality</option>
+              <option value="0">None</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Plants sway</div><div class="row-desc">Plants and curtains move in the room&#x27;s wind</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.graphics.sway">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Particles</div><div class="row-desc">How much drifts in the air (dust, snow, fireflies…)</div></div>
+            <select class="field" data-setting="robot.graphics.particles" data-type="number" aria-label="Particles">
+              <option value="0">None</option>
+              <option value="50">Half</option>
+              <option value="100">Normal</option>
+              <option value="150">More</option>
+            </select>
+          </div>
+          <div class="subhead"><div>
+            <div class="subhead-title">Light and shadow</div>
+            
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Shadows</div><div class="row-desc">How sharp the shadows are</div></div>
+            <select class="field" data-setting="robot.graphics.shadows" aria-label="Shadows">
+              <option value="auto">Like the quality</option>
+              <option value="off">Off</option>
+              <option value="hard">Hard</option>
+              <option value="soft">Soft</option>
+              <option value="very_soft">Very soft</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Shadow resolution</div><div class="row-desc">Higher is crisper and slower</div></div>
+            <select class="field" data-setting="robot.graphics.shadowRes" aria-label="Shadow resolution">
+              <option value="auto">Like the quality</option>
+              <option value="1024">1024</option>
+              <option value="2048">2048</option>
+              <option value="4096">4096</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Ambient occlusion</div><div class="row-desc">Soft darkening where things meet</div></div>
+            <select class="field" data-setting="robot.graphics.ao" aria-label="Ambient occlusion">
+              <option value="auto">Like the quality</option>
+              <option value="off">Off</option>
+              <option value="low">Low</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Contact shadows</div><div class="row-desc">Soft shadows right under things and under the robot</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.graphics.contactShadows">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Room reflections</div><div class="row-desc">Shiny things reflect the room itself (off: a neutral studio)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.graphics.reflections">
+          </label>
+          <div class="subhead"><div>
+            <div class="subhead-title">Camera look</div>
+            
+          </div></div>
+          <div class="row">
+            <div><div class="row-label">Glow</div><div class="row-desc">How much bright things glow (0 is off)</div></div>
+            <input type="range" min="0" max="150" step="5" class="field range" data-setting="robot.graphics.bloom" data-type="number" aria-label="Glow">
+          </div>
+          <label class="row">
+            <div><div class="row-label">Color grading</div><div class="row-desc">The picture takes the color of the room&#x27;s mood</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.graphics.grading">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Depth of field</div><div class="row-desc">Diorama blurs the edges like a miniature; portrait keeps the robot sharp and blurs the room behind</div></div>
+            <select class="field" data-setting="robot.graphics.dof" aria-label="Depth of field">
+              <option value="off">Off</option>
+              <option value="diorama">Diorama</option>
+              <option value="portrait">Portrait</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Depth of field strength</div><div class="row-desc">How strong the blur is</div></div>
+            <input type="range" min="0" max="100" step="5" class="field range" data-setting="robot.graphics.dofStrength" data-type="number" aria-label="Depth of field strength">
+          </div>
           <div class="subhead"><div>
             <div class="subhead-title">Your own model</div>
             <p class="hint">A robot you made in Blender, as one .glb file (up to 30 MB). The README explains the part names it needs.</p>
@@ -2479,6 +2690,120 @@
               <button type="button" class="btn" id="robot-model-reset" hidden>Reset to built-in robot</button>
               <input type="file" id="robot-model-file" accept=".glb,model/gltf-binary" hidden>
             </div>
+          </div>
+          </div>
+
+          <!-- Editor: the Room Editor's preferences -->
+          <div class="subpane" id="subpane-rb-editor" data-subpane="rb-editor" role="tabpanel" aria-labelledby="subtab-rb-editor">
+          <div class="subhead"><div>
+            <div class="subhead-title">Room Editor</div>
+            <p class="hint">The same as the editor&#x27;s Snapping menu.</p>
+          </div><button type="button" class="btn small" data-reset-settings="robot.editor" data-group="Editor" aria-label="Reset Editor">Reset</button></div>
+          <label class="row">
+            <div><div class="row-label">Snap to the grid</div><div class="row-desc">Things land on the grid (hold Ctrl while dragging to place freely)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.snapGrid">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Grid size</div><div class="row-desc">The grid&#x27;s step</div></div>
+            <select class="field" data-setting="robot.editor.grid" data-type="number" aria-label="Grid size">
+              <option value="0.05">5 cm</option>
+              <option value="0.1">10 cm</option>
+              <option value="0.25">25 cm</option>
+              <option value="0.5">50 cm</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Snap angles</div><div class="row-desc">Turning goes in steps</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.snapAngle">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Angle step</div><div class="row-desc">How far one step turns</div></div>
+            <select class="field" data-setting="robot.editor.angle" data-type="number" aria-label="Angle step">
+              <option value="5">5°</option>
+              <option value="15">15°</option>
+              <option value="45">45°</option>
+              <option value="90">90°</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Guides to other things</div><div class="row-desc">Lines up with the edges and middles of other things</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.snapGuides">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Against walls</div><div class="row-desc">Things that go on the floor slide up against a wall</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.snapWalls">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Middle of surfaces</div><div class="row-desc">Things put on a table or shelf find its middle</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.snapSurfaces">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Show distances</div><div class="row-desc">While you move a thing: how far it is from the walls</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.showMeasurements">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Show where the robot can&#x27;t go</div><div class="row-desc">Its blocked floor, whenever its tools are showing</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.showNav">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Units</div><div class="row-desc">Lengths in centimetres or inches</div></div>
+            <select class="field" data-setting="robot.editor.units" aria-label="Units">
+              <option value="cm">Centimetres</option>
+              <option value="in">Inches</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Handle size</div><div class="row-desc">The rings and arrows you drag</div></div>
+            <select class="field" data-setting="robot.editor.handleSize" data-type="number" aria-label="Handle size">
+              <option value="0.75">Small</option>
+              <option value="1">Normal</option>
+              <option value="1.5">Large</option>
+              <option value="2">Extra large</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Orbit speed</div><div class="row-desc">How fast the view turns and zooms</div></div>
+            <select class="field" data-setting="robot.editor.orbitSpeed" data-type="number" aria-label="Orbit speed">
+              <option value="0.5">Slow</option>
+              <option value="1">Normal</option>
+              <option value="1.5">Fast</option>
+              <option value="2">Very fast</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Invert orbit</div><div class="row-desc">Dragging turns the view the other way</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.invertOrbit">
+          </label>
+          <label class="row">
+            <div><div class="row-label">New things match the room&#x27;s colors</div><div class="row-desc">Things you add take colors from the walls and floor</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.matchColors">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Ask before removing several things</div><div class="row-desc">A question first when more than one thing goes</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.confirmDelete">
+          </label>
+          <label class="row">
+            <div><div class="row-label">Save as you go</div><div class="row-desc">Each change is saved at once; off: you save with the Save button</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.editor.autosave">
+          </label>
+          </div>
+
+          <!-- Privacy: your own things in the room -->
+          <div class="subpane" id="subpane-rb-privacy" data-subpane="rb-privacy" role="tabpanel" aria-labelledby="subtab-rb-privacy">
+          <div class="subhead"><div>
+            <div class="subhead-title">Your own things in the room</div>
+            <p class="hint">Some things can show your own things: your whiteboard on a screen, your notes in a notebook, your photos in a frame, your calendar, your inbox. Each is off until you switch it on.</p>
+          </div><button type="button" class="btn small" data-reset-settings="robot.privacy" data-group="Privacy" aria-label="Reset Privacy">Reset</button></div>
+          <label class="row">
+            <div><div class="row-label">Show them while filming and recording</div><div class="row-desc">Off: they stay blank on camera, and the AI isn&#x27;t told what&#x27;s on them while you film</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.privacy.personalInFilming">
+          </label>
+          <div class="row">
+            <div><div class="row-label">In this room</div><div class="row-desc" id="rb-privacy-none">Nothing in this room can show your own things.</div></div>
+          </div>
+          <div class="rb-privacy-things" id="rb-privacy-things"></div>
+          <div class="row">
+            <div><div class="row-label">Describe a room in Private mode</div><div class="row-desc">With Private mode on, only an AI on this computer is asked. With a cloud AI, your words leave this computer (listed in AI &amp; privacy).</div></div>
           </div>
           </div>
         </section>

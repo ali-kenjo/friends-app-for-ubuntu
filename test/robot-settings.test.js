@@ -49,6 +49,10 @@ describe("Robot settings are kept, checked and repaired", () => {
         sound: { enabled: true, volume: 80, pitch: 1.2, blips: false, servos: true, emotes: true, ambience: false, recordMix: true },
         reactions: { mission: false, reminder: true, notifications: false, taskDone: true, habitStreak: false, timeOfDay: true, userReturn: false },
         filming: { delay: 10, cameraFriendly: false, largeCaptions: true, largerFace: true },
+        // 1.1: Settings → Robot → Graphics, Editor and Privacy
+        graphics: { ...require("../src/js/robot/graphics.mjs").GRAPHICS_DEFAULTS, renderScale: 75, fps: "60", lights: "2", shadows: "very_soft", overlay: true, batterySaver: false },
+        editor: { ...require("../src/js/room/editor/prefs.mjs").DEFAULT_PREFS, units: "in", grid: 0.25, angle: 45, showNav: true, autosave: false },
+        privacy: { personalInFilming: true },
       },
     };
     const saved = settings.set(input).robot;
@@ -56,7 +60,8 @@ describe("Robot settings are kept, checked and repaired", () => {
     assert.deepStrictEqual(rest, input.robot);
     assert.deepStrictEqual(ai, settings.DEFAULTS.robot.ai);
     assert.deepStrictEqual(design, settings.DEFAULTS.robot.design);
-    assert.deepStrictEqual(room, settings.DEFAULTS.robot.room);
+    // (1.1: the room is a reference to a room document, made from the default room)
+    assert.strictEqual(require("../server/rooms").get(room.layoutId).template, "studio");
     assert.deepStrictEqual(looks, []);
     const onDisk = JSON.parse(fs.readFileSync(path.join(tempDir, "settings.json"), "utf8")).robot;
     assert.deepStrictEqual(onDisk, saved);
@@ -71,7 +76,7 @@ describe("Robot settings are kept, checked and repaired", () => {
     }).robot;
     assert.strictEqual(r.design.colors.head, "#ede4d6");
     assert.strictEqual(r.design.face.eyes, "classic");
-    assert.strictEqual(r.room.place, "studio");
+    assert.strictEqual(require("../server/rooms").get(r.room.layoutId).template, "studio");
     assert.strictEqual(r.shot, "medium");
     assert.strictEqual(r.position, "center");
     assert.strictEqual(r.seat, "front");

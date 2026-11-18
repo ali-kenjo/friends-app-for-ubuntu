@@ -721,7 +721,7 @@ let nativeNotify = null; // set by the desktop app: fn({ title, body, action })
 
 function events(req, res) {
   res.writeHead(200, securityHeaders({ "Content-Type": "text/event-stream; charset=utf-8", Connection: "keep-alive" }));
-  res.write(`event: hello\ndata: ${JSON.stringify({ native: Boolean(nativeNotify) })}\n\n`);
+  res.write(`event: hello\ndata: ${JSON.stringify({ native: Boolean(nativeNotify), power })}\n\n`);
   eventClients.add(res);
   const beat = setInterval(() => res.write(": still here\n\n"), 25000);
   req.on("close", () => {
@@ -768,6 +768,14 @@ const briefingReady = (made) => {
 };
 
 // The desktop app (electron/main.js) shows notifications itself
+// On battery or not, from the desktop app (Electron powerMonitor): the graphics' battery saver
+// (Settings → Robot → Graphics). null: not known here (the page asks the browser's Battery API).
+let power = null;
+function setPower(state) {
+  power = { onBattery: state?.onBattery === true };
+  push("power", power);
+}
+
 function setNativeNotify(fn) {
   nativeNotify = fn;
 }
@@ -834,6 +842,8 @@ const routes = [
   ["POST", /^\/api\/chats\/([\w-]+)\/suggestions$/, (req, id) => suggestions(id)],
 
   ["GET", /^\/api\/settings$/, () => settings.get()],
+  // What a fresh install has: for "Reset" on one group of Settings (no secrets in it: those are empty)
+  ["GET", /^\/api\/settings\/defaults$/, () => settings.DEFAULTS],
   ["PUT", /^\/api\/settings$/, async (req) => settings.set(await readJson(req))],
   // Only what differs (the page sends this: a stale copy of the rest can't overwrite what the helper changed)
   ["PATCH", /^\/api\/settings$/, async (req) => settings.patch(await readJson(req))],
@@ -1562,4 +1572,4 @@ function start(port = PORT, host = HOST, opts = {}) {
 
 if (require.main === module) start();
 
-module.exports = { start, handle, computeAllowedHosts, setNativeNotify, setRequireAuthForTesting: (v) => (serverRequiresAuth = v) };
+module.exports = { start, handle, computeAllowedHosts, setNativeNotify, setPower, setRequireAuthForTesting: (v) => (serverRequiresAuth = v) };

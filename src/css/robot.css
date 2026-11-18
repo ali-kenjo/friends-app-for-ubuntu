@@ -259,3 +259,20 @@
 .robot-quick { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-3); }
 .pane[data-pane="robot"] .robot-preview-wrap { position: sticky; inset-block-start: 0; z-index: 2; background: var(--bg-main); padding-block-end: var(--space-2); }
 @media (max-height: 760px), (max-width: 700px) { .pane[data-pane="robot"] .robot-preview-wrap { position: static; } }
+
+/* The performance overlay (Settings → Robot → Graphics): over the corner of the robot's picture */
+.robot-perf-overlay {
+  position: fixed;
+  z-index: var(--z-top);
+  pointer-events: none;
+  padding: var(--space-2) var(--space-2h);
+  border-radius: var(--radius-sm);
+  background: rgba(10, 12, 18, 0.78);
+  color: #f2f4f8;
+  font: 12px/1.45 var(--font-mono);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.robot-perf-overlay .over {
+  color: #fcd34d;
+}

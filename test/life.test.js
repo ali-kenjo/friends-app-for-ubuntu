@@ -195,7 +195,8 @@ describe("Reminders reach the page, and the briefing", () => {
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
     let text = "";
     text += (await reader.read()).value;
-    assert.match(text, /event: hello\ndata: \{"native":false\}/);
+    // (1.1: it also says whether the computer is on battery: null here, outside the desktop app)
+    assert.match(text, /event: hello\ndata: \{"native":false,"power":null\}/);
     life.addReminder({ text: "Water the plants", inMinutes: 0.001 });
     life.tick(Date.now() + 1000);
     while (!/event: reminder/.test(text)) text += (await reader.read()).value;

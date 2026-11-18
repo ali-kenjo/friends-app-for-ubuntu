@@ -5,6 +5,8 @@ const { dataDir, writeJson } = require("./config");
 const characters = require("./characters");
 const look = require("./robot-look");
 const roleData = require("../src/js/robot/roles.mjs");
+const graphics = require("../src/js/robot/graphics.mjs");
+const editorPrefs = require("../src/js/room/editor/prefs.mjs");
 const geometry = require("../src/js/whiteboard/geometry.mjs");
 const specialistRoles = require("./specialist-roles");
 const keys = require("./keys");
@@ -232,6 +234,9 @@ const DEFAULTS = {
     nameTag: false, // the character's name under the robot
     smartMoods: false, // one small extra Gemini request per turn to read the mood
     quality: "auto", // ROBOT.qualities
+    graphics: graphics.GRAPHICS_DEFAULTS, // Settings → Robot → Graphics (src/js/robot/graphics.mjs)
+    editor: editorPrefs.DEFAULT_PREFS, // Settings → Robot → Editor, and the Room Editor's Snapping menu (src/js/room/editor/prefs.mjs)
+    privacy: { personalInFilming: false }, // things that show your own things stay blank while filming and recording
     sound: {
       enabled: false, // synthesized WebAudio blips, hums, servo whirs, giggles, sighs, chimes (off by default)
       volume: 50, // 0..100
@@ -759,6 +764,10 @@ function sanitize(input) {
   r.interactive = r.interactive !== false;
   r.nameTag = Boolean(r.nameTag);
   r.quality = oneOf(r.quality, ROBOT.qualities, DEFAULTS.robot.quality);
+  // Graphics: the v1 drawer's anti-aliasing, shadows and "throttle when hidden" are read once, when there are none yet
+  r.graphics = graphics.sanitizeGraphics(raw.graphics && typeof raw.graphics === "object" ? raw.graphics : graphics.graphicsFromV1(input?.visualStyle));
+  r.editor = editorPrefs.sanitizePrefs(raw.editor);
+  r.privacy = { personalInFilming: raw.privacy?.personalInFilming === true };
   r.sound.volume = whole(r.sound.volume ?? DEFAULTS.robot.sound.volume, 0, 100);
   const pitch = Number(r.sound.pitch);
   r.sound.pitch = Number.isFinite(pitch) ? Math.min(1.5, Math.max(0.6, Math.round(pitch * 100) / 100)) : 1;
@@ -1107,6 +1116,14 @@ function withoutDerived(s) {
 
 function set(input) {
   cache = sanitize(input);
+  // The robot's room is always a room document: a 1.0 room (a look, a character's look) becomes one (rooms.js)
+  if (cache.robot?.room && typeof cache.robot.room.layoutId !== "string") {
+    try {
+      cache.robot.room = { layoutId: require("./rooms").fromLegacy(cache.robot.room) };
+    } catch (err) {
+      require("./logger").warn?.(`Rooms: a 1.0 room couldn't become a room document: ${err.message}`);
+    }
+  }
   storeTelegramToken(cache);
   storeRedditSecret(cache);
   storeVoiceSecrets(cache);

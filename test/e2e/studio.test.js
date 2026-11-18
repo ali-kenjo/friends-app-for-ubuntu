@@ -34,6 +34,20 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     assert.fail(`Not saved: ${what}`);
   };
   const click = (selector) => page.evaluate((s) => document.querySelector(s).click(), selector);
+  // 1.1: the robot's room is a room document; settings hold a reference to it
+  const roomNow = async () => {
+    const s = await settings();
+    return s.robot.room?.layoutId ? fetch(`${base}/api/rooms/${s.robot.room.layoutId}`).then((r) => r.json()) : null;
+  };
+  const roomWhere = async (check, what) => {
+    const until = Date.now() + 15000;
+    while (Date.now() < until) {
+      const r = await roomNow();
+      if (r && check(r)) return r;
+      await new Promise((res) => setTimeout(res, 200));
+    }
+    assert.fail(`Not saved: ${what}`);
+  };
   const robotState = () =>
     page.evaluate(() => {
       const e = window.friendsRobot?.engine;
@@ -73,8 +87,9 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     await click("#robot-studio-open");
     await page.waitForFunction(() => !document.getElementById("robot-studio").hidden);
     // (outline icons, not emoji)
-    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab] svg", (icons) => icons.length), 8);
-    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab]", (tabs) => tabs.map((t) => t.textContent.trim())), ["Colors", "Shape", "Face", "Outfit", "Room", "Room Builder", "Behaviors", "Looks"]);
+    // (1.1: the Room Builder tab is gone, the Room Editor builds rooms)
+    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab] svg", (icons) => icons.length), 7);
+    assert.deepStrictEqual(await page.$$eval("#rs-tabs [role=tab]", (tabs) => tabs.map((t) => t.textContent.trim())), ["Colors", "Shape", "Face", "Outfit", "Room", "Behaviors", "Looks"]);
     assert.strictEqual(await page.evaluate(() => document.getElementById("robot-studio").contains(document.activeElement)), true);
     assert.strictEqual(await page.evaluate(() => document.getElementById("settings-modal").inert), true);
     // The robot is drawn in the Studio's stage
@@ -104,32 +119,36 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     assert.notStrictEqual((await robotState()).shape, before);
   });
 
-  test("a place changes the room: its own colors and props, the right set pieces, the right light", async () => {
+  test("a place is a room of its own; its light and air change that room; a green screen keys", async () => {
     await click("#rs-tab-room");
     await page.evaluate(() => document.querySelector('#rs-panel-room .rs-tile[data-id=space]').click());
-    await savedWhere((s) => s.robot.room.place === "space" && s.robot.room.props.planet === true && s.robot.room.floor === "grid", "space");
-    await page.waitForFunction(() => window.friendsRobot.engine.rooms.place?.id === "space", { timeout: 8000 });
-    assert.strictEqual(await page.$$eval("#rs-panel-room .rs-toggle", (rows) => rows.length), 15, "15 procedural space props");
+    const space = await roomWhere((r) => r.template === "space", "the space room");
+    await page.waitForFunction((id) => window.friendsRobot.engine.look.roomDoc?.id === id && window.friendsRobot.engine.rooms.mode === "doc", { timeout: 8000 }, space.id);
+    // Light and air change this room (the room document)
+    await page.evaluate(() => document.querySelector('#rs-panel-room .rs-tile[data-id=night]').click());
+    await roomWhere((r) => r.id === space.id && r.atmosphere.mood === "night", "the night mood");
+    await page.evaluate(() => document.querySelector('#rs-panel-room .rs-tile[data-id=snow]').click());
+    await roomWhere((r) => r.id === space.id && r.atmosphere.air === "snow", "snow in the air");
+    // Another place, and back: the space room kept its night
     await page.evaluate(() => document.querySelector('#rs-panel-room .rs-tile[data-id=podcast]').click());
-    await savedWhere((s) => s.robot.room.place === "podcast" && s.robot.room.sign === "ON AIR", "the podcast studio");
-    // The words on the sign
-    await page.evaluate(() => document.querySelector("#rs-panel-room input[type=text]").select());
-    await page.type("#rs-panel-room input[type=text]", "MY SHOW");
-    await savedWhere((s) => s.robot.room.sign === "MY SHOW", "the sign's words");
-    // The Chroma places are flat: nothing else to choose
+    await roomWhere((r) => r.template === "podcast", "the podcast studio");
+    await page.evaluate(() => document.querySelector('#rs-panel-room .rs-tile[data-id=space]').click());
+    const back = await roomWhere((r) => r.template === "space", "space again");
+    assert.strictEqual(back.id, space.id, "the same room");
+    assert.strictEqual(back.atmosphere.mood, "night");
+    // The Chroma places are a key color
     await page.evaluate(() => document.querySelector('#rs-panel-room .rs-tile[data-id=green]').click());
-    await savedWhere((s) => s.robot.room.place === "green", "the green screen");
-    assert.strictEqual(await page.evaluate(() => window.friendsRobot.engine.rooms.isChroma), true);
+    await roomWhere((r) => r.template === "green", "the green screen");
+    await page.waitForFunction(() => window.friendsRobot.engine.rooms.isChroma === true, { timeout: 8000 });
   });
 
   test("undo and redo bring the last changes back", async () => {
-    const before = (await settings()).robot.room.place;
-    assert.strictEqual(before, "green");
+    assert.strictEqual((await roomNow()).template, "green");
     assert.strictEqual(await page.$eval("#rs-undo", (b) => b.disabled), false);
     await click("#rs-undo");
-    await savedWhere((s) => s.robot.room.place !== "green", "undo");
+    await roomWhere((r) => r.template !== "green", "undo");
     await click("#rs-redo");
-    await savedWhere((s) => s.robot.room.place === "green", "redo");
+    await roomWhere((r) => r.template === "green", "redo");
   });
 
   test("a look is saved with a name, shows up, is applied again and can be deleted", async () => {
@@ -137,14 +156,16 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     await page.evaluate(() => document.querySelector('#rs-panel-looks .rs-tile, #rs-panel-looks .rs-look').scrollIntoView());
     await page.type("#rs-panel-looks .rs-save input", "Green friend");
     await page.evaluate(() => [...document.querySelectorAll("#rs-panel-looks .btn")].find((b) => /Save this look/.test(b.textContent)).click());
-    await savedWhere((s) => s.robot.looks.length === 1 && s.robot.looks[0].name === "Green friend" && s.robot.looks[0].room.place === "green", "the saved look");
+    const green = await roomNow();
+    await savedWhere((s) => s.robot.looks.length === 1 && s.robot.looks[0].name === "Green friend" && s.robot.looks[0].room.layoutId === green.id, "the saved look");
     assert.strictEqual(await page.$$eval("#rs-panel-looks .rs-look-wrap", (e) => e.length), 1);
     // A ready-made look replaces the robot and the room…
     await page.evaluate(() => document.querySelector('#rs-panel-looks .rs-look[data-id="builtin:wizard"]').click());
-    await savedWhere((s) => s.robot.room.place === "observatory" && s.robot.design.outfit.hat.item === "wizard" && s.robot.design.colors.head === "#c9b8f0", "the wizard look");
+    await savedWhere((s) => s.robot.design.outfit.hat.item === "wizard" && s.robot.design.colors.head === "#c9b8f0", "the wizard look");
+    await roomWhere((r) => r.template === "observatory", "the wizard look's room");
     // …and your own comes back
     await page.evaluate(() => document.querySelector('#rs-panel-looks .rs-look-wrap .rs-look').click());
-    await savedWhere((s) => s.robot.room.place === "green", "the saved look, applied");
+    await roomWhere((r) => r.id === green.id, "the saved look, applied");
     await click("#rs-panel-looks .rs-look-del");
     await page.waitForSelector(".confirm-backdrop");
     await page.evaluate(() => document.querySelector('.confirm-backdrop [data-answer="yes"]').click());
@@ -169,7 +190,7 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     assert.match(await page.$eval("#robot-look-summary", (el) => el.textContent), /Green screen/);
     assert.strictEqual(await page.$eval("#robot-place", (el) => el.value), "green");
     await page.select("#robot-place", "lounge");
-    await savedWhere((s) => s.robot.room.place === "lounge" && s.robot.room.props.rug === true, "the living room, chosen in Settings");
+    await roomWhere((r) => r.template === "lounge", "the living room, chosen in Settings");
   });
 
   test("each character keeps its own look when you switch", async () => {
@@ -178,9 +199,11 @@ describe("The Robot Studio", { skip: !CHROME && "no Chrome found" }, () => {
     const s = await settings();
     assert.strictEqual(s.characters.active, "atlas");
     await page.evaluate(() => document.querySelector('#character-switch .character-chip[data-id="mira"]')?.click());
-    await savedWhere((x) => x.characters.active === "mira" && x.robot.design.colors.head === "#f0ccb6" && x.robot.design.face.eyes === "round" && x.robot.room.place === "studio", "Mira's look");
+    await savedWhere((x) => x.characters.active === "mira" && x.robot.design.colors.head === "#f0ccb6" && x.robot.design.face.eyes === "round", "Mira's look");
+    await roomWhere((r) => r.template === "studio", "Mira's room");
     await page.evaluate(() => document.querySelector('#character-switch .character-chip[data-id="atlas"]')?.click());
-    await savedWhere((x) => x.characters.active === "atlas" && x.robot.room.place === "lounge" && x.robot.design.outfit.hat.item === "wizard", "Atlas's look is back");
+    await savedWhere((x) => x.characters.active === "atlas" && x.robot.design.outfit.hat.item === "wizard", "Atlas's look is back");
+    await roomWhere((r) => r.template === "lounge", "Atlas's room is back");
   });
 
   test("nothing went wrong in the page", async () => {

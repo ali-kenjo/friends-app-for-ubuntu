@@ -403,12 +403,14 @@ export function wallDistances(room, asset) {
 
 // ---------- Words ----------
 // "Desk moved 10 cm left, on the floor": what a keyboard move says to a screen reader
-export function moveWords(room, id, dx, dz, say = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "")) {
+export function moveWords(room, id, dx, dz, say = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? ""), units = "cm") {
   const a = room.assets.find((x) => x.id === id);
   if (!a) return "";
   const parts = [];
-  if (dx) parts.push(say(dx < 0 ? "{cm} cm left" : "{cm} cm right", { cm: Math.round(Math.abs(dx) * 100) }));
-  if (dz) parts.push(say(dz < 0 ? "{cm} cm back" : "{cm} cm forward", { cm: Math.round(Math.abs(dz) * 100) }));
+  const inch = units === "in";
+  const n = (m) => (inch ? Math.round((Math.abs(m) / 0.0254) * 2) / 2 : Math.round(Math.abs(m) * 100));
+  if (dx) parts.push(inch ? say(dx < 0 ? "{n} in left" : "{n} in right", { n: n(dx) }) : say(dx < 0 ? "{cm} cm left" : "{cm} cm right", { cm: n(dx) }));
+  if (dz) parts.push(inch ? say(dz < 0 ? "{n} in back" : "{n} in forward", { n: n(dz) }) : say(dz < 0 ? "{cm} cm back" : "{cm} cm forward", { cm: n(dz) }));
   const p = a.parent ? room.assets.find((x) => x.id === a.parent) : null;
   const where = p ? say("on the {name}", { name: displayName(p) }) : a.slot === "wall" ? say("on the wall") : a.slot === "ceiling" ? say("on the ceiling") : say("on the floor");
   return say("{name} moved {how}, {where}", { name: displayName(a), how: parts.join(" ") || say("nowhere"), where });
@@ -417,9 +419,9 @@ export function moveWords(room, id, dx, dz, say = (s, v) => s.replace(/\{(\w+)\}
 // The words spoken here and by the viewport (viewport.js says them through ctx.say, which the scanner can't follow)
 export function labels() {
   return [
-    "{cm} cm left", "{cm} cm right", "{cm} cm back", "{cm} cm forward", "on the {name}", "on the wall", "on the ceiling", "on the floor", "{name} moved {how}, {where}", "nowhere",
+    "{cm} cm left", "{cm} cm right", "{cm} cm back", "{cm} cm forward", "{n} in left", "{n} in right", "{n} in back", "{n} in forward", "on the {name}", "on the wall", "on the ceiling", "on the floor", "{name} moved {how}, {where}", "nowhere",
     "Outside the room", "Inside a wall", "On top of the {name}", "Blocks the robot's way to the {name}", "Stands where the robot lives",
-    "Move {name}", "{name} placed", "Placing {name}. Move the pointer to where it goes; Escape cancels.", "{left} cm from the left wall, {back} cm from the back",
-    "Measuring: click where it starts, then where it ends. Escape stops.", "{n} cm between the two points",
+    "Move {name}", "{name} placed", "Placing {name}. Move the pointer to where it goes; Escape cancels.", "{left} cm from the left wall, {back} cm from the back", "{left} in from the left wall, {back} in from the back",
+    "Measuring: click where it starts, then where it ends. Escape stops.", "{n} cm between the two points", "{n} in between the two points", "{n} cm", "{n} in",
   ];
 }

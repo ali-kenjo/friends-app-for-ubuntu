@@ -8,6 +8,7 @@ import { t } from "../../i18n.js";
 import * as C from "../choices.mjs";
 import * as RO from "./robot-ops.mjs";
 import { displayName } from "../model.mjs";
+import { buildGrid } from "../nav.mjs";
 
 const RAD = Math.PI / 180;
 const Y = 0.02;
@@ -46,6 +47,7 @@ export class RobotTools {
     });
     this.group.clear();
     this.handles = [];
+    this.simGrid = null;
   }
 
   // ---------- Drawing what there is ----------
@@ -105,6 +107,8 @@ export class RobotTools {
       const f = h.facing * RAD;
       this.handle([h.pos[0] + Math.sin(f) * 0.55, h.pos[2] + Math.cos(f) * 0.55], new THREE.Color("#3e9bff"), { kind: "facing" }, 0.07);
     }
+    // Where it can't go (Settings → Robot → Editor → "Show where the robot can't go"; always while simulating)
+    if (!ed.simulating && ed.prefs?.().showNav) this.showSim(null, buildGrid(room));
   }
 
   handle([x, z], c, data, r = 0.06, label = "") {
@@ -210,7 +214,7 @@ export class RobotTools {
     if (d.kind === "home") {
       const check = RO.standCheck(room, p.x, p.z);
       ed.commit(RO.setHome(room, p.x, p.z), t("Home"), opts);
-      ed.hint(check.ok ? `${Math.round(p.x * 100)}, ${Math.round(p.z * 100)} cm` : standWords(ed, room, check), e);
+      ed.hint(check.ok ? `${ed.len(p.x)}, ${ed.len(p.z)}` : standWords(ed, room, check), e);
       d.bad = !check.ok;
       return true;
     }

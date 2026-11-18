@@ -128,7 +128,8 @@ export function initV1Runtime() {
   bus.on(EVENTS.SHADER_CHANGED, () => applyVisualSettings(getSettings()));
   bus.on(EVENTS.LIGHTING_CHANGED, () => applyVisualSettings(getSettings()));
   bus.on(EVENTS.ROBOT_EMOTION, ({ emotion }) => {
-    if (attachedEngine) setEmotionTint(emotion, getSettings()?.visualStyle?.emotionLightingTint !== false);
+    // The room's own "Tint with the robot's feelings" (Settings → Robot → Room; the Room Editor's Light and mood)
+    if (attachedEngine) setEmotionTint(emotion, attachedEngine.look?.roomDoc?.atmosphere?.emotionTint !== false);
   });
   bus.on(EVENTS.CAMERA_PRESET_CHANGED, ({ preset }) => {
     currentCameraPreset = preset;

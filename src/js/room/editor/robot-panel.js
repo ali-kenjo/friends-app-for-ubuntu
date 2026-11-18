@@ -8,6 +8,7 @@ import * as C from "../choices.mjs";
 import { entryFor } from "../catalog.mjs";
 import { defaultRules, displayName } from "../model.mjs";
 import * as RO from "./robot-ops.mjs";
+import { toUnits, fromUnits } from "./prefs.mjs";
 
 // Made when shown (the words are in the interface language)
 const tabNames = () => [
@@ -19,7 +20,11 @@ const tabNames = () => [
   ["auto", t("On its own")],
 ];
 const stateWords = () => ({ idle: t("Idle"), talking: t("Talking"), listening: t("Listening"), thinking: t("Thinking"), away: t("When you're away") });
-const cm = (m) => Math.round(m * 100);
+// A length field in the units chosen (Settings → Robot → Editor): value, limits and result in meters
+function lengthRow(ed, label, m, onChange, { min, max }) {
+  const u = ed.prefs().units;
+  return numberRow(label, toUnits(m, u), (v) => onChange(Math.round(fromUnits(v, u) * 1000) / 1000), { min: toUnits(min, u), max: toUnits(max, u), step: u === "in" ? 0.5 : 1, suffix: u === "in" ? t("in") : t("cm") });
+}
 
 function select(label, options, value, onChange) {
   const s = h("select", { class: "field", "aria-label": label }, ...options.map(([v, l]) => h("option", { value: v, text: l })));
@@ -75,8 +80,8 @@ export function robotPanel(ed, state) {
       return [
         section(t("Home"),
           hint(t("Drag the robot in the room to move its home; its ring turns it.")),
-          numberRow(t("Across (X)"), cm(home.pos[0]), (v) => setRobot({ home: { ...ed.room.robot.home, pos: [v / 100, 0, ed.room.robot.home.pos[2]] } }, t("Home")), { min: -700, max: 700, suffix: "cm" }),
-          numberRow(t("Depth (Z)"), cm(home.pos[2]), (v) => setRobot({ home: { ...ed.room.robot.home, pos: [ed.room.robot.home.pos[0], 0, v / 100] } }, t("Home")), { min: -600, max: 600, suffix: "cm" }),
+          lengthRow(ed, t("Across (X)"), home.pos[0], (v) => setRobot({ home: { ...ed.room.robot.home, pos: [v, 0, ed.room.robot.home.pos[2]] } }, t("Home")), { min: -7, max: 7 }),
+          lengthRow(ed, t("Depth (Z)"), home.pos[2], (v) => setRobot({ home: { ...ed.room.robot.home, pos: [ed.room.robot.home.pos[0], 0, v] } }, t("Home")), { min: -6, max: 6 }),
           slider({ label: t("Facing"), min: -180, max: 180, step: 5, value: home.facing, def: 0, format: (v) => `${Math.round(v)}°`, onChange: (v) => setRobot({ home: { ...ed.room.robot.home, facing: v } }, t("Home"), "home-facing") }).el,
           check.ok ? null : h("p", { class: "rs-hint warn", role: "note", text: standWords(room, check) }),
         ),
@@ -106,7 +111,7 @@ export function robotPanel(ed, state) {
         return section(stateWords()[k],
           select(t("Looks"), C.GAZE_MODES.map((m) => [m.id, t(m.label)]), g.mode, (v) => set({ mode: v })),
           g.mode === "asset" ? select(t("At"), thingOptions(things), g.asset || "", (v) => set({ asset: v || null })) : null,
-          g.mode === "point" ? h("div", {}, numberRow(t("Across (X)"), cm(g.point[0]), (v) => set({ point: [v / 100, g.point[1], g.point[2]] }), { min: -700, max: 700, suffix: "cm" }), numberRow(t("Height (Y)"), cm(g.point[1]), (v) => set({ point: [g.point[0], v / 100, g.point[2]] }), { min: 0, max: 500, suffix: "cm" }), numberRow(t("Depth (Z)"), cm(g.point[2]), (v) => set({ point: [g.point[0], g.point[1], v / 100] }), { min: -600, max: 600, suffix: "cm" })) : null,
+          g.mode === "point" ? h("div", {}, lengthRow(ed, t("Across (X)"), g.point[0], (v) => set({ point: [v, g.point[1], g.point[2]] }), { min: -7, max: 7 }), lengthRow(ed, t("Height (Y)"), g.point[1], (v) => set({ point: [g.point[0], v, g.point[2]] }), { min: 0, max: 5 }), lengthRow(ed, t("Depth (Z)"), g.point[2], (v) => set({ point: [g.point[0], g.point[1], v] }), { min: -6, max: 6 })) : null,
           slider({ label: t("Turns its head (rather than just its eyes)"), min: 0, max: 1, step: 0.05, value: g.headWeight, def: 0.85, onChange: (v) => set({ headWeight: v }, "head") }).el,
           slider({ label: t("Moves its eyes"), min: 0, max: 1, step: 0.05, value: g.eyeWeight, def: 1, onChange: (v) => set({ eyeWeight: v }, "eye") }).el,
           slider({ label: t("Looks away now and then"), min: 0, max: 1, step: 0.05, value: g.lookAway, def: 0.3, onChange: (v) => set({ lookAway: v }, "away") }).el,
@@ -130,7 +135,7 @@ export function robotPanel(ed, state) {
       return [
         section(t("Where it may go"), tiles({ label: null, name: t("Freedom"), items: C.FREEDOMS, value: mv.freedom, columns: 2, onChange: (v) => setMv({ freedom: v }) }).el, mv.freedom === "near_home" ? slider({ label: t("How far from home"), min: 0.2, max: 3, step: 0.05, value: mv.leash, def: 1.2, format: (v) => t("{n} m", { n: v.toFixed(2) }), onChange: (v) => setMv({ leash: v }, "leash") }).el : null),
         section(t("How it moves"),
-          slider({ label: t("Clearance from walls and furniture"), min: 0, max: 60, step: 1, value: mv.clearance, def: 15, format: (v) => t("{n} cm", { n: Math.round(v) }), onChange: (v) => setMv({ clearance: v }, "clear") }).el,
+          slider({ label: t("Clearance from walls and furniture"), min: 0, max: 60, step: 1, value: mv.clearance, def: 15, format: (v) => ed.len(v / 100), onChange: (v) => setMv({ clearance: v }, "clear") }).el,
           slider({ label: t("Speed"), min: 0.2, max: 2.5, step: 0.05, value: mv.speed, def: 0.9, format: (v) => t("{n} m/s", { n: v.toFixed(2) }), onChange: (v) => setMv({ speed: v }, "speed") }).el,
           slider({ label: t("Acceleration"), min: 0.3, max: 5, step: 0.05, value: mv.accel, def: 1.6, format: (v) => v.toFixed(2), onChange: (v) => setMv({ accel: v }, "accel") }).el,
           slider({ label: t("Turn speed"), min: 30, max: 720, step: 10, value: mv.turn, def: 220, format: (v) => t("{n}°/s", { n: Math.round(v) }), onChange: (v) => setMv({ turn: v }, "turn") }).el,
