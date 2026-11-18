@@ -45,3 +45,52 @@ clear?.addEventListener("click", () => {
 });
 document.addEventListener("keydown", onKey, true); // before the settings panel's own keys (Esc closes it)
 onSettings(show);
+
+// ---------- Live voice service (moved here from 1.0's studio drawer) ----------
+// Rows for the chosen service only; keys are sent once and kept in the system keyring by the helper (the field
+// empties and says a key is saved).
+const serviceRows = document.querySelectorAll("[data-voice-for]");
+const keyFields = [
+  { input: document.getElementById("voice-gemini-key"), setting: "geminiKey", has: "hasGeminiKey" },
+  { input: document.getElementById("voice-openai-key"), setting: "openaiKey", has: "hasOpenaiKey" },
+];
+function showService() {
+  const av = getSettings()?.aiVoice || {};
+  for (const row of serviceRows) row.hidden = !row.dataset.voiceFor.split(" ").includes(av.provider || "gemini-live");
+  for (const k of keyFields) if (k.input && document.activeElement !== k.input) k.input.placeholder = av[k.has] ? t("A key is saved (type to replace it)") : t("Paste a key");
+}
+for (const k of keyFields) {
+  k.input?.addEventListener("change", () => {
+    const value = k.input.value.trim();
+    if (!value) return;
+    updateSettings((s) => (s.aiVoice[k.setting] = value));
+    k.input.value = "";
+  });
+}
+onSettings(showService);
+
+// ---------- Data & backups → Robot and voice setup ----------
+const bundleNote = document.getElementById("studio-bundle-note");
+const bundleFile = document.getElementById("studio-bundle-file");
+document.getElementById("studio-bundle-export")?.addEventListener("click", async () => {
+  const { downloadStudioBundle } = await import("./storage/bundle-client.mjs");
+  try {
+    await downloadStudioBundle("zip");
+  } catch (err) {
+    bundleNote.textContent = t("Couldn't export: {error}", { error: err.message });
+  }
+});
+document.getElementById("studio-bundle-import")?.addEventListener("click", () => bundleFile?.click());
+bundleFile?.addEventListener("change", async () => {
+  const file = bundleFile.files?.[0];
+  bundleFile.value = "";
+  if (!file) return;
+  const { importStudioBundleFile } = await import("./storage/bundle-client.mjs");
+  try {
+    await importStudioBundleFile(file);
+    bundleNote.textContent = t("Imported. Reloading…");
+    setTimeout(() => location.reload(), 600);
+  } catch (err) {
+    bundleNote.textContent = t("Couldn't import: {error}", { error: err.message });
+  }
+});

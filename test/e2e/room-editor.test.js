@@ -475,7 +475,8 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await page.mouse.down();
     for (const k of [0.2, 0.5, 0.8, 1]) await page.mouse.move(from.x + 160 * k, from.y + 30 * k, { steps: 2 });
     await page.mouse.up();
-    await page.waitForSelector(".voice-home-offer button", { timeout: 10000 });
+    // (offered once it has walked there: with the whole robot drawn, software WebGL takes a while)
+    await page.waitForSelector(".voice-home-offer button", { timeout: 30000 });
     await click(".voice-home-offer button");
     const at = await page.evaluate(() => [window.friendsRobot.engine.behaviour.pos[0], window.friendsRobot.engine.behaviour.pos[1]]);
     assert.ok(Math.hypot(at[0] - before[0], at[1] - before[2]) > 0.2, `carried: ${at}`);
@@ -483,6 +484,91 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     assert.ok(Math.abs(saved.robot.home.pos[2] - at[1]) < 0.01);
     await page.goto(`${base}/?robot-debug`, { waitUntil: "networkidle2" });
     await page.waitForFunction(() => window.friendsRobot?.room?.id, { timeout: 60000 });
+  });
+
+  test("voice mode's toolbar: home, a thing, the camera, roaming, clean stage, keys, all through the room", async () => {
+    await page.evaluate(() => localStorage.setItem("friends.voiceTheme", "robot"));
+    await page.goto(`${base}/?robot-debug&voice=1`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.friendsRobot?.engine?.active?.name === "voice" && window.friendsRobot.engine.behaving(), { timeout: 60000 });
+    await page.waitForSelector("#voice-dock:not([hidden]) .voice-dock-btn");
+    // A toolbar with labels, translated names, 44 px buttons and arrow keys
+    const names = await page.$$eval("#voice-dock .voice-dock-btn", (els) => els.filter((b) => b.offsetParent).map((b) => b.getAttribute("aria-label")));
+    assert.ok(names.includes("Go home") && names.includes("Camera") && names.includes("Clean stage"), names.join(", "));
+    const size = await page.$eval("#voice-dock .voice-dock-btn", (b) => [b.offsetWidth, b.offsetHeight]);
+    assert.ok(size[0] >= 44 && size[1] >= 44, `44 px: ${size}`);
+    await page.focus('#voice-dock [data-module="summon_home"]');
+    await page.keyboard.press("ArrowDown"); // a rail on the left: up and down move along it
+    assert.notStrictEqual(await page.evaluate(() => document.activeElement.dataset.module), "summon_home");
+    // A thing: the robot walks to it (the thing's own rules allow it)
+    await click('#voice-dock [data-module="quick_prop"]');
+    await page.waitForSelector("#voice-dock-menu .voice-dock-item");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => window.friendsRobot.engine.behaviour.why === "command", { timeout: 5000 });
+    // Home (its key, R)
+    await page.keyboard.press("KeyR");
+    await page.waitForFunction(() => {
+      const b = window.friendsRobot.engine.behaviour;
+      return b.task?.kind === "go" || Math.hypot(b.pos[0] - b.room.robot.home.pos[0], b.pos[1] - b.room.robot.home.pos[2]) < 0.4;
+    }, { timeout: 5000 });
+    // The camera: a ready-made shot joins the room and voice mode uses it
+    await click('#voice-dock [data-module="camera_preset"]');
+    await page.waitForSelector("#voice-dock-menu [role=menuitemradio]");
+    await page.evaluate(() => [...document.querySelectorAll("#voice-dock-menu [role=menuitemradio]")].find((b) => b.textContent.includes("The whole room")).click());
+    const withShot = await savedWhere((r) => r.defaultCamera !== "auto" && r.cameras.some((c) => c.id === r.defaultCamera), "the shot");
+    assert.ok(withShot.cameras.find((c) => c.id === withShot.defaultCamera).name.includes("The whole room"));
+    await click('#voice-dock [data-module="camera_preset"]');
+    await page.waitForSelector("#voice-dock-menu [role=menuitemradio]");
+    await page.evaluate(() => document.querySelector('#voice-dock-menu [role=menuitemradio]').click());
+    await savedWhere((r) => r.defaultCamera === "auto", "back to framing the robot");
+    // Roaming off: it stays put (the behaviour is told), and the button says so
+    await click('#voice-dock [data-module="roam_toggle"]');
+    await page.waitForFunction(() => window.friendsSettings.getSettings().robot.roam === false && document.querySelector('[data-module="roam_toggle"]').getAttribute("aria-pressed") === "false");
+    await page.waitForFunction(() => window.friendsRobot.engine.behaviour.out.roam === false, { timeout: 5000 });
+    await click('#voice-dock [data-module="roam_toggle"]');
+    // Clean stage: everything but the picture; Escape brings the controls back (and doesn't end the conversation)
+    await page.keyboard.press("KeyH");
+    await page.waitForFunction(() => document.body.classList.contains("voice-clean-stage") && getComputedStyle(document.querySelector(".voice-controls")).visibility === "hidden");
+    assert.strictEqual(await page.evaluate(() => !document.querySelector(".voice-clean-pill").hidden), true);
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.body.classList.contains("voice-clean-stage"));
+    assert.strictEqual(await page.evaluate(() => document.getElementById("voice-mode").hidden), false);
+    // Moving a button with Alt + arrow is saved
+    await page.focus('#voice-dock [data-module="interrupt"]');
+    await page.keyboard.down("Alt");
+    await page.keyboard.press("ArrowUp");
+    await page.keyboard.up("Alt");
+    const s = await savedSettings((x) => x.voiceDock.order[0] === "interrupt", "the new order");
+    assert.strictEqual(s.voiceDock.preset, "custom");
+    await api("PATCH", "/api/settings", { voiceDock: { order: s.voiceDock.order.filter((x) => x !== "interrupt").toSpliced(1, 0, "interrupt"), preset: "creator_stage" }, robot: { roam: true } });
+    await page.goto(`${base}/?robot-debug`, { waitUntil: "networkidle2" });
+    await page.waitForFunction(() => window.friendsRobot?.room?.id, { timeout: 60000 });
+  });
+
+  test("Settings → Characters → Voice mode toolbar: buttons, keys and the live voice service", async () => {
+    await click("#settings-btn");
+    await click("#tab-personality");
+    await page.waitForSelector("#dock-modules .dock-module");
+    // A key for the scene button; one already used moves over, M can't be taken
+    await click('#dock-modules [data-dock-id="scene"][data-kind="key"]');
+    await page.keyboard.press("KeyR");
+    let s = await savedSettings((x) => x.voiceDock.shortcuts.scene === "KeyR", "the key");
+    assert.strictEqual(s.voiceDock.shortcuts.summon_home, "", "R moved from Go home");
+    await click('#dock-modules [data-dock-id="summon_home"][data-kind="key"]');
+    await page.keyboard.press("KeyM");
+    assert.match(await page.$eval("#dock-keys-note", (el) => el.textContent), /already does something/);
+    // A preset
+    await page.select("#dock-preset", "minimal");
+    s = await savedSettings((x) => x.voiceDock.preset === "minimal" && x.voiceDock.visible.summon_home === false, "the preset");
+    // The live voice service: only the chosen service's rows show
+    await page.evaluate(() => (document.getElementById("live-voice-service").open = true));
+    await page.select('[data-setting="aiVoice.provider"]', "openai-realtime");
+    await page.waitForFunction(() => !document.getElementById("voice-openai-key").closest(".row").hidden && document.getElementById("voice-gemini-key").closest(".row").hidden);
+    await page.type("#voice-openai-key", "sk-test-not-real");
+    await page.evaluate(() => document.getElementById("voice-openai-key").dispatchEvent(new Event("change", { bubbles: true })));
+    s = await savedSettings((x) => x.aiVoice.provider === "openai-realtime" && x.aiVoice.hasOpenaiKey === true, "the key, kept in the keyring");
+    assert.strictEqual(s.aiVoice.openaiKey, "", "never sent back");
+    await api("PATCH", "/api/settings", { aiVoice: { provider: "gemini-live" }, voiceDock: { preset: "creator_stage", visible: { summon_home: true }, shortcuts: { summon_home: "KeyR", scene: "" } } });
+    await closeSettings();
   });
 
   test("Describe a room: the room from your words shows at once; Undo takes it back", async () => {

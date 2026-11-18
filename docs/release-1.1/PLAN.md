@@ -213,7 +213,8 @@ with what is left written next to it. A fresh session continues from this file a
 
 - [x] Settings → Robot pages: Graphics, Room, Behaviour (§9 table), Editor, Privacy; searchable; reset per group
       (DECISIONS R43–R47). Per-room robot rules stay in the editor, reached from Behaviour.
-- [ ] Voice-dock actions mapped onto the new system.
+- [x] Voice-dock actions mapped onto the new system (DECISIONS R48–R52); the 1.0 studio drawer, dock and clean
+      stage removed, their settings moved.
 - [ ] Remove old code once unused: `src/js/ui/{studio-drawer,room-editor,behavior-studio}.js`,
       `src/css/v1-studio.css`, `src/js/core/world/*`, `src/js/core/robot/*`, `src/js/robot/room-catalog.mjs`,
       `src/js/robot/places/props3d.js`; `room3d.js` and the legacy place builders once every template is rebuilt.
@@ -255,12 +256,12 @@ Filled in as each moves (step 5–8). "→ ?" means not moved yet.
 | Custom rooms: name, save, export, import | Studio → Room Builder (removed) | Editor → Room menu: name, Your rooms…, Duplicate, Save as…, Export…, Import… (old custom rooms were moved on first start) |
 | v1 Room: presets, spawn 15 assets, move/rotate/scale, attach/clear .glb, duplicate, remove, reset pose, undo/redo, debug overlays | v1 drawer → Room | → ? |
 | v1 Behavior: autonomy, focus lock, home X/Z/yaw, return delay, quotas, kinematics, gaze weights, foley, interrupt policy, category multipliers, per-asset weights/dwells, waypoint route builder, AI tool permissions | v1 drawer → Behavior | → ? |
-| v1 Visual: shader theme, lighting preset, emotion tint, desk-lamp glow, shadow quality, GPU stats | v1 drawer → Visual | Shadows, smooth edges, GPU stats (performance overlay), throttle: Settings → Robot → Graphics; emotion tint: Settings → Robot → Room → Tint with the robot's feelings (the room's own switch); shader theme, lighting preset, desk-lamp glow → ? (8d) |
-| v1 Clean stage & backdrops (full/solid/chroma/transparent) | v1 drawer, clean-stage | → ? (backdrop layers) |
-| v1 AI & Data: provider adapter, keys, local endpoint/model, VAD threshold, text sandbox tester, bundle export/import | v1 drawer → AI & Data | → ? (Settings → AI / Data & backups) |
-| v1 Dock: position, toolbar presets, visible modules and shortcuts | v1 drawer → Dock | → ? (Settings → Voice) |
-| Camera presets (wide, desk close-up, whiteboard focus, follow robot, cinema orbit) | clean-stage, voice dock | → ? (camera shots, room-relative) |
-| Voice dock: go home, auto roam, emotion, whiteboard, props/toys, camera, clean stage, studio, mute, VAD/PTT, vision, stop AI | voice dock | → ? |
+| v1 Visual: shader theme, lighting preset, emotion tint, desk-lamp glow, shadow quality, GPU stats | v1 drawer → Visual | Shadows, smooth edges, GPU stats (performance overlay), throttle: Settings → Robot → Graphics; emotion tint: Settings → Robot → Room → Tint with the robot's feelings (the room's own switch); shader theme: Settings → Robot → Graphics → The robot's shading (soft or cel); lighting preset and desk-lamp glow: the room's mood and each lamp's light (R50) |
+| v1 Clean stage & backdrops (full/solid/chroma/transparent) | v1 drawer, clean-stage | Voice toolbar → Clean stage (H, Escape, the pill); backdrops: the room's backdrop layer (Settings → Robot → Room → Behind the robot, the editor), carried over once |
+| v1 AI & Data: provider adapter, keys, local endpoint/model, VAD threshold, text sandbox tester, bundle export/import | v1 drawer → AI & Data | Settings → Characters → Voice conversation → Live voice service; Data & backups → Robot and voice setup; local servers: AI & privacy → AI on this computer; sandbox: the "Typing only" service (R51) |
+| v1 Dock: position, toolbar presets, visible modules and shortcuts | v1 drawer → Dock | Settings → Characters → Voice mode toolbar (layout, where, words, each button and its key); reorder on the toolbar (drag, Alt + arrow) |
+| Camera presets (wide, desk close-up, whiteboard focus, follow robot, cinema orbit) | clean-stage, voice dock | The room's shots: voice toolbar → Camera, voice mode's scene menu, the editor; ready-made shots (the whole room, eye level, keeps the robot in frame, at each main thing); a saved 1.0 preset becomes a room shot once |
+| Voice dock: go home, auto roam, emotion, whiteboard, props/toys, camera, clean stage, studio, mute, VAD/PTT, vision, stop AI | voice dock | Voice toolbar: Go home, Go to… (spots), Mood, Use a thing, Whiteboard, Camera, Scene, Roam the room, Clean stage, Edit the room, Robot Studio, Microphone, Stop talking; VAD/PTT and Vision did nothing and are gone (R48) |
 
 ---
 

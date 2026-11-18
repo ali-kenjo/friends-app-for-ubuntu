@@ -2,28 +2,19 @@
 // Connects the 3D Engine (shader pipeline, lighting presets, unifiedRoom, gizmos),
 // Behavior Engine (A* pathfinding, IK sockets, quotas, choreography),
 // Voice Dock / Clean Stage / Studio Drawer UI, and Room-Context Bridge.
-import * as THREE from "three";
 import { bus, EVENTS } from "./event-bus.mjs";
 import { appState } from "./state-store.mjs";
 import { attachLiveContextSocket, detachLiveContextSocket, initRoomContextBridge } from "./ai/room-context-bridge.mjs";
-import { shaderPipeline } from "./world/shader-pipeline.mjs";
 import { EMOTION_AMBIENT_TINTS } from "./world/lighting-presets.mjs";
 import { unifiedRoom } from "./world/unified-room-manager.mjs";
 import { roomGizmos } from "./world/gizmos.mjs";
 import { navMesh } from "./robot/pathfinding.mjs";
 import { ikSockets } from "./robot/ik-sockets.mjs";
 import { behaviorEngine } from "./robot/behavior-engine.mjs";
-import { voiceDock } from "../ui/voice-dock.js";
-import { CAMERA_PRESET_VIEWS, cleanStage } from "../ui/clean-stage.js";
-import { studioDrawer } from "../ui/studio-drawer.js";
-import { getSettings, onSettings, updateSettings } from "../store.js";
+import { getSettings, onSettings } from "../store.js";
 
 let initialized = false;
 let attachedEngine = null;
-let currentCameraPreset = "wide_room";
-const camPosTarget = new THREE.Vector3(0, 1.48, 3.25);
-const camLookTarget = new THREE.Vector3(0, 0.85, -0.35);
-let smoothCamActive = false;
 
 export function attachV1Engine(engine) {
   if (!engine || attachedEngine === engine) return;
@@ -47,11 +38,8 @@ export function attachV1Engine(engine) {
 
 function applyVisualSettings(s) {
   if (!attachedEngine || !s) return;
-  const vs = s.visualStyle || {};
-  const accent = s.theme?.accent || "#f5a94a";
-  // Shader themes style the robot only; room things keep their art-directed materials (1.1, DECISIONS R6)
-  shaderPipeline.applyStyle(attachedEngine.robot?.root, vs.shaderTheme || "cozy_stylized", { accent });
-  setEmotionTint(appState.get("behavior")?.emotion || "calm", vs.emotionLightingTint !== false);
+  // (the robot's shading is the engine's own now: robot/robot-style.js)
+  setEmotionTint(appState.get("behavior")?.emotion || "calm", attachedEngine.look?.roomDoc?.atmosphere?.emotionTint !== false);
 }
 
 // The robot's feeling tints the room's bounce light a little (the moods own every other light now)
@@ -71,25 +59,6 @@ export function stepV1Frame(engine, pose, dt, time) {
   // Smoothly apply active IK arm reach + weighted head gaze
   ikSockets.applyPostPose(engine.robot, dt);
   unifiedRoom.update(dt, time);
-
-  // Critically damped camera preset override when active in Clean Stage / Studio mode
-  if (smoothCamActive && currentCameraPreset !== "follow_robot") {
-    const view = CAMERA_PRESET_VIEWS[currentCameraPreset];
-    if (view) {
-      const alpha = 1 - Math.exp(-5.5 * dt);
-      camPosTarget.set(view.pos[0], view.pos[1], view.pos[2]);
-      camLookTarget.set(view.target[0], view.target[1], view.target[2]);
-      engine.camera.position.lerp(camPosTarget, alpha);
-      engine.camera.lookAt(camLookTarget);
-    }
-  } else if (currentCameraPreset === "follow_robot" && engine.robot?.nodes?.Root) {
-    const rp = engine.robot.nodes.Root.position;
-    const alpha = 1 - Math.exp(-4.5 * dt);
-    camPosTarget.set(rp.x, 1.38, rp.z + 2.25);
-    camLookTarget.set(rp.x, 0.84, rp.z);
-    engine.camera.position.lerp(camPosTarget, alpha);
-    engine.camera.lookAt(camLookTarget);
-  }
 }
 
 export function dispatchChoreography(choreography) {
@@ -102,9 +71,6 @@ export function initV1Runtime() {
   initialized = true;
 
   initRoomContextBridge();
-  voiceDock.mount(document.body);
-  cleanStage.mount(document.body);
-  studioDrawer.mount(document.body);
 
   // Bind step actions from BehaviorEngine to 3D unified assets + hand sockets
   behaviorEngine.onStepAction = ({ assetId, action, payload }) => {
@@ -131,32 +97,6 @@ export function initV1Runtime() {
     // The room's own "Tint with the robot's feelings" (Settings → Robot → Room; the Room Editor's Light and mood)
     if (attachedEngine) setEmotionTint(emotion, attachedEngine.look?.roomDoc?.atmosphere?.emotionTint !== false);
   });
-  bus.on(EVENTS.CAMERA_PRESET_CHANGED, ({ preset }) => {
-    currentCameraPreset = preset;
-    smoothCamActive = preset !== "wide_room";
-  });
-
-  // Wire voice dock actions to runtime
-  bus.on(EVENTS.DOCK_ACTION, (ev) => {
-    const assets = appState.get("roomAssets") || [];
-    if (ev.action === "summon_home") behaviorEngine.handleChoreographyTool({ tool: "return_home" }, assets);
-    else if (ev.action === "roam_toggle") {
-      const next = !(appState.get("behavior")?.autonomousRoaming !== false);
-      updateSettings({ behaviorEngine: { autonomousRoaming: next } }).catch(() => {});
-    } else if (ev.action === "set_emotion" && ev.emotion) {
-      behaviorEngine.handleChoreographyTool({ tool: "set_emotion", args: { emotion: ev.emotion } }, assets);
-    } else if (ev.action === "toggle_whiteboard") {
-      cleanStage.setCameraPreset(currentCameraPreset === "whiteboard_focus" ? "wide_room" : "whiteboard_focus");
-    } else if (ev.action === "vision_toggle") {
-      const next = !appState.get("voice")?.visionContext;
-      appState.set("voice", { visionContext: next });
-      voiceDock.render();
-    } else if (ev.action === "mic_mode") {
-      const next = appState.get("voice")?.micMode === "ptt" ? "vad" : "ptt";
-      appState.set("voice", { micMode: next });
-      voiceDock.render();
-    }
-  });
 
   // Global Room Undo/Redo + Voice speech interrupts
   window.addEventListener("keydown", (e) => {
@@ -167,12 +107,6 @@ export function initV1Runtime() {
       e.preventDefault();
       appState.undo.redo();
     }
-  });
-
-  document.addEventListener("friends:tray-action", (e) => {
-    const act = e.detail?.action;
-    if (act === "toggle-clean-stage") cleanStage.toggleCleanStage();
-    else if (act === "mute-mic") bus.emit(EVENTS.DOCK_ACTION, { action: "mic_mute" });
   });
 
   document.addEventListener("friends:choreography", (e) => {
@@ -202,13 +136,11 @@ export function initV1Runtime() {
   // Keep reactive settings synchronized
   onSettings((s) => {
     if (!s) return;
-    if (s.voiceDock) voiceDock.configure(s.voiceDock);
     if (s.behaviorEngine) {
       behaviorEngine.configure(s.behaviorEngine);
       unifiedRoom.setFoleyVolume(s.behaviorEngine.foley?.volume ?? 65);
       unifiedRoom.rebuildDebugOverlays(navMesh, s.behaviorEngine.waypointRoute);
     }
-    if (s.stageMode) cleanStage.configure(s.stageMode);
     applyVisualSettings(s);
   });
 }

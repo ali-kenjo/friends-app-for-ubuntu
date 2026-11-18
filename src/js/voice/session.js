@@ -42,7 +42,7 @@ import { spoken } from "./spoken.js";
 import { hooks as stageHooks, stage, syncRobot, resizeCanvas, setVoiceTheme, isRobotStyle } from "./stage.js";
 import { status } from "./status.js";
 import { bus, EVENTS } from "../core/event-bus.mjs";
-import { voiceDock } from "../ui/voice-dock.js";
+import { voiceDock } from "./dock.js";
 
 export { setVoiceTheme };
 
@@ -364,6 +364,7 @@ export async function openVoice() {
   voiceMode.classList.remove("muted");
   robot.director.openVoice();
   syncRobot();
+  voiceDock.setVisible(true);
   resizeCanvas();
   if (store.get("friends.voiceTheme") === "robot" && robot.unavailable) stage.noteRobotMissing();
   status.set("connecting");
@@ -374,7 +375,6 @@ export async function openVoice() {
   await audio.ensureOutput();
   const aiProvider = getSettings()?.aiVoice?.provider || "gemini-live";
   if (aiProvider !== "text-sandbox") await startMic();
-  voiceDock.setVisible(true);
   if (voiceMode.hidden || session !== opened) return;
   clearInterval(heartbeatTimer);
   heartbeatTimer = setInterval(() => {

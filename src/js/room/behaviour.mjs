@@ -299,7 +299,7 @@ export class RoomBehaviour {
     const prev = this.ctxState;
     this.ctxState = state;
     const filming = Boolean(ctx.filming) && robot.states.filming.stay;
-    const still = filming || robot.autonomy.preset === "statue" || robot.movement.freedom === "stay";
+    const still = filming || ctx.stay === true || robot.autonomy.preset === "statue" || robot.movement.freedom === "stay";
     const night = robot.states.night.on && inWindow(robot.states.night.from, robot.states.night.to, now);
     const awayMin = (ctx.awaySec || 0) / 60;
     const away = state === "away" || (state === "idle" && awayMin >= robot.states.away.afterMin);
@@ -748,7 +748,7 @@ export class RoomBehaviour {
   // ---------- What it shows ----------
   output(state = "idle", ctx = {}, { away = false, filming = false } = {}) {
     const robot = this.room?.robot;
-    if (!robot) return { x: 0, z: 0.15, yaw: 0, posture: { kind: "stand", asset: null, point: null }, gaze: { mode: "you", point: null }, hover: 0, stance: "upright", speed: 0, moving: false, quiet: false, sleeping: false, path: [] };
+    if (!robot) return { x: 0, z: 0.15, yaw: 0, posture: { kind: "stand", asset: null, point: null }, gaze: { mode: "you", point: null, headWeight: 1, eyeWeight: 1, lookAway: 0, dontStare: false, headLimit: 90 }, hover: 0, stance: "upright", speed: 0, moving: false, quiet: false, sleeping: false, path: [] };
     const key = away ? "away" : state === "thinking" ? "idle" : state;
     // Posture: sit, lean or rest only once it's there (and the thing is)
     // (a posture you or the AI asked for wins until it stands up again or moves on)
@@ -802,7 +802,7 @@ export class RoomBehaviour {
       moving: this.speed > 0.02,
       quiet,
       sleeping: this.sleeping,
-      roam: !filming && !ctx.reducedMotion && robot.movement.freedom !== "stay" && robot.autonomy.preset !== "statue",
+      roam: !filming && !ctx.reducedMotion && ctx.stay !== true && robot.movement.freedom !== "stay" && robot.autonomy.preset !== "statue",
       path: this.task?.kind === "go" ? this.task.points.slice(this.task.i - 1) : this.task?.leg ? this.task.leg.points.slice(this.task.leg.i - 1) : [],
       why: this.why,
     };

@@ -241,6 +241,8 @@ function applySettings(s) {
     ...(layoutId ? { roomDoc: roomDoc?.id === layoutId ? roomDoc : null } : { room: r.room, roomDoc: null }),
     shot: r.shot,
     position: r.position,
+    // Settings → Robot → Graphics → The robot's shading (1.0's shader theme)
+    robotStyle: s.visualStyle?.shaderTheme === "anime_cel" ? "cel" : "soft",
     cinematic: r.cinematic,
     roam: r.roam !== false,
     world: r.world !== false,

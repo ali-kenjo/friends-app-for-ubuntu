@@ -964,8 +964,10 @@ export class Animator {
       if (this.t < gl.until) x += gl.x;
     }
     const body = this.options.reducedMotion ? 0.5 : 1;
-    const hw = rg ? rg.headWeight : 1;
-    const limit = rg ? (rg.headLimit * Math.PI) / 180 : Infinity;
+    // (a gaze without its weights, or with a broken one, counts as the usual: one NaN here would stay for good)
+    const num = (v, fallback) => (Number.isFinite(v) ? v : fallback);
+    const hw = num(rg?.headWeight, 1);
+    const limit = Number.isFinite(rg?.headLimit) ? (rg.headLimit * Math.PI) / 180 : Infinity;
     o.headYaw += clamp(x * 0.42 * body * hw, -limit, limit);
     o.headPitch += clamp(-y * 0.22 * body * hw, -limit, limit);
     o.bodyYaw += x * 0.15 * body * hw;
@@ -985,10 +987,8 @@ export class Animator {
       }
     }
     let [ex, ey] = eyesOnly || [x, y];
-    if (rg) {
-      ex *= rg.eyeWeight;
-      ey *= rg.eyeWeight;
-    }
+    ex *= num(rg?.eyeWeight, 1);
+    ey *= num(rg?.eyeWeight, 1);
     o.lookX += ex * 0.55 + s.x;
     o.lookY += ey * 0.5 + s.y;
     o.pupilX += clamp(ex * 0.7 + s.x * 1.2, -1, 1);

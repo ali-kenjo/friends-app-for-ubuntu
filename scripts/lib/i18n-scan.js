@@ -153,6 +153,8 @@ function serverStrings() {
   for (const mod of ["choices.mjs", "catalog.mjs", "templates.mjs", "rules.mjs", "model.mjs", "editor/ops.mjs", "cameras.mjs", "behaviour.mjs", "editor/robot-ops.mjs", "ai.mjs"]) {
     for (const label of require(path.join(roomDir, mod)).labels()) out.add(label);
   }
+  // Voice mode's toolbar: its buttons, presets, moods and menu words
+  for (const label of require(path.join(root, "src", "js", "voice", "dock-model.mjs")).labels()) out.add(label);
   return out;
 }
 

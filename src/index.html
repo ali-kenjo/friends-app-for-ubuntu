@@ -38,7 +38,6 @@
   <link rel="stylesheet" href="css/ai.css">
   <link rel="stylesheet" href="css/rtl.css">
   <link rel="stylesheet" href="css/a11y.css">
-  <link rel="stylesheet" href="css/v1-studio.css">
   <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -1732,6 +1731,99 @@
             </select>
           </div>
 
+          <details class="advanced" id="live-voice-service">
+            <summary>Live voice service</summary>
+            <div class="row">
+              <div><div class="row-label">Service</div><div class="row-desc">What runs a live conversation (the Live engine in voice mode)</div></div>
+              <select class="field" data-setting="aiVoice.provider" aria-label="Service">
+                <option value="gemini-live">Gemini Live (Google)</option>
+                <option value="openai-realtime">OpenAI Realtime</option>
+                <option value="local-pipeline">On this computer (speech, a local AI, a voice)</option>
+                <option value="text-sandbox">Typing only, no microphone (for trying things out)</option>
+              </select>
+            </div>
+            <label class="row" data-voice-for="gemini-live">
+              <div><div class="row-label">Think longer</div><div class="row-desc">Gemini thinks before it answers: slower, more careful</div></div>
+              <input type="checkbox" class="toggle" data-setting="aiVoice.extendedThinking">
+            </label>
+            <div class="row" data-voice-for="gemini-live">
+              <div><div class="row-label">Gemini key for voice</div><div class="row-desc">Optional: without it, voice uses your Gemini AI from AI &amp; privacy. Kept in the system keyring, never shown again</div></div>
+              <input type="password" class="field" id="voice-gemini-key" aria-label="Gemini key for voice" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="row" data-voice-for="openai-realtime">
+              <div><div class="row-label">OpenAI key</div><div class="row-desc">Needed for OpenAI Realtime. Kept in the system keyring, never shown again</div></div>
+              <input type="password" class="field" id="voice-openai-key" aria-label="OpenAI key" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="row" data-voice-for="openai-realtime">
+              <div><div class="row-label">OpenAI voice</div><div class="row-desc">How it sounds</div></div>
+              <select class="field" data-setting="aiVoice.openaiVoice" aria-label="OpenAI voice">
+                <option value="alloy">Alloy</option><option value="ash">Ash</option><option value="ballad">Ballad</option><option value="coral">Coral</option><option value="echo">Echo</option><option value="sage">Sage</option><option value="shimmer">Shimmer</option><option value="verse">Verse</option>
+              </select>
+            </div>
+            <div class="row" data-voice-for="local-pipeline">
+              <div><div class="row-label">Speech recognition address</div><div class="row-desc">The local server that turns your voice into text</div></div>
+              <input type="url" class="field" data-setting="aiVoice.localSttUrl" aria-label="Speech recognition address" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="row" data-voice-for="local-pipeline">
+              <div><div class="row-label">Local AI address</div><div class="row-desc">An OpenAI-compatible chat address (Ollama, LM Studio…)</div></div>
+              <input type="url" class="field" data-setting="aiVoice.localLlmUrl" aria-label="Local AI address" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="row" data-voice-for="local-pipeline">
+              <div><div class="row-label">Local model</div><div class="row-desc">The model&#x27;s name on that server</div></div>
+              <input type="text" class="field" data-setting="aiVoice.localLlmModel" aria-label="Local model" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="row" data-voice-for="local-pipeline">
+              <div><div class="row-label">Voice engine</div><div class="row-desc">What speaks the answers</div></div>
+              <select class="field" data-setting="aiVoice.localTtsEngine" aria-label="Voice engine">
+                <option value="piper">Piper</option><option value="kokoro">Kokoro</option><option value="system">The system's voice</option>
+              </select>
+            </div>
+            <div class="row" data-voice-for="local-pipeline">
+              <div><div class="row-label">Speech address</div><div class="row-desc">The local server that speaks (Piper or Kokoro)</div></div>
+              <input type="url" class="field" data-setting="aiVoice.localTtsUrl" aria-label="Speech address" spellcheck="false" autocomplete="off">
+            </div>
+            <div class="row" data-voice-for="local-pipeline openai-realtime">
+              <div><div class="row-label">When it hears you</div><div class="row-desc">How loud your voice must be before it listens: higher ignores more background noise</div></div>
+              <input type="range" min="0.005" max="0.4" step="0.005" class="field range" data-setting="aiVoice.vadThreshold" data-type="number" aria-label="When it hears you">
+            </div>
+            <div class="form-field" data-voice-for="gemini-live openai-realtime local-pipeline">
+              <label class="row-label" for="voice-persona">Extra instructions for live voice</label>
+              <textarea class="field" id="voice-persona" data-setting="aiVoice.systemPersona" rows="3" maxlength="4000"></textarea>
+              <p class="row-desc">Added to the character's own instructions in live conversations</p>
+            </div>
+          </details>
+
+          <div class="subhead"><div>
+            <div class="subhead-title">Voice mode toolbar</div>
+            <p class="hint">Shortcuts for the robot in voice mode: send it home or to a spot, a mood, a thing to use, the camera, the scene, clean stage. Arrow keys move along it; Alt + arrow moves a button.</p>
+          </div><button type="button" class="btn small" data-reset-settings="voiceDock" data-group="Voice mode toolbar" aria-label="Reset Voice mode toolbar">Reset</button></div>
+          <div class="row">
+            <div><div class="row-label">Layout</div><div class="row-desc">Which buttons it starts with; change any of them below</div></div>
+            <select class="field" id="dock-preset" aria-label="Layout">
+              <option value="minimal">Minimal</option>
+              <option value="creator_stage">Creator stage</option>
+              <option value="full_control">Everything</option>
+              <option value="custom">Your own</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Where it is</div><div class="row-desc">Floating: drag it by its edge in voice mode</div></div>
+            <select class="field" data-setting="voiceDock.position" aria-label="Where it is">
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+              <option value="bottom">Bottom</option>
+              <option value="floating">Floating</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Show the words</div><div class="row-desc">Each button's name next to its icon</div></div>
+            <input type="checkbox" class="toggle" data-setting="voiceDock.showLabels">
+          </label>
+          <div class="row">
+            <div><div class="row-label">Buttons and keys</div><div class="row-desc" id="dock-keys-note" role="status">Switch each button on or off, and give it a key (M, F, Escape and Space are taken by voice mode)</div></div>
+          </div>
+          <div class="dock-modules" id="dock-modules"></div>
+
           <div class="subhead"><div>
             <div class="subhead-title">On camera</div>
             <p class="hint">Co-host mode for videos, streams and podcasts. Turn it on with ON AIR in voice mode.</p>
@@ -2396,7 +2488,7 @@
             </div>
           </div>
           <label class="row">
-            <div><div class="row-label">Roam the room</div><div class="row-desc">In voice mode it moves about: closer while you talk, back while it thinks. Tap it, hold it, or drag the view (off while filming)</div></div>
+            <div><div class="row-label">Roam the room</div><div class="row-desc">In voice mode it walks about its room on its own, closer while you talk. Off: it stays where it is unless you send it somewhere (also off while filming)</div></div>
             <input type="checkbox" class="toggle" data-setting="robot.roam">
           </label>
           <label class="row">
@@ -2517,7 +2609,7 @@
           <div class="subhead"><div>
             <div class="subhead-title">Quality and performance</div>
             <p class="hint">For every room and every place the robot shows.</p>
-          </div><button type="button" class="btn small" data-reset-settings="robot.quality robot.graphics" data-group="Graphics" aria-label="Reset Graphics">Reset</button></div>
+          </div><button type="button" class="btn small" data-reset-settings="robot.quality robot.graphics visualStyle.shaderTheme" data-group="Graphics" aria-label="Reset Graphics">Reset</button></div>
 
           <div class="row">
             <div><div class="row-label">Quality</div><div class="row-desc" id="robot-quality-status">Auto starts high and steps down if it gets slow</div></div>
@@ -2658,6 +2750,13 @@
             <div class="subhead-title">Camera look</div>
             
           </div></div>
+          <div class="row">
+            <div><div class="row-label">The robot's shading</div><div class="row-desc">Soft, or cel-shaded with ink outlines like a cartoon</div></div>
+            <select class="field" data-setting="visualStyle.shaderTheme" aria-label="The robot's shading">
+              <option value="cozy_stylized">Soft</option>
+              <option value="anime_cel">Cel-shaded</option>
+            </select>
+          </div>
           <div class="row">
             <div><div class="row-label">Glow</div><div class="row-desc">How much bright things glow (0 is off)</div></div>
             <input type="range" min="0" max="150" step="5" class="field range" data-setting="robot.graphics.bloom" data-type="number" aria-label="Glow">
@@ -3752,6 +3851,14 @@
               <option value="replace">Replace what's here</option>
             </select>
             <input type="file" id="backup-file" accept=".gz,.json,application/gzip,application/json" hidden>
+          </div>
+          <div class="row">
+            <div><div class="row-label">Robot and voice setup</div><div class="row-desc" id="studio-bundle-note" role="status">The robot's look, its settings, voice mode's toolbar and live voice settings, as one file to keep or move to another computer (no keys inside). Rooms have their own Export in the Room Editor.</div></div>
+            <div class="row-actions">
+              <button type="button" class="btn small" id="studio-bundle-export">Export…</button>
+              <button type="button" class="btn small" id="studio-bundle-import">Import…</button>
+              <input type="file" id="studio-bundle-file" accept=".zip,.json,application/zip,application/json" hidden>
+            </div>
           </div>
         </section>
       </div>

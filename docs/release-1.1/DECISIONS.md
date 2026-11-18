@@ -225,3 +225,33 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
 - **R47 The Settings preview outranks Home's robot** (priority 2.5): both were 2 and Home, registered first, kept
   the canvas under the Settings window, so the preview showed nothing (since 0.6). Voice mode (3) still wins, so
   opening Settings while filming doesn't take the picture from the recording.
+- **R48 Voice mode's toolbar was rebuilt on the room system** (`src/js/voice/dock.js`, pure `dock-model.mjs`).
+  1.0's dock (emoji, untranslated, built with `innerHTML`) saved nothing: its `updateSettings({…})` calls passed an
+  object where the store takes a function and threw. Its "VAD / PTT" and "Vision" switches changed nothing
+  anywhere (no push-to-talk or vision exists) and are gone; its M shortcut fought voice mode's own M (one press
+  muted and unmuted). The saved layout (`settings.voiceDock`) keeps working: order, which buttons, labels,
+  position and keys; new buttons (Go to…, Scene) join next to their neighbours. Home, spots and things go through
+  the behaviour engine (a thing is offered only if its own rules allow it when you ask and the robot can reach
+  it); Camera lists the room's shots, then ready-made ones (picked: added to the room); Scene sets the room's
+  scene; Roam is `robot.roam`, which now also tells the behaviour engine to stay put; Clean stage hides
+  everything but the picture (H, the pill, or Escape brings it back). The default position is a rail on the
+  left: at the bottom it covers the robot (a saved position stays). Arrow keys move along it, Alt + arrow moves
+  a button, menus are proper menus.
+- **R49 1.0's stage settings become the room's** (`stageIntoRoom`): the stage backdrop (`stageMode.backdrop`) is
+  the room's backdrop layer, and the fixed camera views (made for 1.0's desk room) become the room's own shots,
+  once. The engine draws the backdrop from the room only; the "solid" and "transparent" layers now hide the
+  room (before, only the 1.0 stage setting did).
+- **R50 The robot's shading is soft or cel-shaded** (`src/js/robot/robot-style.js`, Settings → Robot →
+  Graphics). The cel look keeps the parts' own color objects and leaves glowing parts alone, so the robot's
+  colors and the glow pass keep working (1.0's theme materials were copies taken once: the light color stopped
+  following the design). "Realistic" and "Minimalist" looked like soft on the 1.1 robot and are gone (saved
+  ones read as soft); 1.0's lighting presets and desk-lamp glow are the room's moods and each lamp's own light.
+- **R51 The 1.0 studio drawer is gone, and what was in it moved**: live voice service (provider, Gemini thinking,
+  keys kept in the keyring, OpenAI voice, the local pipeline's addresses and model, voice detection, extra
+  instructions) → Settings → Characters → Voice conversation → Live voice service; dock → Settings →
+  Characters → Voice mode toolbar; robot setup export/import → Data & backups. Its "auto-detect local servers"
+  and "sandbox tester" called endpoints the helper doesn't have; AI & privacy → "AI on this computer" finds local
+  servers, and the "Typing only" service is the sandbox. Its Room and Behavior tabs are the Room Editor.
+- **R52 The robot had no head in voice mode** (since step 6): before its room was known the behaviour engine's
+  gaze had no weights, the animator multiplied by undefined, and the NaN stayed in its springs. The gaze now
+  always carries its weights, and the animator treats a missing weight as the usual one.

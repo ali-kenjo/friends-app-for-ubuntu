@@ -24,10 +24,10 @@ import { buildRobot, loadRobot, applyPose, applyLook, setMaterialDetail, dispose
 import { userGlowFor } from "./presets.mjs";
 import { defaultDesign, shapeKey } from "./design.mjs";
 import { springStep, clamp } from "./spring.mjs";
-import { appState } from "../core/state-store.mjs";
 import { attachV1Engine, stepV1Frame } from "../core/v1-runtime.mjs";
 import { resolveShot, shotFrame } from "../room/cameras.mjs";
 import { resolveGraphics, buildKey } from "./graphics.mjs";
+import { styleRobot } from "./robot-style.js";
 import { RoomBehaviour } from "../room/behaviour.mjs";
 import { standCheck } from "../room/editor/robot-ops.mjs";
 
@@ -656,6 +656,7 @@ export class RobotEngine {
     }
     if (look.room || look.roomDoc !== undefined) this.roomDirty = true;
     if (look.cameraFriendly !== undefined) this.stage.setCameraFriendly(look.cameraFriendly);
+    if (look.robotStyle !== undefined) styleRobot(this.robot, look.robotStyle);
     if (look.theme) this.look.themeColor.set(look.theme.bg);
   }
 
@@ -694,6 +695,7 @@ export class RobotEngine {
     } else if (this.robot.builtIn) {
       applyLook(this.robot, d, this.look.accent);
     }
+    styleRobot(this.robot, this.look.robotStyle);
   }
 
   swapRobot(next) {
@@ -949,28 +951,15 @@ export class RobotEngine {
     // Where the robot is on screen, for the vignette and the glow
     this.projected.set(pose.worldX ?? pose.posX ?? 0, 0.72 + this.base.y, pose.worldZ ?? pose.posZ ?? 0).project(this.camera);
     u.uCenter.value.set(this.projected.x * 0.5 + 0.5, this.projected.y * 0.5 + 0.5);
-    const stageBackdrop = appState.get("stageBackdrop") || "full_room";
-    if (this.rooms?.group) this.rooms.group.visible = stageBackdrop === "full_room";
-    if (stageBackdrop === "transparent_window") {
+    // The room's backdrop layer (§5.9): the robot alone on a color, or alone on a transparent picture
+    const layer = this.rooms.mode === "doc" ? this.rooms.layer : "full";
+    if (this.rooms?.group) this.rooms.group.visible = layer !== "solid" && layer !== "transparent";
+    if (layer === "transparent") {
       u.uTransparent.value = 1;
       this.stage.setChroma?.(true);
       return;
     }
     u.uTransparent.value = 0;
-    if (stageBackdrop === "chroma_green" || stageBackdrop === "chroma_blue") {
-      u.uMode.value = 0;
-      u.uBg.value.set(stageBackdrop === "chroma_blue" ? 0x0047ff : 0x00ff00);
-      this.stage.setChroma?.(true);
-      return;
-    }
-    if (stageBackdrop === "solid_studio") {
-      u.uMode.value = 1;
-      u.uBg.value.set(0x1b1e28);
-      u.uBgEdge.value.set(0x10131b);
-      u.uGlowAmount.value = 0.04;
-      this.stage.setChroma?.(false);
-      return;
-    }
     this.stage.setChroma?.(this.rooms.isChroma);
     const b = this.rooms.backdrop;
     const blobs = u.uBlobs.value;
@@ -1123,7 +1112,8 @@ export class RobotEngine {
     const s = a.state;
     const state = ["speaking", "streaming"].includes(s) ? "talking" : ["listening", "hearing"].includes(s) ? "listening" : ["thinking", "waiting", "busy", "connecting"].includes(s) ? "thinking" : "idle";
     const prevYaw = this.base.yaw;
-    const ctx = { state, filming: Boolean(this.look.filming), reducedMotion: this.reducedMotion.matches, mood: a.pose.mood, awaySec: Math.max(0, a.t - a.lastActivity) };
+    // stay: "Roam the room" off (Settings → Robot → Scene and camera, or the voice toolbar): it stays put unless asked
+    const ctx = { state, filming: Boolean(this.look.filming), reducedMotion: this.reducedMotion.matches, mood: a.pose.mood, awaySec: Math.max(0, a.t - a.lastActivity), stay: this.look.roam === false };
     let out = b.out;
     // (the editor's Simulate can run it faster)
     const fast = dt * Math.min(10, Math.max(1, this.active?.options.behaveSpeed || 1));

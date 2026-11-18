@@ -7,6 +7,7 @@ const look = require("./robot-look");
 const roleData = require("../src/js/robot/roles.mjs");
 const graphics = require("../src/js/robot/graphics.mjs");
 const editorPrefs = require("../src/js/room/editor/prefs.mjs");
+const dockModel = require("../src/js/voice/dock-model.mjs");
 const geometry = require("../src/js/whiteboard/geometry.mjs");
 const specialistRoles = require("./specialist-roles");
 const keys = require("./keys");
@@ -413,50 +414,8 @@ const DEFAULTS = {
     antiAliasing: "msaa", // off | fxaa | msaa
     throttleWhenHidden: true,
   },
-  // v1.0 Customizable Voice Mode Action Dock
-  voiceDock: {
-    preset: "creator_stage", // minimal | creator_stage | full_control | custom
-    position: "bottom", // bottom | left | right | floating
-    floatingX: 24,
-    floatingY: 24,
-    showLabels: false,
-    order: [
-      "mic_mute",
-      "mic_mode",
-      "interrupt",
-      "summon_home",
-      "emotion_picker",
-      "toggle_whiteboard",
-      "quick_prop",
-      "camera_preset",
-      "vision_toggle",
-      "roam_toggle",
-      "clean_stage",
-      "open_studio",
-    ],
-    visible: {
-      mic_mute: true,
-      mic_mode: true,
-      interrupt: true,
-      summon_home: true,
-      emotion_picker: true,
-      toggle_whiteboard: true,
-      quick_prop: true,
-      camera_preset: true,
-      vision_toggle: false,
-      roam_toggle: true,
-      clean_stage: true,
-      open_studio: true,
-    },
-    shortcuts: {
-      mic_mute: "KeyM",
-      interrupt: "", // Leave empty by default so voice.interruptKey in Settings controls Space/custom interrupt key
-      summon_home: "KeyR",
-      clean_stage: "KeyH",
-      toggle_whiteboard: "KeyB",
-      roam_toggle: "KeyP",
-    },
-  },
+  // Voice mode's toolbar (src/js/voice/dock-model.mjs; the layout saved since 1.0 keeps working)
+  voiceDock: dockModel.DOCK_DEFAULTS,
   // v1.0 Behavior, Physical IK & Choreography Engine
   behaviorEngine: {
     autonomousRoaming: true,
@@ -902,6 +861,7 @@ function sanitize(input) {
   av.extendedThinking = Boolean(av.extendedThinking);
   av.geminiModel = String(av.geminiModel || DEFAULTS.aiVoice.geminiModel).trim().slice(0, 100);
   if (av.extendedThinking && av.geminiModel === "gemini-3.8-live") av.geminiModel = "gemini-3.8-live-extended-thinking";
+  else if (!av.extendedThinking && av.geminiModel === "gemini-3.8-live-extended-thinking") av.geminiModel = "gemini-3.8-live";
   av.geminiVoice = typeof av.geminiVoice === "string" ? av.geminiVoice.trim().slice(0, 40) : "";
   av.openaiModel = String(av.openaiModel || DEFAULTS.aiVoice.openaiModel).trim().slice(0, 100);
   av.openaiVoice = String(av.openaiVoice || "alloy").trim().slice(0, 40);
@@ -919,7 +879,8 @@ function sanitize(input) {
 
   s.visualStyle = { ...clone(DEFAULTS.visualStyle), ...(s.visualStyle && typeof s.visualStyle === "object" ? s.visualStyle : {}) };
   const vs = s.visualStyle;
-  if (!["realistic_pbr", "anime_cel", "cozy_stylized", "minimalist_studio"].includes(vs.shaderTheme)) vs.shaderTheme = "cozy_stylized";
+  // 1.1: soft or cel-shaded (1.0's realistic and minimalist themes looked like soft on the new robot; DECISIONS R50)
+  if (vs.shaderTheme !== "anime_cel") vs.shaderTheme = "cozy_stylized";
   if (!["morning_daylight", "warm_desk_lamp", "sunset_glow", "night_cyber_studio", "neutral_broadcast"].includes(vs.lightingPreset)) vs.lightingPreset = "warm_desk_lamp";
   vs.emotionLightingTint = vs.emotionLightingTint !== false;
   vs.deskLampEmission = Math.max(0, Math.min(3, Number(vs.deskLampEmission ?? 1)));
@@ -927,20 +888,7 @@ function sanitize(input) {
   if (!["off", "fxaa", "msaa"].includes(vs.antiAliasing)) vs.antiAliasing = "msaa";
   vs.throttleWhenHidden = vs.throttleWhenHidden !== false;
 
-  const vdBase = clone(DEFAULTS.voiceDock);
-  const vdIn = s.voiceDock && typeof s.voiceDock === "object" ? s.voiceDock : {};
-  s.voiceDock = {
-    ...vdBase,
-    ...vdIn,
-    visible: { ...vdBase.visible, ...(vdIn.visible && typeof vdIn.visible === "object" ? vdIn.visible : {}) },
-    shortcuts: { ...vdBase.shortcuts, ...(vdIn.shortcuts && typeof vdIn.shortcuts === "object" ? vdIn.shortcuts : {}) },
-  };
-  if (!["minimal", "creator_stage", "full_control", "custom"].includes(s.voiceDock.preset)) s.voiceDock.preset = "creator_stage";
-  if (!["bottom", "left", "right", "floating"].includes(s.voiceDock.position)) s.voiceDock.position = "bottom";
-  s.voiceDock.showLabels = Boolean(s.voiceDock.showLabels);
-  s.voiceDock.floatingX = Math.max(0, Math.min(4000, Number(s.voiceDock.floatingX) || 24));
-  s.voiceDock.floatingY = Math.max(0, Math.min(4000, Number(s.voiceDock.floatingY) || 24));
-  s.voiceDock.order = Array.isArray(s.voiceDock.order) && s.voiceDock.order.length ? [...new Set(s.voiceDock.order.map(String))] : vdBase.order;
+  s.voiceDock = dockModel.sanitizeDock(input?.voiceDock);
 
   const beBase = clone(DEFAULTS.behaviorEngine);
   const beIn = s.behaviorEngine && typeof s.behaviorEngine === "object" ? s.behaviorEngine : {};
