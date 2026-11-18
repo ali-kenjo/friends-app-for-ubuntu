@@ -443,28 +443,42 @@ function actorsFor(kind, phase, seed) {
   return list;
 }
 
-// One view: the painting, the canvas it's shown on (painting + life) and its texture
+// One view: the painting and its texture. The canvas the life is drawn on (painting + life) is made only while
+// the view is animated, and let go again when it hasn't been for a while (a cache of every view's two canvases
+// would grow with every room you visit)
+const animated = new Set();
+const IDLE_MS = 10000;
+
 function makeView(kind, phase, seed) {
   const base = paint(kind, phase, seed);
-  const out = document.createElement("canvas");
-  out.width = base.width;
-  out.height = base.height;
-  const ctx = out.getContext("2d");
-  ctx.drawImage(base, 0, 0);
-  const texture = new THREE.CanvasTexture(out);
+  const texture = new THREE.CanvasTexture(base);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.userData.shared = true;
-  const view = { base, out, ctx, texture, actors: actorsFor(kind, phase, seed), t: Math.random() * 30, since: 0 };
+  const view = { base, out: null, ctx: null, texture, actors: actorsFor(kind, phase, seed), t: Math.random() * 30, since: 0, last: 0 };
   texture.userData.outside = view;
-  if (view.actors.length) draw(view);
   return view;
 }
 
 function draw(view) {
+  if (!view.out) {
+    view.out = document.createElement("canvas");
+    view.out.width = view.base.width;
+    view.out.height = view.base.height;
+    view.ctx = view.out.getContext("2d");
+    view.texture.image = view.out;
+  }
   const { ctx, base, out } = view;
   ctx.drawImage(base, 0, 0);
   for (const a of view.actors) a.draw(ctx, out.width, out.height, view.t);
   view.texture.needsUpdate = true;
+}
+
+function rest(view) {
+  view.texture.image = view.base;
+  view.texture.needsUpdate = true;
+  view.out = null;
+  view.ctx = null;
+  animated.delete(view);
 }
 
 export function outsideTexture(kind, hour = 14, seed = 7) {
@@ -476,14 +490,18 @@ export function outsideTexture(kind, hour = 14, seed = 7) {
 
 // The life moves on, for the views given (their textures): still with reduced motion or while filming
 // camera-friendly; fps: how often a view is redrawn (lower on the Low quality)
-export function stepOutside(textures, dt, { still = false, fps = 12 } = {}) {
+export function stepOutside(textures, dt, { still = false, fps = 12, now = performance.now() } = {}) {
+  // Views not shown for a while go back to their painting alone
+  for (const view of animated) if (now - view.last > IDLE_MS) rest(view);
   if (still) return;
   for (const tex of textures) {
     const view = tex?.userData?.outside;
-    if (!view || !view.actors.length) continue;
+    if (!view || !view.actors?.length) continue;
+    view.last = now;
+    animated.add(view);
     view.t += dt;
     view.since += dt;
-    if (view.since < 1 / fps) continue;
+    if (view.out && view.since < 1 / fps) continue;
     view.since = 0;
     draw(view);
   }

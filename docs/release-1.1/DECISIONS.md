@@ -289,7 +289,9 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
   butterflies, a kite, a sailboat, a lighthouse beam, light trails and a holo billboard in the city, fireflies,
   drifting clouds, shooting stars, satellites and comets. Drawn over the painting on its own canvas about 12
   times a second (6 on Low), only for the views on screen, still with reduced motion and while filming
-  camera-friendly; the billboard changes color slowly instead of flickering.
+  camera-friendly; the billboard changes color slowly instead of flickering. The canvas the life is drawn on exists only while a
+  view is on screen and goes again after 10 seconds without it (keeping one for every view of every room you
+  visited would add up: a full test run once lost its browser to memory).
 - **R58 Plants that need care** (`src/js/room/care.mjs`, off by default; the robot → On its own → Plants and
   tidying). Each plant remembers when it was last watered (`asset.care.wateredAt`), droops a little over three
   days (it leans over and sags), the robot is up to seven times likelier to visit a thirsty plant and waters it

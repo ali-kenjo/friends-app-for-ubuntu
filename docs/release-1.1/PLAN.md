@@ -238,7 +238,9 @@ with what is left written next to it. A fresh session continues from this file a
       tables, test counts, a screenshot), CHANGELOG 1.1.0 (migration notes, keyboard map).
 - [x] Animated outside scenery the painter doesn't draw yet: flocks of birds, butterflies, rainbow, balloon, kite,
       windmill, light trails, holo billboard, shooting stars, satellites (DECISIONS R17, R57).
-- [ ] Final screenshots in `docs/design/screenshots/1.1/`; `npm run design:assets` and `design:rooms`.
+- [x] Final screenshots in `docs/design/screenshots/1.1/`: `npm run design:assets` (all 194 things at Low and
+      High), `design:rooms` (every template at High and Low, 16:9 and 9:16, with their counts in `stats.json`),
+      and the definition of done's pictures in `dod/`.
 - [x] Definition of done (§14) items 1–11 each verified on screen, with how:
   1. No mixing of systems: the 1.0 place builders, the Room Builder and the unified room are deleted (R53, R54);
      every template is a rebuilt room document (`test/room-model.test.js`: "every place is rebuilt from catalog

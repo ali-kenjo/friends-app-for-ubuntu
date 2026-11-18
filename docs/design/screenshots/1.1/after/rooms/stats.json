@@ -1,62 +1,846 @@
 {
-  "when": "2026-11-17T12:58:26.414Z",
+  "when": "2026-11-18T16:16:05.056Z",
   "renderer": "SwiftShader (software WebGL)",
   "stats": {
+    "studio|low|16x9|dark": {
+      "calls": 29,
+      "triangles": 30403,
+      "ms": 363,
+      "level": "low",
+      "meshes": 21
+    },
+    "glow|low|16x9|dark": {
+      "calls": 29,
+      "triangles": 30403,
+      "ms": 374,
+      "level": "low",
+      "meshes": 21
+    },
+    "desk|low|16x9|dark": {
+      "calls": 91,
+      "triangles": 73923,
+      "ms": 836,
+      "level": "low",
+      "meshes": 88
+    },
+    "podcast|low|16x9|dark": {
+      "calls": 91,
+      "triangles": 74117,
+      "ms": 864,
+      "level": "low",
+      "meshes": 105
+    },
+    "lounge|low|16x9|dark": {
+      "calls": 108,
+      "triangles": 111295,
+      "ms": 1217,
+      "level": "low",
+      "meshes": 105
+    },
+    "bedroom|low|16x9|dark": {
+      "calls": 76,
+      "triangles": 72255,
+      "ms": 915,
+      "level": "low",
+      "meshes": 87
+    },
+    "kitchen|low|16x9|dark": {
+      "calls": 65,
+      "triangles": 60383,
+      "ms": 798,
+      "level": "low",
+      "meshes": 85
+    },
+    "library|low|16x9|dark": {
+      "calls": 77,
+      "triangles": 107215,
+      "ms": 1265,
+      "level": "low",
+      "meshes": 93
+    },
+    "greenhouse|low|16x9|dark": {
+      "calls": 60,
+      "triangles": 82043,
+      "ms": 704,
+      "level": "low",
+      "meshes": 65
+    },
+    "rooftop|low|16x9|dark": {
+      "calls": 68,
+      "triangles": 83471,
+      "ms": 843,
+      "level": "low",
+      "meshes": 77
+    },
+    "workshop|low|16x9|dark": {
+      "calls": 95,
+      "triangles": 89945,
+      "ms": 814,
+      "level": "low",
+      "meshes": 94
+    },
+    "cabin|low|16x9|dark": {
+      "calls": 85,
+      "triangles": 71823,
+      "ms": 786,
+      "level": "low",
+      "meshes": 88
+    },
+    "seaside|low|16x9|dark": {
+      "calls": 52,
+      "triangles": 47043,
+      "ms": 658,
+      "level": "low",
+      "meshes": 60
+    },
+    "campfire|low|16x9|dark": {
+      "calls": 69,
+      "triangles": 82833,
+      "ms": 916,
+      "level": "low",
+      "meshes": 72
+    },
+    "cafe|low|16x9|dark": {
+      "calls": 78,
+      "triangles": 62101,
+      "ms": 772,
+      "level": "low",
+      "meshes": 96
+    },
+    "arcade|low|16x9|dark": {
+      "calls": 59,
+      "triangles": 49787,
+      "ms": 795,
+      "level": "low",
+      "meshes": 94
+    },
+    "observatory|low|16x9|dark": {
+      "calls": 71,
+      "triangles": 58265,
+      "ms": 722,
+      "level": "low",
+      "meshes": 81
+    },
+    "tatami|low|16x9|dark": {
+      "calls": 73,
+      "triangles": 78365,
+      "ms": 896,
+      "level": "low",
+      "meshes": 99
+    },
+    "spaceship|low|16x9|dark": {
+      "calls": 57,
+      "triangles": 69137,
+      "ms": 867,
+      "level": "low",
+      "meshes": 79
+    },
+    "space|low|16x9|dark": {
+      "calls": 23,
+      "triangles": 30391,
+      "ms": 385,
+      "level": "low",
+      "meshes": 21
+    },
+    "garden|low|16x9|dark": {
+      "calls": 41,
+      "triangles": 65613,
+      "ms": 694,
+      "level": "low",
+      "meshes": 38
+    },
+    "city|low|16x9|dark": {
+      "calls": 22,
+      "triangles": 30391,
+      "ms": 373,
+      "level": "low",
+      "meshes": 21
+    },
+    "sky|low|16x9|dark": {
+      "calls": 22,
+      "triangles": 30453,
+      "ms": 511,
+      "level": "low",
+      "meshes": 21
+    },
+    "gradient|low|16x9|dark": {
+      "calls": 21,
+      "triangles": 30389,
+      "ms": 339,
+      "level": "low",
+      "meshes": 20
+    },
+    "photo|low|16x9|dark": {
+      "calls": 21,
+      "triangles": 30389,
+      "ms": 345,
+      "level": "low",
+      "meshes": 20
+    },
+    "green|low|16x9|dark": {
+      "calls": 19,
+      "triangles": 30385,
+      "ms": 333,
+      "level": "low",
+      "meshes": 18
+    },
+    "blue|low|16x9|dark": {
+      "calls": 19,
+      "triangles": 30385,
+      "ms": 340,
+      "level": "low",
+      "meshes": 18
+    },
+    "creator_studio_desk|low|16x9|dark": {
+      "calls": 80,
+      "triangles": 65571,
+      "ms": 519,
+      "level": "low",
+      "meshes": 72
+    },
+    "cozy_study_corner|low|16x9|dark": {
+      "calls": 68,
+      "triangles": 58067,
+      "ms": 506,
+      "level": "low",
+      "meshes": 60
+    },
+    "minimalist_open_stage|low|16x9|dark": {
+      "calls": 40,
+      "triangles": 38559,
+      "ms": 420,
+      "level": "low",
+      "meshes": 33
+    },
+    "studio|low|9x16|dark": {
+      "calls": 25,
+      "triangles": 30395,
+      "ms": 291,
+      "level": "low",
+      "meshes": 21
+    },
+    "glow|low|9x16|dark": {
+      "calls": 25,
+      "triangles": 30395,
+      "ms": 292,
+      "level": "low",
+      "meshes": 21
+    },
+    "desk|low|9x16|dark": {
+      "calls": 73,
+      "triangles": 60139,
+      "ms": 552,
+      "level": "low",
+      "meshes": 88
+    },
+    "podcast|low|9x16|dark": {
+      "calls": 73,
+      "triangles": 64119,
+      "ms": 553,
+      "level": "low",
+      "meshes": 105
+    },
+    "lounge|low|9x16|dark": {
+      "calls": 77,
+      "triangles": 86279,
+      "ms": 681,
+      "level": "low",
+      "meshes": 105
+    },
+    "bedroom|low|9x16|dark": {
+      "calls": 69,
+      "triangles": 67075,
+      "ms": 614,
+      "level": "low",
+      "meshes": 87
+    },
+    "kitchen|low|9x16|dark": {
+      "calls": 48,
+      "triangles": 48897,
+      "ms": 527,
+      "level": "low",
+      "meshes": 85
+    },
+    "library|low|9x16|dark": {
+      "calls": 66,
+      "triangles": 97363,
+      "ms": 619,
+      "level": "low",
+      "meshes": 93
+    },
+    "greenhouse|low|9x16|dark": {
+      "calls": 37,
+      "triangles": 61499,
+      "ms": 404,
+      "level": "low",
+      "meshes": 65
+    },
+    "rooftop|low|9x16|dark": {
+      "calls": 39,
+      "triangles": 58053,
+      "ms": 480,
+      "level": "low",
+      "meshes": 77
+    },
+    "workshop|low|9x16|dark": {
+      "calls": 61,
+      "triangles": 56501,
+      "ms": 536,
+      "level": "low",
+      "meshes": 94
+    },
+    "cabin|low|9x16|dark": {
+      "calls": 43,
+      "triangles": 50173,
+      "ms": 546,
+      "level": "low",
+      "meshes": 88
+    },
+    "seaside|low|9x16|dark": {
+      "calls": 34,
+      "triangles": 35619,
+      "ms": 349,
+      "level": "low",
+      "meshes": 60
+    },
+    "campfire|low|9x16|dark": {
+      "calls": 41,
+      "triangles": 53279,
+      "ms": 407,
+      "level": "low",
+      "meshes": 72
+    },
+    "cafe|low|9x16|dark": {
+      "calls": 56,
+      "triangles": 47899,
+      "ms": 456,
+      "level": "low",
+      "meshes": 96
+    },
+    "arcade|low|9x16|dark": {
+      "calls": 46,
+      "triangles": 44459,
+      "ms": 452,
+      "level": "low",
+      "meshes": 94
+    },
+    "observatory|low|9x16|dark": {
+      "calls": 54,
+      "triangles": 48943,
+      "ms": 451,
+      "level": "low",
+      "meshes": 81
+    },
+    "tatami|low|9x16|dark": {
+      "calls": 57,
+      "triangles": 50979,
+      "ms": 524,
+      "level": "low",
+      "meshes": 99
+    },
+    "spaceship|low|9x16|dark": {
+      "calls": 44,
+      "triangles": 50149,
+      "ms": 603,
+      "level": "low",
+      "meshes": 79
+    },
+    "space|low|9x16|dark": {
+      "calls": 23,
+      "triangles": 30391,
+      "ms": 303,
+      "level": "low",
+      "meshes": 21
+    },
+    "garden|low|9x16|dark": {
+      "calls": 35,
+      "triangles": 49133,
+      "ms": 414,
+      "level": "low",
+      "meshes": 38
+    },
+    "city|low|9x16|dark": {
+      "calls": 22,
+      "triangles": 30391,
+      "ms": 299,
+      "level": "low",
+      "meshes": 21
+    },
+    "sky|low|9x16|dark": {
+      "calls": 22,
+      "triangles": 30453,
+      "ms": 373,
+      "level": "low",
+      "meshes": 21
+    },
+    "gradient|low|9x16|dark": {
+      "calls": 21,
+      "triangles": 30389,
+      "ms": 275,
+      "level": "low",
+      "meshes": 20
+    },
+    "photo|low|9x16|dark": {
+      "calls": 21,
+      "triangles": 30389,
+      "ms": 270,
+      "level": "low",
+      "meshes": 20
+    },
+    "green|low|9x16|dark": {
+      "calls": 19,
+      "triangles": 30385,
+      "ms": 252,
+      "level": "low",
+      "meshes": 18
+    },
+    "blue|low|9x16|dark": {
+      "calls": 19,
+      "triangles": 30385,
+      "ms": 253,
+      "level": "low",
+      "meshes": 18
+    },
+    "creator_studio_desk|low|9x16|dark": {
+      "calls": 56,
+      "triangles": 51769,
+      "ms": 330,
+      "level": "low",
+      "meshes": 72
+    },
+    "cozy_study_corner|low|9x16|dark": {
+      "calls": 50,
+      "triangles": 48289,
+      "ms": 349,
+      "level": "low",
+      "meshes": 60
+    },
+    "minimalist_open_stage|low|9x16|dark": {
+      "calls": 34,
+      "triangles": 37309,
+      "ms": 317,
+      "level": "low",
+      "meshes": 33
+    },
     "studio|high|16x9|dark": {
       "calls": 135,
       "triangles": 126958,
-      "ms": 834,
+      "ms": 958,
       "level": "high",
       "meshes": 40
     },
     "glow|high|16x9|dark": {
       "calls": 135,
       "triangles": 126958,
-      "ms": 866,
+      "ms": 913,
       "level": "high",
       "meshes": 40
     },
+    "desk|high|16x9|dark": {
+      "calls": 331,
+      "triangles": 593876,
+      "ms": 1849,
+      "level": "high",
+      "meshes": 88
+    },
+    "podcast|high|16x9|dark": {
+      "calls": 344,
+      "triangles": 577830,
+      "ms": 1933,
+      "level": "high",
+      "meshes": 105
+    },
+    "lounge|high|16x9|dark": {
+      "calls": 392,
+      "triangles": 784242,
+      "ms": 2571,
+      "level": "high",
+      "meshes": 105
+    },
+    "bedroom|high|16x9|dark": {
+      "calls": 287,
+      "triangles": 527758,
+      "ms": 2006,
+      "level": "high",
+      "meshes": 87
+    },
+    "kitchen|high|16x9|dark": {
+      "calls": 256,
+      "triangles": 480130,
+      "ms": 1819,
+      "level": "high",
+      "meshes": 85
+    },
+    "library|high|16x9|dark": {
+      "calls": 297,
+      "triangles": 755992,
+      "ms": 2456,
+      "level": "high",
+      "meshes": 93
+    },
     "greenhouse|high|16x9|dark": {
-      "calls": 210,
-      "triangles": 660146,
-      "ms": 1316,
+      "calls": 216,
+      "triangles": 681890,
+      "ms": 1570,
       "level": "high",
       "meshes": 65
+    },
+    "rooftop|high|16x9|dark": {
+      "calls": 243,
+      "triangles": 647596,
+      "ms": 1963,
+      "level": "high",
+      "meshes": 77
+    },
+    "workshop|high|16x9|dark": {
+      "calls": 337,
+      "triangles": 615496,
+      "ms": 1740,
+      "level": "high",
+      "meshes": 94
+    },
+    "cabin|high|16x9|dark": {
+      "calls": 307,
+      "triangles": 570358,
+      "ms": 1808,
+      "level": "high",
+      "meshes": 88
     },
     "seaside|high|16x9|dark": {
       "calls": 190,
       "triangles": 303352,
-      "ms": 1157,
+      "ms": 1463,
       "level": "high",
       "meshes": 60
+    },
+    "campfire|high|16x9|dark": {
+      "calls": 248,
+      "triangles": 640932,
+      "ms": 1969,
+      "level": "high",
+      "meshes": 72
+    },
+    "cafe|high|16x9|dark": {
+      "calls": 300,
+      "triangles": 532760,
+      "ms": 1705,
+      "level": "high",
+      "meshes": 96
+    },
+    "arcade|high|16x9|dark": {
+      "calls": 245,
+      "triangles": 347406,
+      "ms": 1640,
+      "level": "high",
+      "meshes": 94
+    },
+    "observatory|high|16x9|dark": {
+      "calls": 269,
+      "triangles": 479670,
+      "ms": 1497,
+      "level": "high",
+      "meshes": 81
+    },
+    "tatami|high|16x9|dark": {
+      "calls": 275,
+      "triangles": 541318,
+      "ms": 1785,
+      "level": "high",
+      "meshes": 99
+    },
+    "spaceship|high|16x9|dark": {
+      "calls": 209,
+      "triangles": 416898,
+      "ms": 1805,
+      "level": "high",
+      "meshes": 79
+    },
+    "space|high|16x9|dark": {
+      "calls": 82,
+      "triangles": 102822,
+      "ms": 913,
+      "level": "high",
+      "meshes": 21
     },
     "garden|high|16x9|dark": {
       "calls": 148,
       "triangles": 503404,
-      "ms": 1331,
+      "ms": 1509,
       "level": "high",
       "meshes": 38
     },
     "city|high|16x9|dark": {
       "calls": 88,
       "triangles": 126790,
-      "ms": 853,
+      "ms": 877,
       "level": "high",
       "meshes": 39
     },
     "sky|high|16x9|dark": {
       "calls": 80,
       "triangles": 102884,
-      "ms": 960,
+      "ms": 1058,
       "level": "high",
       "meshes": 21
+    },
+    "gradient|high|16x9|dark": {
+      "calls": 79,
+      "triangles": 102820,
+      "ms": 841,
+      "level": "high",
+      "meshes": 20
+    },
+    "photo|high|16x9|dark": {
+      "calls": 79,
+      "triangles": 102820,
+      "ms": 800,
+      "level": "high",
+      "meshes": 20
+    },
+    "green|high|16x9|dark": {
+      "calls": 30,
+      "triangles": 50993,
+      "ms": 577,
+      "level": "high",
+      "meshes": 18
+    },
+    "blue|high|16x9|dark": {
+      "calls": 30,
+      "triangles": 50993,
+      "ms": 580,
+      "level": "high",
+      "meshes": 18
     },
     "creator_studio_desk|high|16x9|dark": {
       "calls": 329,
       "triangles": 473682,
-      "ms": 1247,
+      "ms": 1281,
       "level": "high",
       "meshes": 91
+    },
+    "cozy_study_corner|high|16x9|dark": {
+      "calls": 284,
+      "triangles": 400928,
+      "ms": 1140,
+      "level": "high",
+      "meshes": 79
+    },
+    "minimalist_open_stage|high|16x9|dark": {
+      "calls": 175,
+      "triangles": 233580,
+      "ms": 1097,
+      "level": "high",
+      "meshes": 52
+    },
+    "studio|high|9x16|dark": {
+      "calls": 123,
+      "triangles": 161026,
+      "ms": 717,
+      "level": "high",
+      "meshes": 40
+    },
+    "glow|high|9x16|dark": {
+      "calls": 129,
+      "triangles": 161038,
+      "ms": 683,
+      "level": "high",
+      "meshes": 40
+    },
+    "desk|high|9x16|dark": {
+      "calls": 278,
+      "triangles": 481040,
+      "ms": 1451,
+      "level": "high",
+      "meshes": 88
+    },
+    "podcast|high|9x16|dark": {
+      "calls": 292,
+      "triangles": 504426,
+      "ms": 1136,
+      "level": "high",
+      "meshes": 105
+    },
+    "lounge|high|9x16|dark": {
+      "calls": 309,
+      "triangles": 595792,
+      "ms": 1317,
+      "level": "high",
+      "meshes": 105
+    },
+    "bedroom|high|9x16|dark": {
+      "calls": 266,
+      "triangles": 480586,
+      "ms": 1188,
+      "level": "high",
+      "meshes": 87
+    },
+    "kitchen|high|9x16|dark": {
+      "calls": 206,
+      "triangles": 369694,
+      "ms": 1092,
+      "level": "high",
+      "meshes": 85
+    },
+    "library|high|9x16|dark": {
+      "calls": 264,
+      "triangles": 664876,
+      "ms": 1383,
+      "level": "high",
+      "meshes": 93
+    },
+    "greenhouse|high|9x16|dark": {
+      "calls": 160,
+      "triangles": 510592,
+      "ms": 869,
+      "level": "high",
+      "meshes": 65
+    },
+    "rooftop|high|9x16|dark": {
+      "calls": 170,
+      "triangles": 442174,
+      "ms": 1041,
+      "level": "high",
+      "meshes": 77
+    },
+    "workshop|high|9x16|dark": {
+      "calls": 254,
+      "triangles": 430992,
+      "ms": 1077,
+      "level": "high",
+      "meshes": 94
+    },
+    "cabin|high|9x16|dark": {
+      "calls": 199,
+      "triangles": 404224,
+      "ms": 1155,
+      "level": "high",
+      "meshes": 88
+    },
+    "seaside|high|9x16|dark": {
+      "calls": 141,
+      "triangles": 201120,
+      "ms": 825,
+      "level": "high",
+      "meshes": 60
+    },
+    "campfire|high|9x16|dark": {
+      "calls": 176,
+      "triangles": 441488,
+      "ms": 1010,
+      "level": "high",
+      "meshes": 72
+    },
+    "cafe|high|9x16|dark": {
+      "calls": 245,
+      "triangles": 386182,
+      "ms": 1039,
+      "level": "high",
+      "meshes": 96
+    },
+    "arcade|high|9x16|dark": {
+      "calls": 210,
+      "triangles": 321234,
+      "ms": 1045,
+      "level": "high",
+      "meshes": 94
+    },
+    "observatory|high|9x16|dark": {
+      "calls": 223,
+      "triangles": 391714,
+      "ms": 1056,
+      "level": "high",
+      "meshes": 81
+    },
+    "tatami|high|9x16|dark": {
+      "calls": 236,
+      "triangles": 356560,
+      "ms": 1128,
+      "level": "high",
+      "meshes": 99
+    },
+    "spaceship|high|9x16|dark": {
+      "calls": 175,
+      "triangles": 315162,
+      "ms": 1171,
+      "level": "high",
+      "meshes": 79
+    },
+    "space|high|9x16|dark": {
+      "calls": 82,
+      "triangles": 102822,
+      "ms": 692,
+      "level": "high",
+      "meshes": 21
+    },
+    "garden|high|9x16|dark": {
+      "calls": 130,
+      "triangles": 337996,
+      "ms": 864,
+      "level": "high",
+      "meshes": 38
+    },
+    "city|high|9x16|dark": {
+      "calls": 106,
+      "triangles": 160918,
+      "ms": 727,
+      "level": "high",
+      "meshes": 39
+    },
+    "sky|high|9x16|dark": {
+      "calls": 80,
+      "triangles": 102884,
+      "ms": 782,
+      "level": "high",
+      "meshes": 21
+    },
+    "gradient|high|9x16|dark": {
+      "calls": 79,
+      "triangles": 102820,
+      "ms": 721,
+      "level": "high",
+      "meshes": 20
+    },
+    "photo|high|9x16|dark": {
+      "calls": 79,
+      "triangles": 102820,
+      "ms": 627,
+      "level": "high",
+      "meshes": 20
+    },
+    "green|high|9x16|dark": {
+      "calls": 30,
+      "triangles": 50993,
+      "ms": 473,
+      "level": "high",
+      "meshes": 18
+    },
+    "blue|high|9x16|dark": {
+      "calls": 30,
+      "triangles": 50993,
+      "ms": 477,
+      "level": "high",
+      "meshes": 18
+    },
+    "creator_studio_desk|high|9x16|dark": {
+      "calls": 269,
+      "triangles": 422376,
+      "ms": 918,
+      "level": "high",
+      "meshes": 91
+    },
+    "cozy_study_corner|high|9x16|dark": {
+      "calls": 231,
+      "triangles": 376028,
+      "ms": 845,
+      "level": "high",
+      "meshes": 79
+    },
+    "minimalist_open_stage|high|9x16|dark": {
+      "calls": 158,
+      "triangles": 256236,
+      "ms": 798,
+      "level": "high",
+      "meshes": 52
     }
   },
   "errors": []
