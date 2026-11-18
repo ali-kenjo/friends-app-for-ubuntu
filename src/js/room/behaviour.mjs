@@ -10,7 +10,8 @@
 // and it says why in an event log ({ key, vars }: translated where it's shown).
 import { effectiveRoom, inWindow, roomHour } from "./schedule.mjs";
 import { canDo, explain } from "./rules.mjs";
-import { buildGrid, findPath, standPoint, zonesAt, pointInZone, whatBlocks, nearestFree, centreOf } from "./nav.mjs";
+import { thirst } from "./care.mjs";
+import { buildGrid, findPath, standPoint, zonesAt, pointInZone, whatBlocks, nearestFree, centreOf, reachFor } from "./nav.mjs";
 import { entryFor } from "./catalog.mjs";
 import { worldTransform, displayName } from "./model.mjs";
 import { AUTONOMY_PRESETS, TIMES_OF_DAY, HOVER_HEIGHTS } from "./choices.mjs";
@@ -23,6 +24,8 @@ const LOG_MAX = 60;
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const wrap = (deg) => ((((deg + 180) % 360) + 360) % 360) - 180;
+// Tidy up: how long it carries a thing before putting it back by itself (seconds)
+export const TIDY_AFTER = 45;
 const facingTo = (from, to) => Math.atan2(to[0] - from[0], to[1] - from[1]) / RAD;
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
@@ -64,6 +67,7 @@ export class RoomBehaviour {
     this.log = [];
     this.onLog = null;
     this.onAction = null; // ({ assetId, action }) when it uses a thing
+    this.carrying = null; // { id, since }: a thing it picked up (shown in front of it; its place in the room stays)
     this.sleeping = false;
     this.letRun = null; // "finish" | "brief" | "return": the task goes on though you're talking (interrupt policy)
     this.postureWant = null; // a posture asked for (robot_posture): { kind, asset }
@@ -71,6 +75,11 @@ export class RoomBehaviour {
     this.gaitFor = null; // a gait asked for, for one trip
     this.paused = null; // what it was doing when you started talking (pause and resume)
     this.out = this.output();
+  }
+
+  nameOf(id) {
+    const a = this.eff?.room.assets.find((x) => x.id === id);
+    return a ? displayName(a) : "";
   }
 
   // ---------- The room ----------
@@ -83,6 +92,8 @@ export class RoomBehaviour {
       this.gridKey = key;
       this.grid = buildGrid(this.eff.room, { hidden: this.eff.hidden });
     }
+    // A thing it carried that's gone or hidden now is no longer in its hands
+    if (this.carrying && !this.eff.room.assets.some((a) => a.id === this.carrying.id && !this.eff.hidden.has(a.id))) this.carrying = null;
     if (first) {
       this.pos = this.home();
       this.yaw = room.robot.home.facing;
@@ -108,10 +119,10 @@ export class RoomBehaviour {
 
   // ---------- Going places ----------
   // Plans a path; false (and a reason in the log) when there is none
-  goTo(to, { why, face = null, asset = null, then = null, name = "" } = {}) {
+  goTo(to, { why, face = null, asset = null, then = null, name = "", reach = 8 } = {}) {
     if (!this.grid) return false;
     const target = this.leashed(to, why);
-    const p = findPath(this.grid, this.pos, target, { smooth: this.room.robot.movement.path });
+    const p = findPath(this.grid, this.pos, target, { smooth: this.room.robot.movement.path, reach });
     if (!p.ok) {
       const by = whatBlocks(this.eff.room, this.pos, target, { hidden: this.eff.hidden });
       const byName = by.length ? displayName(this.eff.room.assets.find((a) => a.id === by[0])) : "";
@@ -276,7 +287,7 @@ export class RoomBehaviour {
     const look = anchorPoint(this.eff.room, a, "look");
     const name = displayName(a);
     const dwell = r.dwell || [3, 8];
-    const ok = this.goTo(goal, { why, asset: a.id, face: look ? facingTo(goal, [look[0], look[2]]) : null, name, then: { kind: "dwell", asset: a.id, action, dwell: dwell[0] + this.random() * Math.max(0, dwell[1] - dwell[0]) } });
+    const ok = this.goTo(goal, { why, asset: a.id, reach: reachFor(a), face: look ? facingTo(goal, [look[0], look[2]]) : null, name, then: { kind: "dwell", asset: a.id, action, dwell: dwell[0] + this.random() * Math.max(0, dwell[1] - dwell[0]) } });
     if (ok) this.say("Going to the {name}", { name });
     return ok;
   }
@@ -306,7 +317,7 @@ export class RoomBehaviour {
     if (state !== prev && state !== "idle") this.sleeping = false;
 
     // ---- You start talking while it's busy: the interrupt policy says what happens ----
-    const busy = ["visit", "route", "wander", "command", "place", "pace"].includes(this.why) && this.task && this.task.kind !== "hold";
+    const busy = ["visit", "route", "wander", "command", "place", "pace", "tidy"].includes(this.why) && this.task && this.task.kind !== "hold";
     if (busy && (state === "listening" || state === "talking") && prev !== "listening" && prev !== "talking" && !filming) this.interrupt(robot.autonomy.interrupt);
     if (this.letRun && (!this.task || this.task.kind === "hold")) this.letRun = null;
     // Back to idle with something paused: it carries on
@@ -473,7 +484,7 @@ export class RoomBehaviour {
   decideIdle(still, ctx, now) {
     const robot = this.room.robot;
     // Busy with something: let it finish
-    if (this.task && this.task.kind !== "hold" && ["visit", "wander", "route", "home", "command", "place"].includes(this.why)) return;
+    if (this.task && this.task.kind !== "hold" && ["visit", "wander", "route", "home", "command", "place", "tidy"].includes(this.why)) return;
     if (["talk", "listen", "think", "pace", "rest", "filming", "gone"].includes(this.why) || !this.task) {
       // Back from a conversation or a rest: home, after a moment
       this.next.home = this.t + robot.autonomy.homeReturnSec;
@@ -488,6 +499,12 @@ export class RoomBehaviour {
       return;
     }
     if (still || ctx.reducedMotion) return;
+    // Tidy up: what it carried goes back to its place after a while
+    if (robot.autonomy.tidy && this.carrying && this.t - this.carrying.since > TIDY_AFTER) {
+      const a = this.eff.room.assets.find((x) => x.id === this.carrying.id);
+      if (a && this.visit(a, "put_back", "tidy")) return this.say("Tidying up: the {name}", { name: displayName(a) });
+      this.carrying = null;
+    }
     const preset = AUTONOMY_PRESETS.find((p) => p.id === robot.autonomy.preset);
     const idle = robot.autonomy.preset === "custom" ? robot.states.idle : preset?.idle || robot.states.idle;
     // A route that is due runs first
@@ -563,9 +580,13 @@ export class RoomBehaviour {
       let w = r.weight ?? 50;
       if (ctx.mood && r.moods?.[ctx.mood] !== undefined) w *= r.moods[ctx.mood];
       if (w <= 0) continue;
+      // A thirsty plant (plant care on) is much more likely, and it waters it
+      const dry = thirst(this.room, a, now.getTime ? now.getTime() : Date.now());
+      const waterIt = dry >= 0.5 && def.actions.includes("water") && canDo(this.eff.room, "auto", a.id, "water", ctxRules).ok;
+      if (waterIt) w *= 1 + 6 * dry;
       // What it does there: the first thing it may do of what the thing offers (beyond looking and going)
       // (never "use" on its own: switching your things is done when you ask)
-      const act = ["touch", "play", "read", "water", "sit", "lean", "write", "tidy"].find((x) => def.actions.includes(x) && canDo(this.eff.room, "auto", a.id, x, ctxRules).ok) || "look";
+      const act = waterIt ? "water" : ["touch", "play", "read", "sit", "lean", "write", "tidy"].find((x) => def.actions.includes(x) && canDo(this.eff.room, "auto", a.id, x, ctxRules).ok) || "look";
       options.push({ a, w, act });
     }
     if (!options.length) return false;
@@ -665,6 +686,14 @@ export class RoomBehaviour {
       if (a && t.then.action !== "look" && t.then.action !== "go") {
         this.say("Using the {name}: {action}", { name: displayName(a), action: t.then.action });
         this.onAction?.({ assetId: a.id, action: t.then.action });
+        // Picked up: it carries it from here; put back: it lets go where the thing belongs
+        if (t.then.action === "carry") {
+          if (this.carrying && this.carrying.id !== a.id) this.say("Put the {name} back", { name: this.nameOf(this.carrying.id) });
+          this.carrying = { id: a.id, since: this.t };
+        } else if (t.then.action === "put_back" && this.carrying?.id === a.id) {
+          this.carrying = null;
+          this.say("Put the {name} back", { name: displayName(a) });
+        }
       }
       return;
     }
@@ -805,6 +834,7 @@ export class RoomBehaviour {
       roam: !filming && !ctx.reducedMotion && ctx.stay !== true && robot.movement.freedom !== "stay" && robot.autonomy.preset !== "statue",
       path: this.task?.kind === "go" ? this.task.points.slice(this.task.i - 1) : this.task?.leg ? this.task.leg.points.slice(this.task.leg.i - 1) : [],
       why: this.why,
+      carrying: this.carrying?.id || null,
     };
   }
 }
@@ -816,5 +846,6 @@ export function labels() {
     "Following the route {name}", "Staying put: filming", "Night: resting", "You're away: going to rest", "Asleep",
     "Not visiting: the session's limit is reached", "Not visiting: {n} visits this hour already", "Skipped the {name}: Never",
     "Slowed down: slow zone", "Using the {name}: {action}", "Carrying on", "Put down by hand", "Finishing first, then listening", "Finishing briefly, then listening", "Pausing to listen", "Stopping, coming back", "No path to point {n} of the route", "Skipped a step of the route: {why}", "Route done: {name}",
+    "Put the {name} back", "Tidying up: the {name}",
   ];
 }

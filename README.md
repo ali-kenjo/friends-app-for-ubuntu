@@ -1,36 +1,35 @@
 <p align="center"><img src="build/icon.svg" width="88" alt="Friends: the robot's face"></p>
 
-# Friends (`friends-app-for-ubuntu` v1.0)
+# Friends (`friends-app-for-ubuntu` v1.1)
 
-An open-source, interactive 3D desktop AI robot companion for Ubuntu. Talk in real time over voice or zero-key Text Sandbox, customize its shader style & lighting mood, decorate its 3D workspace (or override any prop with your own `.glb` models), and choreograph autonomous room routines—all local-first and under your control.
+An open-source desktop AI companion for Ubuntu with a 3D robot body. Talk in real time by voice (Gemini Live, OpenAI Realtime, or an AI on your own computer) or by typing, give the robot a room you furnish yourself, direct how it lives in it, and keep everything local-first and under your control.
 
-## What's New in v1.0 Production Release
+## What's new in 1.1: The Room
 
-- **Provider-Agnostic Voice & AI Bridge (`VoiceProviderAdapter`)**:
-  - **Gemini Live API (`gemini-3.8-live`)** with optional **`gemini-3.8-live-extended-thinking`** toggle and `interaction_status` lifecycle handling.
-  - **OpenAI Realtime API** bidirectional audio + function calling.
-  - **100% Local / OpenAI-Compatible Pipeline**: VAD + Faster-Whisper/Whisper.cpp STT + Ollama (auto-detected on `localhost:11434`), LM Studio, vLLM, or LocalAI + Piper/Kokoro/system TTS.
-  - **Text / Silent Sandbox Mode**: Full interactive chat + live 3D room tool-calling requiring **zero API keys and zero microphone**.
-  - **Live Room-Context Bridge**: Automatically injects structured live room state (props, whiteboard text, notebook notes, flower hydration, toys) into AI context, paired with 9 compound choreography tools (`move_to_asset`, `explain_on_whiteboard`, `clear_whiteboard`, `write_in_notebook`, `play_with_toy`, `water_flowers`, `set_emotion`, `follow_route`, `return_home`).
-- **All-In-One 4-Style Shader Pipeline & 5 Lighting Presets**:
-  - Hot-swap runtime shaders (`Cozy Stylized PBR`, `Realistic PBR`, `Anime Cel-Shaded` with 3-band toon ramps + inverted-hull outlines, and `Minimalist Studio`) without altering physics or navigation.
-  - 5 lighting moods (`Morning Daylight`, `Warm Desk Lamp`, `Sunset Glow`, `Night Cyber Studio`, `Neutral Broadcast`) with dynamic desk-lamp emission and robot-emotion ambient tinting.
-- **Customizable 12-Module Voice Mode Action Dock & Clean Stage (`H` / `F11`)**:
-  - Per-module visibility toggles, drag-and-drop ordering, icon-only/label modes, `Bottom`/`Left`/`Right`/`Floating` dock positions, custom hotkeys, and *Minimal* / *Creator Stage* / *Full Control* presets.
-  - **Clean Stage & OBS Broadcast Mode** with hideable UI, corner hover pill, 5 camera presets (`Wide Room`, `Desk Close-Up`, `Whiteboard Focus`, `Follow Robot`, `Cinema Orbit`), solid studio, Chroma-Key Green/Blue, and Compositor-Transparent Window backdrops, plus Ubuntu tray actions (`Toggle Clean Stage`, `Mute / Unmute Mic`).
-- **Unified 3D Prop System, 8 Interactive Toys & Custom `.glb` Sockets**:
-  - Procedural furniture & interactive desk props (`whiteboard`, `desk_table` with surface-snap sockets, `study_chair`, `vase_flowers` multi-state watering cycle, `books_notebook`, `pens_cup`, `gaming_console`) + **8 interactive toys** (`bouncy_ball`, `rubiks_cube`, `rc_drone`, `retro_handheld`, `holo_projector`, `newtons_cradle`, `stacking_blocks`, `mini_synth`) with procedural WebAudio foley SFX.
-  - Custom `.glb` model override on every asset with metric auto-normalization and socket detection (`socket_hand_grip`, `anchor_robot_stand`, `DynamicCanvas`).
-- **Live 3D Room Editor, Dynamic A\* Navigation & 5-Tab Behavior Studio**:
-  - Translate/Rotate/Scale `TransformControls` gizmos, Undo/Redo stack (`Ctrl+Z`/`Ctrl+Y`), NavMesh/anchor/route visualizers, and 3 room presets (*Cozy Study*, *Creator Studio*, *Minimal Stage*).
-  - Dynamic 2D A\* grid obstacle avoidance, IK hand/head sockets, autonomous quotas/cooldowns/weights, waypoint routes (`loop`, `ping_pong`, `random`), 4 user-speech interrupt policies, and portable `.zip`/`.json` Studio Bundle export/import stored with `0600` secret protection in `~/.config/friends-app-for-ubuntu/`.
+![The Room Editor: an empty room furnished with a desk, a chair, a lamp and a mug on the desk, a picture and a clock on the wall, a rug and a monstera](docs/design/screenshots/1.1/dod/2-built.png)
 
-## Packaging a v1.0 Ubuntu Release
+- **One room for the robot.** Its walls, floor, ceiling and view outside, its light and air, its things, how it behaves there, camera shots and scenes are one room, and everything (voice mode, the Studio, recordings, the AI) uses it. Your places, Room Builder rooms, 1.0 presets, custom rooms, looks and each character's room moved over by themselves.
+- **194 things in a soft, rounded 3D look** in 18 categories, all recolorable, with contact shadows, lamps that really light the room, and views outside with a little life in them. The 27 places are rebuilt from them as templates.
+- **The Room Editor**: drag things from the catalog onto the floor, a wall or another thing; move, turn and scale them by handle or keyboard; snap, undo, measure, scenes by time of day, a plan as a picture, up to 64 rooms to export and import, and your own `.glb` models from Blender.
+- **Direct the robot**: its home and spots, how it stands and sits, where it looks, how it moves, zones it keeps out of or rests in, routes, and for each thing what it may do with it. Simulate shows it at speed and explains each decision. It notices what you place, carries things and puts them back, and waters drooping plants when plant care is on.
+- **The AI works through the same room and rules**: one set of robot tools checked against the room, a short description of the room for every AI service, rearranging with a preview you approve, and "Describe a room" from your words.
+- **Your own things in the room** (each off until you switch it on): your board on the whiteboard, notes in the notebook, notifications on the tablet, today on the calendar, your photo in a frame; blank while filming unless you allow it.
+- **Voice mode's toolbar** and **Settings → Robot** (Room, Graphics, Editor, Privacy) rebuilt; see [the changelog](CHANGELOG.md) for everything.
+
+How it's built: [docs/design/room.md](docs/design/room.md). Decisions and measured numbers: [docs/release-1.1/DECISIONS.md](docs/release-1.1/DECISIONS.md).
+
+### Still from 1.0
+
+- **Voice your way**: Gemini Live (with "think longer"), OpenAI Realtime, a pipeline on your own computer (speech recognition, a local AI such as Ollama or LM Studio, Piper or Kokoro to speak), or typing only with no microphone or key. Settings → Characters → Voice conversation → Live voice service.
+- **Clean stage and backdrops for streaming**: hide everything but the robot (H), and put it on a solid color, an exact green or blue screen, or a transparent background (the room's "Behind the robot").
+- **Robot and voice setup as one file** to keep or move to another computer (Data & backups), without your keys.
+
+## Packaging a release
 
 ```bash
 npm run check          # Verify syntax, HTML IDs, and ESLint rules
 npm test               # Run all automated tests
-bash scripts/build-release.sh   # Build dist/friends_1.0.0_amd64.deb and AppImage
+bash scripts/build-release.sh   # Build the .deb and the AppImage in dist/
 ```
 
 <p align="center">
@@ -42,7 +41,7 @@ bash scripts/build-release.sh   # Build dist/friends_1.0.0_amd64.deb and AppImag
 - **Specialists**: roles (everyday, coding, writing, research, vision, embeddings) each with its own model on your computer, loaded one at a time so even a small graphics card is enough (Friends works out what your computer can take), with Gemini as the manager. See [Specialists](#specialists-small-models-on-a-small-graphics-card).
 - **Two characters to talk to for hours**: **Atlas** (calm, sharp, dry-witted, always a step ahead) and **Mira** (bright, playful, fearless, your most honest friend), or your own. Switch with one tap. They remember your conversations, follow up on what you told them, and never let a conversation run dry.
 - **Flagship Voice Mode & On-Camera Co-Host**: Real-time voice conversations with a 3D robot body, filming mode, customizable **acting dynamics** (*Best Friends Banter*, *Podcast Co-Host*, *Comedy Partner*, *Sarcastic Critic*, *Curious Interviewer*, *Custom*), scene briefs, and **live document grounding** (talk through scripts, articles, or vault notes during conversations).
-- **3D Robot Studio & Offline Room Builder**: Fully customizable 3D companion with 30 moods, 40 gestures, alive idle behaviors, physical touch zones, and procedural WebAudio robot sounds. Build your own rooms with a 150+ item procedural catalog, slot snapping, architecture styles, camera shots (`orbit`, `dolly`, `cinematic`), and Photo Mode export.
+- **3D Robot Studio and the Room Editor**: Fully customizable 3D companion with 30 moods, 40 gestures, alive idle behaviors, physical touch zones, and procedural WebAudio robot sounds. Furnish its room from a 194-thing catalog (or your own `.glb` models), direct how it lives there, and give voice mode the room's camera shots.
 - **A Robot Page: the Robot, a Whiteboard, Sources and a Role, Together**: one board that you and the robot draw on at the same time, and the robot always knows what is on it and what you are doing. The robot floats over it in a window you place and size yourself; so does the board beside your chat and in voice mode (drag it, pull its edges, dock it, or use its Move and resize menu), and in voice mode you can move the robot itself. The robot can be a **teacher** who explains step by step on the board and quizzes you, a tutor, a study buddy, a coach, a language partner, an interviewer, a co-host, a creative partner, an analyst, a writer, a planner, a storyteller, or a role you describe. Give it **sources** (texts, files, notes, chats) and it answers from them and says where it found it ([S1]); one click makes a summary, a study guide, a quiz, flashcards, a timeline or a mind map. It has a shape library, 20 layouts, 29 tools of its own, `[[links]]` between boards, an outline, Ctrl+P to find anything, asks before changing what you made, and never lets a mission touch it. See it on its own page, beside the chat, in voice mode, with the robot's arm following its pen, and in recordings. Settings → Robot has the options.
 - **Unified Notification Router**: Single dispatcher routing system alerts (reminders, focus, mission plans/progress/done/trouble, briefing, watch alerts, Reddit matches) across Desktop, In-App center, and Telegram companion. Event matrix, quiet hours/DND with urgent bypass, digest bundling, and outbound delivery log.
 - **Hardened Telegram Companion Bot (Labs)**: Talk to Friends, approve mission plans, and receive live alerts from anywhere via your own private Telegram bot using secure long-polling with zero open ports or webhooks. Mandatory 6-digit code pairing (`/pair <code>`), role management (`admin`, `chat`, `notify_only`), safe message splitting, and privacy withholding in group chats.
@@ -162,11 +161,12 @@ The server also emits structured request logs with status codes and duration met
 Friends' tests use Node.js's built-in `node:test` and `node:assert`:
 
 ```bash
-npm test               # unit and HTTP integration tests (nearly 500, under a minute, no network; a fake Gemini and a fake Ollama play the models)
+npm test               # unit and HTTP integration tests (about 1,000, under a minute, no network; a fake Gemini and a fake Ollama play the models)
 npm run check          # every script parses, JSON is valid, the page needs no internet to start
 npm run test:e2e       # the real page in Chrome against the real helper and a fake Ollama: first run, the keyboard,
-                       #   languages and right-to-left, touch targets, zoom, Missions and Specialists (needs Chrome; set CHROME_PATH if it isn't in the usual place)
-npm run test:a11y      # axe-core over the main surfaces, dark and light, English and Arabic
+                       #   languages and right-to-left, touch targets, zoom, Missions and Specialists, the Room Editor and the robot in
+                       #   its room, and the 1.1 definition of done item by item (needs Chrome; set CHROME_PATH if it isn't in the usual place)
+npm run test:a11y      # axe-core over the main surfaces, dark and light, English and Arabic, then the Room Editor with WebGL
 npm run i18n           # how complete the German and Arabic translations are
 npm audit              # dependencies with known vulnerabilities
 ```
@@ -414,14 +414,17 @@ A small, friendly hovering robot is the AI's body: a rounded head with a glossy 
 |---|---|
 | Robot in text chat | The small robot next to your chats |
 | Looks | **Open Robot Studio…**: colors, shape, face, clothes, the room around it, and your saved looks (next section). A line summarises what it wears now |
-| Where it is | The place the robot is in: Studio, Glow, Cozy desk, Podcast studio, Living room, Space, Sunset hills, Neon city, Clouds, Gradient, Your picture, or **Green screen** / **Blue screen** (exactly #00B140 / #0047BB, flat, with no shadow or glow spilling onto it, for keying out in Kdenlive; don't pick a light color close to the key color). Everything else about the place is in the Studio |
+| Room | The room it is in (start from any of the 27 places), its name, mood, brightness, time of day, the robot's mood tint, what's in the air, season, weather from outside, wind, the camera voice mode starts with, and what's **behind the robot**: the whole room, the robot and chosen things, a solid color, a **green** or **blue screen** (exactly #00B140 / #0047BB, flat, no shadow or glow spilling onto it, for keying out in Kdenlive; don't pick a light color close to the key color), or transparent. **Edit the room…** opens the Room Editor for the rest |
+| Behaviour | What the AI may do with the robot's body (moods, gestures, walking, looking, using things, rearranging the room: never, ask first or without asking; Describe a room; what the AI is told of the room), and **Edit its rules in the room…** for its home, posture, gaze, movement, zones, routes and each thing's rules |
 | Camera shot, Place in the picture | Close-up, medium or wide; the robot on the left third, centered or on the right third |
 | Cinematic camera | A gentle drift, and a small push-in when it stresses a word |
 | Where do you sit? | Left, in front or right of the screen (as you look at it): it turns to you when you talk and looks out of the screen when it talks |
 | Follow my face | Its eyes follow you through the webcam. Face detection runs in the browser (MediaPipe, served by the helper, nothing is sent anywhere). The camera is used only while this is on and a robot is showing; an indicator in voice mode shows it (click it to switch off) |
 | The AI moves it: in voice mode / in text chat | Offers the AI the robot tools. On for voice by default; off for text chat, because every tool round adds a moment before the reply appears |
 | Smarter moods | One small extra Gemini request per turn to read the mood (uses quota) |
-| Quality | Auto, Low, Medium, High: pixel ratio, antialiasing, bloom, shadows and face texture size. Auto starts high and steps down one level if it stays under about 50 frames a second for a few seconds |
+| Graphics | Quality (Auto, Low, Medium, High, Ultra: Auto starts high and steps down one level if it stays under about 50 frames a second for a few seconds, never while filming), render scale, frame rate, battery saver, slower in the background, smooth edges, geometry and texture detail, lamps that light the room, plant sway, particles, shadows and their resolution, ambient occlusion, contact shadows, room reflections, glow, color grading, depth of field, the robot's shading (soft or cel-shaded), and a performance overlay |
+| Editor | The Room Editor's grid, snapping, angle step, distances, the robot's walkable floor, units (cm or inches), handle size, orbit speed, new things in the room's colors, asking before removing several things, saving as you go |
+| Privacy | Each thing in the room that can show your own things (off until you switch it on), and whether they show while filming and recording |
 | Filming mode | Start delay (off, 3, 5, 10 s), camera-friendly look, large captions, bigger face |
 | Your own model | Upload a `.glb` from Blender, or reset to the built-in robot |
 
@@ -433,7 +436,7 @@ The panel has a live preview, and "Try a mood" / "Try a move" to see every expre
 
 ![The Robot Studio: the live robot on the left, what to change on the right](docs/design/robot-studio/studio.jpg)
 
-Settings → Robot → **Open Robot Studio…** (or **Customize…** in voice mode's 🎥 menu). A big live preview on one side (camera: close, medium, wide; view: front, angle, side, back, or a slow turn; try a mood or a move), six tabs on the other. Everything changes the robot at once, everywhere (voice mode, the chat dock, recordings), is saved as you go, and can be undone (Ctrl+Z, Ctrl+Shift+Z). **Each character keeps its own robot and room** while "Each has its own look" is on (Settings → Characters): Atlas can sit in a podcast studio in a headset while Mira lounges in a living room in a beanie.
+Settings → Robot → **Open Robot Studio…** (or **Customize…** in voice mode's 🎥 menu). A big live preview on one side (camera: close, medium, wide; view: front, angle, side, back, or a slow turn; try a mood or a move), seven tabs on the other. Everything changes the robot at once, everywhere (voice mode, the chat dock, recordings), is saved as you go, and can be undone (Ctrl+Z, Ctrl+Shift+Z). **Each character keeps its own robot and room** while "Each has its own look" is on (Settings → Characters): Atlas can sit in a podcast studio in a headset while Mira lounges in a living room in a beanie.
 
 | Tab | What you can change |
 |---|---|
@@ -441,7 +444,8 @@ Settings → Robot → **Open Robot Studio…** (or **Customize…** in voice mo
 | **Shape** | Body (bean, egg, capsule, ball, pear), what's on its head (glowing fins, antenna, two antennae, cat, bear or bunny ears, a sprout, little horns, nothing), hands (paddles, balls, mittens, pincers), how it floats (ring, two rings, jets, nothing), and eight sliders: overall size, head size, head shape (boxy to round), body width and height, arm length, hand size, size of the ears or fins |
 | **Face** | Eyes (classic, round, wide, big, dots, tall, pixel, visor), their size and distance, the mouth (smile, small, wide, bold, none), the color of the eyes and mouth, the blush |
 | **Outfit** | Seven places to dress, each with its own colors: **hat** (beanie, cap, top hat, beret, party hat, crown, wizard hat, chef's hat, propeller cap, cowboy hat, Santa hat, big bow, flower, halo), **face** (round, square, heart or star glasses, sunglasses, visor, monocle, eye patch, mustache), **ears** (headphones, headset with a microphone, earmuffs), **neck** (scarf, bow tie, necktie, bandana, frilly collar, medal, bell collar, shirt collar), **clothes** (T-shirt, sweater, hoodie, vest, overalls, apron, jacket; plain, stripes, bands, dots, checks, a fade or stars), **back** (cape, backpack, angel or butterfly wings, jetpack, a fluffy tail), **chest** (glowing core, heart, star, lightning bolt, name badge, buttons). Propellers spin, capes sway, wings flap, flames flicker while it talks |
-| **Room** | The **place** and, for each, its colors, the **lighting** (like the place, studio, daylight, golden hour, evening, night, neon; brightness), the **floor** (glossy mirror, matte, glowing grid, none), **what's in the air** (dust in the light, fireflies, snow, stars, bubbles, petals, sparkles, embers, rain; how much), **the pieces of the set** (switch each on or off), the **words on a neon sign** (podcast studio, neon city), and **your own picture** as the backdrop (PNG, JPEG or WebP up to 12 MB; blur and dim it) |
+| **Room** | The room it is in: its picture, name and the template it came from, **Edit the room…** (the Room Editor), **Start from a place** (each of the 27 places is a room of its own, made the first time), **Surprise me**, its **light and mood** (mood, brightness, time of day), **what's in the air** (dust, fireflies, snow, stars, bubbles, petals, sparkles, embers, rain, leaves; how much), and **your own picture** when the view outside is your picture (PNG, JPEG or WebP up to 12 MB; blur and dim it) |
+| **Behaviors** | Its personality (energy, curiosity, playfulness…) and what it does when it's quiet |
 | **Looks** | 14 ready-made looks to start from (Podcast host, Pilot, Chef, Wizard, Astronaut, Detective, Cozy, Party, Royal, Angel, Gardener, Neon, Kitty, and the Classic), up to 24 of your own (give it a name, **Save this look**), **Surprise me**, and **Export…** / **Import…** to share a look as a small `.robot-look.json` file (a picture you chose as a backdrop isn't in it) |
 
 The ready-made looks, each in its own room (every one is made in the Studio and can be changed from there):

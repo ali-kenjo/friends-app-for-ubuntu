@@ -62,8 +62,9 @@ with what is left written next to it. A fresh session continues from this file a
       normal from height in the worker (`OffscreenCanvas`), idle-time fallback; no visible tiling on large
       surfaces (two scales / per-room offset).
 - [x] Contact shadows: one soft footprint texture (`kit/texture-gen.mjs`), all of a room's decals merged into one mesh (`RoomRenderer.syncDecals`), instead of a `kit/decals.js` (DECISIONS R8).
-- [~] `render/lighting.js`: key shadow camera fitted to room bounds (CSM for big open-air on High), soft
-      shadows by setting (PCFSoft / VSM on High), hemisphere bounce from the floor color, practical light
+- [x] `render/lighting.js`: key shadow camera fitted to room bounds (the open-air rooms are 6 × 5 m, so the fitted
+      camera covers them and CSM wasn't needed: §3.2 offers either), soft shadows by setting (the key light's PCF
+      blur radius: hard, soft, very soft; R43 — VSM wasn't needed), hemisphere bounce from the floor color, practical light
       budget (0/2/4/6) by importance and distance, window sun patches by time of day, per-room environment
       PMREM (debounced), emotion tint kept, chroma free of shadows and glow.
       **Left:** CSM for big open-air rooms and VSM on High; soft-shadow setting. Done (in `scene.js` + `RoomRenderer.js`, no separate lighting.js): room-fitted key shadow, hemisphere bounce, practical light budget, sun patches, per-room environment, emotion tint, chroma free of shadow and glow.
@@ -112,8 +113,7 @@ with what is left written next to it. A fresh session continues from this file a
       robot page's palette ("Edit the robot's room"). One opener (`editor/open.js`, `data-edit-room`); from
       the Studio, the Studio comes back after Done. (The voice request is an AI tool: step 7.)
 - [x] Studio Room tab summary: the room's picture and template name.
-- [ ] Studio Room tab: quick mood/time/air on the room document (step 8, when the tab's 1.0 place, mood,
-      floor and air controls go; until then they would be two "Mood" controls side by side).
+- [x] Studio Room tab: quick mood/time/air on the room document (done in step 8a, R41).
 - [x] Catalog: categories, search in en/de/ar over labels and tags, favourites, recently used, My sets;
       thumbnails drawn from the real builders and cached in IndexedDB by catalog version; badges; click or drag.
 - [x] Catalog: My models ("Add my model…", remove), placed and used like any other thing.
@@ -148,9 +148,9 @@ with what is left written next to it. A fresh session continues from this file a
 - [x] Extras: per-asset schedules (Advanced tab), floor plan as a PNG, scenes (which is on now; per scene
       its name, when it switches on, its mood, what shows and which lamps are on; holds only what it
       changes), the measure tool, "Describe the room" (the room in words, for screen readers and anyone).
-- [ ] Extras that need the robot or the AI: Describe a room (AI, step 7), ask the robot to rearrange and
-      tidy up (step 7), plants that need care (step 6).
-- [ ] The robot reacts to placed things during a conversation (with step 6).
+- [x] Extras that need the robot or the AI: Describe a room (AI, step 7), ask the robot to rearrange (step 7),
+      tidy up and plants that need care (step 9, R58, R59).
+- [x] The robot reacts to placed things during a conversation (step 9, R60).
 - [x] Touch, keyboard and accessibility for all of the above: keyboard shortcuts, outline as a tree,
       arrow keys in tabs/tiles not stolen by the shortcuts, focus kept when the inspector rebuilds, live
       announcements, 44 px targets on touch, RTL. `test/e2e/room-editor.test.js` (12 tests),
@@ -185,8 +185,10 @@ with what is left written next to it. A fresh session continues from this file a
       "Make this its home" then saves it as home (offered until used, dismissed or voice mode closes).
 - [x] Interrupt policies in the behaviour (stop and come back, finish briefly, pause and resume, finish
       first), unit-tested; mood affinity per thing in its Robot rules tab.
-- [ ] Navigation/interaction with anchors, aim IK, sit/lean, carrying the real mesh; move `core/robot/*`
-      into `src/js/room/robot/`; fix id collisions, unsanitized inputs, shadow/camera bug.
+- [x] Navigation/interaction with anchors, sit/lean, carrying the real mesh (R59); 1.0's `core/robot/*` was
+      removed rather than moved (R53, its id collisions and unsanitized inputs went with it); the shadow camera
+      fits the room bounds (step 3, `scene.js` setRoomBounds). Aim IK: the arm
+      follows the pen at the whiteboard and holds what it carries; a general reach-for-any-point IK is not built.
 - [x] Camera follow (voice mode follows the robot's place in the room) and auto-frame (room shots, step 5).
 - [x] Simulate ▶ (1×/5×, path line, nav grid, zones), event log explaining decisions (translated),
       "Try it" buttons for each interaction of a selected thing, Go there now for spots.
@@ -226,15 +228,38 @@ with what is left written next to it. A fresh session continues from this file a
 
 ## Step 9: Polish
 
-- [ ] i18n (de/ar complete, `npm run i18n` clean), RTL, `data-no-i18n` removed from anything with words.
-- [ ] Accessibility: `scripts/a11y.js` extended to the editor; axe clean en/ar; contrast AA in 6 packs × 2.
-- [ ] Performance pass; measured numbers per tier in DECISIONS.md.
-- [ ] Docs: `docs/design/room.md`, `docs/design/robot-studio.md`, README (accurate numbers, screenshots),
-      CHANGELOG 1.1.0 (migration notes, keyboard map).
-- [ ] Animated outside scenery the painter doesn't draw yet: flocks of birds, butterflies, rainbow, balloon, kite,
-      windmill, light trails, holo billboard, shooting stars, satellites (DECISIONS R17).
+- [x] i18n (de/ar complete, `npm run i18n` clean), RTL, `data-no-i18n` only on your own content (chats, avatars,
+      search results).
+- [x] Accessibility: `scripts/a11y.js` extended to the editor (`--editor`, WebGL); axe clean en/ar; contrast AA in
+      the six packs, light and dark (the a11y run covers every pack and theme).
+- [x] Performance pass; measured numbers per tier in DECISIONS.md (R61; frame rates on a real GPU are the owner's
+      check, with the performance overlay).
+- [x] Docs: `docs/design/room.md` (new), `docs/design/robot-studio.md`, README (1.1 section, Settings and Studio
+      tables, test counts, a screenshot), CHANGELOG 1.1.0 (migration notes, keyboard map).
+- [x] Animated outside scenery the painter doesn't draw yet: flocks of birds, butterflies, rainbow, balloon, kite,
+      windmill, light trails, holo billboard, shooting stars, satellites (DECISIONS R17, R57).
 - [ ] Final screenshots in `docs/design/screenshots/1.1/`; `npm run design:assets` and `design:rooms`.
-- [ ] Definition of done (§14) items 1–11 each verified on screen, with how.
+- [x] Definition of done (§14) items 1–11 each verified on screen, with how:
+  1. No mixing of systems: the 1.0 place builders, the Room Builder and the unified room are deleted (R53, R54);
+     every template is a rebuilt room document (`test/room-model.test.js`: "every place is rebuilt from catalog
+     things"); before/after shots in `docs/design/screenshots/1.1/before|after/`.
+  2–7. `test/e2e/definition-of-done.test.js`, one test per item, in the real page, with pictures in
+     `docs/design/screenshots/1.1/dod/` (2: the empty room furnished, the desk carrying the lamp and mug, nine
+     undos and nine redos, shadows and contact shadows; 3: home by the window facing the desk, gaze at you while
+     talking and at what it does otherwise; 4: 600 s of Simulate never inside the no-go zone, the AI's "water the
+     plant" refused; 5: sits on the sofa when idle, stands to talk; 6: Work by day with the lamp on and home at
+     the desk, Chill after 19:00 with a warm mood; 7: a Blender-style chair with `sit_seat` and
+     `anchor_robot_stand` through the wizard, on the floor at its size, sat on at the seat's height).
+  8. Low on software WebGL draws every room without errors (that suite's item 8 and every e2e run);
+     counts per tier inside budget (R61); Auto stepping down is unit-tested; 60 fps on High on a real GPU: the
+     owner's check, with Settings → Robot → Graphics → Performance overlay.
+  9. German and Arabic complete (`npm run i18n`), the Arabic editor test (right to left, nothing left in
+     English), keyboard paths in the editor and toolbar tests, axe clean (`npm run test:a11y`, page and editor).
+  10. `test/rooms-migration-start.test.js` and `test/room-model.test.js` (0.6, 0.7, 0.8 and 1.0 settings, custom
+     rooms, looks, characters' rooms), `.robot-room.json` and bundle imports (`test/rooms-api.test.js`,
+     `test/v1-architecture.test.js`).
+  11. All five checks pass (the last run is in the final report); contact sheets and room shots in
+     `docs/design/screenshots/1.1/`.
 - [ ] Final report.
 
 ---

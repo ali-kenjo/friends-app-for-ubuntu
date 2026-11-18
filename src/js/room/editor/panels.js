@@ -17,6 +17,7 @@ import { resolveShot, shotPresets } from "../cameras.mjs";
 import * as SC from "./scenes.mjs";
 import { robotPanel } from "./robot-panel.js";
 import { thumbFor } from "./thumbs.js";
+import { unreachable, standPoint, whatBlocks } from "../nav.mjs";
 
 const PALETTE = ["#f4efe6", "#ede4d6", "#d9c29c", "#c89b6e", "#b07a4a", "#8a5a33", "#5a3d2b", "#2d3038", "#c47a5a", "#e05a47", "#f2c14e", "#4d8a62", "#5b8fa8", "#6f9cf5", "#7c66dc", "#c98bb8"];
 // Made when shown (the words are in the interface language)
@@ -267,6 +268,7 @@ export function outlinePanel(ed) {
     input.select();
   };
 
+  let blocked = new Set();
   const row = (a, depth) => {
     const sel = ed.selected.includes(a.id);
     const name = a.name || t(ops.defOf(a)?.label || a.type);
@@ -292,12 +294,15 @@ export function outlinePanel(ed) {
       if (i > 0) [list[i - 1], list[i]] = [list[i], list[i - 1]];
       ed.commit({ ...ed.room, assets: list }, t("Reorder"));
     });
-    li.append(nameBtn, h("span", { class: "re-row-tools" }, up, eye, lock));
+    // The robot can't get to it from its home (it can still look at it)
+    const warn = blocked.has(a.id) ? h("span", { class: "re-row-warn", title: t("The robot can't get to it"), text: "!" }, h("span", { class: "sr-only", text: t("The robot can't get to it") })) : null;
+    li.append(nameBtn, warn, h("span", { class: "re-row-tools" }, up, eye, lock));
     return li;
   };
 
   function refresh() {
     const focusedId = document.activeElement?.closest?.(".re-tree [data-id]")?.dataset.id;
+    blocked = new Set(unreachable(ed.room).filter((x) => x.kind === "asset").map((x) => x.id));
     tree.replaceChildren();
     const robotRow = h("li", { role: "treeitem", tabindex: "0", class: `re-row robot${ed.robotSelected ? " on" : ""}`, "aria-level": "1", "aria-selected": String(ed.robotSelected), "data-robot": "" }, h("span", { class: "re-row-name", text: t("The robot (its home)") }));
     robotRow.addEventListener("click", () => ed.selectRobot());
@@ -519,7 +524,16 @@ function rulesTab(ed, a, def, commit) {
     const ids = ed.room.assets.filter((x) => ops.defOf(x)?.category === def.category).map((x) => x.id);
     ed.commit(ops.updateMany(ed.room, ids, (x) => ({ rules: { ...defaultRules(ops.defOf(x)), permission: r.permission, weight: r.weight, cooldown: r.cooldown, maxPerHour: r.maxPerHour, keepDistance: r.keepDistance } })), t("Rules"));
   });
+  // Out of its reach: what stands in the way, so you know what to move
+  let reach = null;
+  if (unreachable(ed.room).some((x) => x.kind === "asset" && x.id === a.id)) {
+    const home = ed.room.robot.home.pos;
+    const block = whatBlocks(ed.room, [home[0], home[2]], standPoint(ed.room, a)).filter((id) => id !== a.id)[0];
+    const other = block && ed.room.assets.find((x) => x.id === block);
+    reach = h("p", { class: "rs-hint re-warn", role: "note", text: other ? t("The robot can't get to it from its home: the {name} is in the way.", { name: other.name || t(ops.defOf(other)?.label || "") }) : t("The robot can't get to it from its home: there's no way through. Move it, or what's around it.") });
+  }
   return [
+    ...(reach ? [reach] : []),
     section(t("What the robot may do with it"), tiles({ label: null, name: t("Permission"), items: C.PERMISSIONS, value: r.permission, columns: 2, onChange: (v) => set({ permission: v }) }).el),
     section(t("Allowed actions"), ...actionToggles),
     section(t("Visiting on its own"), slider({ label: t("How much it likes it"), min: 0, max: 100, step: 1, value: r.weight, def: 50, format: (v) => `${Math.round(v)}`, onChange: (v) => set({ weight: v }) }).el, slider({ label: t("Wait before the next visit"), min: 0, max: 600, step: 5, value: r.cooldown, def: 45, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ cooldown: v }) }).el, slider({ label: t("At most per hour"), min: 0, max: 60, step: 1, value: r.maxPerHour, def: 6, format: (v) => `${Math.round(v)}`, onChange: (v) => set({ maxPerHour: v }) }).el, slider({ label: t("Stays at least"), min: 0, max: 120, step: 1, value: r.dwell[0], def: 3, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ dwell: [v, Math.max(v, r.dwell[1])] }) }).el, slider({ label: t("Stays at most"), min: 0, max: 300, step: 1, value: r.dwell[1], def: 8, format: (v) => t("{n} s", { n: Math.round(v) }), onChange: (v) => set({ dwell: [Math.min(v, r.dwell[0]), v] }) }).el, slider({ label: t("Keeps its distance"), min: 0, max: 200, step: 5, value: r.keepDistance, def: 0, format: (v) => ed.len(v / 100), onChange: (v) => set({ keepDistance: v }) }).el, toggle({ label: t("Fragile: careful and slow, never carried"), value: r.fragile, onChange: (on) => set({ fragile: on }) }).el),

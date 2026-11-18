@@ -1184,3 +1184,25 @@
   flex: 1;
   min-inline-size: 12rem;
 }
+
+/* Things the robot can't get to (the outline's mark, the robot rules' note) */
+.re-row-warn {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: 50%;
+  background: var(--warning);
+  color: #1b1405;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+[data-theme="light"] .re-row-warn {
+  color: #ffffff;
+}
+.rs-hint.re-warn {
+  color: var(--warning);
+  border-inline-start: 3px solid var(--warning);
+  padding-inline-start: var(--space-2);
+}

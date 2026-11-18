@@ -11,6 +11,7 @@ import { robotSound } from "./sound.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
 import { onHello, onServerEvent } from "../events.js";
 import { personalTexture } from "../room/personal.js";
+import { water as waterPlant } from "../room/care.mjs";
 import { loadCustomModels } from "../room/custom.js";
 import { canDo } from "../room/rules.mjs";
 import { standPoint } from "../room/nav.mjs";
@@ -172,6 +173,10 @@ export function loadEngine() {
         onTouch: (zone) => {
           if (engine?.quiet) return;
           robotSound.play(zone === "head" || zone === "cheek" ? "giggle" : "blip");
+        },
+        onWatered: (id) => {
+          if (roomDoc) setRoom(waterPlant(roomDoc, id, Date.now()));
+          if (!engine?.quiet) robotSound.play("water");
         },
         onPropUsed: (res) => {
           // A thing that was switched (a lamp on or off) is saved with the room

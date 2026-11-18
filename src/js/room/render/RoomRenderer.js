@@ -24,7 +24,8 @@ import { setTextureDetail } from "./kit/materials.js";
 import { setGeometryDetail } from "./kit/geometry.js";
 import { shadowRadius } from "../../robot/graphics.mjs";
 import { buildArchitecture, updateCutaway, wallOf, WALL_FACING } from "./architecture.js";
-import { outsideTexture } from "./outside.js";
+import { outsideTexture, stepOutside } from "./outside.js";
+import { thirst } from "../care.mjs";
 
 const RAD = Math.PI / 180;
 export const LIGHT_BUDGET = { low: 0, medium: 2, high: 4, ultra: 6 };
@@ -172,6 +173,12 @@ export class RoomRenderer {
     this.ownBackdrop = this.backdropFor(doc);
     this.syncAssets(doc, level);
     this.applyPersonal(doc, look.personal);
+    // Plants that need care droop as they get thirsty (care.mjs)
+    const nowMs = (look.now || new Date()).getTime();
+    for (const a of doc.assets) {
+      const inst = this.instances.get(a.id);
+      if (inst) inst.thirst = thirst(doc, a, nowMs);
+    }
     this.syncDecals(doc);
     if (this.decalMaterial) this.decalMaterial.visible = this.detail.contact !== false;
     this.syncLights(doc.assets.filter((a) => !this.hidden.has(a.id)), level, doc);
@@ -334,6 +341,34 @@ export class RoomRenderer {
     this.group.add(this.decals);
   }
 
+  // ---- A thing the robot carries: its own model, held in front of the robot (at: { x, y, z, yaw } in the room),
+  // back where it belongs when it's put down (id null). Its saved place never changes. ----
+  hold(id, at) {
+    const held = this.held;
+    const inst = id ? this.instances.get(id) : null;
+    if (held && (held.id !== id || held.group !== inst?.built.group)) {
+      // Put back: the model returns to its parent and its own place
+      if (held.group.parent) held.parent.add(held.group);
+      held.group.position.copy(held.pos);
+      held.group.quaternion.copy(held.quat);
+      held.group.scale.copy(held.scale);
+      this.held = null;
+    }
+    if (!inst || !at) return;
+    const g = inst.built.group;
+    if (!this.held) {
+      this.held = { id, group: g, parent: g.parent, pos: g.position.clone(), quat: g.quaternion.clone(), scale: g.scale.clone() };
+      // Carried things are small; a big one is held smaller so it reads as carried
+      const size = new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3());
+      const k = Math.min(1, 0.32 / Math.max(0.01, size.x, size.y, size.z));
+      this.held.fit = k;
+      this.group.add(g);
+    }
+    g.position.set(at.x, at.y, at.z);
+    g.rotation.set(0, (at.yaw * Math.PI) / 180, 0);
+    g.scale.copy(this.held.scale).multiplyScalar(this.held.fit);
+  }
+
   // ---- Things that show your own things (room/personal.js draws them): on their display while switched on,
   // their own face otherwise and while filming or recording (unless allowed) ----
   applyPersonal(doc, personal = {}) {
@@ -442,6 +477,7 @@ export class RoomRenderer {
   }
 
   clearDoc() {
+    this.held = null;
     for (const id of [...this.instances.keys()]) this.dropInstance(id);
     this.clearArchitecture();
     if (this.decals) {
@@ -477,8 +513,12 @@ export class RoomRenderer {
     if (this.mode !== "doc") return;
     const wind = this.detail?.sway === false ? 0 : this.doc?.atmosphere?.wind ?? 0.3;
     const f = { ...fx, wind };
-    for (const inst of this.instances.values()) inst.built.update?.(dt, this.legacy.time, f);
+    for (const inst of this.instances.values()) inst.built.update?.(dt, this.legacy.time, inst.thirst ? { ...f, thirst: inst.thirst } : f);
     if (this.arch && camera) updateCutaway(this.arch.walls, camera, this.doc.architecture.cutaway, dt);
+    // The life outside the windows and behind the room (birds, light trails, shooting stars…)
+    const views = this.arch?.outsides || [];
+    const back = this.ownBackdrop?.mode === "image" ? this.ownBackdrop.texture : null;
+    stepOutside(new Set(back ? [...views, back] : views), dt, { still: Boolean(fx.reduced || fx.friendly), fps: this.lightLevel?.startsWith("low") ? 6 : 12 });
   }
 
   dispose() {

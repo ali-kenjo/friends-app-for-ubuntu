@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.1.0] - unreleased
+
+### The Room: one room for the robot, a room editor, and a robot you can direct
+- **One room system.** The 27 places, the 0.7 Room Builder and 1.0's "unified room" were three systems that could show props from each other. Now the robot's room is one room document, called Room everywhere: its walls, floor, ceiling and view outside, its light and air, its things, how the robot behaves in it, camera shots and scenes. Every place, every Room Builder room, 1.0's three presets, your custom rooms, your looks and each character's room were moved over on first start, looking as close as possible to before.
+- **Everything rebuilt in a soft, rounded 3D look**: 194 things in 18 categories (furniture, plants, lamps, screens, toys, kitchen, music, companions…), each recolorable, with contact shadows, and the 27 places rebuilt from them. Lamps really light the room, rooms reflect their own walls, and the views outside have life: birds, a balloon, a windmill, butterflies, a kite, a sailboat, light trails, shooting stars.
+- **The Room Editor** (Studio → Room, Settings → Robot, the robot page and its Ctrl+P ("Edit the robot's room"), voice mode's scene menu and toolbar): drag things from the catalog onto the floor, a wall or another thing (a lamp on the desk moves with the desk), move, turn and scale them with handles or the keyboard, snap to the grid, walls and surfaces, undo and redo every step, hide, lock, group, measure, and export the plan as a picture. Start from a template or an empty room, keep up to 64 rooms, export and import them. Add your own `.glb` models from Blender (its size, flat tops and seats are read from the file). Scenes switch the room by time of day or while filming ("Work" by day, "Chill" after 19:00).
+- **Direct the robot**: drag its home and turn it, add spots, choose how it stands and sits per state (sit on the sofa when idle, get up to talk), where it looks, how freely and how fast it moves, draw zones (no-go, allowed, slow, quiet, stage, rest), make routes, and set for each thing what it may do with it (never, look only, when you ask, free; which actions; how often; how long). Simulate shows it all at speed, with a log that explains each decision. It notices things you place while you talk, can carry things (and put them back, or tidy up by itself), and waters plants that start to droop when plant care is on.
+- **The AI uses the same room and the same rules**: one set of robot tools checked against the room (1.0's tool names still work), a short description of the room for every AI service, "Rearrange" with a preview you approve, and "Describe a room": your words become a room from the catalog. A thing set to Never is refused with a sentence the AI says.
+- **Your own things on things in the room**, each off until you switch it on: your whiteboard on the board, your latest notes in the notebook, your notifications on the tablet, today on the wall calendar, a photo of yours in the frame. All drawn on your computer; blank while filming or recording unless you allow it.
+- **Voice mode's toolbar, rebuilt**: send the robot home or to a spot, a mood, a thing to use, the camera (the room's shots), the scene, roaming, clean stage; translated, with real keyboard use and keys you choose (Settings → Characters → Voice mode toolbar).
+- **Settings → Robot, reorganised**: Room (the room's name, light, time, air, season, weather, camera, what's behind the robot), Graphics (render scale, frame rate, battery saver, shadows, ambient occlusion, reflections, glow, depth of field, particles, the robot's shading, a performance overlay), Editor, and Privacy. Every group can be reset and found in search.
+
+### Moving to 1.1
+- On first start every room you had becomes a room document: the place you were in (its colors, light, floor, air, the pieces of its set you had on, the sign's words, your picture), each Room Builder room, the things of 1.0's unified room (in the room you used, not in every place), your custom rooms, your looks and each character's room. Places are now templates rebuilt from catalog things, so they look like before, only rounder and richer; a room that can't be matched exactly gets a note in it. Old `.robot-room.json` files and 1.0 studio bundles still import.
+- Settings keep only which room the robot is in (`robot.room = { layoutId }`); the rooms are files in `rooms/` (with `room-assets/` for your models and `room-photos/` for photos), all in backups.
+- 1.0's stage backdrop and camera preset become the room's own, once; 1.0's dock layout, keys and visual settings carry over.
+
+### Keyboard
+- **Room Editor**, with things selected: arrows move 1 cm (Shift: 10 cm); PageUp/PageDown lift (Shift: 10 cm); Q/E turn 15° (Shift: 1°); R turns 90°; Delete removes; H hides; L locks; F frames it; Ctrl+D duplicates, Ctrl+C/Ctrl+V copy and paste, Ctrl+G groups, Ctrl+A selects everything; Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y) undo and redo; hold Ctrl while dragging to place freely; Escape cancels or closes. The outline is a tree (arrow keys), and every tab and tile row works from the keyboard.
+- **Voice mode's toolbar**: Tab reaches it, arrow keys move along it, Alt + arrow moves a button, Enter or Space presses it, its menus close with Escape. Keys of your own (R home, H clean stage, B whiteboard, P roaming by default; M, F, Escape and Space stay voice mode's); in clean stage the first Escape brings the controls back.
+
+### Changed
+- The live voice service (Gemini Live, OpenAI Realtime, on this computer, typing only), its keys and the local pipeline's addresses moved from 1.0's studio drawer to Settings → Characters → Voice conversation; the robot and voice setup export to Data & backups.
+- The robot's shading is Soft or Cel-shaded; 1.0's "Realistic" and "Minimalist" looked like Soft on the new robot and are gone (a saved one reads as Soft). 1.0's lighting presets are the room's moods.
+- 1.0's dock switches "VAD / PTT" and "Vision" did nothing and are gone.
+
+### Fixed
+- In voice mode the robot could have no head (a gaze value went missing on its first frame).
+- The Settings preview never showed the robot (the Home robot kept the picture).
+- 1.0's dock, clean stage and studio drawer saved nothing (each change threw an error); the Room Editor's preferences were lost on restart.
+- The frame rate read high on slow computers, so Auto stepped down too late.
+- The robot's light color stopped following its design under 1.0's shader themes.
+
+### Removed
+- 1.0's unified-room code (its hidden copy of the desk room could put a marker in the robot's hand), the Room Builder tab, the 1.0 place builders and prop catalog, and the studio drawer.
+
 ## [0.8.0] - 2026-10-25
 
 ### The Robot page: the robot, and the whiteboard, sources and notes you work on together

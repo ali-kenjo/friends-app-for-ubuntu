@@ -278,3 +278,49 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
   and import; in backups like everything else you keep). All of it is drawn on this computer from what the page
   already has. While filming or recording each goes back to its own face, unless Settings → Robot → Privacy →
   "Show them while filming and recording" is on (recording now tells the robot it started and stopped).
+- **R56 Out of reach is shown, and templates don't ship with it.** The editor marks things the robot can't get to
+  from its home (a "!" in the outline, and the robot rules name what's in the way). Wall and ceiling things count
+  as reached from 1.5 m in front of them (it can look or point from there; the behaviour engine uses the same
+  reach), so a window above a sofa is fine. A room made from a template makes what still can't be reached
+  look-only (a gaming chair tucked under the podcast desk, a fern deep in the library's corner), and things set
+  to look-only or Never aren't counted. The model wizard switches on "sit" for a model with a `sit_` node and
+  "carry" for one with `socket_hand_grip`.
+- **R57 The views outside have life** (step 9, R17's list): birds, a balloon, a windmill, a rainbow at golden hour,
+  butterflies, a kite, a sailboat, a lighthouse beam, light trails and a holo billboard in the city, fireflies,
+  drifting clouds, shooting stars, satellites and comets. Drawn over the painting on its own canvas about 12
+  times a second (6 on Low), only for the views on screen, still with reduced motion and while filming
+  camera-friendly; the billboard changes color slowly instead of flickering.
+- **R58 Plants that need care** (`src/js/room/care.mjs`, off by default; the robot → On its own → Plants and
+  tidying). Each plant remembers when it was last watered (`asset.care.wateredAt`), droops a little over three
+  days (it leans over and sags), the robot is up to seven times likelier to visit a thirsty plant and waters it
+  (the clock starts again, saved with the room), and the AI is told which plants look thirsty. 1.0's vase
+  hydration, for every plant.
+- **R59 Carrying is the real thing, and Tidy up puts it back.** Asked to carry something (the AI's `robot_use`
+  with "carry", or a route step), the robot walks there and picks it up: the thing's own model moves to just in
+  front of it at hand height (a big one held smaller) and follows it, arms around it; the room document keeps
+  the thing's place. "Put back" walks it to its place and lets go; with Tidy up on it does that by itself after
+  45 seconds. Fragile things aren't carried; a thing removed or hidden is let go. The AI is told what it's
+  carrying.
+- **R60 It notices what you place.** Something new in the room while it acts there (placed in the editor during a
+  conversation, or by the AI) gets a four-second look and a curious tilt (not while filming); with the editor on
+  top it looks once the conversation shows it again.
+- **R61 Measured per tier** (step 9 performance pass; voice mode at 1280 × 720, `engine.getStats()`, summed over
+  every pass of a frame: the scene, shadows, the glow pass and AO's depth pass). Draw calls / triangles:
+
+  | Room (things) | Low | Medium | High | Ultra |
+  |---|---|---|---|---|
+  | Living room (21) | 106 / 110k | 387 / 576k | 387 / 779k | 387 / 977k |
+  | Podcast studio (20) | 91 / 74k | 344 / 419k | 344 / 577k | 344 / 741k |
+  | Library (16) | 76 / 105k | 294 / 562k | 294 / 739k | 294 / 895k |
+  | Café (18) | 78 / 62k | 294 / 366k | 300 / 532k | 300 / 677k |
+  | Spaceship (15) | 58 / 70k | 212 / 315k | 212 / 425k | 212 / 538k |
+  | Creator studio desk (12) | 80 / 65k | 310 / 349k | 326 / 469k | 329 / 580k |
+  | Budget (R11) | 180 / 300k | 420 / 1.2M | 560 / 2.4M | 720 / 4M |
+
+  Every template is inside its tier's budget. Medium's jump in draw calls is the shadow and AO passes (each pass
+  draws the scene again); High and Ultra add triangles (rounder geometry, the robot's detail), not calls. These
+  counts don't depend on the computer. Frame rates do, and this environment has only software WebGL (all of the
+  page's tests run there, on Low, without errors); "60 fps on High with 60 things on a real GPU" (§14 item 8) is
+  for the owner's machine: Settings → Robot → Graphics → Performance overlay shows the frame rate and the
+  counts against the budget live. Auto steps down below about 50 fps for 3 seconds (unit-tested), never while
+  filming.

@@ -197,6 +197,9 @@ export function addModelWizard() {
         const rawH = state.info.box.max.y - state.info.box.min.y;
         state.unit = rawH > 20 ? 0.01 : 1;
         state.surfaces = detectSurfaces(state.scene, state.info.box);
+        // Its node names say what it's for: a seat (sit_*) can be sat on, a grip (socket_hand_grip) carried
+        if (state.info.anchors.sit) state.actions = [...new Set([...state.actions, "sit"])];
+        if (state.info.anchors.grip) state.actions = [...new Set([...state.actions, "carry"])];
         status.textContent = "";
         details.hidden = false;
         render();

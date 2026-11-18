@@ -96,8 +96,11 @@ export function _sway(b, geos, slot, spec, pivotY, amount = 0.035) {
   const phase = b.rand() * 6;
   b.onUpdate((dt, t, fx) => {
     const k = fx?.reduced || fx?.friendly ? 0 : (fx?.wind ?? 0.3) / 0.3;
-    mesh.rotation.z = Math.sin(t * 0.9 + phase) * amount * k;
-    mesh.rotation.x = Math.sin(t * 0.7 + phase * 1.3) * amount * 0.6 * k;
+    // A thirsty plant (plant care) leans over and sags a little
+    const dry = fx?.thirst || 0;
+    mesh.rotation.z = Math.sin(t * 0.9 + phase) * amount * k + dry * 0.22;
+    mesh.rotation.x = Math.sin(t * 0.7 + phase * 1.3) * amount * 0.6 * k + dry * 0.12;
+    mesh.scale.y = 1 - dry * 0.14;
   });
 }
 

@@ -128,3 +128,23 @@ describe("Scenes", () => {
     assert.equal(room.scenes.length, 0);
   });
 });
+
+describe("Life outside the windows (DECISIONS R17)", () => {
+  test("each view gets its own animated life, by time of day; a still view when moving is off", async () => {
+    const O = await import("../src/js/room/render/outside.js");
+    // birds and a balloon by day, a windmill on the hills; a rainbow at golden hour
+    assert.ok(O.outsideLife("hills", "day") >= 3);
+    assert.ok(O.outsideLife("hills", "golden") > O.outsideLife("hills", "night") - 2);
+    // butterflies in the garden; a kite and a sailboat by the sea, a lighthouse beam at night
+    assert.ok(O.outsideLife("garden_day", "day") > O.outsideLife("hills", "day") - 1);
+    assert.ok(O.outsideLife("sea", "day") >= 3 && O.outsideLife("sea", "night") >= 3);
+    // light trails and a holo billboard in the city, with shooting stars and satellites
+    assert.ok(O.outsideLife("city_night", "night") >= 4);
+    // comets and satellites in space, fireflies in the forest
+    assert.ok(O.outsideLife("space", "day") >= 2);
+    assert.ok(O.outsideLife("forest", "night") >= 3);
+    // stepping a view that isn't drawn yet, or with movement off, does nothing
+    assert.doesNotThrow(() => O.stepOutside([null, {}], 0.1));
+    assert.doesNotThrow(() => O.stepOutside([{ userData: { outside: { actors: [{ draw() { throw new Error("drawn while still"); } }] } } }], 0.5, { still: true }));
+  });
+});

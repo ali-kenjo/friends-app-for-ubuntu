@@ -5,6 +5,7 @@
 // prop switches, its sign words); the renderer draws that set until the template is rebuilt
 // (docs/release-1.1/PLAN.md, step 4). A rebuilt template lists its things as assets; its `props` map
 // tells the migration which asset ids each 1.0 prop switch turns on or off.
+import { unreachable } from "./nav.mjs";
 import { PLACES, PLACE_BY_ID } from "../robot/room.mjs";
 import { sanitizeRoom, emptyRoom, defaultArchitecture, defaultAtmosphere } from "./model.mjs";
 import { WALL_LAYOUTS, SIZE_PRESETS, FLOOR_MATERIALS, WALL_MATERIALS } from "./choices.mjs";
@@ -153,7 +154,12 @@ export function templateRoom(templateId, { id, name, size, walls, floor, wall, n
   doc.id = id || doc.id;
   doc.name = name || doc.name;
   doc.createdAt = doc.updatedAt = now;
-  return sanitizeRoom(doc, { now });
+  const clean = sanitizeRoom(doc, { now });
+  // A template's things the robot can't get to from its home (a chair tucked under a desk, a plant deep in a
+  // corner) are look-only there, so it doesn't try and fail (the editor flags it if you change that)
+  const away = new Set(unreachable(clean).filter((x) => x.kind === "asset").map((x) => x.id));
+  if (!away.size) return clean;
+  return sanitizeRoom({ ...clean, assets: clean.assets.map((a) => (away.has(a.id) ? { ...a, rules: { ...a.rules, permission: "look" } } : a)) }, { now });
 }
 
 export const isRebuilt = (templateId) => Boolean(REBUILT[templateId]) || TEMPLATE_BY_ID[templateId]?.kind !== "place";

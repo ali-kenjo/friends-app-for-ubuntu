@@ -278,10 +278,14 @@ class Heap {
 
 // A path from one floor point to another: { ok, points [[x, z]…], reason, cost }
 // reason: "start_blocked" | "goal_blocked" | "no_path"
-export function findPath(g, from, to, { smooth = "smooth" } = {}) {
+// reach: how far from `to` (in cells) the goal may be when `to` itself is blocked (a wall thing can be reached
+// from further back: WALL_REACH)
+export const WALL_REACH = 15;
+export const reachFor = (asset) => (asset && (asset.slot === "wall" || asset.slot === "ceiling") ? WALL_REACH : 8);
+export function findPath(g, from, to, { smooth = "smooth", reach = 8 } = {}) {
   const s = nearestFree(g, from[0], from[1], 6);
   if (!s) return { ok: false, points: [], reason: "start_blocked" };
-  const e = nearestFree(g, to[0], to[1], 8);
+  const e = nearestFree(g, to[0], to[1], reach);
   if (!e) return { ok: false, points: [], reason: "goal_blocked" };
   const start = s[1] * g.cols + s[0];
   const goal = e[1] * g.cols + e[0];
@@ -388,8 +392,8 @@ export function catmull(points, wobble = 0) {
   return out;
 }
 
-export function reachable(g, from, to) {
-  return findPath(g, from, to, { smooth: "direct" }).ok;
+export function reachable(g, from, to, reach = 8) {
+  return findPath(g, from, to, { smooth: "direct", reach }).ok;
 }
 
 // Every thing's stand point and every spot: which ones the robot can't reach from home
@@ -401,8 +405,10 @@ export function unreachable(room, g = buildGrid(room)) {
     if (a.hidden) continue;
     const def = entryFor(a.type);
     if (!def || def.actions.every((x) => x === "look")) continue;
+    // (things it may only look at, or not at all, aren't meant to be walked to)
+    if (a.rules?.permission === "look" || a.rules?.permission === "never") continue;
     const at = standPoint(room, a, byId);
-    if (!reachable(g, home, at)) out.push({ kind: "asset", id: a.id });
+    if (!reachable(g, home, at, reachFor(a))) out.push({ kind: "asset", id: a.id });
   }
   for (const s of room.robot.spots) if (!reachable(g, home, [s.pos[0], s.pos[2]])) out.push({ kind: "spot", id: s.id });
   return out;

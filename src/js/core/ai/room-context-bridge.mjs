@@ -43,6 +43,7 @@ function doingWords(room, b) {
   const t = b.task;
   const name = (id) => JSON.stringify(displayName(room.assets.find((a) => a.id === id) || { type: "" }));
   if (b.sleeping) return "asleep";
+  if (b.carrying) return `carrying the ${name(b.carrying.id)}`;
   if (t?.kind === "dwell" && t.asset) return `${t.action === "look" ? "looking at" : "with"} the ${name(t.asset)}`;
   if (t?.kind === "go" && t.asset) return `going to the ${name(t.asset)}`;
   if (t?.kind === "route") return "following a route";

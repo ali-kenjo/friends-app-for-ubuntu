@@ -11,6 +11,7 @@ import { ACTIONS, ACTION_IDS } from "./choices.mjs";
 import { displayName, worldTransform, roomSummary, sanitizeRoom } from "./model.mjs";
 import { canDo, explain, DEFAULT_AI, personalOn } from "./rules.mjs";
 import { effectiveRoom } from "./schedule.mjs";
+import { isThirsty } from "./care.mjs";
 import * as ops from "./editor/ops.mjs";
 
 export const DIRECTIONS = ["left", "right", "front", "back", "center", "centre"];
@@ -199,6 +200,7 @@ export function roomBlock(room, opts = {}) {
     let extra = "";
     if (def?.personalData) extra = personalOn(a) && !ctx.privateMode && (!ctx.filming || opts.personalInFilming) ? " (shows the user's own things)" : " (switched off: say nothing of its contents)";
     if (a.state && "on" in a.state) extra += a.state.on ? " (on)" : " (off)";
+    if (isThirsty(room, a, opts.now ? new Date(opts.now).getTime() : Date.now())) extra += " (looks thirsty: it needs water)";
     things.push(`- ${q(displayName(a))} [id ${a.id}], ${where}${extra}: ${rule}.`);
   }
   if (things.length) lines.push("Things:", ...things);

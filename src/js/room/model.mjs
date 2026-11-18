@@ -12,6 +12,7 @@
 
 import * as C from "./choices.mjs";
 import { CATALOG_BY_ID, CATEGORIES, entryFor, customEntries } from "./catalog.mjs";
+import { cleanCare } from "./care.mjs";
 
 export const SCHEMA = 1;
 export const LIMITS = { rooms: 64, assets: 300, zones: 64, routes: 16, routePoints: 64, cameras: 32, scenes: 16, spots: 32, zonePoints: 32, name: 60, text: 120 };
@@ -267,6 +268,7 @@ export function sanitizeAsset(raw, { custom = null, notes } = {}) {
     rules: cleanRules(a.rules, def),
     schedule: cleanSchedule(a.schedule),
     light: def.light ? cleanLight(a.light) : null,
+    care: def.actions?.includes("water") ? cleanCare(a.care) : null, // a plant: when it was last watered (care.mjs)
   };
 }
 

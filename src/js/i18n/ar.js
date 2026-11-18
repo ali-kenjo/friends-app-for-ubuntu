@@ -5870,4 +5870,12 @@ export default {
   "The photo": "الصورة",
   "Your photo is chosen; switch on \"Show my photos\" to see it.": "صورتك مختارة؛ شغّل «إظهار صوري» لتراها.",
   "Your photo is in the frame.": "صورتك في الإطار.",
+  "The robot can't get to it": "لا يستطيع الروبوت الوصول إليه",
+  "The robot can't get to it from its home: the {name} is in the way.": "لا يستطيع الروبوت الوصول إليه من بيته: {name} في الطريق.",
+  "The robot can't get to it from its home: there's no way through. Move it, or what's around it.": "لا يستطيع الروبوت الوصول إليه من بيته: لا يوجد طريق. حرّكه أو حرّك ما حوله.",
+  "Plants and tidying": "النباتات والترتيب",
+  "Plants need care: they droop over a few days, and it waters them when it may": "النباتات تحتاج رعاية: تذبل على مدى أيام، ويسقيها حين يُسمح له",
+  "Put the {name} back": "أعاد {name} إلى مكانه",
+  "Tidying up: the {name}": "يرتّب: {name}",
+  "Tidy up: what it carried goes back to its place after a while": "الترتيب: ما حمله يعود إلى مكانه بعد فترة",
 };

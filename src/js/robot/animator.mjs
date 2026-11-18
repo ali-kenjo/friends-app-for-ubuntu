@@ -858,6 +858,15 @@ export class Animator {
         o.ringGlow += 0.3 * k;
       } else o.hoverY += Math.sin(t * 3) * 0.012 * k;
     }
+    // Carrying something: both arms up in front, holding it
+    if (r.carrying) {
+      o.armLFwd += 0.95;
+      o.armRFwd += 0.95;
+      o.armLIn += 0.45;
+      o.armRIn += 0.45;
+      o.armLRaise -= 0.15;
+      o.armRRaise -= 0.15;
+    }
     // Banking into a turn
     if (r.turnRate && !rm) o.bodyRoll -= clamp(r.turnRate * (r.banking ?? 0.4) * 0.0025, -0.25, 0.25);
   }

@@ -73,6 +73,7 @@ export function buildArchitecture(room, { level = "high", hidden = new Set() } =
   const tier = G.tierOf(level);
   const walls = [];
   const views = [];
+  const outsides = []; // the outside views its windows show (RoomRenderer moves their life on)
   const glowing = [];
   const hour = room.atmosphere?.timeHour ?? 14;
 
@@ -197,6 +198,7 @@ export function buildArchitecture(room, { level = "high", hidden = new Set() } =
       placeWall(holder, side, w, d, t);
       group.add(holder);
       views.push(holder);
+      outsides.push(tex);
       walls[walls.length - 1].extras.push(holder);
     }
   }
@@ -284,7 +286,7 @@ export function buildArchitecture(room, { level = "high", hidden = new Set() } =
   }
 
   const bounds = new THREE.Box3(new THREE.Vector3(-w / 2 - t, 0, -d / 2 - t), new THREE.Vector3(w / 2 + t, h, d / 2 + t));
-  return { group, walls, views, glowing, bounds };
+  return { group, walls, views, glowing, bounds, outsides };
 }
 
 function withColor(geo) {

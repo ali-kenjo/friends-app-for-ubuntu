@@ -5778,4 +5778,12 @@ export default {
   "The photo": "Das Foto",
   "Your photo is chosen; switch on \"Show my photos\" to see it.": "Dein Foto ist gewählt; schalte „Meine Fotos zeigen“ ein, um es zu sehen.",
   "Your photo is in the frame.": "Dein Foto ist im Rahmen.",
+  "The robot can't get to it": "Der Roboter kommt nicht hin",
+  "The robot can't get to it from its home: the {name} is in the way.": "Der Roboter kommt von seinem Zuhause aus nicht hin: {name} steht im Weg.",
+  "The robot can't get to it from its home: there's no way through. Move it, or what's around it.": "Der Roboter kommt von seinem Zuhause aus nicht hin: Es gibt keinen Weg. Verschiebe es oder was drumherum steht.",
+  "Plants and tidying": "Pflanzen und Aufräumen",
+  "Plants need care: they droop over a few days, and it waters them when it may": "Pflanzen brauchen Pflege: Sie lassen über einige Tage die Köpfe hängen, und er gießt sie, wenn er darf",
+  "Put the {name} back": "{name} zurückgestellt",
+  "Tidying up: the {name}": "Räumt auf: {name}",
+  "Tidy up: what it carried goes back to its place after a while": "Aufräumen: Was er getragen hat, kommt nach einer Weile an seinen Platz zurück",
 };

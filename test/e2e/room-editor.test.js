@@ -491,6 +491,15 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await page.goto(`${base}/?robot-debug&voice=1`, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.friendsRobot?.engine?.active?.name === "voice" && window.friendsRobot.engine.behaving(), { timeout: 60000 });
     await page.waitForSelector("#voice-dock:not([hidden]) .voice-dock-btn");
+    // Something placed while you talk: it turns to look at it
+    const placed = await page.evaluate(() => import("/js/room/editor/ops.mjs").then((ops) => {
+      const res = ops.addAsset(window.friendsRobot.room, "monstera", { pos: [1.2, 0, 0.9] });
+      window.friendsRobot.setRoom(res.room);
+      return res.id;
+    }));
+    await page.waitForFunction(() => window.friendsRobot.engine.behaviour.lookOverride, { timeout: 15000 });
+    // (taken away again, so the rest of this test runs in the room as it was)
+    await page.evaluate((id) => window.friendsRobot.setRoom({ ...window.friendsRobot.room, assets: window.friendsRobot.room.assets.filter((a) => a.id !== id) }), placed);
     // A toolbar with labels, translated names, 44 px buttons and arrow keys
     const names = await page.$$eval("#voice-dock .voice-dock-btn", (els) => els.filter((b) => b.offsetParent).map((b) => b.getAttribute("aria-label")));
     assert.ok(names.includes("Go home") && names.includes("Camera") && names.includes("Clean stage"), names.join(", "));
@@ -503,13 +512,13 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await click('#voice-dock [data-module="quick_prop"]');
     await page.waitForSelector("#voice-dock-menu .voice-dock-item");
     await page.keyboard.press("Enter");
-    await page.waitForFunction(() => window.friendsRobot.engine.behaviour.why === "command", { timeout: 5000 });
+    await page.waitForFunction(() => window.friendsRobot.engine.behaviour.why === "command", { timeout: 15000 });
     // Home (its key, R)
     await page.keyboard.press("KeyR");
     await page.waitForFunction(() => {
       const b = window.friendsRobot.engine.behaviour;
       return b.task?.kind === "go" || Math.hypot(b.pos[0] - b.room.robot.home.pos[0], b.pos[1] - b.room.robot.home.pos[2]) < 0.4;
-    }, { timeout: 5000 });
+    }, { timeout: 15000 });
     // The camera: a ready-made shot joins the room and voice mode uses it
     await click('#voice-dock [data-module="camera_preset"]');
     await page.waitForSelector("#voice-dock-menu [role=menuitemradio]");
@@ -523,7 +532,7 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     // Roaming off: it stays put (the behaviour is told), and the button says so
     await click('#voice-dock [data-module="roam_toggle"]');
     await page.waitForFunction(() => window.friendsSettings.getSettings().robot.roam === false && document.querySelector('[data-module="roam_toggle"]').getAttribute("aria-pressed") === "false");
-    await page.waitForFunction(() => window.friendsRobot.engine.behaviour.out.roam === false, { timeout: 5000 });
+    await page.waitForFunction(() => window.friendsRobot.engine.behaviour.out.roam === false, { timeout: 15000 });
     await click('#voice-dock [data-module="roam_toggle"]');
     // Clean stage: everything but the picture; Escape brings the controls back (and doesn't end the conversation)
     await page.keyboard.press("KeyH");

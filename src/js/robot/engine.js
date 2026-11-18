@@ -640,6 +640,13 @@ export class RobotEngine {
   // the light unless the design has its own. Colors change at once; a new shape (size, ears,
   // clothes…) rebuilds the robot at the start of the next frame, however many changes came in.
   setLook(look) {
+    // Something new in the same room (placed in the editor while you talk): it turns to look at it
+    const before = this.look.roomDoc;
+    if (look.roomDoc && before && look.roomDoc.id === before.id && look.roomDoc.assets.length > before.assets.length) {
+      const had = new Set(before.assets.map((a) => a.id));
+      const fresh = look.roomDoc.assets.find((a) => !had.has(a.id) && !a.hidden);
+      if (fresh) this.noticeNew = fresh.id;
+    }
     // Filming, recording or the privacy switch changed: the things that show your own things are redone
     const personal = ["filming", "recording", "personalInFilming"].some((k) => k in look && look[k] !== this.look[k]);
     Object.assign(this.look, look);
@@ -762,6 +769,14 @@ export class RobotEngine {
     options.roam = this.roamAmount();
     // The room's behaviour keeps real time (cooldowns, dwell, "away for N minutes") even when frames are slow
     this.stepBehaviour(Math.min(real, 1));
+    // (once its room has the new thing: a look and a curious tilt, not while filming)
+    if (this.noticeNew && this.behaving() && !this.roomDirty) {
+      if (!this.look.filming && this.behaviour.eff.room.assets.some((a) => a.id === this.noticeNew)) {
+        this.behaviour.command({ kind: "look", target: { kind: "asset", id: this.noticeNew }, seconds: 4 });
+        this.animator.gesture("tilt");
+      }
+      this.noticeNew = null;
+    }
     this.hooks.beforeUpdate?.(dt);
     const pose = this.animator.update(dt);
     this.draw(pose, dt);
@@ -784,6 +799,12 @@ export class RobotEngine {
     this.stage.follow(pose.hoverY + b.y, pose.worldX, pose.worldZ);
     this.updateWorld(dt, pose);
     this.rooms.update(dt, pose, { friendly: look.cameraFriendly, reduced: this.reducedMotion.matches }, this.camera);
+    // What it carries: in front of it, at the height of its hands, turning with it
+    const carried = this.behaving() ? this.behaviour.out.carrying : null;
+    if (carried || this.rooms.held) {
+      const ry = (b.yaw * Math.PI) / 180;
+      this.rooms.hold?.(carried, carried ? { x: pose.worldX + Math.sin(ry) * 0.3, y: 0.36 + b.y + Math.max(0, pose.hoverY || 0), z: pose.worldZ + Math.cos(ry) * 0.3, yaw: b.yaw } : null);
+    }
     this.face.render(pose, { face: look.design.face, largerFace: look.largerFace, color: look.faceColor || look.accent });
 
     this.frameCamera(dt, pose);
@@ -1155,6 +1176,8 @@ export class RobotEngine {
   // The behaviour engine uses a thing: switching it goes through the room (and is saved), the rest shows
   behaviourAction({ assetId, action, gesture }) {
     if (gesture) return this.animator.gesture(gesture);
+    // Watering a plant starts its clock again (care.mjs), and it's saved with the room
+    if (action === "water") this.hooks.onWatered?.(assetId);
     if (action === "use") {
       this.animator.gesture("point_right");
       return this.triggerProp(assetId, "toggle");

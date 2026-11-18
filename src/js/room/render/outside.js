@@ -2,6 +2,11 @@
 // A painted view per outside kind (choices.mjs OUTSIDES) and time of day: a sky, a horizon, and the
 // landscape's own shapes (rooftops with lit windows, hills and trees, the sea, pines in snow, stars).
 // Drawn once on a canvas per kind, phase and seed, cached; shown unlit so it glows like daylight would.
+// On top of the painting, a little life (stepOutside, about 12 times a second, only for views on screen, still
+// with reduced motion or camera-friendly filming): birds and a balloon by day, butterflies in the garden, a
+// windmill turning on the hills and a rainbow after golden hour, a kite and a sailboat by the sea, light trails
+// and a holo billboard in the city, fireflies in the forest, shooting stars and satellites at night, comets and
+// satellites in space, clouds that drift.
 import * as THREE from "three";
 
 // The sky by phase: [top, horizon, ground, stars]
@@ -158,18 +163,334 @@ function paint(kind, phase, seed) {
     ctx.arc(w * 0.3, h * 0.62, 150, 0, Math.PI * 2);
     ctx.fill();
   }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.userData.shared = true;
-  return t;
+  return c;
+}
+
+// ---------- The life on top ----------
+// Each actor: { draw(ctx, w, h, t) } with its own timing; t is seconds since the view was made
+function actorsFor(kind, phase, seed) {
+  const r = rnd(seed * 31 + 5);
+  const day = phase === "day" || phase === "golden";
+  const dark = phase === "night" || phase === "evening";
+  const list = [];
+  const H = 512;
+  const hy = H * 0.7;
+  // A flock: a few small V's crossing slowly, the next one some seconds later
+  if (day && ["hills", "garden_day", "sea", "clouds"].includes(kind)) {
+    const birds = Array.from({ length: 5 }, (_, i) => ({ dx: i * 16 + r() * 8, dy: (i % 2) * 9 + r() * 6, ph: r() * 6 }));
+    const y0 = H * (0.18 + r() * 0.15);
+    list.push({
+      draw(ctx, w, h, t) {
+        const span = w + 260;
+        const x0 = ((t * 28) % (span + 400)) - 200;
+        if (x0 > span) return;
+        ctx.strokeStyle = phase === "golden" ? "rgba(60,40,40,0.75)" : "rgba(40,50,70,0.7)";
+        ctx.lineWidth = 2;
+        for (const b of birds) {
+          const x = x0 - b.dx;
+          const y = y0 + b.dy + Math.sin(t * 1.3 + b.ph) * 3;
+          const flap = Math.sin(t * 9 + b.ph) * 3;
+          ctx.beginPath();
+          ctx.moveTo(x - 6, y - 2 - flap);
+          ctx.lineTo(x, y);
+          ctx.lineTo(x + 6, y - 2 - flap);
+          ctx.stroke();
+        }
+      },
+    });
+  }
+  // A hot-air balloon drifting very slowly
+  if (phase === "day" && ["hills", "clouds", "garden_day"].includes(kind)) {
+    const y = H * (0.22 + r() * 0.12);
+    const hue = Math.floor(r() * 360);
+    list.push({
+      draw(ctx, w, h, t) {
+        const x = (w * 0.15 + t * 4) % (w + 80) - 40;
+        const yy = y + Math.sin(t * 0.3) * 6;
+        ctx.fillStyle = `hsl(${hue} 70% 58%)`;
+        ctx.beginPath();
+        ctx.ellipse(x, yy, 14, 17, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `hsl(${(hue + 40) % 360} 75% 64%)`;
+        ctx.fillRect(x - 3, yy - 16, 6, 30);
+        ctx.strokeStyle = "rgba(60,40,30,0.8)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - 8, yy + 12);
+        ctx.lineTo(x - 4, yy + 24);
+        ctx.moveTo(x + 8, yy + 12);
+        ctx.lineTo(x + 4, yy + 24);
+        ctx.stroke();
+        ctx.fillStyle = "#7a5332";
+        ctx.fillRect(x - 5, yy + 24, 10, 7);
+      },
+    });
+  }
+  // Butterflies over the garden
+  if (day && kind === "garden_day") {
+    const flies = Array.from({ length: 5 }, () => ({ x: r(), y: hy + 30 + r() * 90, ph: r() * 6, c: ["#ffd84a", "#ff8fb0", "#ffffff", "#ffab5e"][Math.floor(r() * 4)] }));
+    list.push({
+      draw(ctx, w, h, t) {
+        for (const f of flies) {
+          const x = (f.x * w + Math.sin(t * 0.4 + f.ph) * 60 + t * 6) % w;
+          const y = f.y + Math.sin(t * 1.7 + f.ph) * 12;
+          const open = 0.4 + Math.abs(Math.sin(t * 12 + f.ph)) * 0.6;
+          ctx.fillStyle = f.c;
+          ctx.beginPath();
+          ctx.ellipse(x - 3 * open, y, 3.5 * open, 3, -0.4, 0, Math.PI * 2);
+          ctx.ellipse(x + 3 * open, y, 3.5 * open, 3, 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      },
+    });
+  }
+  // A windmill on the hills, its sails turning
+  if (kind === "hills") {
+    const x = 1024 * (0.62 + r() * 0.2);
+    const base = hy - 30;
+    list.push({
+      draw(ctx, w, h, t) {
+        ctx.fillStyle = dark ? "#2b2a36" : "#e9e2d6";
+        ctx.beginPath();
+        ctx.moveTo(x - 9, base);
+        ctx.lineTo(x - 5, base - 62);
+        ctx.lineTo(x + 5, base - 62);
+        ctx.lineTo(x + 9, base);
+        ctx.fill();
+        ctx.save();
+        ctx.translate(x, base - 62);
+        ctx.rotate(t * 0.6);
+        ctx.fillStyle = dark ? "#3a3946" : "#f8f3ea";
+        for (let k = 0; k < 4; k++) {
+          ctx.rotate(Math.PI / 2);
+          ctx.fillRect(-2, 0, 4, 36);
+          ctx.fillRect(1, 8, 7, 26);
+        }
+        ctx.restore();
+      },
+    });
+  }
+  // A faint rainbow over the hills and the garden at golden hour
+  if (phase === "golden" && (kind === "hills" || kind === "garden_day")) {
+    list.push({
+      draw(ctx, w, h) {
+        const cx = w * 0.32;
+        ["#ff5a5a", "#ffa94a", "#ffe45a", "#6ad16a", "#5aa0ff", "#8a6aff"].forEach((c, i) => {
+          ctx.strokeStyle = c;
+          ctx.globalAlpha = 0.16;
+          ctx.lineWidth = 7;
+          ctx.beginPath();
+          ctx.arc(cx, hy + 20, 230 - i * 7, Math.PI, Math.PI * 2);
+          ctx.stroke();
+        });
+        ctx.globalAlpha = 1;
+      },
+    });
+  }
+  // By the sea: a kite on its string, a sailboat along the horizon, a lighthouse beam at night
+  if (kind === "sea") {
+    if (day) {
+      list.push({
+        draw(ctx, w, h, t) {
+          const ax = w * 0.18;
+          const kx = ax + 60 + Math.sin(t * 0.7) * 18;
+          const ky = H * 0.32 + Math.sin(t * 1.1) * 10;
+          ctx.strokeStyle = "rgba(255,255,255,0.7)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(ax, h);
+          ctx.quadraticCurveTo(ax + 40, ky + 120, kx, ky + 14);
+          ctx.stroke();
+          ctx.fillStyle = "#ff5a7a";
+          ctx.beginPath();
+          ctx.moveTo(kx, ky - 14);
+          ctx.lineTo(kx + 10, ky);
+          ctx.lineTo(kx, ky + 14);
+          ctx.lineTo(kx - 10, ky);
+          ctx.fill();
+        },
+      });
+    }
+    list.push({
+      draw(ctx, w, h, t) {
+        const x = ((t * 6) % (w + 60)) - 30;
+        ctx.fillStyle = dark ? "#1d2a44" : "#f6f2ea";
+        ctx.beginPath();
+        ctx.moveTo(x, hy - 2);
+        ctx.lineTo(x, hy - 24);
+        ctx.lineTo(x + 12, hy - 4);
+        ctx.fill();
+        ctx.fillStyle = dark ? "#151c2e" : "#5b4636";
+        ctx.fillRect(x - 8, hy - 3, 22, 4);
+      },
+    });
+    if (dark) {
+      list.push({
+        draw(ctx, w, h, t) {
+          const x = w * 0.88;
+          const a = Math.sin(t * 0.9);
+          const g = ctx.createLinearGradient(x, hy - 40, x + a * 260, hy - 50);
+          g.addColorStop(0, "rgba(255,240,190,0.55)");
+          g.addColorStop(1, "rgba(255,240,190,0)");
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.moveTo(x, hy - 40);
+          ctx.lineTo(x + a * 260, hy - 70);
+          ctx.lineTo(x + a * 260, hy - 30);
+          ctx.fill();
+          ctx.fillStyle = "#e9e2d6";
+          ctx.fillRect(x - 4, hy - 40, 8, 38);
+        },
+      });
+    }
+  }
+  // The city: light trails along the street, and a holo billboard slowly changing color
+  if (kind === "city_night") {
+    const cars = Array.from({ length: 7 }, () => ({ s: 60 + r() * 80, off: r() * 1200, dir: r() < 0.5 ? 1 : -1 }));
+    list.push({
+      draw(ctx, w, h, t) {
+        for (const c of cars) {
+          const y = H * (c.dir > 0 ? 0.9 : 0.94);
+          const x = c.dir > 0 ? ((t * c.s + c.off) % (w + 120)) - 60 : w - (((t * c.s + c.off) % (w + 120)) - 60);
+          const g = ctx.createLinearGradient(x, y, x - c.dir * 46, y);
+          g.addColorStop(0, c.dir > 0 ? "rgba(255,236,170,0.95)" : "rgba(255,90,80,0.95)");
+          g.addColorStop(1, "rgba(255,200,150,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(Math.min(x, x - c.dir * 46), y - 1.5, 46, 3);
+        }
+      },
+    });
+    const bx = 1024 * (0.2 + r() * 0.5);
+    list.push({
+      draw(ctx, w, h, t) {
+        const hue = (t * 12) % 360;
+        ctx.fillStyle = `hsla(${hue} 90% 62% / 0.55)`;
+        ctx.fillRect(bx, H * 0.36, 70, 34);
+        ctx.strokeStyle = `hsla(${(hue + 60) % 360} 100% 75% / 0.85)`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx, H * 0.36, 70, 34);
+      },
+    });
+  }
+  // Fireflies in the forest at night
+  if (kind === "forest" && dark) {
+    const flies = Array.from({ length: 14 }, () => ({ x: r(), y: hy - 10 + r() * 90, ph: r() * 6 }));
+    list.push({
+      draw(ctx, w, h, t) {
+        for (const f of flies) {
+          const a = 0.5 + 0.5 * Math.sin(t * 1.6 + f.ph);
+          ctx.fillStyle = `rgba(214,255,122,${0.25 + a * 0.6})`;
+          ctx.beginPath();
+          ctx.arc((f.x * w + Math.sin(t * 0.3 + f.ph) * 20) % w, f.y + Math.sin(t * 0.5 + f.ph) * 6, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      },
+    });
+  }
+  // Clouds that drift
+  if (kind === "clouds") {
+    const puffs = Array.from({ length: 3 }, () => ({ y: H * (0.3 + r() * 0.4), s: 6 + r() * 6, off: r() * 1200, size: 70 + r() * 50 }));
+    list.push({
+      draw(ctx, w, h, t) {
+        for (const p of puffs) {
+          const x = ((t * p.s + p.off) % (w + 300)) - 150;
+          const g = ctx.createRadialGradient(x, p.y, 4, x, p.y, p.size);
+          g.addColorStop(0, "rgba(255,255,255,0.7)");
+          g.addColorStop(1, "rgba(255,255,255,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(x - p.size, p.y - p.size, p.size * 2, p.size * 2);
+        }
+      },
+    });
+  }
+  // Shooting stars (now and then) and satellites at night, and comets in space
+  if (dark || kind === "space") {
+    const every = 9 + r() * 6;
+    list.push({
+      draw(ctx, w, h, t) {
+        const k = (t % every) / 0.9;
+        if (k > 1) return;
+        const n = Math.floor(t / every);
+        const rr = rnd(seed + n * 17);
+        const x0 = w * (0.2 + rr() * 0.6);
+        const y0 = H * (0.05 + rr() * 0.2);
+        const len = kind === "space" ? 120 : 80;
+        const x = x0 + k * 160;
+        const y = y0 + k * 50;
+        const g = ctx.createLinearGradient(x, y, x - len, y - len * 0.3);
+        g.addColorStop(0, `rgba(255,255,255,${1 - k * 0.6})`);
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = g;
+        ctx.lineWidth = kind === "space" ? 3 : 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - len, y - len * 0.3);
+        ctx.stroke();
+      },
+    });
+    const sats = Array.from({ length: kind === "space" ? 3 : 1 }, () => ({ y: H * (0.1 + r() * 0.3), s: 5 + r() * 6, off: r() * 1000 }));
+    list.push({
+      draw(ctx, w, h, t) {
+        for (const sat of sats) {
+          const x = ((t * sat.s + sat.off) % (w + 20)) - 10;
+          const blink = Math.sin(t * 3 + sat.off) > 0.7;
+          ctx.fillStyle = blink ? "rgba(255,120,120,0.95)" : "rgba(255,255,255,0.85)";
+          ctx.fillRect(x, sat.y, 2.5, 2.5);
+        }
+      },
+    });
+  }
+  return list;
+}
+
+// One view: the painting, the canvas it's shown on (painting + life) and its texture
+function makeView(kind, phase, seed) {
+  const base = paint(kind, phase, seed);
+  const out = document.createElement("canvas");
+  out.width = base.width;
+  out.height = base.height;
+  const ctx = out.getContext("2d");
+  ctx.drawImage(base, 0, 0);
+  const texture = new THREE.CanvasTexture(out);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.userData.shared = true;
+  const view = { base, out, ctx, texture, actors: actorsFor(kind, phase, seed), t: Math.random() * 30, since: 0 };
+  texture.userData.outside = view;
+  if (view.actors.length) draw(view);
+  return view;
+}
+
+function draw(view) {
+  const { ctx, base, out } = view;
+  ctx.drawImage(base, 0, 0);
+  for (const a of view.actors) a.draw(ctx, out.width, out.height, view.t);
+  view.texture.needsUpdate = true;
 }
 
 export function outsideTexture(kind, hour = 14, seed = 7) {
   const phase = phaseFor(hour);
   const key = `${kind}|${phase}|${seed}`;
-  if (!cache.has(key)) cache.set(key, paint(kind, phase, seed));
-  return cache.get(key);
+  if (!cache.has(key)) cache.set(key, makeView(kind, phase, seed));
+  return cache.get(key).texture;
 }
+
+// The life moves on, for the views given (their textures): still with reduced motion or while filming
+// camera-friendly; fps: how often a view is redrawn (lower on the Low quality)
+export function stepOutside(textures, dt, { still = false, fps = 12 } = {}) {
+  if (still) return;
+  for (const tex of textures) {
+    const view = tex?.userData?.outside;
+    if (!view || !view.actors.length) continue;
+    view.t += dt;
+    view.since += dt;
+    if (view.since < 1 / fps) continue;
+    view.since = 0;
+    draw(view);
+  }
+}
+
+// The kinds of life a view has (for tests and the editor's words)
+export const outsideLife = (kind, phase) => actorsFor(kind, phase, 7).length;
 
 // How bright the view is (it lights nothing, but daylight views read brighter than night ones)
 export const outsideGlow = (hour) => ({ day: 1, golden: 0.95, evening: 0.85, night: 0.75 })[phaseFor(hour)];
