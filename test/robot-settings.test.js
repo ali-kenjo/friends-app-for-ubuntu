@@ -145,11 +145,19 @@ describe("Robot settings are kept, checked and repaired", () => {
     const base = settings.get();
     const on = { ...base, robot: { ...base.robot, aiGestures: { voice: true, chat: true } } };
     const names = (s) => tools.declarations(s, { voice: true, robot: true }).map((t) => t.name).filter((n) => n.startsWith("robot_"));
-    assert.deepStrictEqual(names(on).sort(), ["robot_gesture", "robot_go_to", "robot_look_at", "robot_mood", "robot_use_prop"]);
-    const some = { ...on, robot: { ...on.robot, aiAllowed: { mood: false, gesture: true, prop: false, move: true, look: true } } };
-    assert.deepStrictEqual(names(some).sort(), ["robot_gesture", "robot_go_to", "robot_look_at"]);
+    // 1.1: one tool set (going, looking, using, posture, routes) and one set of switches (robot.ai)
+    assert.deepStrictEqual(names(on).sort(), ["robot_gesture", "robot_go_to", "robot_look_at", "robot_mood", "robot_posture", "robot_route", "robot_use"]);
+    const some = { ...on, robot: { ...on.robot, ai: { ...on.robot.ai, mood: false, gestures: true, use: false, move: true, look: true } } };
+    assert.deepStrictEqual(names(some).sort(), ["robot_gesture", "robot_go_to", "robot_look_at", "robot_posture", "robot_route"]);
     assert.strictEqual(tools.robotAllowed(some, "robot_mood"), false);
     assert.strictEqual(tools.robotAllowed(some, "robot_gesture"), true);
     assert.strictEqual(tools.robotAllowed(some, "robot_go_to"), true);
+    // The 1.0 names still run, under the switch their new tool needs
+    assert.strictEqual(tools.robotAllowed(some, "robot_use_prop"), false);
+    assert.strictEqual(tools.robotAllowed(some, "return_home"), true);
+    // room_edit is offered unless rearranging is off
+    const all = (s) => tools.declarations(s, { voice: true, robot: true }).map((t) => t.name);
+    assert.ok(all(on).includes("room_edit"));
+    assert.ok(!all({ ...on, robot: { ...on.robot, ai: { ...on.robot.ai, rearrange: "off" } } }).includes("room_edit"));
   });
 });

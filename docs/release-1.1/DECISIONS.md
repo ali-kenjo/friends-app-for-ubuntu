@@ -183,3 +183,14 @@ Non-obvious choices, with the reason. Newest at the bottom of each section.
 - **R36 Found and fixed: the robot's sounds never played.** `robot/index.js` called `robotSound.giggle()`,
   `.blip()` and `.water()` and looked sounds up as methods, but the sound module only has `play(kind)`; touching
   the robot threw. Sounds now go through `play()`, and quiet zones silence them.
+- **R37 The AI's tools are checked on the helper against the live room** (`src/js/room/ai.mjs`, shared with the
+  page): names resolve to things (your names first, then catalog names, ids, kinds), spots, home, you and
+  directions; what doesn't exist or isn't allowed comes back as a sentence the AI can say. The page gets a
+  room command for the behaviour engine.
+- **R38 The room block lists every visible thing with what the AI may do with it**, names quoted, and says
+  plainly what the user switched off. Things that show the user's own things say only that they're off,
+  unless switched on, not in Private mode, and not while filming (until a "show while filming" switch exists:
+  step 8, Settings → Privacy).
+- **R39 "Ask first" shows the proposed room on screen while it asks** (nothing saved until Apply); "Describe a
+  room" applies at once as one step with Keep it / Undo, since you asked for it in the editor.
+- **R40 The text sandbox adapter reads the live room** for "what's in the room" and for going to a thing named.

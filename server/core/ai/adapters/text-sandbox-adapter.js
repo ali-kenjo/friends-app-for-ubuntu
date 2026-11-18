@@ -4,6 +4,9 @@
 const crypto = require("crypto");
 const { VoiceProviderAdapter } = require("../voice-adapter");
 const roomContext = require("../room-context");
+const settingsStore = require("../../../settings");
+const roomAI = require("../../../../src/js/room/ai.mjs");
+const { displayName } = require("../../../../src/js/room/model.mjs");
 
 class TextSandboxAdapter extends VoiceProviderAdapter {
   constructor(options = {}) {
@@ -88,19 +91,21 @@ class TextSandboxAdapter extends VoiceProviderAdapter {
       pushCall("set_emotion", { emotion: "excited" });
       reply = `Walking over to play with ${chosen.replace(/_/g, " ")}!`;
     } else if (/\b(room|what do you see|what's around|props|inventory)\b/.test(lower)) {
-      const names = (ctx.activeProps || []).map((p) => p.name || p.id);
-      const toys = (ctx.availableToys || []).map((t) => t.id);
-      pushCall("set_emotion", { emotion: "curious" });
-      reply = `Right now in ${ctx.presetId || "our room"}, I see ${names.length} active items (${names.slice(0, 8).join(", ") || "open floor"}). Flowers are ${ctx.flowerHydration || "healthy"}, and toys ready are: ${toys.join(", ") || "none"}.`;
+      // The robot's room, as it is (the rooms store)
+      const room = roomContext.room(this.settings || settingsStore.get());
+      const names = room ? room.assets.filter((a) => !a.hidden).map((a) => displayName(a)) : [];
+      pushCall("robot_mood", { mood: "curious" });
+      reply = room ? `We're in ${room.name}. I see ${names.length} things (${names.slice(0, 8).join(", ") || "open floor"}).` : "My room is still loading.";
     } else {
-      // Match move_to_asset if an active asset name/id is mentioned
-      const matchedProp = (ctx.activeProps || []).find(
-        (p) => lower.includes(p.id.toLowerCase()) || (p.name && lower.includes(p.name.toLowerCase()))
-      );
+      // Going to a thing the words name (one the room has)
+      const room = roomContext.room(this.settings || settingsStore.get());
+      const word = lower.split(/\s+/).find((w) => w.length > 3 && room && roomAI.resolve(room, w, { kinds: ["asset"] }));
+      const target = word && roomAI.resolve(room, word, { kinds: ["asset"] });
+      const matchedProp = target && room.assets.find((a) => a.id === target.id);
       if (matchedProp) {
-        pushCall("move_to_asset", { assetId: matchedProp.id });
-        pushCall("set_emotion", { emotion: "curious" });
-        reply = `Heading over to check out ${matchedProp.name || matchedProp.id}!`;
+        pushCall("robot_go_to", { target: matchedProp.id });
+        pushCall("robot_mood", { mood: "curious" });
+        reply = `Heading over to check out the ${displayName(matchedProp)}!`;
       } else {
         pushCall("set_emotion", { emotion: /\bthank|great|awesome|cool|yay\b/.test(lower) ? "happy" : "curious" });
         reply = `[Text Sandbox Mode] Heard you: "${raw}". Ask me to explain something on the whiteboard, write in the notebook, water the flowers, play with any toy (ball, rubik's cube, drone, holo projector, kalimba), or describe the room!`;

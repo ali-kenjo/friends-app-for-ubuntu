@@ -28,8 +28,8 @@ async function call(method, url, body) {
 
 // What the AI did with its robot body: a mood, a gesture, or a move/look/prop (they all reach the robot)
 export function robotEvent(event) {
-  const { mood, gesture, useProp, goTo, lookAt } = event;
-  return { mood, gesture, useProp, goTo, lookAt };
+  const { mood, gesture, useProp, goTo, lookAt, room, roomChanged, roomPreview } = event;
+  return { mood, gesture, useProp, goTo, lookAt, room, roomChanged, roomPreview };
 }
 
 // Read the helper's newline-separated JSON events as they arrive

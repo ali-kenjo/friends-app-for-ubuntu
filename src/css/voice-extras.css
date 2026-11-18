@@ -345,3 +345,8 @@
 [dir="rtl"] .voice-home-offer {
   transform: translateX(50%);
 }
+
+.room-edit-notice {
+  inset-block-start: 9rem;
+  max-inline-size: min(90vw, 40rem);
+}

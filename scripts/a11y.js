@@ -183,6 +183,15 @@ async function main() {
     await scan("room-editor-rooms", lang, theme);
     await page.keyboard.press("Escape");
     await sleep(200);
+    await page.evaluate(() => {
+      const menu = document.querySelector("#room-editor .re-menu");
+      menu.value = "describe";
+      menu.dispatchEvent(new Event("change"));
+    });
+    await page.waitForSelector(".re-desc-words", { timeout: 10000 });
+    await scan("room-editor-describe-room", lang, theme);
+    await page.keyboard.press("Escape");
+    await sleep(200);
     // My models, and the "Add my model" wizard before a file is chosen
     await page.evaluate(() => document.querySelector('.re-chip[data-cat="mine"]')?.click());
     await sleep(300);

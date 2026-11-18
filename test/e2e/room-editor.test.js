@@ -485,6 +485,41 @@ describe("The Room Editor", { skip: !CHROME && "no Chrome found" }, () => {
     await page.waitForFunction(() => window.friendsRobot?.room?.id, { timeout: 60000 });
   });
 
+  test("Describe a room: the room from your words shows at once; Undo takes it back", async () => {
+    // (no AI here: the helper's answer is made from a layout the way the helper would)
+    const AI = require("../../src/js/room/ai.mjs");
+    const current = await savedRoom();
+    const answer = AI.describeResult(current, '{"things":[{"type":"sofa","x":-1.6,"z":-1.6},{"type":"monstera","x":2.2,"z":-1.9}]}');
+    await page.setRequestInterception(true);
+    const onRequest = (req) => {
+      if (req.url().endsWith("/describe") && req.method() === "POST") req.respond({ status: 200, contentType: "application/json", body: JSON.stringify(answer) });
+      else req.continue();
+    };
+    page.on("request", onRequest);
+    try {
+      await page.evaluate(() => import("/js/room/editor/open.js").then((m) => m.editRoom()));
+      await editorOpen();
+      await page.evaluate(() => {
+        const menu = document.querySelector("#room-editor .re-menu");
+        menu.value = "describe";
+        menu.dispatchEvent(new Event("change"));
+      });
+      await page.waitForSelector(".re-desc-words");
+      await page.type(".re-desc-words", "a plant corner with a sofa");
+      await page.evaluate(() => [...document.querySelectorAll(".re-new-box button")].find((b) => b.textContent.trim() === "Make it").click());
+      await page.waitForSelector(".re-described");
+      await savedWhere((r) => r.assets.length === answer.assets.length && r.assets.some((a) => a.type === "monstera"), "the described room");
+      assert.match(await page.$eval(".re-described", (el) => el.textContent), /Made from your words: 2 things/);
+      await page.evaluate(() => [...document.querySelectorAll(".re-described button")].find((b) => b.textContent.trim() === "Undo").click());
+      await savedWhere((r) => r.assets.length === current.assets.length, "back as it was");
+      assert.equal(await page.$(".re-described"), null);
+      await done();
+    } finally {
+      page.off("request", onRequest);
+      await page.setRequestInterception(false);
+    }
+  });
+
   test("in Arabic the editor is right to left and every word is translated", async () => {
     const s = await api("GET", "/api/settings");
     s.ui.language = "ar";

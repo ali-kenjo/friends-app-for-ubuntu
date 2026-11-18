@@ -52,6 +52,7 @@ const whiteboardLinks = require("./whiteboard-links");
 const whiteboardTools = require("./whiteboard-tools");
 const studioBundle = require("./storage/studio-bundle");
 const roomContext = require("./core/ai/room-context");
+const roomAI = require("../src/js/room/ai.mjs");
 const voiceAdapter = require("./core/ai/voice-adapter");
 const auth = require("./auth");
 const { execFile } = require("child_process");
@@ -407,7 +408,7 @@ async function chat(req, res) {
         key: b.key,
         model: b.model,
         contents,
-        system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc, withhold, board }),
+        system: prompt.build(current, { voice, toolsOffered: offered, summary: conversation.summary?.text, onAir, chatId: conversation.id, doc, withhold, board, room: robotOnScreen === true ? roomContext.formatPromptBlock(undefined, { settings: current, maxChars: brain.kind === "local" ? 1500 : 3500 }) : null }),
         temperature: prompt.temperature(current),
         // Thinking at length makes a reply start 10+ seconds later; only "Deep" does
         fast: voice || current.aiControl?.reasoningEffort !== "deep",
@@ -685,6 +686,24 @@ function sendBackground(req, res) {
   });
 }
 
+// "Describe a room": your words → a layout from the catalog, by the AI for small jobs (a local one in Private
+// mode). Only catalog ids go out, never your own things; nothing is saved here (the editor shows it, undoable).
+async function describeRoom(id, body) {
+  const current = settings.get();
+  const fail = (message, http) => {
+    throw Object.assign(new Error(message), { http });
+  };
+  if (current.robot?.ai?.describe === false) fail("Describing rooms is switched off in Settings → Robot.", 403);
+  const room = rooms.get(id);
+  if (!room) notFound("Room not found");
+  const words = String(body?.text || "").trim();
+  if (!words) fail("Say what the room should be like.", 400);
+  const brain = brains.forTask();
+  if (!brain) fail(current.privacy?.localOnly ? "Private mode is on and there's no local AI to ask." : "There's no AI set up to ask.", 409);
+  const answer = await brain.api.generateText({ key: brain.key, model: brain.model, prompt: roomAI.describePrompt(room, words), temperature: 0.4 });
+  return roomAI.describeResult(room, answer);
+}
+
 // "Smarter moods": one small Gemini request per turn, only when it's switched on
 async function smartMood({ text, heard }) {
   if (!settings.get().robot.smartMoods) return { mood: null };
@@ -845,6 +864,7 @@ const routes = [
   ["PUT", /^\/api\/rooms\/([\w-]+)$/, async (req, id) => rooms.save(id, await readJson(req))],
   ["DELETE", /^\/api\/rooms\/([\w-]+)$/, (req, id) => rooms.remove(id)],
   ["POST", /^\/api\/rooms\/([\w-]+)\/duplicate$/, async (req, id) => rooms.duplicate(id, await readJson(req))],
+  ["POST", /^\/api\/rooms\/([\w-]+)\/describe$/, async (req, id) => describeRoom(id, await readJson(req))],
   ["GET", /^\/api\/whiteboards$/, (req, id, url) => whiteboard.list({ scope: url.searchParams.get("scope") || "", scopeId: url.searchParams.get("scopeId") || "", search: url.searchParams.get("q") || "" })],
   ["POST", /^\/api\/whiteboards$/, async (req) => whiteboard.create({ ...(await readJson(req)), author: "user" })],
   ["GET", /^\/api\/whiteboards\/available-sources$/, () => whiteboardSources.candidates()],

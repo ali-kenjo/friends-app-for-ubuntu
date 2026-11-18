@@ -10,6 +10,8 @@ import { FaceTracker } from "./facetrack.js";
 import { robotSound } from "./sound.js";
 import { getSettings, onSettings, updateSettings } from "../store.js";
 import { loadCustomModels } from "../room/custom.js";
+import { canDo } from "../room/rules.mjs";
+import { standPoint } from "../room/nav.mjs";
 
 export const animator = new Animator();
 animator.onSound = (kind, sub) => {
@@ -40,8 +42,47 @@ export const director = new Director(animator, {
     if (typeof document === "undefined" || !ev) return;
     if (ev.choreography) document.dispatchEvent(new CustomEvent("friends:choreography", { detail: ev }));
     if (ev.emotion || ev.mood) document.dispatchEvent(new CustomEvent("friends:robot-emotion", { detail: { emotion: ev.emotion || ev.mood } }));
+    if (ev.room) roomCommand(ev.room);
+    if (ev.roomChanged) roomChangedByAI(ev.roomChanged);
+    // A rearrangement waiting for your yes: shown (not saved) until you decide
+    if (ev.roomPreview?.room) engine?.setLook({ roomDoc: ev.roomPreview.room });
+    else if (ev.roomPreview?.end && roomDoc) engine?.setLook({ roomDoc });
+    // Writing on the real whiteboard: with a whiteboard in its room that it may write on, it goes there
+    if (ev.gesture === "board_write" || ev.gesture === "board_erase" || ev.lookAt?.target === "board") goToBoard();
   },
 });
+
+// The AI's robot tools (checked by the helper against the room): its behaviour engine carries them out
+function roomCommand(cmd) {
+  // Words for a sign: on the sign at once (saved), while the robot goes to it
+  if (cmd.kind === "asset" && cmd.text && roomDoc) {
+    const a = roomDoc.assets.find((x) => x.id === cmd.id);
+    if (a && a.state && "text" in a.state) setRoom({ ...roomDoc, assets: roomDoc.assets.map((x) => (x.id === a.id ? { ...x, state: { ...x.state, text: cmd.text } } : x)) });
+  }
+  const res = engine?.behaviour.command(cmd);
+  if (res && !res.ok && res.text) director.a.lookAt({ target: "user", duration: 2 });
+}
+
+let boardTrip = 0;
+function goToBoard() {
+  const b = engine?.behaviour;
+  if (!b?.room || !roomDoc || performance.now() - boardTrip < 4000) return;
+  const board = roomDoc.assets.find((a) => !a.hidden && (a.type === "whiteboard" || a.type === "chalkboard"));
+  if (!board || b.task?.asset === board.id) return;
+  if (!canDo(roomDoc, "ai", board.id, "write", { ai: getSettings()?.robot?.ai }).ok) return;
+  boardTrip = performance.now();
+  // (at the board already: it stays and keeps writing)
+  const at = standPoint(roomDoc, board);
+  if (Math.hypot(b.pos[0] - at[0], b.pos[1] - at[1]) < 0.3) return;
+  b.command({ kind: "asset", id: board.id, action: "look", actor: "ai" });
+}
+
+// The AI rearranged the room (room_edit): it's loaded again, and you can take it back
+async function roomChangedByAI({ id, done = [] } = {}) {
+  const before = roomDoc && roomDoc.id === id ? JSON.parse(JSON.stringify(roomDoc)) : null;
+  await loadRoom(id);
+  document.dispatchEvent(new CustomEvent("friends:robot-room-edited", { detail: { id, done, undo: before ? () => setRoom(before) : null } }));
+}
 
 let engine = null;
 let loading = null;

@@ -98,6 +98,13 @@ class LiveSession {
     this.boardNote = { timer: null, last: 0, tries: 0 }; // telling it quietly that you changed the whiteboard
     this.onBoardOps = (event) => this.boardChanged(event);
     whiteboard.events.on("ops", this.onBoardOps);
+    // The room changed, or how the robot is: the AI is told quietly (a second after the last change)
+    this.roomNote = { timer: null };
+    this.onRoomChange = () => {
+      clearTimeout(this.roomNote.timer);
+      this.roomNote.timer = setTimeout(() => this.sendRoomNote(), 1000);
+    };
+    roomContext.on("change", this.onRoomChange);
 
     client.on("message", (data, isBinary) => this.fromPage(data, isBinary));
     client.on("close", () => this.close());
@@ -148,19 +155,26 @@ class LiveSession {
     }
   }
 
+  // How the robot is now, from the page (where, doing, posture): the registry says when it changed
   updateRoomContext(ctx) {
-    const updated = roomContext.update(ctx);
+    roomContext.update(ctx);
+  }
+
+  sendRoomNote() {
+    if (this.closed || !this.robot) return;
+    const latest = roomContext.get();
     if (this.adapter) {
-      this.adapter.sendRoomContext(updated);
+      this.adapter.sendRoomContext(latest);
       return;
     }
-    if (this.ready && !this.turn.model) {
-      this.toGemini({
-        realtimeInput: {
-          text: `(Room Update — silent context, do not announce unless asked):\n${roomContext.formatPromptBlock(updated)}`,
-        },
-      });
+    const block = roomContext.formatPromptBlock(latest, { settings: this.settings || settings.get() });
+    if (!block) return;
+    // Not in the middle of its own answer: a little later
+    if (!this.ready || this.turn.model) {
+      this.onRoomChange();
+      return;
     }
+    this.toGemini({ realtimeInput: { text: `(Room update — silent context; don't mention it unless asked):\n${block}` } });
   }
 
   // The person changed what the robot is to them (a teacher, a coach…) while talking: the AI is told what that means now.
@@ -267,7 +281,7 @@ class LiveSession {
     const withTools = this.robot;
     this.withhold = current.privacy?.shareMemoryWithCloud === false;
     this.offered = tools.declarations(current, { voice: true, robot: withTools, nonBlocking: true, onAir: this.onAir, live: false, withhold: this.withhold, source: "voice" });
-    this.robotTools = this.offered.some((t) => tools.isRobotTool(t.name) || tools.isChoreographyTool?.(t.name));
+    this.robotTools = this.offered.some((t) => tools.isRobotTool(t.name));
     const apiKey = voiceAdapter.resolveProviderKey(providerId, current);
     const av = current.aiVoice || {};
     const sys = prompt.build(current, { voice: true, live: true, toolsOffered: this.offered, onAir: this.onAir, chatId: this.chatId, doc: this.doc, style: this.currentStyle(), withhold: this.withhold });
@@ -443,7 +457,7 @@ class LiveSession {
               this.system +
                 boardBlock +
                 (current.aiVoice?.systemPersona ? `\n\n## Custom Personality\n${current.aiVoice.systemPersona}` : "") +
-                (roomContext.get().activeProps?.length ? `\n\n${roomContext.formatPromptBlock()}` : "")
+                (this.robot ? ((block) => (block ? `\n\n${block}` : ""))(roomContext.formatPromptBlock(undefined, { settings: current })) : "")
             ),
           },
         ],
@@ -611,7 +625,7 @@ class LiveSession {
       let response;
       try {
         if (!tools.robotAllowed(this.settings || settings.get(), call.name)) throw new Error("The user doesn't let you use that part of your body. Leave it be.");
-        this.toPage({ type: "robot", ...tools.robotEvent(call.name, call.args || {}) });
+        this.toPage({ type: "robot", ...tools.robotEvent(call.name, call.args || {}, this.settings || settings.get()) });
         response = { ok: true, scheduling: "SILENT" };
       } catch (err) {
         response = { error: err.message, scheduling: "SILENT" };
@@ -796,6 +810,8 @@ class LiveSession {
     clearTimeout(this.micTimer);
     clearTimeout(this.boardNote.timer);
     whiteboard.events.off("ops", this.onBoardOps);
+    clearTimeout(this.roomNote.timer);
+    roomContext.off("change", this.onRoomChange);
     this.adapter?.stop().catch(() => {});
     this.adapter = null;
     this.finishTurn();

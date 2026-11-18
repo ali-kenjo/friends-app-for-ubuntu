@@ -227,18 +227,15 @@ describe("friends-app-for-ubuntu v1.0 Architecture", () => {
   });
 
   test("Live RoomContextRegistry & Gemini/OpenAI/Local/TextSandbox VoiceProviderAdapters", async () => {
-    roomContext.update({
-      presetId: "creator_studio_desk",
-      activeProps: ["whiteboard", "vase_flowers", "books_notebook"],
-      whiteboardTitle: "Architecture",
-      whiteboardText: "A* -> IK -> Shaders",
-      flowerHydration: "needs_water",
-      toys: ["rubiks_cube", "rc_drone"],
-    });
+    // 1.1: the room block is made from the room the robot is in (the rooms store), plus how the robot is now
+    const rooms = require("../server/rooms");
+    const doc = rooms.create({ template: "lounge" });
+    settings.set({ ...settings.get(), robot: { ...settings.get().robot, room: { layoutId: doc.id } } });
+    roomContext.update({ where: "at home", doing: "", posture: "stand" });
     const block = roomContext.formatPromptBlock();
-    assert.match(block, /creator_studio_desk/);
-    assert.match(block, /needs_water/);
-    assert.match(block, /A\* -> IK -> Shaders/);
+    assert.match(block, /Room "Living room"/);
+    assert.match(block, /"Fireplace"/);
+    assert.match(block, /Right now you're at home/);
 
     // Gemini extended thinking toggle + model selection
     assert.equal(gemini.liveSupportsThinking(gemini.EXTENDED_THINKING_LIVE_MODEL), true);
@@ -246,7 +243,7 @@ describe("friends-app-for-ubuntu v1.0 Architecture", () => {
     assert.ok(liveList.includes(gemini.EXTENDED_THINKING_LIVE_MODEL));
 
     // GeminiLiveAdapter setup payload + interaction_status handling
-    const toolDecls = Object.values(tools.CHOREOGRAPHY_TOOLS);
+    const toolDecls = Object.values(tools.ROBOT_TOOLS);
     const gAdapter = new GeminiLiveAdapter({
       apiKey: "demo",
       extendedThinking: true,

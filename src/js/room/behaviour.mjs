@@ -66,6 +66,9 @@ export class RoomBehaviour {
     this.onAction = null; // ({ assetId, action }) when it uses a thing
     this.sleeping = false;
     this.letRun = null; // "finish" | "brief" | "return": the task goes on though you're talking (interrupt policy)
+    this.postureWant = null; // a posture asked for (robot_posture): { kind, asset }
+    this.lookOverride = null; // looking at something for a while (robot_look_at): { point, until }
+    this.gaitFor = null; // a gait asked for, for one trip
     this.paused = null; // what it was doing when you started talking (pause and resume)
     this.out = this.output();
   }
@@ -180,8 +183,55 @@ export class RoomBehaviour {
       this.why = "command";
       return { ok: true };
     }
+    this.gaitFor = ["hover", "walk", "glide", "hop", "zip"].includes(cmd.gait) ? cmd.gait : null;
+    // Going somewhere else ends a posture it was asked for; sitting on something starts one
+    if (cmd.kind === "asset" && ["sit", "lean", "rest"].includes(cmd.action)) this.postureWant = { kind: cmd.action, asset: cmd.id };
+    else if (!["posture", "look"].includes(cmd.kind)) this.postureWant = null;
     if (cmd.kind === "home") {
+      this.postureWant = null;
       this.goHome("command");
+      return { ok: true };
+    }
+    if (cmd.kind === "you") {
+      const y = this.you();
+      const goal = [this.pos[0] + (y[0] - this.pos[0]) * 0.3, Math.min(this.room.size.d / 2 - 0.45, this.pos[1] + 1)];
+      return this.goTo(goal, { why: "command", face: facingTo(goal, y), name: "you" }) ? { ok: true } : { ok: false, reason: "no_path" };
+    }
+    if (cmd.kind === "direction") {
+      const { w, d } = this.room.size;
+      const step = { left: [-1, 0], right: [1, 0], front: [0, 1], back: [0, -1] }[cmd.dir];
+      const goal = cmd.dir === "center" ? [0, 0] : [clamp(this.pos[0] + step[0], -w / 2 + 0.4, w / 2 - 0.4), clamp(this.pos[1] + step[1], -d / 2 + 0.4, d / 2 - 0.4)];
+      return this.goTo(goal, { why: "command", name: cmd.dir }) ? { ok: true } : { ok: false, reason: "no_path" };
+    }
+    // Look at something for a while (the AI's robot_look_at): a thing, a spot; you, the camera and directions are
+    // the animator's own looks
+    if (cmd.kind === "look") {
+      const t = cmd.target || {};
+      let point = null;
+      if (t.kind === "asset") {
+        const a = this.eff.room.assets.find((x) => x.id === t.id);
+        point = a ? anchorPoint(this.eff.room, a, "look") : null;
+      } else if (t.kind === "spot") {
+        const sp = this.room.robot.spots.find((x) => x.id === t.id);
+        point = sp ? [sp.pos[0], 0.6, sp.pos[2]] : null;
+      }
+      if (point) {
+        this.lookOverride = { point, until: this.t + (cmd.seconds || 5) };
+        if (this.task?.kind === "hold") this.task.face = facingTo(this.pos, [point[0], point[2]]);
+      }
+      return { ok: true };
+    }
+    // A posture: sit or lean on a thing (going there first), rest (on its pad or where it is), stand
+    if (cmd.kind === "posture") {
+      if (cmd.posture === "stand") {
+        this.postureWant = null;
+        return { ok: true };
+      }
+      this.postureWant = { kind: cmd.posture, asset: cmd.id || null };
+      const a = cmd.id && this.eff.room.assets.find((x) => x.id === cmd.id);
+      if (a) return this.visit(a, cmd.posture, "command") ? { ok: true } : { ok: false, reason: "no_path" };
+      this.task = { kind: "hold", face: this.yaw };
+      this.why = "command";
       return { ok: true };
     }
     if (cmd.kind === "spot") {
@@ -570,8 +620,13 @@ export class RoomBehaviour {
         }
       }
     } else if (task?.kind === "dwell") {
+      // Sitting, leaning or resting there because it was asked to: it stays
+      if (this.t >= task.until && this.postureWant && this.postureWant.asset === task.asset) {
+        this.task = { kind: "hold", face: task.face };
+        this.why = "command";
+      }
       // Done with it: a moment, then home (decideIdle)
-      if (this.t >= task.until) {
+      else if (this.t >= task.until) {
         this.next.home = this.t + this.room.robot.autonomy.homeReturnSec;
         this.why = "after";
         this.task = { kind: "hold", face: this.yaw };
@@ -603,6 +658,7 @@ export class RoomBehaviour {
   arrive() {
     const t = this.task;
     this.speed = 0;
+    this.gaitFor = null;
     if (t.then?.kind === "dwell") {
       this.task = { kind: "dwell", until: this.t + t.then.dwell, asset: t.then.asset, action: t.then.action, face: t.face };
       const a = this.eff.room.assets.find((x) => x.id === t.then.asset);
@@ -695,10 +751,11 @@ export class RoomBehaviour {
     if (!robot) return { x: 0, z: 0.15, yaw: 0, posture: { kind: "stand", asset: null, point: null }, gaze: { mode: "you", point: null }, hover: 0, stance: "upright", speed: 0, moving: false, quiet: false, sleeping: false, path: [] };
     const key = away ? "away" : state === "thinking" ? "idle" : state;
     // Posture: sit, lean or rest only once it's there (and the thing is)
-    const want = robot.posture[key] || robot.posture.idle;
+    // (a posture you or the AI asked for wins until it stands up again or moves on)
+    const want = this.postureWant || robot.posture[key] || robot.posture.idle;
     let posture = { kind: "stand", asset: null, point: null };
     const settled = !this.task || this.task.kind === "hold" || this.task.kind === "dwell";
-    if (want.kind === "rest" && away && settled) posture = { kind: "rest", asset: want.asset, point: null };
+    if (want.kind === "rest" && (away || want === this.postureWant) && settled) posture = { kind: "rest", asset: want.asset, point: null };
     else if ((want.kind === "sit" || want.kind === "lean") && want.asset && settled) {
       const a = this.eff.room.assets.find((x) => x.id === want.asset && !this.eff.hidden.has(x.id));
       const p = a && anchorPoint(this.eff.room, a, want.kind);
@@ -721,6 +778,10 @@ export class RoomBehaviour {
       point = asset ? anchorPoint(this.eff.room, asset, "look") : null;
       if (!point) mode = "natural";
     } else if (mode === "point") point = [...g.point];
+    if (this.lookOverride && this.t < this.lookOverride.until) {
+      mode = "point";
+      point = this.lookOverride.point;
+    }
     if (state === "thinking" && robot.states.thinking === "look_up") {
       mode = "point";
       point = [this.pos[0], 2.4, this.pos[1] + 0.6];
@@ -735,7 +796,7 @@ export class RoomBehaviour {
       gaze: { mode, point, headWeight: g.headWeight, eyeWeight: g.eyeWeight, lookAway: g.lookAway, dontStare: g.dontStare, headLimit: g.headLimit },
       hover,
       stance: robot.posture.stance,
-      gait: robot.movement.gait,
+      gait: this.gaitFor || robot.movement.gait,
       banking: robot.movement.banking,
       speed: this.speed,
       moving: this.speed > 0.02,

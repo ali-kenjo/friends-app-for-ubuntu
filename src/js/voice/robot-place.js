@@ -220,3 +220,30 @@ document.addEventListener("friends:robot-dropped", (e) => {
   // (on the page, above voice mode: voice mode rebuilds its own layers as its state changes)
   document.body.append(homeOffer);
 });
+
+// ---------- The AI rearranged the room (room_edit): what it did, and Undo ----------
+let editNotice = null;
+document.addEventListener("friends:robot-room-edited", (e) => {
+  const { done = [], undo } = e.detail || {};
+  editNotice?.remove();
+  const close = () => {
+    editNotice?.remove();
+    editNotice = null;
+  };
+  const what = done.map((d) => (typeof d === "string" ? d : t(d.key, { name: t(d.vars?.name || "") }))).join(", ");
+  const kids = [h("span", { text: t("The room changed: {what}", { what }) })];
+  if (undo) {
+    const back = h("button", { type: "button", class: "btn small", text: t("Undo") });
+    back.addEventListener("click", () => {
+      undo();
+      close();
+      announce(t("The room is back as it was."));
+    });
+    kids.push(back);
+  }
+  const no = h("button", { type: "button", class: "icon-btn small", "aria-label": t("Dismiss"), title: t("Dismiss"), text: "✕" });
+  no.addEventListener("click", close);
+  kids.push(no);
+  editNotice = h("div", { class: "voice-home-offer room-edit-notice", role: "status" }, ...kids);
+  document.body.append(editNotice);
+});

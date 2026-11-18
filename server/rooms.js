@@ -96,8 +96,12 @@ function get(id) {
   return readRoom(id) || null;
 }
 
+// Rooms changed (saved, made, removed): the AI's room block is made again (core/ai/room-context.js)
+const events = new (require("events").EventEmitter)();
+
 function write(doc) {
   writeJson(fileFor(doc.id), doc);
+  events.emit("change", doc.id);
   return doc;
 }
 
@@ -455,6 +459,7 @@ const reset = () => {
 };
 
 module.exports = {
+  events,
   list, get, create, save, remove, duplicate, exportRoom, importRoom,
   saveAsset, updateAsset, getAsset, assetInfo, removeAsset, listAssets, customCatalog,
   migrateOnStart, ensure, reset, readGlb, inspect, MAX_GLB,

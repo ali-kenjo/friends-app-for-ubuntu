@@ -22,6 +22,8 @@ function leaving(settings = settingsModule.get()) {
     for (const b of brains.publicState().brains.filter((b) => b.enabled && b.kind === "cloud")) out.push({ id: `ai-${b.id}`, kind: "ai", name: b.name, detail: b.model });
     for (const { def } of connectors.active(settings)) if (def.online) out.push({ id: `app-${def.id}`, kind: "app", name: def.name, detail: "" });
     if (settings.life?.briefingNews) out.push({ id: "news", kind: "feature", name: "news", detail: "" });
+    // "Describe a room" asks the AI for small jobs, which may be a cloud AI (only catalog names go out)
+    if (settings.robot?.ai?.describe !== false) out.push({ id: "room-describe", kind: "feature", name: "room_describe", detail: "" });
     if (settings.reddit?.enabled !== false && (settings.reddit?.watchers || []).some((w) => w.enabled !== false)) {
       out.push({ id: "reddit-watchers", kind: "feature", name: "reddit_watchers", detail: "" });
     }

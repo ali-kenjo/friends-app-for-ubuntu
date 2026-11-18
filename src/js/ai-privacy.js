@@ -26,6 +26,7 @@ const FEATURES = {
   telegram: t("Your Telegram bot (messages go through Telegram)"),
   updates: t("The daily check for a newer Friends (it sends nothing about you)"),
   reddit_watchers: t("Reddit watchers (checks configured subreddits periodically)"),
+  room_describe: t("Describe a room (your words and the catalog's names, to your AI for small jobs)"),
 };
 
 function renderLeaving(summary) {

@@ -193,12 +193,21 @@ with what is left written next to it. A fresh session continues from this file a
 
 ## Step 7: AI
 
-- [ ] Tool set (§7.3) replacing `ROBOT_TOOLS` + `CHOREOGRAPHY_TOOLS`; old names as aliases for one release.
-- [ ] One permission model in `rules.mjs` (§7.4); migrate `robot.aiAllowed` + `behaviorEngine.toolPermissions`.
-- [ ] Room context block (§7.5) from `roomSummary()`: size-capped, names quoted as data, personal-data
-      redaction, every adapter (Gemini Live, OpenAI Realtime, local pipeline, text sandbox) + normal chat.
-- [ ] `room_edit` with "AI may rearrange" Off / Ask first (default) / Allowed; ghost preview Apply/Cancel; undoable.
-- [ ] Describe a room (local AI in Private mode; never personal-data contents; listed in "what could leave").
+- [x] Tool set (§7.3): robot_mood, robot_gesture, robot_go_to, robot_look_at, robot_use, robot_posture,
+      robot_route, room_edit; every call checked against the live room (`src/js/room/ai.mjs`) with refusals
+      the AI can say; the 1.0 names (robot_use_prop, move_to_asset, return_home, play_with_toy, water_flowers,
+      write_in_notebook, clear_whiteboard, explain_on_whiteboard, follow_route, set_emotion) run as aliases for
+      one release; writing on the real whiteboard walks it to a 3D whiteboard it may use.
+- [x] One permission model in `rules.mjs` (§7.4): autonomy, AI tools and the editor; `robot.ai` (migrated
+      from `robot.aiAllowed` + `behaviorEngine.toolPermissions`) drives the tools and Settings → Robot.
+- [x] Room context block (§7.5) from the room document (`roomBlock`): size-capped, names quoted as data,
+      personal-data things silent unless on and allowed, the robot's live state from the page; Settings →
+      "What the AI knows of the room" (all / names / nothing); every adapter + the normal chat when the robot is
+      on screen; silent updates to live sessions when the room or the robot changes.
+- [x] `room_edit` with "AI may rearrange" Off / Ask first (default) / Allowed; the proposed room shown on
+      screen while asking (Apply/Cancel); afterwards "The room changed: … Undo".
+- [x] Describe a room (Room menu): the AI for small jobs (local in Private mode) furnishes it from catalog ids
+      only; shown at once, Keep it / Undo; Settings switch; listed in "what could leave".
 
 ## Step 8: Consolidation
 

@@ -251,3 +251,33 @@ describe("When you start talking while it's busy (interrupt policy)", () => {
     assert.ok(near([b.out.x, b.out.z], [2.4, -2], 0.15), `at ${b.out.x}, ${b.out.z}`);
   });
 });
+
+describe("What the AI asks for", () => {
+  test("sit on a chair and stay; stand up; look at a thing; come to you; a direction", () => {
+    let r = room();
+    r = add(r, "chair_office", [1.5, 0, -1]);
+    const chair = r.assets.at(-1).id;
+    r = add(r, "lamp_floor", [-2, 0, -2]);
+    const lamp = r.assets.at(-1).id;
+    const b = new RoomBehaviour({ random: seeded() });
+    b.setRoom(model.sanitizeRoom(r));
+    assert.equal(b.command({ kind: "posture", posture: "sit", id: chair }).ok, true);
+    let out = run(b, 40);
+    assert.equal(out.posture.kind, "sit", "it stays seated after the visit");
+    b.command({ kind: "posture", posture: "stand" });
+    assert.equal(run(b, 0.2).posture.kind, "stand");
+    b.command({ kind: "look", target: { kind: "asset", id: lamp }, seconds: 3 });
+    out = run(b, 0.5);
+    assert.equal(out.gaze.mode, "point");
+    assert.ok(out.gaze.point[0] < -1.5);
+    assert.notEqual(run(b, 4).gaze.mode, "point", "only for a while");
+    const z0 = b.pos[1];
+    b.command({ kind: "you" });
+    out = run(b, 10);
+    assert.ok(out.z > z0 + 0.4, "came closer");
+    b.command({ kind: "direction", dir: "left" });
+    const x0 = b.pos[0];
+    out = run(b, 10);
+    assert.ok(out.x < x0 - 0.6, "went left");
+  });
+});

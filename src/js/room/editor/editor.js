@@ -11,7 +11,7 @@ import { h, button } from "../../robot/studio/ui.js";
 import { History } from "./history.mjs";
 import * as ops from "./ops.mjs";
 import { Viewport } from "./viewport.js";
-import { catalogPanel, outlinePanel, inspectorPanel, newRoomDialog, roomPickerDialog } from "./panels.js";
+import { catalogPanel, outlinePanel, inspectorPanel, newRoomDialog, roomPickerDialog, describeDialog } from "./panels.js";
 import { cancelThumbs } from "./thumbs.js";
 import { RobotTools } from "./robot-tools.js";
 import { explain } from "../rules.mjs";
@@ -246,6 +246,24 @@ class RoomEditor {
     if (tool) this.say(tool.startsWith("route:") ? t("Click in the room to add points to the route; Escape when done.") : words[tool]);
   }
 
+  // The room made from your words: keep it, or undo it (it's one step of the history either way)
+  showDescribed(out) {
+    this.describedBar?.remove();
+    const close = () => {
+      this.describedBar?.remove();
+      this.describedBar = null;
+    };
+    const keep = button(t("Keep it"), close, { primary: true, icon: "check" });
+    const undo = button(t("Undo"), () => {
+      this.undo();
+      close();
+    }, { icon: "undo" });
+    const skipped = out.errors?.length ? tp("{n} suggestion didn't fit and was left out.", "{n} suggestions didn't fit and were left out.", out.errors.length) : "";
+    this.describedBar = h("div", { class: "re-described", role: "status" }, h("span", { text: [t("Made from your words: {n} things.", { n: out.assets.length }), skipped].filter(Boolean).join(" ") }), keep, undo);
+    this.stage.append(this.describedBar);
+    keep.focus();
+  }
+
   // ---------- Simulate: the behaviour runs in the editor, with its path, the nav grid and why ----------
   toggleSim(on = !this.simulating) {
     if (on) this.startSim();
@@ -464,6 +482,15 @@ class RoomEditor {
   }
 
   async roomAction(action) {
+    if (action === "describe") {
+      const out = await describeDialog({ roomId: this.room.id });
+      if (!out) return;
+      this.selected = [];
+      this.robotSelected = false;
+      this.commit({ ...this.room, assets: out.assets }, t("Describe a room"));
+      this.showDescribed(out);
+      return;
+    }
     if (action === "rooms") {
       const id = await roomPickerDialog({ current: this.room.id });
       if (id) await this.switchTo(id);
@@ -531,7 +558,7 @@ class RoomEditor {
     const name = h("input", { class: "field re-name", type: "text", maxlength: 60, "aria-label": t("Room name"), value: this.room.name });
     name.addEventListener("change", () => this.commit({ ...this.room, name: name.value.trim().slice(0, 60) || this.room.name }, t("Rename")));
     this.nameEl = name;
-    const menu = h("select", { class: "field re-menu", "aria-label": t("Room menu") }, ...[["", t("Room…")], ["rooms", t("Your rooms…")], ["new", t("New room…")], ["duplicate", t("Duplicate")], ["templates", t("Templates…")], ["save_as", t("Save as…")], ["import", t("Import…")], ["export", t("Export…")], ["revert", t("Revert to when I opened it")], ["delete", t("Delete room")]].map(([v, l]) => h("option", { value: v, text: l })));
+    const menu = h("select", { class: "field re-menu", "aria-label": t("Room menu") }, ...[["", t("Room…")], ["rooms", t("Your rooms…")], ["new", t("New room…")], ["duplicate", t("Duplicate")], ["templates", t("Templates…")], ...(getSettings()?.robot?.ai?.describe === false ? [] : [["describe", t("Describe a room…")]]), ["save_as", t("Save as…")], ["import", t("Import…")], ["export", t("Export…")], ["revert", t("Revert to when I opened it")], ["delete", t("Delete room")]].map(([v, l]) => h("option", { value: v, text: l })));
     menu.addEventListener("change", () => {
       const v = menu.value;
       menu.value = "";

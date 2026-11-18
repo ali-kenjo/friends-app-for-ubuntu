@@ -1,47 +1,33 @@
-// ---------- Live Room-State Context Manager (server/core/ai/room-context.js) ----------
-// Maintains the latest structured snapshot of the 3D room (desk props, whiteboard text,
-// open notebook notes, flower hydration, available toys, robot state) and formats
-// concise context blocks for VoiceProviderAdapters so the AI never hallucinates missing objects.
-
+// ---------- What the AI is told about the robot's room (server/core/ai/room-context.js) ----------
+// One block for every provider (Gemini Live, OpenAI Realtime, the local pipeline, the text sandbox, and the
+// normal chat when the robot is on screen), made from the room document in the rooms store
+// (src/js/room/ai.mjs roomBlock): the things by their names with where they are, what the robot may and may not
+// do with each, its spots and routes, and how it is now. Names you gave things are quoted as data. Things that
+// show your own things say nothing of them unless switched on and allowed. Settings → Robot → "What the AI
+// knows of the room": all, names only, or nothing.
+//
+// The page reports how the robot is (update()); the rooms store says when the room changed. Either way
+// "change" is emitted, and live sessions send the AI a silent update.
 const EventEmitter = require("events");
+const rooms = require("../../rooms");
+const roomAI = require("../../../src/js/room/ai.mjs");
+
+const text = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, max) : "");
 
 class RoomContextRegistry extends EventEmitter {
   constructor() {
     super();
-    this.latest = {
-      presetId: "creator_studio_desk",
-      robotState: "IDLE_HOME",
-      robotEmotion: "calm",
-      heldProp: null,
-      homeSpot: { x: 0, z: 0.15, rotY: 0 },
-      flowerHydration: "healthy",
-      whiteboardText: "",
-      notebookNotes: [],
-      activeProps: [],
-      availableToys: [],
-      updatedAt: null,
-    };
+    this.latest = { state: {}, filming: false, updatedAt: null };
+    rooms.events?.on("change", () => this.emit("change", this.latest));
   }
 
-  /**
-   * Update the active room snapshot and emit a change event for live sessions.
-   * @param {Record<string, any>} snapshot
-   */
+  // How the robot is now, from the page: { where, doing, posture, mood, filming }
   update(snapshot) {
-    if (!snapshot || typeof snapshot !== "object") return this.latest;
-    this.latest = {
-      presetId: String(snapshot.presetId || this.latest.presetId),
-      robotState: String(snapshot.robotState || "IDLE_HOME"),
-      robotEmotion: String(snapshot.robotEmotion || "calm"),
-      heldProp: snapshot.heldProp ? String(snapshot.heldProp) : null,
-      homeSpot: snapshot.homeSpot && typeof snapshot.homeSpot === "object" ? snapshot.homeSpot : this.latest.homeSpot,
-      flowerHydration: String(snapshot.flowerHydration || "healthy"),
-      whiteboardText: String(snapshot.whiteboardText || "").slice(0, 800),
-      notebookNotes: Array.isArray(snapshot.notebookNotes) ? snapshot.notebookNotes.slice(-8).map((n) => String(n).slice(0, 200)) : [],
-      activeProps: Array.isArray(snapshot.activeProps) ? snapshot.activeProps.slice(0, 40) : [],
-      availableToys: Array.isArray(snapshot.availableToys) ? snapshot.availableToys.slice(0, 16) : [],
-      updatedAt: new Date().toISOString(),
-    };
+    const s = snapshot && typeof snapshot === "object" ? snapshot : {};
+    const posture = ["stand", "sit", "lean", "rest"].includes(s.posture) ? s.posture : "stand";
+    const next = { state: { where: text(s.where, 80), doing: text(s.doing, 80), posture, mood: text(s.mood, 24) }, filming: s.filming === true, updatedAt: new Date().toISOString() };
+    if (JSON.stringify(next.state) === JSON.stringify(this.latest.state) && next.filming === this.latest.filming) return this.latest;
+    this.latest = next;
     this.emit("change", this.latest);
     return this.latest;
   }
@@ -50,30 +36,37 @@ class RoomContextRegistry extends EventEmitter {
     return this.latest;
   }
 
-  /**
-   * Format a compact, deterministic prompt block describing what is physically in the room right now.
-   * @param {Record<string, any>} [ctx]
-   */
-  formatPromptBlock(ctx = this.latest) {
-    const props = (ctx.activeProps || []).map((p) => {
-      const loc = p.attachedTo ? `on ${p.attachedTo}` : `at (${p.x ?? 0}, ${p.z ?? 0})`;
-      const st = p.state ? ` [${typeof p.state === "string" ? p.state : JSON.stringify(p.state)}]` : "";
-      return `- ${p.id} (${p.name || p.kind}, ${p.category}) ${loc}${st}`;
-    });
-    const toys = (ctx.availableToys || []).map((t) => t.id);
-    const notes = (ctx.notebookNotes || []).length ? ctx.notebookNotes.join(" | ") : "(empty)";
-    const wb = ctx.whiteboardText ? ctx.whiteboardText.replace(/\s+/g, " ").trim().slice(0, 400) : "(blank)";
+  // The room the robot is in now
+  room(settings) {
+    try {
+      const id = settings?.robot?.room?.layoutId;
+      return id ? rooms.get(id) : null;
+    } catch {
+      return null;
+    }
+  }
 
-    return [
-      "## Live 3D Room Context (authoritative — only interact with items listed here)",
-      `Layout Preset: ${ctx.presetId} | Robot State: ${ctx.robotState} (${ctx.robotEmotion})${ctx.heldProp ? ` | Holding: ${ctx.heldProp}` : ""}`,
-      `Flowers Hydration: ${ctx.flowerHydration}`,
-      `Whiteboard Content: ${wb}`,
-      `Open Notebook Notes: ${notes}`,
-      `Available Toys: ${toys.length ? toys.join(", ") : "none"}`,
-      `Active Room Props (${props.length}):`,
-      props.length ? props.join("\n") : "- (default open stage)",
-    ].join("\n");
+  hasRoom(settings = require("../../settings").get()) {
+    return Boolean(this.room(settings));
+  }
+
+  // The block for the AI ("" when there's no room or the user keeps the room from it)
+  formatPromptBlock(ctx = this.latest, { settings = require("../../settings").get(), maxChars = 3500 } = {}) {
+    const mode = settings.robot?.ai?.context || "all";
+    if (mode === "none") return "";
+    const room = this.room(settings);
+    if (!room) return "";
+    const block = roomAI.roomBlock(room, {
+      state: ctx?.state || {},
+      ai: settings.robot?.ai,
+      privateMode: settings.privacy?.localOnly === true,
+      filming: ctx?.filming === true,
+      personalInFilming: settings.robot?.privacy?.personalInFilming === true,
+      maxChars,
+    });
+    // "Names only": the things and where they are, without the rules and the robot's state
+    if (mode === "names") return block.split("\n").filter((l) => !/^(Right now|The user has switched off|You may)/.test(l)).map((l) => l.replace(/: (you may|never|look only)[^.]*\.$/, ".")).join("\n");
+    return block;
   }
 }
 

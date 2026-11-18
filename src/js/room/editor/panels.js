@@ -757,3 +757,50 @@ export function roomPickerDialog({ current } = {}) {
       });
   });
 }
+
+// ---------- Describe a room: your words, a layout from the catalog ----------
+// Resolves to { assets, errors } from the helper, or null (cancelled)
+export function describeDialog({ roomId }) {
+  return new Promise((resolve) => {
+    const back = h("div", { class: "modal-backdrop re-new" });
+    const box = h("div", { class: "modal re-new-box", role: "dialog", "aria-modal": "true", "aria-labelledby": "re-desc-title" });
+    const words = h("textarea", { class: "field re-desc-words", rows: 4, maxlength: 400, "aria-label": t("What should the room be like?"), placeholder: t("A cozy reading nook with lots of plants and a big window") });
+    const status = h("p", { class: "rs-hint", role: "status" });
+    const finish = (value) => {
+      back.remove();
+      resolve(value);
+    };
+    const go = button(t("Make it"), async () => {
+      const text = words.value.trim();
+      if (!text) return void (status.textContent = t("Say what the room should be like."));
+      go.disabled = true;
+      status.textContent = t("Asking your AI…");
+      try {
+        const res = await fetch(`/api/rooms/${encodeURIComponent(roomId)}/describe`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+        const out = await res.json();
+        if (!res.ok) throw new Error(out.error || res.status);
+        if (!out.assets) throw new Error((out.errors || [])[0] || t("Nothing came back."));
+        finish(out);
+      } catch (err) {
+        go.disabled = false;
+        status.textContent = t("That didn't work: {reason}", { reason: err.message });
+      }
+    }, { primary: true, icon: "sparkles" });
+    box.append(
+      h("h2", { id: "re-desc-title", text: t("Describe a room") }),
+      hint(t("Your AI for small jobs furnishes the room from the catalog (a local one in Private mode). Only your words and the catalog's names go to it. You see the result at once and can undo it.")),
+      words,
+      status,
+      h("div", { class: "rs-actions re-wiz-actions" }, button(t("Cancel"), () => finish(null)), go),
+    );
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        finish(null);
+      }
+    });
+    back.append(box);
+    document.body.append(back);
+    words.focus();
+  });
+}

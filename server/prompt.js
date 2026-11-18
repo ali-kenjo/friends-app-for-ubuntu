@@ -305,7 +305,7 @@ function historySection(user, summary, history, others = {}) {
 // text, for Live, which doesn't get the chat as messages), onAir (co-host mode),
 // chatId (this chat, so its own memory isn't repeated), doc ({ name, content } grounding document)
 // withhold: this goes to a cloud AI and the person chose not to share their memories with those (Settings → Privacy)
-function build(settings, { voice = false, live = false, toolsOffered = [], summary = "", history = [], onAir = false, chatId = null, doc = null, withhold = false, style = settings.voice?.style, board = null } = {}) {
+function build(settings, { voice = false, live = false, toolsOffered = [], summary = "", history = [], onAir = false, chatId = null, doc = null, withhold = false, style = settings.voice?.style, board = null, room = null } = {}) {
   const p = settings.personality;
   const lines = [];
   const character = characters.active(settings);
@@ -366,6 +366,8 @@ function build(settings, { voice = false, live = false, toolsOffered = [], summa
   if (onAir) lines.push(...onAirSection(settings, user, character));
   if (offered.includes("robot_mood") || offered.includes("robot_gesture")) lines.push(...bodySection(user, { voice }));
   if (offered.some((n) => n.startsWith("whiteboard_"))) lines.push(...whiteboardSection(settings, user, { voice, offered, board }));
+  // The robot's room, when its body is on screen with its tools (server/core/ai/room-context.js)
+  if (room && offered.some((n) => n.startsWith("robot_"))) lines.push("", "# Your room", room);
 
   if (!hidden && !withhold && settings.memory.enabled && settings.memory.items.length) {
     lines.push("", "# Things the user asked you to remember");

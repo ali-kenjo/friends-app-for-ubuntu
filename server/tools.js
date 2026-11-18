@@ -14,6 +14,8 @@ const connectors = require("./connectors");
 const mcp = require("./mcp");
 const localNotes = require("./local-notes");
 const whiteboardTools = require("./whiteboard-tools");
+const rooms = require("./rooms");
+const roomAI = require("../src/js/room/ai.mjs");
 
 const str = (description) => ({ type: "STRING", description });
 const num = (description) => ({ type: "NUMBER", description });
@@ -308,9 +310,10 @@ const RECALL_TOOLS = {
   ),
 };
 
-// The robot body on screen (Settings → Robot). These only move the robot, so
-// they answer at once, never ask, never show up as steps in the chat, and
-// don't count toward the tool rounds of a reply (see gemini.streamChat).
+// The robot body on screen and its room (Settings → Robot). These only move the robot, so they answer at
+// once, never ask, never show up as steps in the chat, and don't count toward the tool rounds of a reply (see
+// gemini.streamChat). Every call is checked against the live room (src/js/room/ai.mjs): what doesn't exist or
+// isn't allowed comes back as a sentence the AI can say ("I'm only allowed to look at the vase").
 const ROBOT_TOOLS = {
   robot_mood: fn(
     "robot_mood",
@@ -322,116 +325,75 @@ const ROBOT_TOOLS = {
     "Make your robot body do one short move: nod, head_shake, tilt, wave, shrug, bounce, celebrate, look_around, lean_in, point_left, point_right, double_take, shy, wink, blow_kiss, facepalm, clap, thumbs_up, fist_pump, dance_groove, dance_spin, dance_robot, shiver, stretch, yawn, sneeze, hiccup, hug, high_five, bow, salute, big_shrug, chin_on_hand, scratch_head, big_wave, royal_wave, peek, hide, dizzy, whistle, drum_roll, flex.",
     { gesture: { type: "STRING", enum: robot.GESTURES, description: "The move to make" } }
   ),
-  robot_use_prop: fn(
-    "robot_use_prop",
-    "Have your robot body interact with a prop or companion in the room (e.g. lamp, radio, record_player, tv, fireplace, plant, kettle, blinds, book, tablet, mug, cat, fish_tank, lava_lamp, clock, window).",
-    {
-      prop: str("The prop or companion id to use, e.g. 'lamp', 'radio', 'plant', 'cat', 'fireplace', 'tv', 'tablet', 'book', 'kettle'"),
-      action: str("Optional action: 'use', 'toggle', 'on', 'off', 'inspect', 'water', 'pat'"),
-    },
-    ["prop"]
-  ),
   robot_go_to: fn(
     "robot_go_to",
-    "Move your robot body to a spot or prop in the room (e.g. 'center', 'left', 'right', 'front', 'back', 'window', 'desk', or a prop id).",
-    {
-      target: str("Spot or prop name: 'center', 'left', 'right', 'front', 'back', 'window', 'desk', or a prop id"),
-      x: num("Optional horizontal offset from -1 (left) to 1 (right)"),
-      z: num("Optional depth offset from -1 (back) to 1 (front)"),
-    },
+    "Go somewhere in your room: a thing (by its name or id from the room description), a spot, 'home', 'you' (closer to the user), or a direction ('left', 'right', 'front', 'back', 'center').",
+    { target: str("Where to go: a thing's name or id, a spot's name, 'home', 'you', or a direction"), gait: str("Optional: 'hover', 'walk', 'glide', 'hop' or 'zip'") },
     ["target"]
   ),
   robot_look_at: fn(
     "robot_look_at",
-    "Turn your robot body's eyes and head toward a target ('user', 'audience', 'left', 'right', 'up', 'down', 'window', 'companion', or a prop id).",
-    {
-      target: str("Where to look: 'user', 'audience', 'left', 'right', 'up', 'down', 'window', 'companion', or a prop id"),
-      x: num("Optional horizontal gaze from -1 (left) to 1 (right)"),
-      y: num("Optional vertical gaze from -1 (down) to 1 (up)"),
-    },
+    "Look at something: 'you' (the user), 'camera', a thing (by name or id), a spot, or a direction ('left', 'right', 'up', 'down').",
+    { target: str("What to look at") },
     ["target"]
   ),
-};
-
-const CHOREOGRAPHY_TOOLS = {
-  move_to_asset: fn(
-    "move_to_asset",
-    "Walk or hover cleanly via A* pathfinding to an interactive asset in the room (e.g. 'whiteboard', 'desk_table', 'vase_flowers', 'books_notebook', 'gaming_console', 'rubiks_cube').",
-    {
-      assetId: str("Target asset id in the room"),
-      gait: str("Optional locomotion gait: 'walk' | 'hover' | 'brisk' | 'playful'"),
-    },
-    ["assetId"]
+  robot_use: fn(
+    "robot_use",
+    "Do something with a thing in your room: walk to it and use it as it allows (use/switch, touch, play, water, read, write, tidy, sit, rest…). Leave the action out to do what the thing is for.",
+    { asset: str("The thing's name or id from the room description"), action: str("Optional: use, touch, play, water, read, write, tidy, sit, lean, rest, point, carry"), text: str("Optional words to put on it (a sign)") },
+    ["asset"]
   ),
-  explain_on_whiteboard: fn(
-    "explain_on_whiteboard",
-    "Walk to the whiteboard, equip a marker from the pens cup, and write a structured explanation line-by-line (title, bullet list, or flowchart nodes) on the 3D whiteboard.",
-    {
-      title: str("Heading title to write on the board"),
-      bullets: { type: "ARRAY", items: { type: "STRING" }, description: "Bullet points or diagram steps to write step-by-step" },
-      diagramType: str("Optional visual layout: 'notes' | 'flowchart'"),
-    },
-    ["title"]
+  robot_posture: fn(
+    "robot_posture",
+    "Change how you stand: 'stand', 'sit' (on a chair, sofa, pouf, bed or bench), 'lean' (on a desk or wall) or 'rest' (on your charging pad).",
+    { posture: { type: "STRING", enum: ["stand", "sit", "lean", "rest"], description: "The posture" }, asset: str("Optional: what to sit or lean on (name or id)") },
+    ["posture"]
   ),
-  clear_whiteboard: fn(
-    "clear_whiteboard",
-    "Walk to the whiteboard and run an animated wiper erase across the 3D board surface.",
-    {}
-  ),
-  write_in_notebook: fn(
-    "write_in_notebook",
-    "Walk to the desk, equip a pen from the cup, and write live notes or session takeaways onto the open 3D notebook pages.",
-    {
-      note: str("Concise takeaway or note to write in the open notebook"),
-      heading: str("Optional section heading"),
-    },
-    ["note"]
-  ),
-  play_with_toy: fn(
-    "play_with_toy",
-    "Walk to an interactive 3D toy in the room and play with it (bouncy_ball, rubiks_cube, rc_drone, retro_handheld, holo_projector, newtons_cradle, stacking_blocks, mini_synth).",
-    {
-      toyId: str("Toy id: bouncy_ball, rubiks_cube, rc_drone, retro_handheld, holo_projector, newtons_cradle, stacking_blocks, or mini_synth"),
-      action: str("Optional toy action, e.g. 'play', 'juggle', 'solve', 'fly', 'stack', 'topple', 'laser'"),
-    },
-    ["toyId"]
-  ),
-  water_flowers: fn(
-    "water_flowers",
-    "Walk to the vase & flowers, equip a watering can, water drooping flowers back to Vibrant Bloom, and smile.",
-    {}
-  ),
-  set_emotion: fn(
-    "set_emotion",
-    "Set the robot's emotional state and optional subtle ambient lighting mood (happy, curious, thinking, excited, calm, playful, proud, surprised).",
-    {
-      emotion: str("Emotion name: happy | curious | thinking | excited | calm | playful | proud | surprised"),
-    },
-    ["emotion"]
-  ),
-  follow_route: fn(
-    "follow_route",
-    "Follow the configured custom waypoint route around the room (loop, ping_pong, or random).",
-    {
-      mode: str("Optional route mode override: 'loop' | 'ping_pong' | 'random'"),
-    }
-  ),
-  return_home: fn(
-    "return_home",
-    "Walk smoothly back to the configured Home Standing Spot and face the user.",
-    {}
+  robot_route: fn(
+    "robot_route",
+    "Follow one of your room's routes.",
+    { route: str("The route's name (leave out for the first one)"), mode: str("Optional: 'loop', 'ping_pong', 'random' or 'once'") }
   ),
 };
+// The 1.0 tools, still accepted for one release (src/js/room/ai.mjs maps them to the ones above)
+const ALIAS_TOOLS = new Set(Object.keys(roomAI.ALIASES));
 
-const isChoreographyTool = (name) => Object.hasOwn(CHOREOGRAPHY_TOOLS, name);
+// Rearranging the room: a normal tool (it changes your room), gated by Settings → Robot → "AI may rearrange"
+const ROOM_EDIT_TOOL = fn(
+  "room_edit",
+  "Rearrange your room: move, add, remove or recolor things. With 'Ask first' the user sees the changes and approves them.",
+  {
+    changes: {
+      type: "ARRAY",
+      description: "The changes, in order",
+      items: {
+        type: "OBJECT",
+        properties: {
+          op: { type: "STRING", enum: ["move", "add", "remove", "recolor"] },
+          asset: str("The thing (name or id) to move, remove or recolor"),
+          type: str("For add: a catalog id or name, e.g. 'pouf', 'lamp_floor'"),
+          to: str("For move: a thing's name, a spot, or 'left', 'right', 'front', 'back', 'center'"),
+          near: str("For add: next to which thing or spot"),
+          c1: str("For recolor: the first color as #rrggbb"),
+          c2: str("For recolor: the second color"),
+          c3: str("For recolor: the third color"),
+        },
+        required: ["op"],
+      },
+    },
+  },
+  ["changes"]
+);
 
 // Compact versions of the robot tools for small local models ("essential" tool set)
 const ROBOT_TOOLS_LOCAL = {
   robot_mood: fn("robot_mood", "Set robot face mood.", { mood: { type: "STRING", enum: robot.MOODS } }),
   robot_gesture: fn("robot_gesture", "Play robot gesture.", { gesture: { type: "STRING", enum: robot.GESTURES } }),
-  robot_use_prop: fn("robot_use_prop", "Use a room prop (lamp, radio, plant, cat, tv, fireplace, book, tablet).", { prop: str("Prop id"), action: str("use|toggle|on|off") }, ["prop"]),
-  robot_go_to: fn("robot_go_to", "Move robot in room (center, left, right, front, back, or prop id).", { target: str("Spot or prop") }, ["target"]),
-  robot_look_at: fn("robot_look_at", "Look at target (user, audience, window, companion, or prop id).", { target: str("Target") }, ["target"]),
+  robot_go_to: fn("robot_go_to", "Go to a thing, spot, home, you, or a direction.", { target: str("Where") }, ["target"]),
+  robot_look_at: fn("robot_look_at", "Look at you, camera, a thing, or a direction.", { target: str("Target") }, ["target"]),
+  robot_use: fn("robot_use", "Use a thing in the room.", { asset: str("Thing"), action: str("Optional action") }, ["asset"]),
+  robot_posture: fn("robot_posture", "stand, sit, lean or rest.", { posture: str("Posture"), asset: str("Optional thing") }, ["posture"]),
+  robot_route: fn("robot_route", "Follow a route.", { route: str("Route name") }),
 };
 
 // Goals that take many steps and time: handed to the mission engine (server/missions/)
@@ -446,7 +408,8 @@ const ONLINE_TOOLS = new Set(Object.keys(WORKSPACE_TOOLS));
 const LIFE_NAMES = new Set(Object.keys(LIFE_TOOLS));
 const VAULT_NAMES = new Set(Object.keys(VAULT_TOOLS));
 
-const isRobotTool = (name) => Object.hasOwn(ROBOT_TOOLS, name);
+const isRobotTool = (name) => Object.hasOwn(ROBOT_TOOLS, name) || ALIAS_TOOLS.has(name);
+const isChoreographyTool = () => false; // (1.0's choreography tools are aliases of the robot tools now)
 
 // The robot tools are offered when the robot is on screen (the page says so)
 // and Settings → Robot lets the AI move it, separately for voice and text.
@@ -455,45 +418,45 @@ function robotToolsOn(settings, { voice, robot: onScreen }) {
   return onScreen === true && (voice ? allowed.voice : allowed.chat) === true;
 }
 
-// Which part of its body each robot tool moves (Settings → Robot → Behaviour: what the AI may do)
-const ROBOT_KIND = { robot_mood: "mood", robot_gesture: "gesture", robot_use_prop: "prop", robot_go_to: "move", robot_look_at: "look" };
-const robotAllowed = (settings, name) => settings.robot?.aiAllowed?.[ROBOT_KIND[name]] !== false;
+// Which of the AI switches (Settings → Robot → what the AI may do; robot.ai) each robot tool needs
+const ROBOT_KIND = { robot_mood: "mood", robot_gesture: "gestures", robot_go_to: "move", robot_route: "move", robot_posture: "move", robot_look_at: "look", robot_use: "use" };
+function robotAllowed(settings, name) {
+  const [real] = roomAI.aliasCall(name, {});
+  return settings.robot?.ai?.[ROBOT_KIND[real]] !== false;
+}
+
+// The room the robot is in now (settings.robot.room → the rooms store)
+function liveRoom(settings) {
+  try {
+    const id = settings.robot?.room?.layoutId;
+    return id ? rooms.get(id) : null;
+  } catch {
+    return null;
+  }
+}
 
 // What a robot tool call shows: { mood }, { gesture }, { useProp }, { goTo }, or { lookAt }; throws when invalid
-function robotEvent(name, args = {}) {
-  if (name === "robot_mood") {
-    if (robot.MOODS.includes(args.mood)) return { mood: args.mood };
+// A robot tool call → what the page does: { mood } | { gesture } | { room: a command for the behaviour engine }
+// (and lookAt for the animator when it's a direction). settings: to find the live room and the AI switches.
+function robotEvent(name, args = {}, settings = null) {
+  const [real, a] = roomAI.aliasCall(name, args || {});
+  if (real === "robot_mood") {
+    if (robot.MOODS.includes(a.mood)) return { mood: a.mood };
     throw new Error(`Use one of these moods: ${robot.MOODS.join(", ")}.`);
   }
-  if (name === "robot_gesture") {
-    if (robot.GESTURES.includes(args.gesture)) return { gesture: args.gesture };
+  if (real === "robot_gesture") {
+    if (robot.GESTURES.includes(a.gesture)) return { gesture: a.gesture };
     throw new Error(`Use one of these gestures: ${robot.GESTURES.join(", ")}.`);
   }
-  if (name === "robot_use_prop") {
-    const prop = String(args.prop || "").trim().slice(0, 64);
-    if (!prop) throw new Error("Give a prop name to use (e.g. 'lamp', 'radio', 'plant', 'cat').");
-    const action = String(args.action || "use").trim().slice(0, 32) || "use";
-    return { useProp: { prop, action } };
-  }
-  if (name === "robot_go_to") {
-    const target = String(args.target || args.place || "").trim().slice(0, 64);
-    const hasCoords = Number.isFinite(Number(args.x)) || Number.isFinite(Number(args.z));
-    if (!target && !hasCoords) throw new Error("Give a target spot or prop name (e.g. 'center', 'left', 'right', 'window').");
-    const out = { target: target || "spot" };
-    if (Number.isFinite(Number(args.x))) out.x = Math.max(-1, Math.min(1, Number(args.x)));
-    if (Number.isFinite(Number(args.z))) out.z = Math.max(-1, Math.min(1, Number(args.z)));
-    return { goTo: out };
-  }
-  if (name === "robot_look_at") {
-    const target = String(args.target || "").trim().slice(0, 64);
-    const hasCoords = Number.isFinite(Number(args.x)) || Number.isFinite(Number(args.y));
-    if (!target && !hasCoords) throw new Error("Give a target to look at (e.g. 'user', 'audience', 'window', 'clock').");
-    const out = { target: target || "point" };
-    if (Number.isFinite(Number(args.x))) out.x = Math.max(-1, Math.min(1, Number(args.x)));
-    if (Number.isFinite(Number(args.y))) out.y = Math.max(-1, Math.min(1, Number(args.y)));
-    return { lookAt: out };
-  }
-  throw new Error(`Unknown robot tool: ${name}`);
+  const s = settings || {};
+  // Looking up or down needs no room
+  if (real === "robot_look_at" && ["up", "down"].includes(String(a.target || "").toLowerCase())) return { lookAt: { target: String(a.target).toLowerCase() } };
+  const res = roomAI.robotCommand(liveRoom(s), real, a, { ai: s.robot?.ai, privateMode: s.privacy?.localOnly === true });
+  if (!res.ok) throw new Error(res.error);
+  const out = { room: res.command };
+  // Directions and you/the camera: the animator's own look as well
+  if (res.command.kind === "look" && ["you", "camera", "direction"].includes(res.command.target.kind)) out.lookAt = { target: res.command.target.kind === "you" ? "user" : res.command.target.kind === "camera" ? "audience" : res.command.target.dir };
+  return out;
 }
 
 // options.voice: a spoken conversation, which also gets write_draft.
@@ -563,10 +526,7 @@ function declarations(settings, { voice = false, robot: onScreen = false, nonBlo
   if (!hidden) list.push(...whiteboardTools.declarations(settings, { source: voice ? "voice" : source, withhold }));
   if (robotToolsOn(settings, { voice, robot: onScreen })) {
     for (const tool of Object.values(ROBOT_TOOLS)) if (robotAllowed(settings, tool.name)) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
-    const perms = settings.behaviorEngine?.toolPermissions || {};
-    for (const tool of Object.values(CHOREOGRAPHY_TOOLS)) {
-      if (perms[tool.name] !== false) list.push(nonBlocking ? { ...tool, behavior: "NON_BLOCKING" } : tool);
-    }
+    if ((settings.robot?.ai?.rearrange || "ask") !== "off" && !hidden) list.push(ROOM_EDIT_TOOL);
   }
   return list;
 }
@@ -583,8 +543,7 @@ const ESSENTIAL = new Set([
   "get_weather", "web_search", "read_webpage",
   "search_gmail", "get_calendar_events",
   "home_devices", "home_control", "start_mission",
-  "robot_mood", "robot_gesture", "robot_use_prop", "robot_go_to", "robot_look_at",
-  "move_to_asset", "explain_on_whiteboard", "clear_whiteboard", "write_in_notebook", "play_with_toy", "water_flowers", "set_emotion", "follow_route", "return_home",
+  "robot_mood", "robot_gesture", "robot_go_to", "robot_look_at", "robot_use", "robot_posture", "robot_route", "room_edit",
   ...whiteboardTools.ESSENTIAL_WHITEBOARD_TOOLS,
 ]);
 
@@ -592,7 +551,7 @@ function forLocal(list, settings) {
   if (settings.aiControl?.localTools === "all") return list;
   // Apps you added yourself (MCP) are kept too; robot tools use their compact essential schema
   return list
-    .filter((t) => ESSENTIAL.has(t.name) || Object.hasOwn(FILE_TOOLS, t.name) || isRobotTool(t.name) || isChoreographyTool(t.name) || t.name.startsWith("mcp_"))
+    .filter((t) => ESSENTIAL.has(t.name) || Object.hasOwn(FILE_TOOLS, t.name) || isRobotTool(t.name) || t.name.startsWith("mcp_"))
     .map((t) => ROBOT_TOOLS_LOCAL[t.name] || whiteboardTools.WHITEBOARD_TOOLS_LOCAL[t.name] || t);
 }
 
@@ -845,6 +804,33 @@ async function runLife(name, args, ctx) {
   throw new Error(`Unknown tool ${name}.`);
 }
 
+// room_edit: "AI may rearrange" off → refused; "ask" → the user sees the changes and approves them; "allowed" →
+// applied. The page is told the room changed (and can undo it).
+async function roomEdit(args, ctx) {
+  const mode = ctx.settings.robot?.ai?.rearrange || "ask";
+  if (mode === "off") return { error: "The user doesn't let you rearrange the room." };
+  const room = liveRoom(ctx.settings);
+  if (!room) return { error: "Your room isn't loaded yet." };
+  const changes = (Array.isArray(args?.changes) ? args.changes : []).map((c) => ({ ...c, colors: c?.colors || (c?.c1 || c?.c2 || c?.c3 ? { c1: c.c1, c2: c.c2, c3: c.c3 } : undefined) }));
+  const result = roomAI.applyEdit(room, changes, { strict: true });
+  if (result.errors.length) return { error: result.errors.join(" ") };
+  if (mode === "ask") {
+    // The proposed room is shown on screen while the user decides (nothing is saved until they apply it)
+    ctx.onRobot?.({ roomPreview: { room: result.room } });
+    let ok = false;
+    try {
+      ok = await ctx.confirm?.(`Rearrange the room: ${result.done.join(", ")}?`, result.done.join("\n"));
+    } finally {
+      ctx.onRobot?.({ roomPreview: { end: true } });
+    }
+    if (!ok) return { error: "The user said no to these changes." };
+  }
+  const saved = rooms.save(room.id, result.room);
+  ctx.onRobot?.({ roomChanged: { id: saved.id, done: result.words } });
+  ctx.onActivity?.(`Room: ${result.done.join(", ")}`);
+  return { ok: true, done: result.done };
+}
+
 // Runs one tool call. ctx: { settings, googleAccessToken, confirm(summary, details) → Promise<boolean>,
 // onActivity(text), onDraft(draft), onRobot({ mood } | { gesture }) }.
 // Always returns an object for the model; errors are reported, not thrown.
@@ -853,20 +839,13 @@ async function run(name, args, ctx) {
   if (isRobotTool(name)) {
     try {
       if (!robotAllowed(ctx.settings, name)) throw new Error("The user doesn't let you use that part of your body. Leave it be.");
-      ctx.onRobot?.(robotEvent(name, args));
+      ctx.onRobot?.(robotEvent(name, args, ctx.settings));
       return { ok: true };
     } catch (err) {
       return { error: err.message };
     }
   }
-  if (isChoreographyTool(name)) {
-    const perms = ctx.settings?.behaviorEngine?.toolPermissions || {};
-    if (perms[name] === false) return { error: `Tool ${name} is disabled in Behavior Studio permissions.` };
-    const choreography = { tool: name, args: args && typeof args === "object" ? args : {} };
-    ctx.onRobot?.({ choreography });
-    ctx.onActivity?.(`Robot: ${name.replace(/_/g, " ")}`);
-    return { ok: true, tool: name, args: choreography.args };
-  }
+  if (name === "room_edit") return roomEdit(args, ctx);
   // Private mode: nothing leaves this computer, even if the AI asks
   if (ctx.settings.privacy?.localOnly === true && ONLINE_TOOLS.has(name)) {
     return { error: "Private mode is on: this tool needs the internet, so it's off." };
@@ -1108,4 +1087,4 @@ async function run(name, args, ctx) {
   }
 }
 
-module.exports = { declarations, forLocal, run, isRobotTool, isChoreographyTool, robotEvent, robotAllowed, briefing, CHOREOGRAPHY_TOOLS };
+module.exports = { declarations, forLocal, run, isRobotTool, isChoreographyTool, robotEvent, robotAllowed, briefing, liveRoom, ROBOT_TOOLS };

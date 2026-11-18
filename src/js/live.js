@@ -303,6 +303,9 @@ export class LiveVoice {
             useProp: event.useProp,
             goTo: event.goTo,
             lookAt: event.lookAt,
+            room: event.room,
+            roomChanged: event.roomChanged,
+            roomPreview: event.roomPreview,
             choreography: event.choreography,
           })
         );

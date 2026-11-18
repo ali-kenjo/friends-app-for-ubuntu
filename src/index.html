@@ -2236,24 +2236,44 @@
           </div></div>
           <label class="row">
             <div><div class="row-label">Show moods</div><div class="row-desc">Feelings on its face</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.mood">
+            <input type="checkbox" class="toggle" data-setting="robot.ai.mood">
           </label>
           <label class="row">
             <div><div class="row-label">Make gestures</div><div class="row-desc">Waving, nodding, dancing…</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.gesture">
+            <input type="checkbox" class="toggle" data-setting="robot.ai.gestures">
           </label>
           <label class="row">
-            <div><div class="row-label">Use things in the room</div><div class="row-desc">The lamp, the radio, the plant…</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.prop">
+            <div><div class="row-label">Use things in the room</div><div class="row-desc">The lamp, the radio, the plant… (each thing's own rules still apply, in the Room Editor)</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.ai.use">
           </label>
           <label class="row">
-            <div><div class="row-label">Walk around</div><div class="row-desc">Move to a spot in the room</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.move">
+            <div><div class="row-label">Walk around</div><div class="row-desc">Go to things, spots and you; sit, lean and rest; follow routes</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.ai.move">
           </label>
           <label class="row">
             <div><div class="row-label">Look around</div><div class="row-desc">Turn its eyes and head</div></div>
-            <input type="checkbox" class="toggle" data-setting="robot.aiAllowed.look">
+            <input type="checkbox" class="toggle" data-setting="robot.ai.look">
           </label>
+          <div class="row">
+            <div><div class="row-label" id="robot-ai-rearrange-label">Rearrange the room</div><div class="row-desc">Move, add, remove and recolor things when you ask. With "Ask first" you see the changes and approve them; you can always undo.</div></div>
+            <select class="field" data-setting="robot.ai.rearrange" aria-labelledby="robot-ai-rearrange-label">
+              <option value="off">Never</option>
+              <option value="ask">Ask first</option>
+              <option value="allowed">Without asking</option>
+            </select>
+          </div>
+          <label class="row">
+            <div><div class="row-label">Describe a room</div><div class="row-desc">In the Room Editor: your words become a room from the catalog, made by your AI for small jobs</div></div>
+            <input type="checkbox" class="toggle" data-setting="robot.ai.describe">
+          </label>
+          <div class="row">
+            <div><div class="row-label" id="robot-ai-context-label">What the AI knows of the room</div><div class="row-desc">The things in it, where they are and what it may do with them. Your own things (photos, notes) only when you switch them on.</div></div>
+            <select class="field" data-setting="robot.ai.context" aria-labelledby="robot-ai-context-label">
+              <option value="all">Everything</option>
+              <option value="names">Only what's where</option>
+              <option value="none">Nothing</option>
+            </select>
+          </div>
 
           <div class="subhead"><div>
             <div class="subhead-title">You and the robot</div>
